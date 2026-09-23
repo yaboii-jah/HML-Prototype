@@ -1,0 +1,3 @@
+import { RequestForm } from "@/src/features/requests/Requests";
+
+export default async function Page({ params }: { params: Promise<{ id: string }> }) { const { id } = await params; return <RequestForm id={id}/>; }
