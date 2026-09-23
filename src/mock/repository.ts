@@ -3,7 +3,8 @@ import { seedDemo } from "./fixtures/seed.ts";
 import { normalizeKnownPlaceholders } from "./normalize.ts";
 import { ROLES, type DemoSnapshot, type LegacySnapshot } from "../domain/types.ts";
 
-const CURRENT_KEY = "hml-buildsync-demo-v2";
+const CURRENT_KEY = "hml-constructsync-demo-v2";
+const PREVIOUS_KEY = "hml-buildsync-demo-v2";
 const LEGACY_KEY = "hml-buildsync-demo-v1";
 export type RepositoryView = { snapshot: DemoSnapshot | null; status: "loading" | "ready" | "volatile" | "recovery"; message?: string };
 export interface DemoRepository {
@@ -34,7 +35,7 @@ export class LocalDemoRepository implements DemoRepository {
 
   constructor() {
     if (typeof window !== "undefined") window.addEventListener("storage", event => {
-      if (event.key !== CURRENT_KEY && event.key !== LEGACY_KEY) return;
+      if (event.key !== CURRENT_KEY && event.key !== PREVIOUS_KEY && event.key !== LEGACY_KEY) return;
       this.initialized = false;
       this.read();
       this.notify();
@@ -55,10 +56,12 @@ export class LocalDemoRepository implements DemoRepository {
     this.initialized = true;
     if (typeof window === "undefined") return this.view;
     let current: string | null;
+    let previous: string | null;
     let old: string | null;
     try {
       current = localStorage.getItem(CURRENT_KEY);
-      old = current ? null : localStorage.getItem(LEGACY_KEY);
+      previous = current ? null : localStorage.getItem(PREVIOUS_KEY);
+      old = current || previous ? null : localStorage.getItem(LEGACY_KEY);
     } catch {
       this.view = { snapshot: seedDemo(), status: "volatile", message: "Changes cannot be saved right now." };
       return this.view;
@@ -67,6 +70,12 @@ export class LocalDemoRepository implements DemoRepository {
       if (current) {
         const parsed = parseCurrent(current);
         this.view = parsed ? { snapshot: parsed, status: "ready" } : { snapshot: null, status: "recovery", message: "Saved workspace data could not be read. Restore the workspace to continue." };
+        return this.view;
+      }
+      if (previous) {
+        const parsed = parseCurrent(previous);
+        this.view = parsed ? this.write(parsed) : { snapshot: null, status: "recovery", message: "Saved workspace data could not be opened. Restore the workspace to continue." };
+        if (parsed && this.view.status === "ready") try { localStorage.removeItem(PREVIOUS_KEY); } catch {}
         return this.view;
       }
       if (old) {
@@ -95,7 +104,7 @@ export class LocalDemoRepository implements DemoRepository {
   async reset() {
     this.initialized = true;
     this.view = this.write(seedDemo());
-    if (this.view.status === "ready") try { localStorage.removeItem(LEGACY_KEY); } catch {}
+    if (this.view.status === "ready") try { localStorage.removeItem(PREVIOUS_KEY); localStorage.removeItem(LEGACY_KEY); } catch {}
     this.notify();
     return this.view;
   }

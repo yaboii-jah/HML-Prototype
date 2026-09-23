@@ -1,6 +1,6 @@
-# HML BuildSync — UI Prototype Brief for Codex
+# HML ConstructSync — UI Prototype Brief for Codex
 
-> **Task:** Build a runnable, polished, interactive prototype of HML BuildSync. Implement the flows below in the project where this brief is provided. Inspect the existing project first and follow its conventions. If the project is empty, choose a sensible web app setup. Complete the implementation, run it, and verify the main walkthrough; do not stop after producing a plan or static mockups.
+> **Task:** Build a runnable, polished, interactive prototype of HML ConstructSync. Implement the flows below in the project where this brief is provided. Inspect the existing project first and follow its conventions. If the project is empty, choose a sensible web app setup. Complete the implementation, run it, and verify the main walkthrough; do not stop after producing a plan or static mockups.
 
 ## 1. Prototype boundary
 

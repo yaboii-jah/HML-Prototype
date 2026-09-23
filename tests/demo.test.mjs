@@ -82,7 +82,7 @@ test("v1 migration preserves edited records and rejects malformed saved data", (
   assert.equal(migrated.activity[0].action, "PO served");
   assert.equal(migrated.movements[2].reason, "Opening stock balance");
   assert.equal(migrateLegacy({ version: 1, role: "Site Personnel" }), null);
-  const saved = new Map([["hml-buildsync-demo-v2", "not-json"]]);
+  const saved = new Map([["hml-constructsync-demo-v2", "not-json"]]);
   const previous = globalThis.localStorage;
   const previousWindow = globalThis.window;
   globalThis.localStorage = { getItem: key => saved.get(key) ?? null, setItem: (key, value) => saved.set(key, value) };
@@ -100,7 +100,7 @@ test("legacy query links still target their record routes", () => {
   assert.equal(legacyDestination(new URLSearchParams("view=dashboard")), "/dashboard");
 });
 
-test("existing v2 records show polished built-in values without changing user edits", () => {
+test("previous BuildSync v2 records migrate to ConstructSync without changing user edits", () => {
   const priorStorage = globalThis.localStorage;
   const priorWindow = globalThis.window;
   const old = seedDemo();
@@ -117,5 +117,6 @@ test("existing v2 records show polished built-in values without changing user ed
     assert.equal(view.snapshot.suppliers[1].contact, "Custom purchasing contact");
     assert.equal(view.snapshot.activity[0].action, "PO served");
     assert.equal(view.snapshot.requests[0].id, "m1");
+    assert.equal(JSON.parse(saved.get("hml-constructsync-demo-v2")).requests[0].id, "m1");
   } finally { globalThis.localStorage = priorStorage; globalThis.window = priorWindow; }
 });

@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "HML BuildSync | Project Operations",
+  title: "HML ConstructSync | Project Operations",
   description: "Construction purchasing, deliveries, and site inventory",
 };
 
