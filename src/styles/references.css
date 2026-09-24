@@ -1,0 +1,25 @@
+.reference-count{color:var(--muted);font-size:12px}
+.reference-note{color:var(--muted);font-size:12px;margin:-5px 0 12px}
+.reference-dropzone{min-height:190px;border:1px dashed #aebfce;border-radius:5px;background:var(--paper);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:22px;transition:border-color .16s ease,background-color .16s ease}
+.reference-dropzone.is-active,.reference-dropzone:hover{border-color:var(--brand);background:color-mix(in srgb,var(--brand) 6%,var(--paper))}
+.reference-dropzone p{margin:10px 0 4px;color:var(--ink);font-size:13px}
+.reference-dropzone small{color:var(--muted);font-size:11px}
+.reference-upload-icon{width:48px;height:48px;overflow:visible}
+.reference-upload-icon path:first-child{fill:#eaf0f5;stroke:#d3dce5;stroke-width:1.5}
+.reference-upload-icon path:nth-child(2){fill:#dce5ed;stroke:#d3dce5;stroke-width:1.5}
+.reference-upload-icon circle{fill:var(--brand);stroke:var(--paper);stroke-width:2}
+.reference-upload-icon path:last-child{fill:none;stroke:white;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.reference-file-input{display:none}
+.reference-choose{padding:0;border:0;background:none;color:var(--ink);font:inherit;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.reference-choose:hover{color:var(--brand)}
+.reference-file-list{display:grid;gap:7px;margin-top:10px}
+.reference-file{display:flex;align-items:center;gap:11px;min-width:0;padding:9px 11px;border:1px solid var(--line);border-radius:4px;background:var(--paper)}
+.reference-file-icon{width:36px;height:36px;flex:0 0 36px;display:grid;place-items:center;border:1px solid var(--line);border-radius:4px;background:var(--surface);color:var(--brand);font-size:9px;font-weight:800;letter-spacing:.02em}
+.reference-file-detail{display:grid;gap:3px;min-width:0;flex:1}
+.reference-file-detail strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px}
+.reference-file-detail small{color:var(--muted);font-size:11px}
+.reference-remove{width:30px;height:30px;flex:0 0 30px;display:grid;place-items:center;border:0;border-radius:4px;background:transparent;color:var(--muted);font-size:20px;cursor:pointer}
+.reference-remove:hover{background:var(--surface);color:var(--bad)}
+html[data-theme="dark"] .reference-upload-icon path:first-child{fill:#283548;stroke:#41516a}
+html[data-theme="dark"] .reference-upload-icon path:nth-child(2){fill:#35455b;stroke:#41516a}
+@media(max-width:600px){.reference-dropzone{min-height:160px;padding:18px 12px}.reference-file{gap:8px;padding:8px}}

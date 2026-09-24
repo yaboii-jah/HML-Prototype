@@ -2,14 +2,38 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type ChangeEvent, type DragEvent, type FormEvent } from "react";
 import { useDemo } from "@/src/app-state/DemoProvider";
 import { Badge, Documents, Empty, Field, InlineError, PageHeader, RecordHeader, Timeline } from "@/src/components/ui/Primitives";
 import { MissingRecord } from "@/src/components/ui/States";
 import { dateText, money } from "@/src/domain/format";
 import { newId } from "@/src/domain/ids";
 import { poForRequest, poTotal, quoteTotal, siteName, stockFor, supplierName } from "@/src/domain/selectors";
-import type { Item } from "@/src/domain/types";
+import type { DocumentRef, Item } from "@/src/domain/types";
+
+const MAX_REFERENCE_SIZE = 25 * 1024 * 1024;
+const REFERENCE_TYPES: Record<string, string[]> = {
+  pdf: ["application/pdf"],
+  jpg: ["image/jpeg", "image/jpg"],
+  jpeg: ["image/jpeg", "image/jpg"],
+  png: ["image/png"],
+  webp: ["image/webp"],
+};
+const REFERENCE_ACCEPT = ".pdf,.jpg,.jpeg,.png,.webp";
+
+function referenceType(file: File) {
+  const extension = file.name.split(".").pop()?.toLowerCase() || "";
+  const acceptedMimes = REFERENCE_TYPES[extension];
+  return acceptedMimes && (!file.type || acceptedMimes.includes(file.type.toLowerCase()))
+    ? file.type || acceptedMimes[0]
+    : "";
+}
+
+function referenceLabel(document: DocumentRef) {
+  const extension = document.name.split(".").pop()?.toUpperCase();
+  if (["PDF", "JPG", "JPEG", "PNG", "WEBP"].includes(extension || "")) return `${extension} file`;
+  return document.type || "Document reference";
+}
 
 export function Requests() {
   const { snapshot: state } = useDemo();
@@ -20,20 +44,113 @@ export function Requests() {
 }
 
 export function RequestForm({ id }: { id?: string }) {
-  const { snapshot: state, run }=useDemo(); const router=useRouter();
-  const original=state?.requests.find(r=>r.id===id);
-  const [items,setItems]=useState<Item[]>(()=>original?.items.map(i=>({...i}))||[{id:newId("item"),name:"",unit:"bag",quantity:1}]);
-  const [error,setError]=useState("");
-  if(!state)return null;
-  if(id&&!original)return <MissingRecord name="MRF" listHref="/requests"/>;
-  const save=async(e:FormEvent<HTMLFormElement>)=>{
-    e.preventDefault(); const intent=(e.nativeEvent as SubmitEvent).submitter?.getAttribute("value")==="draft"?"draft":"submit";
-    const form=new FormData(e.currentTarget);
-    const documents=[String(form.get("signed")||""),String(form.get("plan")||"")].filter(Boolean).map(name=>({name,type:name.toLowerCase().endsWith(".pdf")?"application/pdf":"Reference"}));
-    const result=await run({type:"saveRequest",id, intent, siteId:String(form.get("site")),category:String(form.get("category")),scope:String(form.get("scope")),items,neededDate:String(form.get("needed")),purpose:String(form.get("purpose")),location:String(form.get("location")),remarks:String(form.get("remarks")),documents});
-    if(result.ok)router.push(`/requests/${result.recordId}`); else setError(result.message);
+  const { snapshot: state, run } = useDemo();
+  const router = useRouter();
+  const original = state?.requests.find(request => request.id === id);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [items, setItems] = useState<Item[]>(() => original?.items.map(item => ({ ...item })) || [{ id: newId("item"), name: "", unit: "bag", quantity: 1 }]);
+  const [documentState, setDocumentState] = useState<{ id?: string; touched: boolean; documents: DocumentRef[] }>(() => ({ id, touched: false, documents: [] }));
+  const documents = documentState.id === id && documentState.touched ? documentState.documents : original?.documents || [];
+  const [error, setError] = useState("");
+  const [attachmentError, setAttachmentError] = useState("");
+  const [dragActive, setDragActive] = useState(false);
+
+  const updateDocuments = (update: (current: DocumentRef[]) => DocumentRef[]) => setDocumentState(current => {
+    const currentDocuments = current.id === id && current.touched ? current.documents : original?.documents || [];
+    return { id, touched: true, documents: update(currentDocuments) };
+  });
+
+  if (!state) return null;
+  if (id && !original) return <MissingRecord name="MRF" listHref="/requests"/>;
+
+  const addFiles = (files: FileList | null) => {
+    if (!files?.length) return;
+    const nextDocuments: DocumentRef[] = [];
+    const problems: string[] = [];
+    Array.from(files).forEach(file => {
+      if (file.size > MAX_REFERENCE_SIZE) {
+        problems.push(`${file.name} is larger than 25 MB.`);
+        return;
+      }
+      const type = referenceType(file);
+      if (!type) {
+        problems.push(`${file.name} isn’t a supported file type. Choose a PDF, JPG, PNG, or WEBP.`);
+        return;
+      }
+      nextDocuments.push({ name: file.name, type });
+    });
+    if (nextDocuments.length) updateDocuments(current => [...current, ...nextDocuments]);
+    setAttachmentError(problems.join(" "));
   };
-  return <><PageHeader eyebrow={original?"REVISE MATERIAL REQUEST":"NEW MATERIAL REQUEST"} title={original?`Edit ${original.ref}`:"Create MRF"} description="Capture the work need, material quantities, and document references."/><form className="form-stack" noValidate onSubmit={save}><section className="panel"><h2 className="panel-title">Request context</h2><div className="form-grid"><Field label="Project / site"><select name="site" defaultValue={original?.siteId||(state.siteFilter!=="all"?state.siteFilter:state.sites[0].id)}>{state.sites.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></Field><Field label="Category"><select name="category" defaultValue={original?.category||state.categories[0]}>{state.categories.map(c=><option key={c}>{c}</option>)}</select></Field><Field label="Work package / scope"><input name="scope" defaultValue={original?.scope||""}/></Field><Field label="Needed date"><input name="needed" type="date" defaultValue={original?.neededDate||new Date().toISOString().slice(0,10)}/></Field><Field label="Purpose"><input name="purpose" defaultValue={original?.purpose||""}/></Field><Field label="Delivery location"><input name="location" defaultValue={original?.location||""}/></Field></div><Field label="Remarks"><textarea name="remarks" defaultValue={original?.remarks||""}/></Field></section><section className="panel"><div className="panel-heading"><h2>Materials</h2><button type="button" className="text-link" onClick={()=>setItems([...items,{id:newId("item"),name:"",unit:"piece",quantity:1}])}>+ Add item</button></div>{items.map((item,index)=><div className="item-row" key={item.id}><Field label={`Material ${index+1}`}><input value={item.name} onChange={e=>setItems(items.map(i=>i.id===item.id?{...i,name:e.target.value}:i))}/></Field><Field label="Unit"><input value={item.unit} onChange={e=>setItems(items.map(i=>i.id===item.id?{...i,unit:e.target.value}:i))}/></Field><Field label="Quantity"><input type="number" step="any" value={item.quantity} onChange={e=>setItems(items.map(i=>i.id===item.id?{...i,quantity:Number(e.target.value)}:i))}/></Field><button type="button" className="icon-button" aria-label="Remove material" disabled={items.length===1} onClick={()=>setItems(items.filter(i=>i.id!==item.id))}>×</button></div>)}</section><section className="panel"><h2 className="panel-title">Document references</h2><p className="muted">Add the signed MRF reference before submission.</p><div className="form-grid"><Field label="Signed MRF"><input name="signed" placeholder="Signed MRF.pdf" defaultValue={original?.documents[0]?.name||""}/></Field><Field label="Key Plan"><input name="plan" placeholder="Key Plan.pdf" defaultValue={original?.documents[1]?.name||""}/></Field></div></section><InlineError message={error}/><div className="form-actions"><Link className="button secondary" href={original?`/requests/${original.id}`:"/requests"}>Cancel</Link><button className="button secondary" type="submit" value="draft">Save draft</button><button className="button primary" type="submit" value="submit">{original?"Resubmit MRF":"Submit MRF"}</button></div></form></>;
+
+  const onPickFiles = (event: ChangeEvent<HTMLInputElement>) => {
+    addFiles(event.currentTarget.files);
+    event.currentTarget.value = "";
+  };
+
+  const save = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const intent = (event.nativeEvent as SubmitEvent).submitter?.getAttribute("value") === "draft" ? "draft" : "submit";
+    if (intent === "submit" && documents.length === 0) {
+      setAttachmentError("Add at least one document before submitting this MRF.");
+      return;
+    }
+    const form = new FormData(event.currentTarget);
+    const result = await run({
+      type: "saveRequest", id, intent, siteId: String(form.get("site")), category: String(form.get("category")),
+      scope: String(form.get("scope")), items, neededDate: String(form.get("needed")), purpose: String(form.get("purpose")),
+      location: String(form.get("location")), remarks: String(form.get("remarks")), documents,
+    });
+    if (result.ok) router.push(`/requests/${result.recordId}`);
+    else setError(result.message);
+  };
+
+  return <>
+    <PageHeader eyebrow={original ? "REVISE MATERIAL REQUEST" : "NEW MATERIAL REQUEST"} title={original ? `Edit ${original.ref}` : "Create MRF"} description="Capture the work need, material quantities, and document references."/>
+    <form className="form-stack" noValidate onSubmit={save}>
+      <section className="panel">
+        <h2 className="panel-title">Request context</h2>
+        <div className="form-grid">
+          <Field label="Project / site"><select name="site" defaultValue={original?.siteId || (state.siteFilter !== "all" ? state.siteFilter : state.sites[0].id)}>{state.sites.map(site => <option key={site.id} value={site.id}>{site.name}</option>)}</select></Field>
+          <Field label="Category"><select name="category" defaultValue={original?.category || state.categories[0]}>{state.categories.map(category => <option key={category}>{category}</option>)}</select></Field>
+          <Field label="Work package / scope"><input name="scope" defaultValue={original?.scope || ""}/></Field>
+          <Field label="Needed date"><input name="needed" type="date" defaultValue={original?.neededDate || new Date().toISOString().slice(0, 10)}/></Field>
+          <Field label="Purpose"><input name="purpose" defaultValue={original?.purpose || ""}/></Field>
+          <Field label="Delivery location"><input name="location" defaultValue={original?.location || ""}/></Field>
+        </div>
+        <Field label="Remarks"><textarea name="remarks" defaultValue={original?.remarks || ""}/></Field>
+      </section>
+      <section className="panel">
+        <div className="panel-heading"><h2>Materials</h2><button type="button" className="text-link" onClick={() => setItems(current => [...current, { id: newId("item"), name: "", unit: "piece", quantity: 1 }])}>+ Add item</button></div>
+        {items.map((item, index) => <div className="item-row" key={item.id}>
+          <Field label={`Material ${index + 1}`}><input value={item.name} onChange={event => setItems(current => current.map(currentItem => currentItem.id === item.id ? { ...currentItem, name: event.target.value } : currentItem))}/></Field>
+          <Field label="Unit"><input value={item.unit} onChange={event => setItems(current => current.map(currentItem => currentItem.id === item.id ? { ...currentItem, unit: event.target.value } : currentItem))}/></Field>
+          <Field label="Quantity"><input type="number" step="any" value={item.quantity} onChange={event => setItems(current => current.map(currentItem => currentItem.id === item.id ? { ...currentItem, quantity: Number(event.target.value) } : currentItem))}/></Field>
+          <button type="button" className="icon-button" aria-label="Remove material" disabled={items.length === 1} onClick={() => setItems(current => current.filter(currentItem => currentItem.id !== item.id))}>×</button>
+        </div>)}
+      </section>
+      <section className="panel">
+        <div className="panel-heading"><h2 id="references-heading">Document references</h2><span className="reference-count">{documents.length} attached</span></div>
+        <p className="reference-note">File contents aren’t retained; only attachment details are saved.</p>
+        <div className={`reference-dropzone${dragActive ? " is-active" : ""}`} onDragEnter={event => { event.preventDefault(); setDragActive(true); }} onDragOver={event => { event.preventDefault(); setDragActive(true); }} onDragLeave={event => { event.preventDefault(); setDragActive(false); }} onDrop={(event: DragEvent<HTMLDivElement>) => { event.preventDefault(); setDragActive(false); addFiles(event.dataTransfer.files); }}>
+          <input ref={inputRef} className="reference-file-input" type="file" accept={REFERENCE_ACCEPT} multiple aria-label="Choose document references" onChange={onPickFiles}/>
+          <svg className="reference-upload-icon" viewBox="0 0 48 48" aria-hidden="true"><path d="M11 4h17l9 9v18H11z"/><path d="M28 4v9h9"/><circle cx="33" cy="35" r="10"/><path d="M33 39v-9m-4 4 4-4 4 4"/></svg>
+          <p>Drag and drop files here or <button type="button" className="reference-choose" onClick={() => inputRef.current?.click()}>Choose files</button></p>
+          <small>PDF, JPG, PNG, or WEBP · Up to 25 MB per file</small>
+        </div>
+        <InlineError message={attachmentError}/>
+        {documents.length > 0 && <div className="reference-file-list" aria-label="Attached document references">
+          {documents.map((document, index) => <div className="reference-file" key={`${index}-${document.name}-${document.type}`}>
+            <span className="reference-file-icon" aria-hidden="true">{document.name.toLowerCase().endsWith(".pdf") ? "PDF" : "IMG"}</span>
+            <div className="reference-file-detail"><strong title={document.name}>{document.name}</strong><small>{referenceLabel(document)}</small></div>
+            <button type="button" className="reference-remove" aria-label={`Remove ${document.name}`} onClick={() => { updateDocuments(current => current.filter((_, fileIndex) => fileIndex !== index)); setAttachmentError(""); }}>×</button>
+          </div>)}
+        </div>}
+      </section>
+      <InlineError message={error}/>
+      <div className="form-actions"><Link className="button secondary" href={original ? `/requests/${original.id}` : "/requests"}>Cancel</Link><button className="button secondary" type="submit" value="draft">Save draft</button><button className="button primary" type="submit" value="submit">{original ? "Resubmit MRF" : "Submit MRF"}</button></div>
+    </form>
+  </>;
 }
 
 export function RequestDetail({ id }: { id: string }) {
