@@ -1,0 +1,93 @@
+/* Hallmark · pre-emit critique: P5 H4 E4 S5 R4 V4 */
+/* Hallmark · genre: modern-minimal · macrostructure: Split Story · tone: technical · anchor hue: HML blue */
+.role-modal-actions{display:flex;align-items:center;justify-content:space-between;gap:12px;border-top:1px solid var(--line);margin-top:20px;padding-top:17px}
+.role-modal-actions span{color:var(--muted);font-size:11px}
+
+.signin-page{height:100dvh;display:grid;grid-template-columns:minmax(400px,42%) minmax(0,1fr);overflow:hidden;background:var(--paper)}
+.signin-intro{position:relative;isolation:isolate;overflow:hidden;display:flex;flex-direction:column;justify-content:space-between;gap:16px;min-width:0;min-height:0;padding:24px clamp(24px,4vw,56px);background:var(--auth-panel);color:var(--auth-panel-ink)}
+.signin-logo{display:inline-flex;align-self:flex-start;align-items:center;padding:10px 14px;background:var(--auth-logo-surface);border-radius:9px;box-shadow:0 10px 24px var(--auth-card-shadow);animation:auth-reveal var(--auth-dur-long) var(--auth-ease-out) both}
+.signin-logo img{height:auto;max-width:100%}
+.signin-story{width:100%;max-width:480px;align-self:center}
+.signin-intro-copy{min-height:138px;animation:auth-reveal var(--auth-dur-long) var(--auth-ease-out) both}
+.signin-kicker{display:block;margin-bottom:17px;color:var(--auth-glint);font-size:11px;font-weight:750;letter-spacing:.13em}
+.signin-kicker span{color:var(--auth-panel-muted);font-weight:500}
+.signin-intro h1{max-width:440px;min-width:0;margin:0 0 10px;color:var(--auth-panel-ink);font-size:clamp(32px,3.4vw,49px);line-height:1.04;letter-spacing:-.055em;font-weight:700;overflow-wrap:anywhere}
+.signin-intro-copy p{max-width:410px;margin:0;color:var(--auth-panel-muted);font-size:14px;line-height:1.6}
+.signin-workflow{position:relative;margin-top:10px;padding:8px 0 0;animation:auth-reveal var(--auth-dur-long) var(--auth-ease-out) .12s both}
+.signin-workflow-top{display:flex;justify-content:space-between;gap:12px;color:var(--auth-panel-muted);font-size:11px;font-weight:650;letter-spacing:.04em}
+.signin-workflow-path{position:relative;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;margin:16px 0 12px}
+.signin-workflow-path::before{content:"";position:absolute;top:9px;left:8%;right:8%;height:1px;background:var(--auth-panel-rule)}
+.signin-workflow-node{position:relative;display:grid;justify-items:center;gap:9px;min-width:0;color:var(--auth-panel-muted);font-size:10px;font-weight:600}
+.signin-workflow-dot{width:19px;height:19px;border:1px solid var(--auth-panel-rule);border-radius:50%;background:var(--auth-panel);box-shadow:0 0 0 4px var(--auth-panel);transition:transform var(--auth-dur-short) var(--auth-ease-out)}
+.signin-workflow-node.complete .signin-workflow-dot{background:var(--auth-glint);border-color:var(--auth-glint)}
+.signin-workflow-node.active{color:var(--auth-panel-ink)}
+.signin-workflow-node.active .signin-workflow-dot{background:var(--auth-panel-ink);border:5px solid var(--auth-glint);transform:scale(1.15)}
+.signin-workflow-card{display:flex;align-items:center;gap:13px;padding:14px 15px;border-radius:11px;background:var(--auth-panel-ink);color:var(--auth-panel-deep);box-shadow:0 14px 30px var(--auth-card-shadow);animation:auth-card-in var(--auth-dur-long) var(--auth-ease-out) both}
+.signin-workflow-card-mark{display:grid;place-items:center;width:38px;height:38px;flex:none;border-radius:8px;background:var(--auth-mark-background);color:var(--auth-panel);font-family:var(--font-geist-mono),monospace;font-size:12px;font-weight:700}
+.signin-workflow-card div{display:grid;gap:1px;min-width:0}
+.signin-workflow-card strong{font-size:13px;line-height:1.25}
+.signin-workflow-card small{color:var(--auth-panel);font-size:11px}
+.signin-workflow-card-arrow{margin-left:auto;color:var(--auth-panel);font-size:18px}
+.signin-story-controls{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-top:10px}
+.signin-story-stages{display:flex;flex-wrap:wrap;gap:4px}
+.signin-story-stages button,.signin-story-playback{min-height:44px;border:0;background:transparent;color:var(--auth-panel-muted);font-size:11px;font-weight:650}
+.signin-story-stages button{position:relative;padding:10px 9px}
+.signin-story-stages button::after{content:"";position:absolute;left:9px;right:9px;bottom:5px;height:2px;background:var(--auth-panel-rule)}
+.signin-story-stages button.active{color:var(--auth-panel-ink)}
+.signin-story-stages button.active::after{background:var(--auth-glint)}
+.signin-story-playback{flex:none;padding:8px 11px;border:1px solid var(--auth-panel-rule);border-radius:7px}
+.signin-story-stages button:hover,.signin-story-playback:hover{color:var(--auth-panel-ink)}
+.signin-story-playback:disabled{opacity:.55}
+.signin-intro-foot{margin:0;color:var(--auth-panel-muted);font-size:11px;line-height:1.5}
+.signin-intro-foot span{padding:0 5px}
+.signin-intro :focus-visible{outline:3px solid var(--auth-glint);outline-offset:2px}
+
+.signin-panel{display:grid;place-items:center;min-width:0;min-height:0;padding:20px clamp(24px,5vw,72px)}
+.signin-card{width:min(100%,505px);padding:24px clamp(22px,3vw,34px) 22px;border:1px solid var(--auth-card-rule);border-radius:17px;background:var(--surface);box-shadow:0 22px 60px var(--auth-card-shadow);animation:auth-reveal var(--auth-dur-long) var(--auth-ease-out) .16s both}
+.signin-card-head{display:flex;align-items:center;gap:10px;margin-bottom:14px;color:var(--ink);font-size:12px;font-weight:750}
+.signin-card-symbol{display:grid;place-items:center;width:30px;height:30px;border-radius:8px;background:var(--brand);color:var(--surface);font-family:var(--font-geist-mono),monospace;font-size:16px;font-weight:750}
+.signin-card h2{margin:0 0 5px;color:var(--ink);font-size:clamp(26px,2.4vw,32px);line-height:1.15;letter-spacing:-.045em}
+.signin-card>p{max-width:440px;margin:0;color:var(--muted);font-size:13px;line-height:1.55}
+.signin-form{display:grid;gap:11px;margin:15px 0 0}
+.signin-field{display:grid;gap:7px}
+.signin-field label{color:var(--ink);font-size:12px;font-weight:700}
+.signin-field input{width:100%;min-height:43px;margin:0;padding:9px 13px;border:1px solid var(--auth-card-rule);border-radius:8px;background:var(--surface);color:var(--ink);font-size:13px;outline:2px solid transparent;outline-offset:1px}
+.signin-field input:hover{background:var(--auth-field-hover)}
+.signin-field input:focus-visible{outline-color:var(--brand);border-color:var(--brand)}
+.signin-field input[aria-invalid="true"]{border-color:var(--bad)}
+.signin-form .signin-submit{width:100%;min-height:44px;margin-top:1px;border-radius:8px;font-size:13px;font-weight:700}
+.signin-form .signin-submit:active{transform:translateY(1px)}
+.signin-error{margin:0;padding:10px 12px;border-left:3px solid var(--bad);border-radius:5px;background:var(--auth-error-surface);color:var(--bad);font-size:12px}
+.signin-card>.signin-note{margin:16px 0 0;color:var(--muted);font-size:11px}
+.signin-card>.signin-warning{margin-top:10px;padding:9px 11px;border-radius:6px;background:var(--auth-warning-surface);color:var(--warn)}
+.signin-page :focus-visible{outline-offset:2px}
+
+@keyframes auth-reveal{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+@keyframes auth-card-in{from{opacity:0;transform:translateY(10px) scale(.98)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){.signin-logo,.signin-intro-copy,.signin-workflow,.signin-card,.signin-workflow-card{animation:none!important}.signin-workflow-dot{transition:none!important}}
+html:has(.signin-page),body:has(.signin-page){overflow-x:clip}
+
+/* Compact viewport layout and on-demand sample account picker. */
+.signin-page{height:100dvh;overflow:hidden}
+.signin-role-picker{position:relative;margin-top:17px}
+.signin-role-label{display:block;margin-bottom:7px;color:var(--ink);font-size:12px;font-weight:700}
+.signin-role-trigger{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;min-height:46px;padding:7px 12px;border:1px solid var(--auth-card-rule);border-radius:8px;background:var(--surface);color:var(--ink);text-align:left}
+.signin-role-trigger:hover,.signin-role-trigger[aria-expanded="true"]{border-color:var(--brand);background:var(--auth-field-hover)}
+.signin-role-trigger:active{transform:translateY(1px)}
+.signin-role-trigger>span:first-child{display:grid;gap:1px;min-width:0}
+.signin-role-trigger strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px}
+.signin-role-trigger small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted);font-size:10px}
+.signin-role-chevron{color:var(--brand);font-size:20px;line-height:1}
+.signin-role-options{position:absolute;z-index:20;top:calc(100% + 5px);left:0;right:0;display:grid;gap:2px;max-height:min(320px,48dvh);overflow-y:auto;padding:5px;border:1px solid var(--auth-card-rule);border-radius:9px;background:var(--surface);box-shadow:0 14px 36px var(--auth-card-shadow)}
+.signin-role-options button{display:grid;align-content:center;gap:1px;min-width:0;min-height:44px;padding:6px 10px;border:0;border-radius:6px;background:var(--surface);color:var(--ink);text-align:left}
+.signin-role-options button:hover,.signin-role-options button.selected{background:var(--auth-selected)}
+.signin-role-options button:active{transform:translateY(1px)}
+.signin-role-options button span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;font-weight:700}
+.signin-role-options button small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted);font-size:10px}
+.signin-note code{color:var(--brand);font-family:var(--font-geist-mono),monospace;font-weight:700}
+.signin-card>.signin-note{margin-top:12px}
+@media(max-width:1050px){.signin-intro{padding-inline:28px}.signin-panel{padding-inline:22px}.signin-card{padding-inline:24px}}
+@media(max-width:900px){.signin-page{grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr)}.signin-intro{min-height:0;padding:15px 25px;gap:8px}.signin-logo{padding:6px 9px}.signin-logo img{width:140px}.signin-story{max-width:none}.signin-intro-copy{min-height:0}.signin-intro h1{max-width:none;font-size:clamp(24px,3.4vw,32px)}.signin-intro-copy p,.signin-workflow,.signin-intro-foot{display:none}.signin-kicker{margin:0 0 5px}.signin-story-controls{margin-top:4px}.signin-panel{place-items:start center;padding:12px 20px}.signin-card{width:min(100%,520px)}}
+@media(max-width:520px){.signin-intro{padding:10px 16px 8px}.signin-logo img{width:125px}.signin-kicker{display:none}.signin-intro h1{font-size:clamp(21px,6.5vw,27px);margin:0}.signin-story-controls{margin-top:0}.signin-story-stages button{min-height:35px;padding:5px 6px;font-size:10px}.signin-story-stages button::after{left:6px;right:6px}.signin-story-playback{min-height:35px;padding:5px 8px}.signin-panel{padding:8px 12px}.signin-card{padding:18px 18px 16px}.signin-card-head{margin-bottom:9px}.signin-card h2{font-size:25px}.signin-card>p:not(.signin-note):not(.signin-warning){display:none}.signin-role-picker{margin-top:12px}.signin-form{margin-top:12px;gap:9px}.signin-field{gap:5px}.signin-card>.signin-note{margin-top:9px;font-size:10px}}
+@media(max-width:360px){.signin-story-stages{gap:0}.signin-story-stages button{padding-inline:4px}.signin-story-stages button::after{left:4px;right:4px}.signin-card{padding:14px 16px}.signin-panel{padding:6px 10px}.signin-role-picker{margin-top:9px}.signin-form{margin-top:9px}}
+@media(max-height:650px) and (max-width:900px){.signin-logo{padding:4px 7px}.signin-logo img{width:115px}.signin-intro{padding-block:7px}.signin-intro h1{font-size:22px}.signin-card-head{margin-bottom:6px}.signin-role-picker{margin-top:8px}.signin-form{margin-top:8px;gap:7px}.signin-field input{min-height:40px}.signin-form .signin-submit{min-height:40px}.signin-card>.signin-note{font-size:9px}}

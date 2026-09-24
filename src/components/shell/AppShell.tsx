@@ -3,12 +3,12 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
 import { useDemo } from "@/src/app-state/DemoProvider";
 import { tasksFor } from "@/src/domain/queues";
 import { ROLES, type Role } from "@/src/domain/types";
 
-type IconName = "grid" | "building" | "request" | "supplier" | "purchase" | "finance" | "delivery" | "inventory" | "accounting" | "report" | "admin" | "bell" | "menu" | "close" | "chevron";
+type IconName = "grid" | "building" | "request" | "supplier" | "purchase" | "finance" | "delivery" | "inventory" | "accounting" | "report" | "admin" | "bell" | "menu" | "close" | "chevron" | "moon" | "sun";
 const icons: Record<IconName, ReactNode> = {
   grid: <><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></>,
   building: <><rect x="4" y="4" width="16" height="17" rx="1.5"/><path d="M8 21v-5h8v5M8 8h2m4 0h2M8 12h2m4 0h2"/></>,
@@ -25,8 +25,17 @@ const icons: Record<IconName, ReactNode> = {
   menu: <path d="M4 6h16M4 12h16M4 18h16"/>,
   close: <path d="M5 5 19 19M19 5 5 19"/>,
   chevron: <path d="m7 10 5 5 5-5"/>,
+  moon: <path d="M20.5 14.2A8.5 8.5 0 0 1 9.8 3.5 8.5 8.5 0 1 0 20.5 14.2Z"/>,
+  sun: <><circle cx="12" cy="12" r="3.5"/><path d="M12 2v2m0 16v2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M2 12h2m16 0h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></>,
 };
 function Icon({ name, size = 18 }: { name: IconName; size?: number }) { return <svg aria-hidden="true" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">{icons[name]}</svg>; }
+const subscribeTheme = (notify: () => void) => {
+  const observer = new MutationObserver(notify);
+  observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+  return () => observer.disconnect();
+};
+const getTheme = (): "light" | "dark" => document.documentElement.dataset.theme === "dark" ? "dark" : "light";
+const getServerTheme = (): "light" => "light";
 
 const NAV: { href: string; label: string; icon: IconName; group: string }[] = [
   { href: "/dashboard", label: "Dashboard", icon: "grid", group: "Overview" },
@@ -53,10 +62,11 @@ const primary: Record<Role, string[]> = {
 };
 
 export function AppShell({ children }: { children: ReactNode }) {
-  const { snapshot, run, notice, clearNotice } = useDemo();
+  const { snapshot, run, signOut, notice, clearNotice } = useDemo();
   const [rolesOpen, setRolesOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const theme = useSyncExternalStore(subscribeTheme, getTheme, getServerTheme);
   const pathname = usePathname();
   const router = useRouter();
   useEffect(() => { if (!notice) return; const timer = setTimeout(clearNotice, 4500); return () => clearTimeout(timer); }, [notice, clearNotice]);
@@ -76,10 +86,28 @@ export function AppShell({ children }: { children: ReactNode }) {
       <nav aria-label="Main navigation"><div className="nav-group"><span className="side-caption">Your workspace</span>{primaryItems.map(navLink)}</div>{["Plan and request", "Purchase", "Receive and account", "Manage"].map(group => { const items = secondaryItems.filter(item => item.group === group); return items.length ? <div className="nav-group" key={group}><span className="side-caption">{group}</span>{items.map(navLink)}</div> : null; })}</nav>
       <div className="side-foot"><span className="demo-dot"/>Prototype / mock data</div>
     </aside>
-    <div className="workspace"><header className="masthead"><button className="mobile-menu icon-button" aria-label="Open navigation" aria-expanded={menuOpen} onClick={() => setMenuOpen(true)}><Icon name="menu"/></button><div className="top-context"><span>Workspace</span><span className="crumb-separator">/</span><strong>{section}</strong></div><div className="masthead-right"><label className="site-context"><span>Project</span><select aria-label="Site context" value={snapshot.siteFilter} onChange={event => void run({ type: "setSiteFilter", siteId: event.target.value })}><option value="all">All sites</option>{snapshot.sites.map(site => <option key={site.id} value={site.id}>{site.name}</option>)}</select></label><div className="notification-wrap"><button className="notification-trigger icon-button" aria-label={`Notifications${tasks.length ? `, ${tasks.length} tasks` : ""}`} aria-expanded={notificationsOpen} onClick={() => setNotificationsOpen(!notificationsOpen)}><Icon name="bell"/>{tasks.length > 0 && <i>{tasks.length}</i>}</button>{notificationsOpen && <div className="notification-popover"><div className="popover-heading"><strong>Needs attention</strong><span>{tasks.length} tasks</span></div>{tasks.length ? tasks.slice(0, 7).map(task => <Link key={task.href + task.title} href={task.href} onClick={() => setNotificationsOpen(false)}><b>{task.title}</b><small>{task.detail} · {task.waiting} days</small></Link>) : <p>Nothing waiting for this role.</p>}</div>}</div><button className="masthead-role" onClick={() => setRolesOpen(true)} aria-label={`Current role: ${snapshot.role}. Switch role`}><span className="role-avatar">{snapshot.role.slice(0, 1)}</span><span className="role-label"><strong>{snapshot.role}</strong><small>Switch role</small></span><Icon name="chevron" size={16}/></button></div></header><div className="mobile-demo"><span className="demo-dot"/>Prototype / mock data</div>
+    <div className="workspace">
+      <header className="masthead">
+        <button className="mobile-menu icon-button" aria-label="Open navigation" aria-expanded={menuOpen} onClick={() => setMenuOpen(true)}><Icon name="menu"/></button>
+        <div className="top-context"><span>Workspace</span><span className="crumb-separator">/</span><strong>{section}</strong></div>
+        <div className="masthead-right">
+          <label className="site-context"><span>Project</span><select aria-label="Site context" value={snapshot.siteFilter} onChange={event => void run({ type: "setSiteFilter", siteId: event.target.value })}><option value="all">All sites</option>{snapshot.sites.map(site => <option key={site.id} value={site.id}>{site.name}</option>)}</select></label>
+          <button className="theme-toggle icon-button" type="button" aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`} aria-pressed={theme === "dark"} title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`} onClick={() => { const nextTheme = theme === "dark" ? "light" : "dark"; document.documentElement.dataset.theme = nextTheme; try { localStorage.setItem("constructsync-theme", nextTheme); } catch {} }}><Icon name={theme === "dark" ? "sun" : "moon"}/></button>
+          <div className="notification-wrap"><button className="notification-trigger icon-button" aria-label={`Notifications${tasks.length ? `, ${tasks.length} tasks` : ""}`} aria-expanded={notificationsOpen} onClick={() => setNotificationsOpen(!notificationsOpen)}><Icon name="bell"/>{tasks.length > 0 && <i>{tasks.length}</i>}</button>{notificationsOpen && <div className="notification-popover"><div className="popover-heading"><strong>Needs attention</strong><span>{tasks.length} tasks</span></div>{tasks.length ? tasks.slice(0, 7).map(task => <Link key={task.href + task.title} href={task.href} onClick={() => setNotificationsOpen(false)}><b>{task.title}</b><small>{task.detail} · {task.waiting} days</small></Link>) : <p>Nothing waiting for this role.</p>}</div>}</div>
+          <button className="masthead-role" onClick={() => setRolesOpen(true)} aria-label={`Current role: ${snapshot.role}. Switch role`}><span className="role-avatar">{snapshot.role.slice(0, 1)}</span><span className="role-label"><strong>{snapshot.role}</strong><small>Switch role</small></span><Icon name="chevron" size={16}/></button>
+        </div>
+      </header>
+      <div className="mobile-demo"><span className="demo-dot"/>Prototype / mock data</div>
       <main className="workspace-content">{children}</main>
     </div>
-    {rolesOpen && <div className="modal-backdrop" onMouseDown={() => setRolesOpen(false)}><div className="modal role-modal" role="dialog" aria-modal="true" aria-label="Choose role" onMouseDown={event => event.stopPropagation()}><div className="modal-head"><div><span className="eyebrow">Workspace access</span><h2>Switch role</h2></div><button aria-label="Close role selector" className="icon-button" onClick={() => setRolesOpen(false)}><Icon name="close"/></button></div><p>Choose a role to see its work queue and available actions.</p><div className="role-options">{ROLES.map(role => <button autoFocus={role === snapshot.role} className={role === snapshot.role ? "selected" : ""} key={role} onClick={async () => { await run({ type: "setRole", role }); setRolesOpen(false); router.push("/dashboard"); }}><span>{role.slice(0, 1)}</span><strong>{role}</strong></button>)}</div></div></div>}
+    {rolesOpen && <div className="modal-backdrop" onMouseDown={() => setRolesOpen(false)}>
+      <div className="modal role-modal" role="dialog" aria-modal="true" aria-label="Choose demo role" onMouseDown={event => event.stopPropagation()}>
+        <div className="modal-head"><div><span className="eyebrow">Demo access</span><h2>Switch role</h2></div><button aria-label="Close role selector" className="icon-button" onClick={() => setRolesOpen(false)}><Icon name="close"/></button></div>
+        <p>Choose a role to see its work queue and available actions.</p>
+        <div className="role-options">{ROLES.map(role => <button autoFocus={role === snapshot.role} className={role === snapshot.role ? "selected" : ""} key={role} onClick={async () => { const result = await run({ type: "setRole", role }); if (!result.ok) return; setRolesOpen(false); router.push("/dashboard"); }}><span>{role.slice(0, 1)}</span><strong>{role}</strong></button>)}</div>
+        <div className="role-modal-actions"><span>Signed in for this browser only</span><button type="button" className="button secondary" onClick={() => { signOut(); setRolesOpen(false); router.replace("/sign-in"); }}>Sign out</button></div>
+      </div>
+    </div>}
     {notice && <div className="toast" role="status">{notice}</div>}
   </div>;
 }
