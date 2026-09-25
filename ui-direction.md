@@ -37,7 +37,7 @@ On a phone, the sidebar becomes a drawer; the content forms one reading column b
 - Desktop: persistent 244px sidebar, slim workspace toolbar, and a content column capped around 1500px. Group navigation by work stage. Put role switching, project filter, and notifications in the toolbar.
 - Dashboard: page title and primary role action; four live measures; a prominent role queue; project position and a linked purchase snapshot. The queue is the first working destination.
 - Registers: clear title, filters in a unified toolbar, roomy rows, visible statuses, and an obvious primary record link. Keep real table headers and horizontal scrolling where six columns would become illegible.
-- Details: consistent breadcrumb/back link, record title, separate status labels, current owner and next step, then action area and linked information. Preserve the history timeline.
+- Details: consistent breadcrumb/back link, record title, separate status labels, then action area and linked information. Preserve the history timeline.
 - Forms: group fields by task, keep labels visible, place errors next to the affected action or field, and keep save/submit choices distinct.
 - Mobile: replace the persistent rail with a menu drawer, stack metrics and panels, allow wide records to scroll within their panel, and keep inputs at touch friendly sizes.
 

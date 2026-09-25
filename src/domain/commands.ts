@@ -1,15 +1,17 @@
 import { newId, nextRef } from "./ids.ts";
-import { acceptedFor, budgetFor, inventoryFor, outstandingFor, paidTotal, poTotal, requestForPO, schedulableFor, stockFor } from "./selectors.ts";
-import { ROLES, type DemoSnapshot, type DocumentRef, type DocumentStatus, type Item, type Priority, type Role } from "./types.ts";
+import { acceptedFor, budgetFor, inventoryFor, orderedFor, outstandingFor, paidTotal, poItems, poTotal, requestForPO, schedulableFor, stockFor } from "./selectors.ts";
+import { ROLES, type DemoSnapshot, type DocumentRef, type DocumentStatus, type Item, type POLine, type Priority, type Quote, type Role } from "./types.ts";
 
 export type Command =
   | { type: "setRole"; role: Role }
   | { type: "setSiteFilter"; siteId: string }
-  | { type: "saveRequest"; id?: string; intent: "draft" | "submit"; siteId: string; category: string; scope: string; items: Item[]; neededDate: string; purpose: string; location: string; remarks: string; documents: DocumentRef[] }
+  | { type: "saveRequest"; id?: string; intent: "draft" | "submit"; siteId: string; category: string; scope: string; requestedBy: string; approvedBy: string; purchaser: string; financeOfficer: string; items: Item[]; documents: DocumentRef[] }
   | { type: "reviewRequest"; id: string; decision: "approve" | "return" | "reject"; reason?: string }
   | { type: "addQuote"; requestId: string; supplierId: string; ref: string; prices: Record<string, number>; available: string; leadDays: number; terms: string; document?: string }
+  | { type: "saveReviewedQuote"; requestId: string; supplierId: string; ref: string; available: string; leadDays: number; terms: string; documents: DocumentRef[]; lines: Quote["lines"]; currency: string; tax: number; freight: number; discount: number; validity: string; extraction: "gemini" | "manual"; supersedesId?: string }
+  | { type: "createAwardPO"; requestId: string; quoteId: string; lines: POLine[]; tax: number; freight: number; discount: number; reason: string; notes: string }
   | { type: "createPO"; requestId: string; quoteId: string; reason: string; notes: string }
-  | { type: "savePO"; id: string; quoteId: string; notes: string; finalize: boolean }
+  | { type: "savePO"; id: string; quoteId: string; notes: string; finalize: boolean; lines?: POLine[]; tax?: number; freight?: number; discount?: number; reason?: string }
   | { type: "setPriority"; id: string; priority: Priority }
   | { type: "reviewPO"; id: string; decision: "approve" | "hold" | "return" | "reject"; reason?: string }
   | { type: "servePO"; id: string }
@@ -22,7 +24,8 @@ export type Command =
   | { type: "updateAssignment"; siteId: string; manager: string; personnel: string }
   | { type: "addCategory"; name: string }
   | { type: "updateSupplier"; id: string; contact: string; accreditation: string }
-  | { type: "addSupplier"; name: string; location: string; contact: string; accreditation: string };
+  | { type: "addSupplier"; name: string; location: string; contact: string; accreditation: string }
+  | { type: "addSupplierFromQuote"; name: string };
 
 export type CommandContext = { now: () => string; id: (prefix: string) => string };
 export type CommandResult = { ok: true; snapshot: DemoSnapshot; recordId?: string; message: string } | { ok: false; message: string; field?: string };
@@ -31,6 +34,32 @@ const fail = (message: string, field?: string): CommandResult => ({ ok: false, m
 const positive = (n: number) => Number.isFinite(n) && n > 0;
 const nonnegative = (n: number) => Number.isFinite(n) && n >= 0;
 const reasonOK = (s?: string) => (s?.trim().length ?? 0) >= 5;
+const close = (left: number, right: number) => Math.abs(left - right) < 0.000001;
+
+function awardError(state: DemoSnapshot, requestId: string, quote: Quote, lines: POLine[], tax: number, freight: number, discount: number, excludingPoId?: string) {
+  const request = state.requests.find(r => r.id === requestId);
+  if (!request || request.status !== "approved" || quote.mrfId !== requestId || !quote.lines?.length) return "Choose a reviewed quotation for an approved MRF.";
+  if (!lines.length || [tax, freight, discount].some(value => !nonnegative(value))) return "Enter awarded lines and valid PO charges.";
+  const awarded = new Map<string, number>();
+  const usedOffers = new Map<string, number>();
+  for (const line of lines) {
+    const item = request.items.find(value => value.id === line.itemId);
+    const offer = quote.lines.find(value => value.id === line.quoteLineId);
+    if (!item || !offer || offer.requestItemId !== item.id || !positive(line.quantity) || !positive(offer.conversionFactor) || !positive(offer.unitPrice) || !close(line.unitPrice, offer.unitPrice / offer.conversionFactor)) return "An award must use a confirmed matching offer and its converted unit price.";
+    if ((offer.brand || offer.specification || offer.unit.toLowerCase() !== item.unit.toLowerCase()) && !offer.varianceReason.trim()) return "Explain the accepted specification or unit difference before awarding.";
+    awarded.set(item.id, (awarded.get(item.id) || 0) + line.quantity);
+    usedOffers.set(offer.id, (usedOffers.get(offer.id) || 0) + line.quantity);
+  }
+  for (const po of state.pos.filter(value => value.mrfId === requestId && value.status !== "rejected" && value.id !== excludingPoId)) {
+    for (const item of request.items) awarded.set(item.id, (awarded.get(item.id) || 0) + orderedFor(state, po, item.id));
+    if (po.quoteId === quote.id) for (const line of po.lines || []) usedOffers.set(line.quoteLineId, (usedOffers.get(line.quoteLineId) || 0) + line.quantity);
+  }
+  if (request.items.some(item => (awarded.get(item.id) || 0) > item.quantity + 0.000001)) return "Awarded quantities exceed the MRF request.";
+  if (quote.lines.some(offer => (usedOffers.get(offer.id) || 0) > offer.quantity * offer.conversionFactor + 0.000001)) return "Awarded quantity exceeds the supplier's quoted quantity.";
+  const subtotal = lines.reduce((sum, line) => sum + line.quantity * line.unitPrice, 0);
+  if (discount > subtotal + tax + freight) return "Discount exceeds the PO amount.";
+  return "";
+}
 
 export function applyCommand(previous: DemoSnapshot, command: Command, ctx: CommandContext = defaultContext): CommandResult {
   const state = structuredClone(previous);
@@ -57,12 +86,12 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       if (command.id && !original) return fail("MRF not found.");
       if (original && !["draft", "returned"].includes(original.status)) return fail("Only draft or returned MRFs can be edited.");
       if (command.intent === "submit") {
-        if (![command.scope, command.neededDate, command.purpose, command.location].every(x => x.trim())) return fail("Complete the request details before submitting.");
+        if (![command.scope, command.requestedBy, command.approvedBy, command.purchaser, command.financeOfficer].every(x => x.trim())) return fail("Complete the request's general information before submitting.");
         if (!command.documents.some(d => d.name.trim())) return fail("Add a signed MRF reference before submitting.", "documents");
-        if (!command.items.length || command.items.some(i => !i.name.trim() || !i.unit.trim() || !positive(i.quantity))) return fail("Each material needs a name, unit, and positive quantity.", "items");
+        if (!command.items.length || command.items.some(i => !i.name.trim() || !i.unit.trim() || !positive(i.quantity) || !i.neededDate.trim() || !i.purpose.trim() || !i.location.trim())) return fail("Each material needs a name, unit, positive quantity, date needed, purpose, and delivery location.", "items");
       }
-      const items = command.items.map(i => ({ ...i, name: i.name.trim(), unit: i.unit.trim(), id: i.id || id("item") }));
-      const fields = { siteId: command.siteId, category: command.category, scope: command.scope.trim(), items, neededDate: command.neededDate, purpose: command.purpose.trim(), location: command.location.trim(), remarks: command.remarks.trim(), documents: command.documents.filter(d => d.name.trim()), status: command.intent === "submit" ? "submitted" as const : "draft" as const, reason: undefined, updatedAt: at };
+      const items = command.items.map(i => ({ ...i, name: i.name.trim(), unit: i.unit.trim(), id: i.id || id("item"), neededDate: i.neededDate.trim(), purpose: i.purpose.trim(), location: i.location.trim(), remarks: i.remarks.trim() }));
+      const fields = { siteId: command.siteId, category: command.category, scope: command.scope.trim(), requestedBy: command.requestedBy.trim(), approvedBy: command.approvedBy.trim(), purchaser: command.purchaser.trim(), financeOfficer: command.financeOfficer.trim(), items, documents: command.documents.filter(d => d.name.trim()), status: command.intent === "submit" ? "submitted" as const : "draft" as const, reason: undefined, updatedAt: at };
       if (original) { Object.assign(original, fields); log(original.id, command.intent === "submit" ? "MRF revised and resubmitted" : "MRF draft saved"); return done(command.intent === "submit" ? "MRF submitted to the Project Manager." : "MRF draft saved.", original.id); }
       const requestId = id("mrf");
       state.requests.push({ id: requestId, ref: nextRef("MRF-2026", state.requests), createdAt: at, ...fields });
@@ -93,13 +122,41 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       log(request.id, "Supplier quotation added");
       return done("Quotation added.", quoteId);
     }
+    case "saveReviewedQuote": {
+      if (!permit("Procurement")) return fail("Switch to Procurement to review quotations.");
+      const request = state.requests.find(r => r.id === command.requestId);
+      if (!request || request.status !== "approved") return fail("Only an approved MRF can receive quotations.");
+      if (!state.suppliers.some(s => s.id === command.supplierId)) return fail("Choose a valid supplier.");
+      if (!command.ref.trim() || command.currency !== "PHP" || !Array.isArray(command.lines) || !command.lines.length || !command.documents.length) return fail("Add a PHP quotation with its source file and quoted lines.");
+      if ([command.tax, command.freight, command.discount].some(value => !nonnegative(value)) || !nonnegative(command.leadDays)) return fail("Enter valid quotation charges and lead time.");
+      if (command.lines.some(line => !line.description.trim() || !line.unit.trim() || !positive(line.quantity) || !positive(line.unitPrice) || !positive(line.conversionFactor) || (line.requestItemId && !request.items.some(item => item.id === line.requestItemId)))) return fail("Review each quoted line, quantity, price, and material match.");
+      const prior = command.supersedesId ? state.quotes.find(q => q.id === command.supersedesId && q.mrfId === request.id && q.supplierId === command.supplierId) : undefined;
+      if (command.supersedesId && !prior) return fail("The earlier quotation version was not found.");
+      const current = state.quotes.filter(q => q.mrfId === request.id && q.supplierId === command.supplierId && !state.quotes.some(later => later.supersedesId === q.id));
+      if (current.length && (!prior || !current.some(q => q.id === prior.id))) return fail("Choose the current supplier quotation as the revision being replaced.");
+      const quoteId = id("quote");
+      state.quotes.push({ id: quoteId, mrfId: request.id, supplierId: command.supplierId, ref: command.ref.trim(), prices: {}, available: command.available.trim(), leadDays: command.leadDays, terms: command.terms.trim(), documents: command.documents, lines: command.lines.map(line => ({ ...line, id: line.id || id("offer"), description: line.description.trim(), unit: line.unit.trim(), brand: line.brand.trim(), specification: line.specification.trim(), varianceReason: line.varianceReason.trim() })), version: (prior?.version || 0) + 1, supersedesId: prior?.id, currency: "PHP", tax: command.tax, freight: command.freight, discount: command.discount, validity: command.validity.trim(), extraction: command.extraction });
+      log(request.id, "Supplier quotation reviewed");
+      return done("Quotation saved for comparison.", quoteId);
+    }
+    case "createAwardPO": {
+      if (!permit("Procurement")) return fail("Switch to Procurement to prepare a PO.");
+      const quote = state.quotes.find(q => q.id === command.quoteId);
+      if (!quote) return fail("Choose a reviewed quotation.");
+      const error = awardError(state, command.requestId, quote, command.lines, command.tax, command.freight, command.discount);
+      if (error) return fail(error);
+      if (!reasonOK(command.reason)) return fail("Explain the supplier choice in at least five characters.");
+      const poId = id("po");
+      state.pos.push({ id: poId, ref: nextRef("PO-2026", state.pos), mrfId: command.requestId, quoteId: quote.id, lines: command.lines, tax: command.tax, freight: command.freight, discount: command.discount, status: "draft", priority: "Normal", notes: command.notes.trim(), selectionReason: command.reason.trim(), createdAt: at, updatedAt: at });
+      log(poId, "PO drafted from awarded quotation", command.reason);
+      return done("PO draft created.", poId);
+    }
     case "createPO": {
       if (!permit("Procurement")) return fail("Switch to Procurement to prepare a PO.");
       const request = state.requests.find(r => r.id === command.requestId);
       const quote = state.quotes.find(q => q.id === command.quoteId && q.mrfId === request?.id);
       if (!request || request.status !== "approved" || !quote) return fail("Choose a quote for an approved MRF.");
-      if (state.pos.some(p => p.mrfId === request.id)) return fail("This MRF already has a PO.");
-      if (state.quotes.filter(q => q.mrfId === request.id).length < 2) return fail("Compare at least two supplier quotations before selecting one.");
+      if (state.pos.some(p => p.mrfId === request.id && p.status !== "rejected")) return fail("Use the material award flow to create another PO for this MRF.");
       if (!reasonOK(command.reason)) return fail("Explain the supplier choice in at least five characters.", "reason");
       const poId = id("po");
       state.pos.push({ id: poId, ref: nextRef("PO-2026", state.pos), mrfId: request.id, quoteId: quote.id, status: "draft", priority: "Normal", notes: command.notes.trim(), selectionReason: command.reason.trim(), createdAt: at, updatedAt: at });
@@ -110,7 +167,17 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       if (!permit("Procurement")) return fail("Switch to Procurement to edit a PO.");
       const po = state.pos.find(p => p.id === command.id);
       if (!po || !["draft", "returned"].includes(po.status)) return fail("This PO is locked for editing.");
-      if (!state.quotes.some(q => q.id === command.quoteId && q.mrfId === po.mrfId)) return fail("Choose a quote linked to this MRF.");
+      const quote = state.quotes.find(q => q.id === command.quoteId && q.mrfId === po.mrfId);
+      if (!quote) return fail("Choose a quote linked to this MRF.");
+      if (po.lines) {
+        const lines = command.lines || po.lines;
+        const tax = command.tax ?? po.tax ?? 0, freight = command.freight ?? po.freight ?? 0, discount = command.discount ?? po.discount ?? 0;
+        const error = awardError(state, po.mrfId, quote, lines, tax, freight, discount, po.id);
+        if (error) return fail(error);
+        po.lines = lines; po.tax = tax; po.freight = freight; po.discount = discount;
+        if (!reasonOK(command.reason || po.selectionReason)) return fail("Explain the supplier choice in at least five characters.");
+        po.selectionReason = (command.reason || po.selectionReason).trim();
+      }
       po.quoteId = command.quoteId; po.notes = command.notes.trim(); po.updatedAt = at;
       if (command.finalize) { po.status = "finalized"; po.reviewReason = undefined; log(po.id, "PO finalized for Finance"); return done("PO finalized. Finance is next."); }
       log(po.id, "PO draft updated"); return done("PO draft saved.");
@@ -151,7 +218,7 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       if (!po || po.status !== "served") return fail("Only a served PO can receive a delivery batch.");
       const request = requestForPO(state, po);
       if (!request || !command.scheduledDate || !command.evidence.trim()) return fail("Enter a schedule and evidence reference.");
-      const lines = request.items.map(item => ({ itemId: item.id, expected: command.expected[item.id] ?? 0, accepted: 0, issue: "" }));
+      const lines = poItems(state, po).map(item => ({ itemId: item.id, expected: command.expected[item.id] ?? 0, accepted: 0, issue: "" }));
       if (lines.some(line => !nonnegative(line.expected) || line.expected > schedulableFor(state, po, line.itemId)) || lines.every(line => line.expected === 0)) return fail("Expected quantities must fit the unscheduled PO balance.", "expected");
       const batchId = id("batch");
       state.batches.push({ id: batchId, ref: nextRef("DEL-2026", state.batches), poId: po.id, scheduledDate: command.scheduledDate, evidence: command.evidence.trim(), delayReason: command.delayReason.trim(), lines, status: "expected", createdAt: at, updatedAt: at });
@@ -182,7 +249,7 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       if (changed && !reasonOK(command.reason)) return fail("Explain changes to accepted quantities before posting.", "reason");
       for (const line of batch.lines) {
         const quantity = command.accepted[line.itemId];
-        const ordered = request.items.find(item => item.id === line.itemId)?.quantity ?? 0;
+        const ordered = orderedFor(state, po, line.itemId);
         if (!nonnegative(quantity) || quantity > line.expected || quantity > ordered - acceptedFor(state, po.id, line.itemId, batch.id)) return fail("Posting quantity exceeds the batch or PO balance.");
         line.accepted = quantity;
       }
@@ -258,6 +325,15 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       state.suppliers.push({ id: supplierId, name: command.name.trim(), location: command.location.trim(), contact: command.contact.trim(), accreditation: command.accreditation.trim() });
       log(supplierId, "Supplier added");
       return done("Supplier added.", supplierId);
+    }
+    case "addSupplierFromQuote": {
+      if (!permit("Procurement")) return fail("Switch to Procurement to confirm a quotation supplier.");
+      const name = command.name.trim();
+      if (!name || state.suppliers.some(supplier => supplier.name.toLowerCase() === name.toLowerCase())) return fail("Enter a new supplier name.");
+      const supplierId = id("supplier");
+      state.suppliers.push({ id: supplierId, name, location: "", contact: "", accreditation: "Pending" });
+      log(supplierId, "Supplier added from quotation");
+      return done("Supplier added from quotation.", supplierId);
     }
   }
 }

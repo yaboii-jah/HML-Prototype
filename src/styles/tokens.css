@@ -39,7 +39,7 @@ html[data-theme="dark"] ::selection{background:#315f9b;color:#fff}
 html[data-theme="dark"] :focus-visible{outline-color:#73a7f3}
 
 html[data-theme="dark"] :is(.side-nav,.masthead,.icon-button,.notification-popover,.state-card,.empty-page,.modal,.role-options button,.panel,.site-tile,.quote-panel,.metric-strip>div,.toolbar,.table-frame,input,select,textarea,.button.secondary,.button.danger-outline){background:var(--surface)}
-html[data-theme="dark"] :is(.side-caption,.side-link,.side-link svg,.side-foot,.top-context,.site-context,.role-label small,.masthead-role svg,.metric-strip small,.toolbar label,.field>span,.table-frame th,.task-age,.stage-row,.purchase-pulse dt,.owner-box small){color:var(--muted)}
+html[data-theme="dark"] :is(.side-caption,.side-link,.side-link svg,.side-foot,.top-context,.site-context,.role-label small,.masthead-role svg,.metric-strip small,.toolbar label,.field>span,.table-frame th,.task-age,.stage-row,.purchase-pulse dt){color:var(--muted)}
 html[data-theme="dark"] :is(.side-link:hover,.masthead-role:hover,.icon-button:hover,.notification-popover>a:hover,.data-link:hover,.compact-list>a:hover,.task-list>a:hover,.table-frame tbody tr:hover){background:#1d2a3d}
 html[data-theme="dark"] .side-link.active,html[data-theme="dark"] .side-link.active:hover{background:#223654;color:#a9c9f8}
 html[data-theme="dark"] .side-link i{background:#223149;color:#91b8f2}
@@ -50,7 +50,7 @@ html[data-theme="dark"] .role-avatar,html[data-theme="dark"] .role-options butto
 html[data-theme="dark"] .role-options button:hover,html[data-theme="dark"] .role-options button.selected{border-color:#507bb4;background:#203450}
 html[data-theme="dark"] .mobile-demo{background:#131f2f;color:var(--muted)}
 
-html[data-theme="dark"] :is(.owner-box,.decision-panel){background:#1b2a3e;border-color:#334965}
+html[data-theme="dark"] :is(.decision-panel){background:#1b2a3e;border-color:#334965}
 html[data-theme="dark"] :is(.action-bar,.purchase-pulse){background:#182d45;border-color:#315174}
 html[data-theme="dark"] .category-chip,html[data-theme="dark"] .supplier-initial{background:#203550;border-color:#345272;color:#9cc4fa}
 html[data-theme="dark"] :is(.callout,.callout.good){background:#17352f}

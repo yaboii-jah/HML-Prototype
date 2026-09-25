@@ -2,13 +2,13 @@
 
 > **Living document:** This is the canonical, implementation-aligned context for the application. Update this file in the same change whenever a major implementation changes the product scope, business workflow, domain model, permissions, routes, persistence, seeded walkthrough, architecture, or verification strategy. Do not record small visual polish, copy edits, or isolated bug fixes unless they change one of those areas.
 
-**Last verified:** 2026-09-24
+**Last verified:** 2026-09-25
 **Application version:** Prototype (`package.json` 0.1.0)
-**State schema:** `DemoSnapshot` version 2
+**State schema:** `DemoSnapshot` version 4
 
 ## Product in one paragraph
 
-HML ConstructSync is a browser-only construction operations prototype that demonstrates the linked journey from a Material Request Form (MRF) through Project Manager review, supplier quotation comparison, Purchase Order (PO) preparation, Finance review, supplier serving, delivery receiving, site inventory posting, material usage, and Accounting document/payment tracking. It uses fictional seeded data, simulated role switching, and browser `localStorage`; it is not a production system and has no authentication, backend, database, real file storage, supplier portal, payment integration, or external API.
+HML ConstructSync is a browser-only construction operations prototype that demonstrates the linked journey from a Material Request Form (MRF) through Project Manager review, supplier quotation comparison, Purchase Order (PO) preparation, Finance review, supplier serving, delivery receiving, site inventory posting, material usage, and Accounting document/payment tracking. It uses fictional seeded data, simulated role switching, browser `localStorage` for records, and IndexedDB for supplier quotation files. A local Next.js server route can parse quotations with Gemini when `GEMINI_API_KEY` is configured. It has no authentication, database, shared file storage, supplier portal, or payment integration.
 
 ## Current product boundary
 
@@ -16,7 +16,9 @@ HML ConstructSync is a browser-only construction operations prototype that demon
 - Role switching changes permitted actions and dashboard tasks. It is a presentation of authorization rules, not security.
 - Site filtering changes dashboard and queue context without creating separate tenant data.
 - All operational changes pass through typed domain commands and update one linked snapshot.
-- Documents are metadata references only (name/type or reference text); no document bytes are stored.
+- MRF and other document references are metadata only. Original supplier quotation PDFs/images are kept in the uploading browser's IndexedDB and linked to reviewed quotation records.
+- The Gemini API key stays in the local Next.js server environment. Simulated roles do not secure the parsing endpoint; this integration is intended for local use only.
+- For local parsing, copy `.env.example` to `.env.local`, set `GEMINI_API_KEY`, and restart `next dev`. Quotation review's manual fallback works without a key.
 - External actions such as serving a PO and recording payment are demonstrations only.
 - The primary experience is desktop, while delivery receiving and inventory actions are intended to remain usable on mobile widths.
 
@@ -25,7 +27,8 @@ HML ConstructSync is a browser-only construction operations prototype that demon
 ```text
 Site Personnel creates/submits MRF
   -> Project Manager approves, returns, or rejects
-  -> Procurement compares at least two quotes and drafts PO
+  -> Procurement uploads supplier quotations, reviews extracted lines, compares offers, and awards quantities
+  -> Procurement creates one or more supplier-specific PO drafts
   -> Procurement finalizes PO for Finance
   -> Finance approves, holds, returns, or rejects
   -> Procurement serves an approved PO
@@ -45,7 +48,7 @@ The statuses for the request, PO/Finance review, delivery, inventory posting, do
 | --- | --- |
 | Site Personnel | Create/save/submit or revise MRFs; confirm receiving; post accepted stock; record usage and stock adjustments. |
 | Project Manager | Approve submitted MRFs or return/reject them with a reason. |
-| Procurement | Add quotations, select a supplier, create/edit/finalize POs, and serve Finance-approved POs. |
+| Procurement | Upload and review supplier quotations, correct extraction, match offered materials, allocate quantities, create/edit/finalize supplier-specific POs, and serve Finance-approved POs. |
 | Finance | Set PO priority; approve, hold, return, or reject POs; approval is constrained by available site budget. |
 | Logistics | Schedule delivery batches against the unscheduled balance of a served PO. |
 | Accounting / Auditing | Track invoice/receipt review, discrepancies, payment references, and justified stock adjustments. |
@@ -61,16 +64,19 @@ The domain command layer in `src/domain/commands.ts` is the authority for permis
 - States: `draft`, `submitted`, `returned`, `approved`, `rejected`.
 - Only Site Personnel can create or edit an MRF, and only drafts or returned records are editable.
 - Submission requires request details, at least one valid item, and a signed MRF document reference.
+- General request information includes manually entered Requested by, Approved by, Purchaser/Procurement Officer, and Finance Officer names. These are document fields, not workflow approvals. All four names and the work package are required for submission.
+- Each material carries its own date needed, purpose, delivery location, and optional remarks. Submission requires date, purpose, and location for every material; drafts may be incomplete. Register and project summaries show the earliest material date.
 - Only a submitted MRF can be reviewed by a Project Manager.
 - Return and rejection require a reason of at least five characters.
 - Only approved MRFs can receive quotations.
 
 ### Quotations and purchase orders
 
-- A quote must cover every requested line with a positive unit price.
-- A PO can be created only after at least two supplier quotations are available for an approved MRF.
-- The supplier selection requires a written rationale; the cheapest quote may be highlighted but is never selected automatically.
-- There is at most one PO per MRF in the current prototype.
+- Reviewed quotations may cover some MRF lines. They retain all offered lines, commercial terms, source file IDs, and immutable revisions. Older seeded quotations remain readable as legacy references without original file bytes.
+- Gemini proposes extracted data only; Procurement checks it against the original, corrects it, confirms MRF matches and unit conversions, and may use a manual fallback. Only PHP quotations are awardable.
+- A supplier choice needs a written rationale. There is no minimum quotation count and no automatic selection.
+- Each PO stores its awarded MRF quantities and source quotation revision. Multiple POs may share one MRF; a material may be split across suppliers. Active PO allocations cannot exceed the requested or quoted quantity; rejected POs release their allocation.
+- Procurement confirms tax, freight, and discount for each PO draft. Draft and Finance-returned POs may be edited; finalized purchasing details are locked.
 - PO states: `draft`, `finalized`, `hold`, `returned`, `rejected`, `approved`, `served`.
 - Only draft or Finance-returned POs can be edited. Finalizing sends the PO to Finance.
 - Finance can review `finalized` or `hold` POs. Hold, return, and rejection require a reason.
@@ -120,15 +126,16 @@ The domain command layer in `src/domain/commands.ts` is the authority for permis
 | Persistence | `src/mock/repository.ts` owns local loading, saving, migration, recovery, and reset behavior. |
 | Seed baseline | `src/mock/fixtures/seed.ts` creates the initial linked demo snapshot. |
 | Styling | Global layers in `src/styles/` plus `app/globals.css`; `ui-direction.md` documents the visual direction. |
-| Verification | Domain tests in `tests/demo.test.mjs`; browser walkthrough in `scripts/browser-smoke.mjs`. |
+| Verification | Domain tests in `tests/demo.test.mjs`; quotation upload and split-award browser check in `scripts/quotation-smoke.mjs`; broader browser walkthrough in `scripts/browser-smoke.mjs`. |
 
 Keep business rules out of page components where practical. New state transitions should be modeled as commands, new calculations as selectors, and durable records in the versioned snapshot.
 
 ## Persistence and recovery
 
-- Current storage key: `hml-constructsync-demo-v2`.
+- Current storage key: `hml-constructsync-demo-v4`.
 - On first load, the repository seeds the workspace if no saved state exists.
-- Compatible data migrates from `hml-buildsync-demo-v2` or version-1 `hml-buildsync-demo-v1` while preserving IDs and user edits where possible.
+- Compatible data migrates from v3, `hml-constructsync-demo-v2`, `hml-buildsync-demo-v2`, or version-1 `hml-buildsync-demo-v1`. Previous request-wide material details are copied to each item, IDs and edits are preserved, and the new name fields remain blank until entered.
+- Quotation originals are browser-local. Clearing browser data removes them; the Gemini Files API is not used as permanent document storage.
 - Malformed saved data enters an explicit recovery state instead of being silently overwritten.
 - If storage is unavailable, the app continues with volatile in-tab state and displays a warning.
 - Reset restores the current seed and removes the recognized legacy keys.
@@ -145,7 +152,7 @@ Any incompatible snapshot change requires a schema-version decision and a migrat
 | `/projects`, `/projects/[siteId]` | Project register and site workspace. |
 | `/requests`, `/requests/new` | MRF register and creation. |
 | `/requests/[id]`, `/requests/[id]/edit` | MRF detail/review and editable draft/return form. |
-| `/requests/[id]/quotes` | Quotation comparison, quote entry, and PO selection flow. |
+| `/requests/[id]/quotes` | Supplier document upload, Gemini extraction review, material-level comparison, and split PO awards. |
 | `/suppliers` | Supplier directory and reference maintenance. |
 | `/purchase-orders`, `/purchase-orders/[id]` | PO register and linked detail. |
 | `/purchase-orders/[id]/edit` | Editable draft or returned PO. |
@@ -195,7 +202,7 @@ The domain test suite currently protects these high-value behaviors:
 - MRF permission/review rules and ID preservation after return/resubmission.
 - Single stock posting, outstanding quantities, site isolation, and nonnegative inventory.
 - Payment movement from commitment to spent without double-reducing available budget.
-- Version-1 and prior-product storage migration plus malformed-data recovery.
+- Version-1 and version-2 storage migration plus malformed-data recovery.
 - Legacy URL routing.
 
 ## Known assumptions and non-goals
@@ -232,3 +239,5 @@ When updating it:
 | Date | Context change |
 | --- | --- |
 | 2026-09-24 | Created the canonical application context from the implemented routes, domain model, command rules, persistence layer, seed data, and tests. |
+| 2026-09-25 | Moved request detail fields to each material, added general information names, and migrated saved snapshots to version 3. |
+| 2026-09-25 | Added browser-local supplier quotation files, Gemini extraction review, material-level comparison, split supplier awards, and version 4 data migration. |
