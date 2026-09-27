@@ -37,7 +37,7 @@ export function DemoProvider({ children }: { children: ReactNode }) {
     if (command.type === "setRole" && previousRole) demoSession.select(command.role);
     const result = await demoRepository.execute(command);
     if (!result.ok && command.type === "setRole" && previousRole) demoSession.select(previousRole);
-    setNotice(result.message);
+    if (result.ok && command.type !== "saveQuoteDraft" && command.type !== "stageAward") setNotice(result.message);
     return result;
   };
   const signIn = async (email: string, password: string) => {
@@ -50,7 +50,7 @@ export function DemoProvider({ children }: { children: ReactNode }) {
     return { ok: true, message: `Entered as ${role}.` };
   };
   const signOut = () => { demoSession.clear(); setNotice(""); };
-  const reset = async () => { await demoRepository.reset(); setNotice("Workspace restored."); };
+  const reset = async () => { await demoRepository.reset(); setNotice("Workspace cleared. Start by adding a project."); };
   return <DemoContext.Provider value={{ ...view, run, session, signIn, signOut, reset, notice, clearNotice: () => setNotice("") }}>{children}</DemoContext.Provider>;
 }
 

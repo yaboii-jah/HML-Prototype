@@ -29,7 +29,8 @@ export function Dashboard() {
   const outstanding = activePO && material ? outstandingFor(state, activePO, material.id) : 0;
   const used = material && activeRequest ? -state.movements.filter(movement => movement.siteId === activeRequest.siteId && movement.itemName.toLowerCase() === material.name.toLowerCase() && movement.unit.toLowerCase() === material.unit.toLowerCase() && movement.kind === "usage").reduce((sum, movement) => sum + movement.quantity, 0) : 0;
   return <>
-    <PageHeader eyebrow={`${state.role} workspace`} title="Operations dashboard" description="Your next decisions and the current position of every project." actions={state.role === "Site Personnel" ? <Link href="/requests/new" className="button primary">New material request</Link> : undefined}/>
+    <PageHeader eyebrow={`${state.role} workspace`} title="Operations dashboard" description="Your next decisions and the current position of every project." actions={state.role === "Site Personnel" && state.sites.length ? <Link href="/requests/new" className="button primary">New material request</Link> : undefined}/>
+    {!state.sites.length && <section className="panel"><span className="eyebrow">START HERE</span><h2>Build your workflow from an empty workspace</h2><p>Switch to Administrator to add a project. Then switch to Site Personnel to create the first MRF. Each handoff will appear in the next role’s queue.</p><Link className="button primary" href="/admin">Set up project</Link></section>}
     <div className="metric-strip dashboard-metrics">
       <div><span className="metric-icon blue">MRF</span><small>PM reviews</small><strong>{metrics.pmReviews}</strong><span>Requests awaiting a decision</span></div>
       <div><span className="metric-icon cyan">PO</span><small>Finance reviews</small><strong>{metrics.financeReviews}</strong><span>Purchase orders to assess</span></div>
