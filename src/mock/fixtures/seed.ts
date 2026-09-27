@@ -1,4 +1,6 @@
-﻿import type { DemoSnapshot, MRF, PO, Quote, Site, Supplier, Batch, Movement } from "@/src/domain/types";
+import type { DemoSnapshot, MRF, PO, Quote, Site, Supplier, Batch, Movement } from "@/src/domain/types";
+
+import { upgradeLegacyQuotes } from "../../domain/procurement.ts";
 
 export function seedDemo(): DemoSnapshot {
   const day = (offset: number) => { const d = new Date(); d.setDate(d.getDate() + offset); return d.toISOString().slice(0, 10); };
@@ -40,7 +42,8 @@ export function seedDemo(): DemoSnapshot {
     { id:"mv2", siteId:"site-a", itemName:"Portland cement", unit:"bag", quantity:-30, kind:"usage", reason:"Tower 1 slab pour", actor:"Site Personnel", at:at(-7) },
     { id:"mv3", siteId:"site-b", itemName:"Safety net", unit:"roll", quantity:12, kind:"opening", reason:"Opening stock balance", actor:"Administrator", at:at(-20) },
   ];
-  return { version:4, role:"Site Personnel", siteFilter:"all", sites, suppliers, categories:["Structural","Formwork","Masonry","Electrical","Finishes","Temporary Works"], requests, quotes, pos, batches, movements, payments:[], accounting:[{poId:"po1",invoiceRef:"",receiptRef:"DR-4821",review:"Incomplete",note:"Supplier invoice pending."}], activity:[{id:"a1",entity:"po1",at:at(-14),actor:"Procurement",action:"PO served"},{id:"a2",entity:"b1",at:at(-9),actor:"Site Personnel",action:"60 bags posted to site stock"},{id:"a3",entity:"m7",at:at(-5),actor:"Project Manager",action:"MRF returned",reason:requests[6].reason}] };
+  const snapshot: DemoSnapshot = { version:6, role:"Site Personnel", siteFilter:"all", sites, suppliers, categories:["Structural","Formwork","Masonry","Electrical","Finishes","Temporary Works"], requests, quotes, pendingAwards:[], pos, batches, movements, payments:[], accounting:[{poId:"po1",invoiceRef:"",receiptRef:"DR-4821",review:"Incomplete",note:"Supplier invoice pending."}], activity:[{id:"a1",entity:"po1",at:at(-14),actor:"Procurement",action:"PO served"},{id:"a2",entity:"b1",at:at(-9),actor:"Site Personnel",action:"60 bags posted to site stock"},{id:"a3",entity:"m7",at:at(-5),actor:"Project Manager",action:"MRF returned",reason:requests[6].reason}] };
+  return upgradeLegacyQuotes(snapshot);
 }
 
 

@@ -1,11 +1,12 @@
 import { applyCommand, type Command, type CommandResult } from "../domain/commands.ts";
-import { seedDemo } from "./fixtures/seed.ts";
+import { blankWorkspace } from "./fixtures/blank.ts";
 import { normalizeKnownPlaceholders } from "./normalize.ts";
+import { upgradeLegacyQuotes } from "../domain/procurement.ts";
 import { ROLES, type DemoSnapshot, type LegacySnapshot } from "../domain/types.ts";
 import { clearQuoteFiles } from "../features/requests/quote-files.ts";
 
-const CURRENT_KEY = "hml-constructsync-demo-v4";
-const PREVIOUS_KEYS = ["hml-constructsync-demo-v3", "hml-constructsync-demo-v2", "hml-buildsync-demo-v2", "hml-buildsync-demo-v1"] as const;
+const CURRENT_KEY = "hml-constructsync-demo-v6";
+const PREVIOUS_KEYS = ["hml-constructsync-demo-v5", "hml-constructsync-demo-v4", "hml-constructsync-demo-v3", "hml-constructsync-demo-v2", "hml-buildsync-demo-v2", "hml-buildsync-demo-v1"] as const;
 export type RepositoryView = { snapshot: DemoSnapshot | null; status: "loading" | "ready" | "volatile" | "recovery"; message?: string };
 export interface DemoRepository {
   load(): Promise<RepositoryView>;
@@ -25,11 +26,19 @@ export function migrateLegacy(value: unknown): DemoSnapshot | null {
     const { neededDate, purpose, location, remarks, items, ...rest } = request;
     return { ...rest, requestedBy: "", approvedBy: "", purchaser: "", financeOfficer: "", items: items.map(item => ({ ...item, neededDate, purpose, location, remarks })) };
   });
-  return normalizeKnownPlaceholders({ ...structuredClone(legacy), requests, version: 4 });
+  return upgradeLegacyQuotes(normalizeKnownPlaceholders({ ...structuredClone(legacy), requests, pendingAwards: [], version: 6 }));
+}
+export function migrateV3OrV4(value: unknown): DemoSnapshot | null {
+  if (!isSnapshotShape(value) || ![3, 4].includes(value.version as number)) return null;
+  return upgradeLegacyQuotes(normalizeKnownPlaceholders({ ...structuredClone(value), pendingAwards: [], version: 6 } as unknown as DemoSnapshot));
+}
+export function migrateV5(value: unknown): DemoSnapshot | null {
+  if (!isSnapshotShape(value) || value.version !== 5 || !Array.isArray(value.pendingAwards)) return null;
+  return normalizeKnownPlaceholders({ ...structuredClone(value), version: 6 } as DemoSnapshot);
 }
 const parseCurrent = (raw: string): DemoSnapshot | null => {
   const parsed: unknown = JSON.parse(raw);
-  return isSnapshotShape(parsed) && parsed.version === 4 ? normalizeKnownPlaceholders(parsed as DemoSnapshot) : null;
+  return isSnapshotShape(parsed) && parsed.version === 6 && Array.isArray(parsed.pendingAwards) ? normalizeKnownPlaceholders(parsed as DemoSnapshot) : null;
 };
 
 export class LocalDemoRepository implements DemoRepository {
@@ -68,7 +77,7 @@ export class LocalDemoRepository implements DemoRepository {
         if (raw) { previous = { key, raw }; break; }
       }
     } catch {
-      this.view = { snapshot: seedDemo(), status: "volatile", message: "Changes cannot be saved right now." };
+      this.view = { snapshot: blankWorkspace(), status: "volatile", message: "Changes cannot be saved right now." };
       return this.view;
     }
     try {
@@ -79,14 +88,12 @@ export class LocalDemoRepository implements DemoRepository {
       }
       if (previous) {
         const source: unknown = JSON.parse(previous.raw);
-        const migrated = isSnapshotShape(source) && source.version === 3
-          ? normalizeKnownPlaceholders({ ...source, version: 4 } as DemoSnapshot)
-          : migrateLegacy(source);
+        const migrated = migrateV5(source) ?? migrateV3OrV4(source) ?? migrateLegacy(source);
         this.view = migrated ? this.write(migrated) : { snapshot: null, status: "recovery", message: "Saved workspace data could not be opened. Restore the workspace to continue." };
         if (migrated && this.view.status === "ready") try { localStorage.removeItem(previous.key); } catch {}
         return this.view;
       }
-      this.view = this.write(seedDemo());
+      this.view = this.write(blankWorkspace());
       return this.view;
     } catch {
       this.view = { snapshot: null, status: "recovery", message: "Saved workspace data could not be opened. Restore the workspace to continue." };
@@ -105,7 +112,7 @@ export class LocalDemoRepository implements DemoRepository {
   }
   async reset() {
     this.initialized = true;
-    this.view = this.write(seedDemo());
+    this.view = this.write(blankWorkspace());
     try { await clearQuoteFiles(); } catch {}
     if (this.view.status === "ready") try { PREVIOUS_KEYS.forEach(key => localStorage.removeItem(key)); } catch {}
     this.notify();

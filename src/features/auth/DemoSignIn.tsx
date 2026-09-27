@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useDemo } from "@/src/app-state/DemoProvider";
 import { DEMO_ACCOUNTS, DEMO_PASSWORD } from "@/src/app-state/demo-session";
+import { useConfirmation } from "@/src/components/ui/ConfirmDialog";
 
 const WORKFLOW_STAGES = [
   { name: "Request", title: "Start with a clear request.", description: "Capture the materials a site needs and keep the handoff visible to everyone involved.", card: "Material request", detail: "Ready for review" },
@@ -20,6 +21,7 @@ function destinationAfterSignIn() {
 }
 
 export function DemoSignIn() {
+  const { confirm, confirmation } = useConfirmation();
   const { snapshot, status, message, session, signIn, reset } = useDemo();
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -85,7 +87,7 @@ export function DemoSignIn() {
   };
 
   if (status === "loading" || session.status === "loading") return <div className="state-screen"><div className="state-card"><span className="eyebrow">HML ConstructSync</span><h1>Opening demo sign-in</h1><p>Preparing sample accounts…</p></div></div>;
-  if (status === "recovery" || !snapshot) return <div className="state-screen"><div className="state-card"><span className="eyebrow">WORKSPACE RECOVERY</span><h1>Saved data needs attention</h1><p>{message}</p><button className="button primary" onClick={() => { if (window.confirm("Restore the workspace? Current saved records will be replaced.")) void reset(); }}>Restore workspace</button></div></div>;
+  if (status === "recovery" || !snapshot) return <><div className="state-screen"><div className="state-card"><span className="eyebrow">WORKSPACE RECOVERY</span><h1>Saved data needs attention</h1><p>{message}</p><button className="button primary" onClick={() => void (async () => { if (await confirm("Restore this workspace?", "The saved records in this browser will be replaced with an empty workspace.", "Restore workspace", true)) await reset(); })()}>Restore workspace</button></div></div>{confirmation}</>;
 
   const stage = WORKFLOW_STAGES[stageIndex];
   const playbackPaused = manualPaused || reducedMotion;

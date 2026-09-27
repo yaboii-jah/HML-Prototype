@@ -2,24 +2,17 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useRef, useState, type ChangeEvent, type DragEvent, type FormEvent } from "react";
+import { useEffect, useRef, useState, type ChangeEvent, type DragEvent, type FormEvent } from "react";
 import { useDemo } from "@/src/app-state/DemoProvider";
 import { Badge, Documents, Empty, Field, InlineError, PageHeader, RecordHeader, Timeline } from "@/src/components/ui/Primitives";
+import { useConfirmation } from "@/src/components/ui/ConfirmDialog";
 import { MissingRecord } from "@/src/components/ui/States";
 import { dateText, money } from "@/src/domain/format";
 import { newId } from "@/src/domain/ids";
 import { earliestNeededDate, posForRequest, poTotal, siteName, stockFor, supplierName } from "@/src/domain/selectors";
 import type { DemoSnapshot, DocumentRef, Item } from "@/src/domain/types";
+import { deleteLocalFile, saveRequestFile } from "./quote-files";
 
-const MAX_REFERENCE_SIZE = 25 * 1024 * 1024;
-const REFERENCE_TYPES: Record<string, string[]> = {
-  pdf: ["application/pdf"],
-  jpg: ["image/jpeg", "image/jpg"],
-  jpeg: ["image/jpeg", "image/jpg"],
-  png: ["image/png"],
-  webp: ["image/webp"],
-};
-const REFERENCE_ACCEPT = ".pdf,.jpg,.jpeg,.png,.webp";
 const MATERIAL_COPY_FIELDS = [
   { key: "unit", label: "Unit" },
   { key: "neededDate", label: "Date needed" },
@@ -29,26 +22,17 @@ const MATERIAL_COPY_FIELDS = [
 ] as const;
 type MaterialCopyField = (typeof MATERIAL_COPY_FIELDS)[number]["key"];
 
-function referenceType(file: File) {
-  const extension = file.name.split(".").pop()?.toLowerCase() || "";
-  const acceptedMimes = REFERENCE_TYPES[extension];
-  return acceptedMimes && (!file.type || acceptedMimes.includes(file.type.toLowerCase()))
-    ? file.type || acceptedMimes[0]
-    : "";
-}
-
 function referenceLabel(document: DocumentRef) {
   const extension = document.name.split(".").pop()?.toUpperCase();
-  if (["PDF", "JPG", "JPEG", "PNG", "WEBP"].includes(extension || "")) return `${extension} file`;
-  return document.type || "Document reference";
+  return extension ? `${extension} file` : "Document file";
 }
 
 export function Requests() {
   const { snapshot: state } = useDemo();
-  const [search,setSearch]=useState(""), [status,setStatus]=useState("all"), [category,setCategory]=useState("all"), [neededBy,setNeededBy]=useState(""), [sort,setSort]=useState("recent");
+  const [search,setSearch]=useState(""), [status,setStatus]=useState("all"), [neededBy,setNeededBy]=useState(""), [sort,setSort]=useState("recent");
   if(!state)return null;
-  const rows=state.requests.filter(r=>(state.siteFilter==="all"||r.siteId===state.siteFilter)&&`${r.ref} ${r.category} ${r.items.map(i=>i.name).join(" ")}`.toLowerCase().includes(search.toLowerCase())&&(status==="all"||r.status===status)&&(category==="all"||r.category===category)&&(!neededBy||r.items.some(item=>item.neededDate && item.neededDate<=neededBy))).sort((a,b)=>sort==="needed"?(earliestNeededDate(a)||"9999").localeCompare(earliestNeededDate(b)||"9999"):b.updatedAt.localeCompare(a.updatedAt));
-  return <><PageHeader eyebrow="MATERIAL REQUEST REGISTER" title="Material requests" description="Requirements, PM decisions, quotations, and linked purchases." actions={state.role==="Site Personnel"?<Link className="button primary" href="/requests/new">+ New MRF</Link>:undefined}/><div className="toolbar"><input aria-label="Search requests" placeholder="Search MRF or material" value={search} onChange={e=>setSearch(e.target.value)}/><select aria-label="Request status" value={status} onChange={e=>setStatus(e.target.value)}>{["all","draft","submitted","returned","approved","rejected"].map(s=><option key={s} value={s}>{s==="all"?"All statuses":s}</option>)}</select><select aria-label="Request category" value={category} onChange={e=>setCategory(e.target.value)}><option value="all">All categories</option>{state.categories.map(c=><option key={c}>{c}</option>)}</select><input aria-label="Needed by date" type="date" value={neededBy} onChange={e=>setNeededBy(e.target.value)}/><select aria-label="Sort requests" value={sort} onChange={e=>setSort(e.target.value)}><option value="recent">Recently updated</option><option value="needed">Needed soonest</option></select></div><div className="table-frame"><table><thead><tr><th>MRF / material</th><th>Project</th><th>Earliest needed</th><th>Category</th><th>Status</th><th>Updated</th></tr></thead><tbody>{rows.map(r=><tr key={r.id}><td><Link className="table-primary" href={`/requests/${r.id}`}>{r.ref}</Link><small>{r.items.map(i=>`${i.quantity} ${i.unit} ${i.name}`).join(", ")}</small></td><td>{siteName(state,r.siteId)}</td><td>{earliestNeededDate(r)?dateText(earliestNeededDate(r)):"—"}</td><td>{r.category}</td><td><Badge value={r.status}/></td><td>{dateText(r.updatedAt)}</td></tr>)}</tbody></table>{!rows.length&&<Empty detail="Try a different search, filter, or site."/>}</div></>;
+  const rows=state.requests.filter(r=>(state.siteFilter==="all"||r.siteId===state.siteFilter)&&`${r.ref} ${r.items.map(i=>i.name).join(" ")}`.toLowerCase().includes(search.toLowerCase())&&(status==="all"||r.status===status)&&(!neededBy||r.items.some(item=>item.neededDate && item.neededDate<=neededBy))).sort((a,b)=>sort==="needed"?(earliestNeededDate(a)||"9999").localeCompare(earliestNeededDate(b)||"9999"):b.updatedAt.localeCompare(a.updatedAt));
+  return <><PageHeader eyebrow="MATERIAL REQUEST REGISTER" title="Material requests" description="Requirements, PM decisions, quotations, and linked purchases." actions={state.role==="Site Personnel"?<Link className="button primary" href="/requests/new">+ New MRF</Link>:undefined}/><div className="toolbar"><input aria-label="Search requests" placeholder="Search MRF or material" value={search} onChange={e=>setSearch(e.target.value)}/><select aria-label="Request status" value={status} onChange={e=>setStatus(e.target.value)}>{["all","draft","submitted","returned","approved","rejected"].map(s=><option key={s} value={s}>{s==="all"?"All statuses":s}</option>)}</select><input aria-label="Needed by date" type="date" value={neededBy} onChange={e=>setNeededBy(e.target.value)}/><select aria-label="Sort requests" value={sort} onChange={e=>setSort(e.target.value)}><option value="recent">Recently updated</option><option value="needed">Needed soonest</option></select></div><div className="table-frame"><table><thead><tr><th>MRF / material</th><th>Project</th><th>Earliest needed</th><th>Status</th><th>Updated</th></tr></thead><tbody>{rows.map(r=><tr key={r.id}><td><Link className="table-primary" href={`/requests/${r.id}`}>{r.ref}</Link><small>{r.items.map(i=>`${i.quantity} ${i.unit} ${i.name}`).join(", ")}</small></td><td>{siteName(state,r.siteId)}</td><td>{earliestNeededDate(r)?dateText(earliestNeededDate(r)):"—"}</td><td><Badge value={r.status}/></td><td>{dateText(r.updatedAt)}</td></tr>)}</tbody></table>{!rows.length&&<Empty detail={state.requests.length ? "Try a different search, filter, or site." : "No material requests yet. Site Personnel can create the first MRF."}/>}</div></>;
 }
 
 export function RequestForm({ id }: { id?: string }) {
@@ -56,9 +40,15 @@ export function RequestForm({ id }: { id?: string }) {
   const router = useRouter();
   const original = state?.requests.find(request => request.id === id);
   const inputRef = useRef<HTMLInputElement>(null);
+  const pendingFileIds = useRef(new Set<string>());
+  useEffect(() => { const staged = pendingFileIds.current; return () => { for (const fileId of staged) void deleteLocalFile(fileId).catch(() => {}); }; }, []);
+  const { confirm, confirmation } = useConfirmation();
   const [items, setItems] = useState<Item[]>(() => original?.items.map(item => ({ ...item })) || [{ id: newId("item"), name: "", unit: "bag", quantity: 1, neededDate: new Date().toISOString().slice(0, 10), purpose: "", location: "", remarks: "" }]);
   const [documentState, setDocumentState] = useState<{ id?: string; touched: boolean; documents: DocumentRef[] }>(() => ({ id, touched: false, documents: [] }));
   const documents = documentState.id === id && documentState.touched ? documentState.documents : original?.documents || [];
+  const [scopeState, setScopeState] = useState<{ id?: string; touched: boolean; document?: DocumentRef }>(() => ({ id, touched: false }));
+  const scopeDocument = scopeState.id === id && scopeState.touched ? scopeState.document : original?.scopeDocument;
+  const attachedDocuments = [...(scopeDocument ? [{ ...scopeDocument, type: "Scope" }] : []), ...documents];
   const [error, setError] = useState("");
   const [attachmentError, setAttachmentError] = useState("");
   const [dragActive, setDragActive] = useState(false);
@@ -118,7 +108,7 @@ export function RequestForm({ id }: { id?: string }) {
     const currentItem = items.find(item => item.id === itemId);
     const updatedItem = currentItem ? { ...currentItem, ...patch } : null;
     setItems(current => current.map(item => item.id === itemId ? { ...item, ...patch } : item));
-    if (invalidItemId === itemId && updatedItem && updatedItem.name.trim() && updatedItem.unit.trim() && Number.isFinite(updatedItem.quantity) && updatedItem.quantity > 0 && updatedItem.neededDate.trim() && updatedItem.purpose.trim() && updatedItem.location.trim()) { setInvalidItemId(null); setError(""); }
+    if (invalidItemId === itemId && updatedItem && updatedItem.name.trim() && updatedItem.unit.trim() && Number.isFinite(updatedItem.quantity) && updatedItem.quantity > 0 && updatedItem.neededDate.trim() && updatedItem.location.trim()) { setInvalidItemId(null); setError(""); }
   };
 
   const normalizedMaterialSearch = materialSearch.trim().toLowerCase();
@@ -129,60 +119,71 @@ export function RequestForm({ id }: { id?: string }) {
     const currentDocuments = current.id === id && current.touched ? current.documents : original?.documents || [];
     return { id, touched: true, documents: update(currentDocuments) };
   });
-
   if (!state) return null;
   if (id && !original) return <MissingRecord name="MRF" listHref="/requests"/>;
 
-  const addFiles = (files: FileList | null) => {
+  const addFiles = async (files: FileList | null) => {
     if (!files?.length) return;
     const nextDocuments: DocumentRef[] = [];
     const problems: string[] = [];
-    Array.from(files).forEach(file => {
-      if (file.size > MAX_REFERENCE_SIZE) {
-        problems.push(`${file.name} is larger than 25 MB.`);
-        return;
+    let nextScopeDocument = scopeDocument;
+    let hasSignedMrf = documents.some(document => document.type === "Signed MRF" && document.fileId);
+    for (const file of Array.from(files)) {
+      const role = !nextScopeDocument?.fileId ? "Scope" : !hasSignedMrf ? "Signed MRF" : "Supporting document";
+      try {
+        const saved = await saveRequestFile(file, role);
+        pendingFileIds.current.add(saved.fileId!);
+        if (role === "Scope") nextScopeDocument = saved;
+        else {
+          nextDocuments.push(saved);
+          if (role === "Signed MRF") hasSignedMrf = true;
+        }
       }
-      const type = referenceType(file);
-      if (!type) {
-        problems.push(`${file.name} isn’t a supported file type. Choose a PDF, JPG, PNG, or WEBP.`);
-        return;
-      }
-      nextDocuments.push({ name: file.name, type });
-    });
+      catch { problems.push(`${file.name} could not be saved in this browser.`); }
+    }
+    if (nextScopeDocument !== scopeDocument) setScopeState({ id, touched: true, document: nextScopeDocument });
     if (nextDocuments.length) updateDocuments(current => [...current, ...nextDocuments]);
     setAttachmentError(problems.join(" "));
   };
 
   const onPickFiles = (event: ChangeEvent<HTMLInputElement>) => {
-    addFiles(event.currentTarget.files);
+    void addFiles(event.currentTarget.files);
     event.currentTarget.value = "";
   };
 
   const save = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const intent = (event.nativeEvent as SubmitEvent).submitter?.getAttribute("value") === "draft" ? "draft" : "submit";
-    if (intent === "submit" && documents.length === 0) {
-      setAttachmentError("Add at least one document before submitting this MRF.");
-      return;
-    }
     const form = new FormData(event.currentTarget);
+    if (intent === "submit" && !await confirm(original ? "Resubmit this MRF?" : "Submit this MRF?", "The Project Manager will receive this request for a decision.", original ? "Resubmit MRF" : "Submit MRF")) return;
     const result = await run({
-      type: "saveRequest", id, intent, siteId: String(form.get("site")), category: String(form.get("category")),
-      scope: String(form.get("scope")), requestedBy: String(form.get("requestedBy")), approvedBy: String(form.get("approvedBy")), purchaser: String(form.get("purchaser")), financeOfficer: String(form.get("financeOfficer")), items, documents,
+      type: "saveRequest", id, intent, siteId: String(form.get("site")), scopeDocument,
+      requestedBy: String(form.get("requestedBy")), approvedBy: String(form.get("approvedBy")), purchaser: String(form.get("purchaser")), financeOfficer: String(form.get("financeOfficer")), items, documents,
     });
-    if (result.ok) router.push(`/requests/${result.recordId}`);
+    if (result.ok) {
+      const keptIds = new Set([scopeDocument?.fileId, ...documents.map(document => document.fileId)].filter((value): value is string => !!value));
+      for (const fileId of pendingFileIds.current) if (keptIds.has(fileId)) pendingFileIds.current.delete(fileId);
+      for (const fileId of [original?.scopeDocument?.fileId, ...(original?.documents.map(document => document.fileId) || [])]) if (fileId && !keptIds.has(fileId)) void deleteLocalFile(fileId).catch(() => {});
+      router.push(`/requests/${result.recordId}`);
+    }
     else {
       setError(result.message);
       if (result.field === "items") {
-        const invalid = items.find(item => !item.name.trim() || !item.unit.trim() || !Number.isFinite(item.quantity) || item.quantity <= 0 || !item.neededDate.trim() || !item.purpose.trim() || !item.location.trim());
+        const invalid = items.find(item => !item.name.trim() || !item.unit.trim() || !Number.isFinite(item.quantity) || item.quantity <= 0 || !item.neededDate.trim() || !item.location.trim());
         if (invalid) {
           setInvalidItemId(invalid.id);
-          const fieldId = !invalid.name.trim() ? "material-" + invalid.id : !invalid.unit.trim() ? "unit-" + invalid.id : !Number.isFinite(invalid.quantity) || invalid.quantity <= 0 ? "quantity-" + invalid.id : !invalid.neededDate.trim() ? "needed-" + invalid.id : !invalid.purpose.trim() ? "purpose-" + invalid.id : "location-" + invalid.id;
+          const fieldId = !invalid.name.trim() ? "material-" + invalid.id : !invalid.unit.trim() ? "unit-" + invalid.id : !Number.isFinite(invalid.quantity) || invalid.quantity <= 0 ? "quantity-" + invalid.id : !invalid.neededDate.trim() ? "needed-" + invalid.id : "location-" + invalid.id;
           revealItem(invalid, fieldId);
         }
       }
     }
   };
+
+  if (!state) return null;
+  if (!state.sites.length) return <>
+    <PageHeader eyebrow="NEW MATERIAL REQUEST" title="Set up the workspace first" description="A project is needed before you can create an MRF." />
+    <section className="panel"><p>Switch to Administrator and add a project. Then return here as Site Personnel.</p><Link className="button primary" href="/admin">Open administration</Link></section>
+  </>;
 
   return <>
     <PageHeader eyebrow={original ? "REVISE MATERIAL REQUEST" : "NEW MATERIAL REQUEST"} title={original ? `Edit ${original.ref}` : "Create MRF"} description="Capture the work need, material quantities, and document references."/>
@@ -191,8 +192,6 @@ export function RequestForm({ id }: { id?: string }) {
         <h2 className="panel-title">General information</h2>
         <div className="form-grid">
           <Field label="Project / site"><select name="site" defaultValue={original?.siteId || (state.siteFilter !== "all" ? state.siteFilter : state.sites[0].id)}>{state.sites.map(site => <option key={site.id} value={site.id}>{site.name}</option>)}</select></Field>
-          <Field label="Category"><select name="category" defaultValue={original?.category || state.categories[0]}>{state.categories.map(category => <option key={category}>{category}</option>)}</select></Field>
-          <Field label="Work package / scope"><input name="scope" defaultValue={original?.scope || ""}/></Field>
           <Field label="Requested by"><input name="requestedBy" defaultValue={original?.requestedBy || ""}/></Field>
           <Field label="Approved by"><input name="approvedBy" defaultValue={original?.approvedBy || ""}/></Field>
           <Field label="Purchaser/Procurement Officer"><input name="purchaser" defaultValue={original?.purchaser || ""}/></Field>
@@ -244,26 +243,32 @@ export function RequestForm({ id }: { id?: string }) {
         </div>
       </section>
       <section className="panel">
-        <div className="panel-heading"><h2 id="references-heading">Document references</h2><span className="reference-count">{documents.length} attached</span></div>
-        <p className="reference-note">File contents aren’t retained; only attachment details are saved.</p>
+        <div className="panel-heading"><h2 id="references-heading">Document references</h2><span className="reference-count">{attachedDocuments.length} attached</span></div>
+        <p className="reference-note">Files fill the missing scope and signed MRF slots in that order; additional files are supporting documents. Files are kept in this browser so reviewers can open them.</p>
+        {original?.scope && !scopeDocument && <p className="helper-note">Previous scope text: {original.scope}. Upload the scope file before resubmitting.</p>}
         <div className={`reference-dropzone${dragActive ? " is-active" : ""}`} onDragEnter={event => { event.preventDefault(); setDragActive(true); }} onDragOver={event => { event.preventDefault(); setDragActive(true); }} onDragLeave={event => { event.preventDefault(); setDragActive(false); }} onDrop={(event: DragEvent<HTMLDivElement>) => { event.preventDefault(); setDragActive(false); addFiles(event.dataTransfer.files); }}>
-          <input ref={inputRef} className="reference-file-input" type="file" accept={REFERENCE_ACCEPT} multiple aria-label="Choose document references" onChange={onPickFiles}/>
+          <input ref={inputRef} className="reference-file-input" type="file" multiple aria-label="Choose document references" onChange={onPickFiles}/>
           <svg className="reference-upload-icon" viewBox="0 0 48 48" aria-hidden="true"><path d="M11 4h17l9 9v18H11z"/><path d="M28 4v9h9"/><circle cx="33" cy="35" r="10"/><path d="M33 39v-9m-4 4 4-4 4 4"/></svg>
-          <p>Drag and drop files here or <button type="button" className="reference-choose" onClick={() => inputRef.current?.click()}>Choose files</button></p>
-          <small>PDF, JPG, PNG, or WEBP · Up to 25 MB per file</small>
+          <p>Drag and drop the scope, signed MRF, and supporting files here or <button type="button" className="reference-choose" onClick={() => inputRef.current?.click()}>Choose files</button></p>
+          <small>Any file type · Files are stored in this browser</small>
         </div>
         <InlineError message={attachmentError}/>
-        {documents.length > 0 && <div className="reference-file-list" aria-label="Attached document references">
-          {documents.map((document, index) => <div className="reference-file" key={`${index}-${document.name}-${document.type}`}>
-            <span className="reference-file-icon" aria-hidden="true">{document.name.toLowerCase().endsWith(".pdf") ? "PDF" : "IMG"}</span>
+        {attachedDocuments.length > 0 && <div className="reference-file-list" aria-label="Attached document references">
+          {attachedDocuments.map((document, index) => <div className="reference-file" key={document.fileId || `${index}-${document.name}`}>
+            <span className="reference-file-icon" aria-hidden="true">{document.name.toLowerCase().endsWith(".pdf") ? "PDF" : /\.(jpe?g|png|webp|gif|bmp)$/i.test(document.name) ? "IMG" : "FILE"}</span>
             <div className="reference-file-detail"><strong title={document.name}>{document.name}</strong><small>{referenceLabel(document)}</small></div>
-            <button type="button" className="reference-remove" aria-label={`Remove ${document.name}`} onClick={() => { updateDocuments(current => current.filter((_, fileIndex) => fileIndex !== index)); setAttachmentError(""); }}>×</button>
+            <button type="button" className="reference-remove" aria-label={`Remove ${document.name}`} onClick={() => {
+              if (document.type === "Scope") setScopeState({ id, touched: true });
+              else updateDocuments(current => current.filter((_, documentIndex) => documentIndex !== index - (scopeDocument ? 1 : 0)));
+              setAttachmentError("");
+            }}>×</button>
           </div>)}
         </div>}
       </section>
       <InlineError message={invalidItemId ? "" : error}/>
       <div className="form-actions"><Link className="button secondary" href={original ? `/requests/${original.id}` : "/requests"}>Cancel</Link><button className="button secondary" type="submit" value="draft">Save draft</button><button className="button primary" type="submit" value="submit">{original ? "Resubmit MRF" : "Submit MRF"}</button></div>
     </form>
+    {confirmation}
   </>;
 }
 
@@ -303,15 +308,17 @@ function RequestMaterialList({ state, siteId, items }: { state: DemoSnapshot; si
 
 export function RequestDetail({ id }: { id: string }) {
   const { snapshot: state, run }=useDemo(); const [decision,setDecision]=useState<"return"|"reject"|null>(null),[error,setError]=useState("");
+  const { confirm, confirmation } = useConfirmation();
   if(!state)return null; const request=state.requests.find(r=>r.id===id); if(!request)return <MissingRecord name="MRF" listHref="/requests"/>;
   const pos=posForRequest(state,request),po=pos[0];
-  const decide=async(choice:"approve"|"return"|"reject",reason?:string)=>{if(choice==="reject"&&!window.confirm("Reject this MRF? The request will close."))return;const result=await run({type:"reviewRequest",id,decision:choice,reason});if(!result.ok)setError(result.message);else{setDecision(null);setError("");}};
-  return <><RecordHeader backHref="/requests" backLabel="Material requests" eyebrow={`${siteName(state,request.siteId)} · ${request.category}`} title={request.ref} badges={<><Badge value={request.status}/>{po&&<Badge value={po.status}/>}</>}/>
-    <div className="request-detail-layout"><div className="request-detail-overview"><section className="panel"><h2 className="panel-title">General information</h2><div className="data-rows"><div><span>Work package</span><strong>{request.scope}</strong></div><div><span>Requested by</span><strong>{request.requestedBy || "—"}</strong></div><div><span>Approved by</span><strong>{request.approvedBy || "—"}</strong></div><div><span>Purchaser/Procurement Officer</span><strong>{request.purchaser || "—"}</strong></div><div><span>Finance Officer</span><strong>{request.financeOfficer || "—"}</strong></div></div>{request.reason&&<div className="callout warn"><strong>Review reason</strong><p>{request.reason}</p></div>}</section>
-    <section className="panel"><h2 className="panel-title">Documents and links</h2><Documents docs={request.documents}/><h3 className="subheading">Purchase order</h3>{pos.length ? pos.map(linked => <Link className="data-link" href={`/purchase-orders/${linked.id}`} key={linked.id}><div><strong>{linked.ref}</strong><small>{supplierName(state,linked)} · {money(poTotal(state,linked))}</small></div><Badge value={linked.status}/></Link>) : <p className="muted">No PO has been prepared.</p>}</section></div>
+  const decide=async(choice:"approve"|"return"|"reject",reason?:string)=>{if(!await confirm(`${choice === "approve" ? "Approve" : choice === "return" ? "Return" : "Reject"} ${request.ref}?`,choice === "approve" ? "Procurement can begin collecting supplier quotations." : choice === "return" ? "Site Personnel will revise this request." : "This request will close.",`${choice === "approve" ? "Approve" : choice === "return" ? "Return" : "Reject"} request`,choice === "reject"))return;const result=await run({type:"reviewRequest",id,decision:choice,reason});if(!result.ok)setError(result.message);else{setDecision(null);setError("");}};
+  return <><RecordHeader backHref="/requests" backLabel="Material requests" eyebrow={siteName(state,request.siteId)} title={request.ref} badges={<><Badge value={request.status}/>{po&&<Badge value={po.status}/>}</>}/>
+    <div className="request-detail-layout"><div className="request-detail-overview"><section className="panel"><h2 className="panel-title">General information</h2><div className="data-rows"><div><span>Requested by</span><strong>{request.requestedBy || "—"}</strong></div><div><span>Approved by</span><strong>{request.approvedBy || "—"}</strong></div><div><span>Purchaser/Procurement Officer</span><strong>{request.purchaser || "—"}</strong></div><div><span>Finance Officer</span><strong>{request.financeOfficer || "—"}</strong></div></div>{request.scope && !request.scopeDocument && <p className="helper-note">Legacy scope note: {request.scope}</p>}{request.reason&&<div className="callout warn"><strong>Review reason</strong><p>{request.reason}</p></div>}</section>
+    <section className="panel"><h2 className="panel-title">Documents and links</h2>{(request.scopeDocument || request.documents.length > 0) && <Documents docs={[...(request.scopeDocument ? [request.scopeDocument] : []), ...request.documents]} showType={false} />}{pos.map(linked => <Link className="data-link" href={`/purchase-orders/${linked.id}`} key={linked.id}><div><strong>{linked.ref}</strong><small>{supplierName(state,linked)} · {money(poTotal(state,linked))}</small></div><Badge value={linked.status}/></Link>)}{!request.scopeDocument && !request.documents.length && !pos.length && <p className="muted">No documents or links recorded.</p>}</section></div>
     <RequestMaterialList key={request.id} state={state} siteId={request.siteId} items={request.items}/>
     {state.role==="Site Personnel"&&["draft","returned"].includes(request.status)&&<section className="action-bar"><div><strong>{request.status==="returned"?"Revision requested":"Draft request"}</strong><p>Update the MRF before submitting it to the Project Manager.</p></div><Link className="button primary" href={`/requests/${id}/edit`}>Edit MRF</Link></section>}
-    {state.role==="Project Manager"&&request.status==="submitted"&&<section className="panel"><div className="panel-heading"><h2>PM decision</h2><span>Site stock is shown above for context.</span></div><div className="button-row"><button className="button primary" onClick={()=>void decide("approve")}>Approve request</button><button className="button secondary" onClick={()=>setDecision("return")}>Return with reason</button><button className="button danger-outline" onClick={()=>setDecision("reject")}>Reject with reason</button></div>{decision&&<form className="decision-panel" onSubmit={e=>{e.preventDefault();void decide(decision,String(new FormData(e.currentTarget).get("reason")));}}><Field label={`${decision==="return"?"Return":"Rejection"} reason`}><textarea name="reason" required minLength={5}/></Field><InlineError message={error}/><div className="button-row"><button type="button" className="button secondary" onClick={()=>setDecision(null)}>Cancel</button><button className="button primary">Confirm {decision}</button></div></form>}</section>}
+    {state.role==="Project Manager"&&request.status==="submitted"&&<section className="panel"><div className="panel-heading"><h2>PM decision</h2></div><p className="helper-note">Review current on-hand site stock for each requested material above. Quantities match the material name and unit; approval does not reserve stock.</p><div className="button-row"><button className="button primary" onClick={()=>void decide("approve")}>Approve request</button><button className="button secondary" onClick={()=>setDecision("return")}>Return with reason</button><button className="button danger-outline" onClick={()=>setDecision("reject")}>Reject with reason</button></div>{decision&&<form className="decision-panel" onSubmit={e=>{e.preventDefault();void decide(decision,String(new FormData(e.currentTarget).get("reason")));}}><Field label={`${decision==="return"?"Return":"Rejection"} reason`}><textarea name="reason" required minLength={5}/></Field><InlineError message={error}/><div className="button-row"><button type="button" className="button secondary" onClick={()=>setDecision(null)}>Cancel</button><button className="button primary">Continue to confirmation</button></div></form>}</section>}
+    {confirmation}
     {request.status==="approved"&&<section className="action-bar"><div><strong>Supplier comparison</strong><p>{state.quotes.filter(q=>q.mrfId===id).length} quotations on file. The lowest price is highlighted but never selected automatically.</p></div><Link className="button primary" href={`/requests/${id}/quotes`}>Compare quotations →</Link></section>}
     <Timeline state={state} ids={[id,...pos.map(linked=>linked.id)]}/></div></>;
 }

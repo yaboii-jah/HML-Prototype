@@ -1,8 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { seedDemo } from "../src/mock/fixtures/seed.ts";
+import { blankWorkspace } from "../src/mock/fixtures/blank.ts";
 import { applyCommand } from "../src/domain/commands.ts";
-import { migrateLegacy, LocalDemoRepository } from "../src/mock/repository.ts";
+import { migrateLegacy, migrateV5, LocalDemoRepository } from "../src/mock/repository.ts";
 import { legacyDestination } from "../src/domain/legacy-links.ts";
 import { acceptedFor, budgetFor, earliestNeededDate, inventoryFor, outstandingFor, paidTotal, paymentStatus, poTotal, quoteTotal, stockFor } from "../src/domain/selectors.ts";
 import { nextRef } from "../src/domain/ids.ts";
@@ -15,6 +16,19 @@ const oldSnapshot = version => ({ ...seedDemo(), version, requests: seedDemo().r
   const { neededDate, purpose, location, remarks } = legacy.items[0];
   return { ...legacy, neededDate, purpose, location, remarks, items: legacy.items.map(({ id, name, unit, quantity }) => ({ id, name, unit, quantity })) };
 }) });
+
+test("a blank workspace can be configured before its first MRF", () => {
+  let state = blankWorkspace();
+  for (const key of ["sites", "suppliers", "categories", "requests", "quotes", "pendingAwards", "pos", "batches", "movements", "payments", "accounting", "activity"]) assert.equal(state[key].length, 0, key);
+  assert.equal(applyCommand(state, { type: "addSite", name: "My project", location: "Site", budget: 100000, manager: "PM", personnel: "Site" }, context).ok, false);
+  state = execute(state, { type: "setRole", role: "Administrator" });
+  state = execute(state, { type: "addSite", name: "My project", location: "Site", budget: 100000, manager: "PM", personnel: "Site" });
+  assert.equal(state.sites.length, 1);
+  state = execute(state, { type: "setRole", role: "Site Personnel" });
+  state = execute(state, { type: "saveRequest", intent: "submit", siteId: state.sites[0].id, scopeDocument: { name: "Scope.pdf", type: "Scope", fileId: "scope-1" }, requestedBy: "Site", approvedBy: "PM", purchaser: "Buyer", financeOfficer: "Finance", items: [{ id: "item-1", name: "Cement", unit: "bag", quantity: 100, neededDate: "2026-10-01", purpose: "", location: "Site", remarks: "" }], documents: [{ name: "Signed MRF.pdf", type: "Signed MRF", fileId: "mrf-1" }] });
+  assert.equal(state.requests[0].ref, "MRF-2026-001");
+  assert.equal(state.requests[0].status, "submitted");
+});
 
 test("seeded cement transaction has consistent purchasing, delivery, stock, and budget values", () => {
   const state = seedDemo(); const po = state.pos.find(p => p.id === "po1");
@@ -38,14 +52,14 @@ test("PM review requires authority and a reason to return; revisions keep the or
   assert.equal(state.requests.find(r => r.id === "m6").status, "returned");
   state = execute(state, { type: "setRole", role: "Site Personnel" });
   const original = state.requests.find(r => r.id === "m6");
-  state = execute(state, { type: "saveRequest", id: "m6", intent: "submit", siteId: original.siteId, category: original.category, scope: "Electrical rough-in, level two", requestedBy: original.requestedBy, approvedBy: original.approvedBy, purchaser: original.purchaser, financeOfficer: original.financeOfficer, items: original.items, documents: original.documents });
+  state = execute(state, { type: "saveRequest", id: "m6", intent: "submit", siteId: original.siteId, scopeDocument: { name: "Electrical scope.pdf", type: "Scope", fileId: "scope-2" }, requestedBy: original.requestedBy, approvedBy: original.approvedBy, purchaser: original.purchaser, financeOfficer: original.financeOfficer, items: original.items, documents: [{ name: "Signed MRF.pdf", type: "Signed MRF", fileId: "mrf-2" }] });
   assert.equal(state.requests.find(r => r.id === "m6").status, "submitted");
   assert.equal(state.requests.filter(r => r.id === "m6").length, 1);
 });
 
 test("multi-material requests keep separate details through draft, submission, and revision", () => {
   let state = seedDemo();
-  const command = { type: "saveRequest", intent: "draft", siteId: "site-a", category: "Structural", scope: "Two work areas", requestedBy: "", approvedBy: "", purchaser: "", financeOfficer: "", documents: [{ name: "Signed request.pdf", type: "application/pdf" }], items: [
+  const command = { type: "saveRequest", intent: "draft", siteId: "site-a", scopeDocument: { name: "Scope.pdf", type: "Scope", fileId: "scope-3" }, requestedBy: "", approvedBy: "", purchaser: "", financeOfficer: "", documents: [{ name: "Signed request.pdf", type: "Signed MRF", fileId: "mrf-3" }], items: [
     { id: "first", name: "Cement", unit: "bag", quantity: 10, neededDate: "2026-10-20", purpose: "Slab pour", location: "Tower 1", remarks: "Keep dry" },
     { id: "second", name: "Sand", unit: "cu.m", quantity: 4, neededDate: "2026-10-05", purpose: "Mixing", location: "Tower 2", remarks: "" },
   ] };
@@ -55,8 +69,7 @@ test("multi-material requests keep separate details through draft, submission, a
   assert.equal(earliestNeededDate(request), "2026-10-05");
   assert.equal(applyCommand(state, { ...command, id: request.id, intent: "submit" }, context).ok, false);
   const complete = { ...command, id: request.id, intent: "submit", requestedBy: "Joel Reyes", approvedBy: "Mara Santos", purchaser: "Nina Valdez", financeOfficer: "Rafael Lim" };
-  assert.equal(applyCommand(state, { ...complete, items: [{ ...command.items[0], purpose: "" }, command.items[1]] }, context).ok, false);
-  state = execute(state, complete);
+  state = execute(state, { ...complete, items: [{ ...command.items[0], purpose: "" }, command.items[1]] });
   assert.deepEqual(state.requests.at(-1).items.map(item => item.id), ["first", "second"]);
   assert.deepEqual(state.requests.at(-1).items.map(item => item.location), ["Tower 1", "Tower 2"]);
   assert.deepEqual(state.requests.at(-1).items.map(item => item.remarks), ["Keep dry", ""]);
@@ -105,7 +118,7 @@ test("v1 migration preserves edited records and rejects malformed saved data", (
   old.activity[0].action = "PO served (Demo)";
   old.movements[2].reason = "Opening demo stock";
   const migrated = migrateLegacy(old);
-  assert.equal(migrated.version, 4);
+  assert.equal(migrated.version, 6);
   assert.equal(migrated.requests[0].scope, "Edited old scope");
   assert.equal(migrated.requests[0].id, "m1");
   assert.equal(migrated.requests[0].items[0].neededDate, old.requests[0].neededDate);
@@ -118,7 +131,7 @@ test("v1 migration preserves edited records and rejects malformed saved data", (
   assert.equal(migrated.activity[0].action, "PO served");
   assert.equal(migrated.movements[2].reason, "Opening stock balance");
   assert.equal(migrateLegacy({ version: 1, role: "Site Personnel" }), null);
-  const saved = new Map([["hml-constructsync-demo-v4", "not-json"]]);
+  const saved = new Map([["hml-constructsync-demo-v6", "not-json"]]);
   const previous = globalThis.localStorage;
   const previousWindow = globalThis.window;
   globalThis.localStorage = { getItem: key => saved.get(key) ?? null, setItem: (key, value) => saved.set(key, value) };
@@ -128,6 +141,16 @@ test("v1 migration preserves edited records and rejects malformed saved data", (
     assert.equal(repo.getSnapshot().status, "recovery");
     assert.equal(repo.getSnapshot().snapshot, null);
   } finally { globalThis.localStorage = previous; globalThis.window = previousWindow; }
+});
+
+test("v5 workspace migrates without losing legacy request or linked purchasing records", () => {
+  const prior = { ...seedDemo(), version: 5 };
+  prior.requests[0].scope = "Legacy slab scope";
+  const migrated = migrateV5(prior);
+  assert.equal(migrated.version, 6);
+  assert.equal(migrated.requests[0].scope, "Legacy slab scope");
+  assert.equal(migrated.pos[0].mrfId, prior.pos[0].mrfId);
+  assert.equal(migrated.requests[0].scopeDocument, undefined);
 });
 
 test("legacy query links still target their record routes", () => {
@@ -153,7 +176,7 @@ test("previous BuildSync v2 records migrate to ConstructSync without changing us
     assert.equal(view.snapshot.suppliers[1].contact, "Custom purchasing contact");
     assert.equal(view.snapshot.activity[0].action, "PO served");
     assert.equal(view.snapshot.requests[0].id, "m1");
-    assert.equal(JSON.parse(saved.get("hml-constructsync-demo-v4")).requests[0].id, "m1");
+    assert.equal(JSON.parse(saved.get("hml-constructsync-demo-v6")).requests[0].id, "m1");
   } finally { globalThis.localStorage = priorStorage; globalThis.window = priorWindow; }
 });
 
@@ -168,7 +191,7 @@ test("current ConstructSync v2 data copies request details to every material", (
   try {
     const view = new LocalDemoRepository().getSnapshot();
     assert.equal(view.status, "ready");
-    assert.equal(view.snapshot.version, 4);
+    assert.equal(view.snapshot.version, 6);
     assert.deepEqual(view.snapshot.requests[0].items.map(item => item.id), ["m1-i1", "m1-i2"]);
     assert.deepEqual(view.snapshot.requests[0].items.map(item => item.purpose), ["Edited purpose", "Edited purpose"]);
     assert.equal(view.snapshot.requests[0].requestedBy, "");
@@ -227,7 +250,7 @@ test("quotation revisions preserve the version linked to an existing PO", () => 
   assert.equal(poTotal(state, state.pos.find(value => value.id === po.id)), 3500);
 });
 
-test("v3 browser records migrate to v4 without changing linked POs", () => {
+test("v3 browser records migrate to v6 without changing linked POs", () => {
   const previousStorage = globalThis.localStorage, previousWindow = globalThis.window;
   const old = { ...seedDemo(), version: 3 };
   const saved = new Map([["hml-constructsync-demo-v3", JSON.stringify(old)]]);
@@ -235,7 +258,7 @@ test("v3 browser records migrate to v4 without changing linked POs", () => {
   globalThis.window = { addEventListener() {} };
   try {
     const view = new LocalDemoRepository().getSnapshot();
-    assert.equal(view.snapshot.version, 4);
+    assert.equal(view.snapshot.version, 6);
     assert.equal(view.snapshot.pos[0].quoteId, old.pos[0].quoteId);
     assert.equal(view.snapshot.quotes[0].ref, old.quotes[0].ref);
     assert.equal(saved.has("hml-constructsync-demo-v3"), false);
