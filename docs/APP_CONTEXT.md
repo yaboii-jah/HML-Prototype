@@ -4,7 +4,7 @@
 
 **Last verified:** 2026-09-28
 **Application version:** Prototype (`package.json` 0.1.0)
-**State schema:** `DemoSnapshot` version 6
+**State schema:** `DemoSnapshot` version 7
 
 ## Product in one paragraph
 
@@ -65,7 +65,7 @@ The domain command layer in `src/domain/commands.ts` is the authority for permis
 - States: `draft`, `submitted`, `returned`, `approved`, `rejected`.
 - Only Site Personnel can create or edit an MRF, and only drafts or returned records are editable.
 - Submission requires request details and at least one valid item. MRF documents are optional and do not block submission; uploads accept any file type and size the browser can store.
-- General request information includes manually entered Requested by, Approved by, Purchaser/Procurement Officer, and Finance Officer names. These are document fields, not workflow approvals. All four names are required for submission.
+- General request information includes a manually entered, globally unique M.R.F No. and editable Request Date, plus Requested by, Approved by, Purchaser/Procurement Officer, and Finance Officer names. All six fields are required for submission but may be blank in a draft. Request Date is document metadata and may be in the future; system timestamps still drive activity and report filters.
 - Each material carries its own date needed, purpose, delivery location, and remarks. Submission requires a name, unit, positive quantity, date, and location; purpose and remarks may be blank. Register and project summaries show the earliest material date.
 - Only a submitted MRF can be reviewed by a Project Manager.
 - The PM material cards display current on-hand site stock by exact material name and unit. Approval does not reserve or deduct stock.
@@ -76,9 +76,9 @@ The domain command layer in `src/domain/commands.ts` is the authority for permis
 ### Quotations and purchase orders
 
 - Quotations begin as persistent drafts and may cover some MRF lines. They retain offered lines, discounts and charges, supplier details, commercial terms, source file IDs, and immutable finalized revisions. Older seeded quotations remain readable as legacy references without original file bytes.
-- The quotation queue has one group per supplier; each group accepts up to 12 ordered PDF/JPG/PNG/WebP files, 20 MB per file and 45 MB combined. A single Extract with AI action processes ready groups separately. Procurement can continue any group manually, including after an extraction failure, or start a file-free manual draft.
+- The quotation queue has one group per supplier; each group accepts up to 12 ordered PDF/JPG/PNG/WebP files, 20 MB per file and 45 MB combined. A single Extract with AI action processes ready groups separately with a visible per-group processing state. The general Enter manually action can attach a queued group's files, including after an extraction failure, or start a file-free draft. Draft review cards open on click; source documents open in a multi-file preview dialog.
 - Gemini proposes extracted data and MRF matches only. Procurement checks the original, corrects pricing and supplier details, confirms each match and unit conversion, and explains any remaining discrepancy before finalization. Manual entry works without a file or API key. Unfinalized drafts can be deleted; finalized quotations remain immutable.
-- Finalized quotations can be compared without a fixed quote count. A supplier choice needs a written rationale; awards are staged and persist until PO generation. Only PHP quotations are awardable.
+- Finalized quotations can be compared without a fixed quote count. Procurement may record a supplier selection reason; awards are staged and persist until PO generation. Only PHP quotations are awardable.
 - Each PO stores its awarded MRF quantities and source quotation revision. Multiple POs may share one MRF; a material may be split across suppliers. Active PO and staged allocations cannot exceed requested MRF quantities or the supplier's quoted quantity; rejected POs release their allocation.
 - Award generation creates one draft PO per supplier from the staged quantities. Procurement confirms each PO's line discounts and other charges. Draft and Finance-returned POs may be edited; a draft using an older quote revision needs an explicit reason before finalizing. Finalized purchasing details are locked.
 - PO printouts show each item's MRF delivery location. Draft printouts carry a preview watermark until Finance approval.
@@ -137,9 +137,9 @@ Keep business rules out of page components where practical. New state transition
 
 ## Persistence and recovery
 
-- Current storage key: `hml-constructsync-demo-v6`.
+- Current storage key: `hml-constructsync-demo-v7`.
 - On first load, the repository creates an empty workspace if no saved state exists.
-- Compatible data migrates from v5, v4, v3, `hml-constructsync-demo-v2`, `hml-buildsync-demo-v2`, or version-1 `hml-buildsync-demo-v1`. Previous request-wide material details are copied to each item, IDs and edits are preserved, and the new name fields remain blank until entered. Legacy quotes are upgraded to finalized records. Legacy category values and scope text remain stored for compatibility but are no longer editable in the workflow.
+- Compatible data migrates from v6, v5, v4, v3, `hml-constructsync-demo-v2`, `hml-buildsync-demo-v2`, or version-1 `hml-buildsync-demo-v1`. Previous request-wide material details are copied to each item, IDs and edits are preserved, and Request Date is backfilled from each MRF's creation timestamp. Legacy quotes are upgraded to finalized records. Legacy category values and scope text remain stored for compatibility but are no longer editable in the workflow.
 - MRF and quotation originals are browser-local. Clearing browser data removes them; the Gemini Files API is not used as permanent document storage.
 - Malformed saved data enters an explicit recovery state instead of being silently overwritten.
 - If storage is unavailable, the app continues with volatile in-tab state and displays a warning.
@@ -208,7 +208,7 @@ The domain test suite currently protects these high-value behaviors:
 - The budget commitment calculation is a display rule pending client validation.
 - Formal purchase closure is not modeled.
 - Tax, VAT/EWT, accruals, bank balances, detailed ledgers, real notifications, shared uploads, email, and integrations are out of scope.
-- The year embedded in generated MRF and PO references is currently fixed to `2026`.
+- The year embedded in generated PO references is currently fixed to `2026`.
 - The repository is deliberately local-first and single-browser; concurrent multi-user behavior is not modeled.
 
 ## Maintenance contract
@@ -240,3 +240,4 @@ When updating it:
 | 2026-09-27 | Added grouped supplier quote drafts and revisions, guided review and finalization, persistent split allocations, supplier PO charge confirmation, version 5 migration, and updated browser verification. |
 | 2026-09-28 | Changed new and cleared workspaces to start empty, added Administrator project creation and clear action, and added first-MRF setup guidance. |
 | 2026-09-28 | Removed category and supplier setup from Admin, added reopenable MRF scope and signed files, optional material purpose, mixed-file supplier groups, batch AI action, draft deletion, decision dialogs, and version 6 migration. |
+| 2026-09-28 | Added manual globally unique M.R.F numbers and editable Request Dates with version 7 migration, and streamlined quotation upload, review cards, and document preview. |

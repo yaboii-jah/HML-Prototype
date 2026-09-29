@@ -5,8 +5,8 @@ import { upgradeLegacyQuotes } from "../domain/procurement.ts";
 import { ROLES, type DemoSnapshot, type LegacySnapshot } from "../domain/types.ts";
 import { clearQuoteFiles } from "../features/requests/quote-files.ts";
 
-const CURRENT_KEY = "hml-constructsync-demo-v6";
-const PREVIOUS_KEYS = ["hml-constructsync-demo-v5", "hml-constructsync-demo-v4", "hml-constructsync-demo-v3", "hml-constructsync-demo-v2", "hml-buildsync-demo-v2", "hml-buildsync-demo-v1"] as const;
+const CURRENT_KEY = "hml-constructsync-demo-v7";
+const PREVIOUS_KEYS = ["hml-constructsync-demo-v6", "hml-constructsync-demo-v5", "hml-constructsync-demo-v4", "hml-constructsync-demo-v3", "hml-constructsync-demo-v2", "hml-buildsync-demo-v2", "hml-buildsync-demo-v1"] as const;
 export type RepositoryView = { snapshot: DemoSnapshot | null; status: "loading" | "ready" | "volatile" | "recovery"; message?: string };
 export interface DemoRepository {
   load(): Promise<RepositoryView>;
@@ -19,26 +19,36 @@ export interface DemoRepository {
 const isRecord = (value: unknown): value is Record<string, unknown> => !!value && typeof value === "object" && !Array.isArray(value);
 const arrays = ["sites", "suppliers", "categories", "requests", "quotes", "pos", "batches", "movements", "payments", "accounting", "activity"] as const;
 const isSnapshotShape = (value: unknown): value is Record<string, unknown> => isRecord(value) && arrays.every(key => Array.isArray(value[key])) && ROLES.includes(value.role as (typeof ROLES)[number]) && typeof value.siteFilter === "string";
+const dateFromTimestamp = (timestamp: string) => {
+  const date = new Date(timestamp);
+  if (Number.isNaN(date.getTime())) return "";
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+};
+const withRequestDates = (snapshot: DemoSnapshot): DemoSnapshot => ({ ...snapshot, requests: snapshot.requests.map(request => ({ ...request, requestDate: request.requestDate || dateFromTimestamp(request.createdAt) })) });
 export function migrateLegacy(value: unknown): DemoSnapshot | null {
   if (!isSnapshotShape(value) || ![1, 2].includes(value.version as number)) return null;
   const legacy = value as LegacySnapshot;
   const requests = legacy.requests.map(request => {
     const { neededDate, purpose, location, remarks, items, ...rest } = request;
-    return { ...rest, requestedBy: "", approvedBy: "", purchaser: "", financeOfficer: "", items: items.map(item => ({ ...item, neededDate, purpose, location, remarks })) };
+    return { ...rest, requestDate: dateFromTimestamp(rest.createdAt), requestedBy: "", approvedBy: "", purchaser: "", financeOfficer: "", items: items.map(item => ({ ...item, neededDate, purpose, location, remarks })) };
   });
-  return upgradeLegacyQuotes(normalizeKnownPlaceholders({ ...structuredClone(legacy), requests, pendingAwards: [], version: 6 }));
+  return withRequestDates(upgradeLegacyQuotes(normalizeKnownPlaceholders({ ...structuredClone(legacy), requests, pendingAwards: [], version: 7 } as DemoSnapshot)));
 }
 export function migrateV3OrV4(value: unknown): DemoSnapshot | null {
   if (!isSnapshotShape(value) || ![3, 4].includes(value.version as number)) return null;
-  return upgradeLegacyQuotes(normalizeKnownPlaceholders({ ...structuredClone(value), pendingAwards: [], version: 6 } as unknown as DemoSnapshot));
+  return withRequestDates(upgradeLegacyQuotes(normalizeKnownPlaceholders({ ...structuredClone(value), pendingAwards: [], version: 7 } as unknown as DemoSnapshot)));
 }
 export function migrateV5(value: unknown): DemoSnapshot | null {
   if (!isSnapshotShape(value) || value.version !== 5 || !Array.isArray(value.pendingAwards)) return null;
-  return normalizeKnownPlaceholders({ ...structuredClone(value), version: 6 } as DemoSnapshot);
+  return withRequestDates(normalizeKnownPlaceholders({ ...structuredClone(value), version: 7 } as DemoSnapshot));
+}
+export function migrateV6(value: unknown): DemoSnapshot | null {
+  if (!isSnapshotShape(value) || value.version !== 6 || !Array.isArray(value.pendingAwards)) return null;
+  return withRequestDates(normalizeKnownPlaceholders({ ...structuredClone(value), version: 7 } as DemoSnapshot));
 }
 const parseCurrent = (raw: string): DemoSnapshot | null => {
   const parsed: unknown = JSON.parse(raw);
-  return isSnapshotShape(parsed) && parsed.version === 6 && Array.isArray(parsed.pendingAwards) ? normalizeKnownPlaceholders(parsed as DemoSnapshot) : null;
+  return isSnapshotShape(parsed) && parsed.version === 7 && Array.isArray(parsed.pendingAwards) ? normalizeKnownPlaceholders(parsed as DemoSnapshot) : null;
 };
 
 export class LocalDemoRepository implements DemoRepository {
@@ -88,7 +98,7 @@ export class LocalDemoRepository implements DemoRepository {
       }
       if (previous) {
         const source: unknown = JSON.parse(previous.raw);
-        const migrated = migrateV5(source) ?? migrateV3OrV4(source) ?? migrateLegacy(source);
+        const migrated = migrateV6(source) ?? migrateV5(source) ?? migrateV3OrV4(source) ?? migrateLegacy(source);
         this.view = migrated ? this.write(migrated) : { snapshot: null, status: "recovery", message: "Saved workspace data could not be opened. Restore the workspace to continue." };
         if (migrated && this.view.status === "ready") try { localStorage.removeItem(previous.key); } catch {}
         return this.view;

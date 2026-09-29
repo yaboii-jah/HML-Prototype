@@ -7,7 +7,7 @@ import { ROLES, type DemoSnapshot, type DocumentRef, type DocumentStatus, type I
 export type Command =
   | { type: "setRole"; role: Role }
   | { type: "setSiteFilter"; siteId: string }
-  | { type: "saveRequest"; id?: string; intent: "draft" | "submit"; siteId: string; scopeDocument?: DocumentRef; requestedBy: string; approvedBy: string; purchaser: string; financeOfficer: string; items: Item[]; documents: DocumentRef[] }
+  | { type: "saveRequest"; id?: string; intent: "draft" | "submit"; siteId: string; ref: string; requestDate: string; scopeDocument?: DocumentRef; requestedBy: string; approvedBy: string; purchaser: string; financeOfficer: string; items: Item[]; documents: DocumentRef[] }
   | { type: "reviewRequest"; id: string; decision: "approve" | "return" | "reject"; reason?: string }
   | { type: "addQuote"; requestId: string; supplierId: string; ref: string; prices: Record<string, number>; available: string; leadDays: number; terms: string; document?: string }
   | { type: "saveReviewedQuote"; requestId: string; supplierId: string; ref: string; available: string; leadDays: number; terms: string; documents: DocumentRef[]; lines: Quote["lines"]; currency: string; tax: number; freight: number; discount: number; validity: string; extraction: "gemini" | "manual"; supersedesId?: string }
@@ -40,6 +40,7 @@ const positive = (n: number) => Number.isFinite(n) && n > 0;
 const nonnegative = (n: number) => Number.isFinite(n) && n >= 0;
 const reasonOK = (s?: string) => (s?.trim().length ?? 0) >= 5;
 const close = (left: number, right: number) => Math.abs(left - right) < 0.000001;
+const validRequestDate = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(`${value}T00:00:00Z`)) && new Date(`${value}T00:00:00Z`).toISOString().slice(0, 10) === value;
 
 function awardError(state: DemoSnapshot, requestId: string, quote: Quote, lines: POLine[], tax: number, freight: number, discount: number, excludingPoId?: string) {
   const request = state.requests.find(r => r.id === requestId);
@@ -91,15 +92,20 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       const original = command.id ? state.requests.find(r => r.id === command.id) : undefined;
       if (command.id && !original) return fail("MRF not found.");
       if (original && !["draft", "returned"].includes(original.status)) return fail("Only draft or returned MRFs can be edited.");
+      const ref = (command.ref || "").trim();
+      const requestDate = (command.requestDate || "").trim();
       if (command.intent === "submit") {
+        if (!ref) return fail("Enter the M.R.F No. before submitting.", "ref");
+        if (state.requests.some(request => request.id !== original?.id && request.ref.trim().toLocaleLowerCase() === ref.toLocaleLowerCase())) return fail("This M.R.F No. is already in use.", "ref");
+        if (!validRequestDate(requestDate)) return fail("Enter a valid Request Date before submitting.", "requestDate");
         if (![command.requestedBy, command.approvedBy, command.purchaser, command.financeOfficer].every(x => x.trim())) return fail("Complete the request's general information before submitting.");
         if (!command.items.length || command.items.some(i => !i.name.trim() || !i.unit.trim() || !positive(i.quantity) || !i.neededDate.trim() || !i.location.trim())) return fail("Each material needs a name, unit, positive quantity, date needed, and delivery location.", "items");
       }
       const items = command.items.map(i => ({ ...i, name: i.name.trim(), unit: i.unit.trim(), id: i.id || id("item"), neededDate: i.neededDate.trim(), purpose: i.purpose.trim(), location: i.location.trim(), remarks: i.remarks.trim() }));
-      const fields = { siteId: command.siteId, category: original?.category || "", scope: original?.scope || "", scopeDocument: command.scopeDocument, requestedBy: command.requestedBy.trim(), approvedBy: command.approvedBy.trim(), purchaser: command.purchaser.trim(), financeOfficer: command.financeOfficer.trim(), items, documents: command.documents.filter(d => d.name.trim()), status: command.intent === "submit" ? "submitted" as const : "draft" as const, reason: undefined, updatedAt: at };
+      const fields = { ref, requestDate, siteId: command.siteId, category: original?.category || "", scope: original?.scope || "", scopeDocument: command.scopeDocument, requestedBy: command.requestedBy.trim(), approvedBy: command.approvedBy.trim(), purchaser: command.purchaser.trim(), financeOfficer: command.financeOfficer.trim(), items, documents: command.documents.filter(d => d.name.trim()), status: command.intent === "submit" ? "submitted" as const : "draft" as const, reason: undefined, updatedAt: at };
       if (original) { Object.assign(original, fields); log(original.id, command.intent === "submit" ? "MRF revised and resubmitted" : "MRF draft saved"); return done(command.intent === "submit" ? "MRF submitted to the Project Manager." : "MRF draft saved.", original.id); }
       const requestId = id("mrf");
-      state.requests.push({ id: requestId, ref: nextRef("MRF-2026", state.requests), createdAt: at, ...fields });
+      state.requests.push({ id: requestId, createdAt: at, ...fields });
       log(requestId, command.intent === "submit" ? "MRF submitted" : "MRF draft saved");
       return done(command.intent === "submit" ? "MRF submitted to the Project Manager." : "MRF draft saved.", requestId);
     }
@@ -214,7 +220,7 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       for (const [quoteId, awards] of groups) {
         const quote = state.quotes.find(value => value.id === quoteId)!;
         if (state.pos.some(value => value.mrfId === command.requestId && value.status !== "rejected" && state.quotes.find(source => source.id === value.quoteId)?.supplierId === quote.supplierId)) return fail("An active PO already exists for this supplier and MRF. Edit that PO draft instead.");
-        if (!reasonOK(command.reasons[quote.supplierId])) return fail("Explain each supplier choice in at least five characters.");
+        const selectionReason = (command.reasons[quote.supplierId] || "").trim();
         const lines: POLine[] = awards.map(award => {
           const offer = quote.lines!.find(value => value.id === award.quoteLineId)!;
           const fullOffer = Math.abs(award.quantity - offer.quantity * offer.conversionFactor) < 0.000001;
@@ -228,9 +234,9 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
           ...(quote.discount ? [{ id: id("adjustment"), label: "Discount", kind: "discount" as const, calculation: "fixed" as const, value: quote.discount }] : []),
         ]).map(value => ({ ...value, included: true, confirmed: false }));
         const poId = id("po");
-        state.pos.push({ id: poId, ref: nextRef("PO-2026", state.pos), mrfId: command.requestId, quoteId, lines, adjustments, status: "draft", priority: "Normal", notes: "", selectionReason: command.reasons[quote.supplierId].trim(), createdAt: at, updatedAt: at });
+        state.pos.push({ id: poId, ref: nextRef("PO-2026", state.pos), mrfId: command.requestId, quoteId, lines, adjustments, status: "draft", priority: "Normal", notes: "", selectionReason, createdAt: at, updatedAt: at });
         firstId ||= poId;
-        log(poId, "PO drafted from staged supplier award", command.reasons[quote.supplierId]);
+        log(poId, "PO drafted from staged supplier award", selectionReason || undefined);
       }
       state.pendingAwards = state.pendingAwards.filter(value => value.requestId !== command.requestId);
       return done(`${groups.size} supplier PO draft${groups.size === 1 ? "" : "s"} created.`, firstId);
@@ -294,8 +300,7 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
           if (command.adjustments.some(value => !value.label.trim() || !nonnegative(value.value) || value.calculation === "percentage" && value.value > 100)) return fail("Review each PO adjustment amount.");
           po.adjustments = command.adjustments;
         }
-        if (!reasonOK(command.reason || po.selectionReason)) return fail("Explain the supplier choice in at least five characters.");
-        po.selectionReason = (command.reason || po.selectionReason).trim();
+        po.selectionReason = (command.reason ?? po.selectionReason).trim();
       }
       if (command.finalize) {
         if (po.lines?.some(line => line.discountType === "fixed" && line.fixedDiscountConfirmed !== true)) return fail("Confirm each fixed line discount before Finance review.");

@@ -11,7 +11,7 @@ export function tasksFor(state: DemoSnapshot): Task[] {
   }).map(item => ({ title: `Low stock: ${item.name}`, detail: `${site.name} / ${item.onHand} ${item.unit} on hand`, href: `/inventory/${site.id}/${item.id}`, siteId: site.id, waiting: 0 })));
   const role = state.role;
   const tasks: Task[] = role === "Site Personnel" ? [
-    ...state.requests.filter(r => r.status === "draft").map(r => ({ title: `Complete ${r.ref}`, detail: siteName(state, r.siteId), href: `/requests/${r.id}`, siteId: r.siteId, waiting: daysWaiting(r.updatedAt) })),
+    ...state.requests.filter(r => r.status === "draft").map(r => ({ title: `Complete ${r.ref || "unnumbered draft"}`, detail: siteName(state, r.siteId), href: `/requests/${r.id}`, siteId: r.siteId, waiting: daysWaiting(r.updatedAt) })),
     ...state.requests.filter(r => r.status === "returned").map(r => ({ title: `Revise ${r.ref}`, detail: r.reason || "Returned by PM", href: `/requests/${r.id}`, siteId: r.siteId, waiting: daysWaiting(r.updatedAt) })),
     ...state.batches.filter(b => b.status === "expected" || b.status === "confirmed").map(b => ({ title: `Receive ${b.ref}`, detail: b.status === "confirmed" ? "Review stock posting" : "Confirm quantities", href: `/deliveries/${b.id}`, siteId: requestForPO(state, state.pos.find(p => p.id === b.poId)!)?.siteId, waiting: daysWaiting(b.updatedAt) })),
     ...stockTasks,

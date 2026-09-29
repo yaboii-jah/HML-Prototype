@@ -21,6 +21,7 @@ const MATERIAL_COPY_FIELDS = [
   { key: "remarks", label: "Remarks" },
 ] as const;
 type MaterialCopyField = (typeof MATERIAL_COPY_FIELDS)[number]["key"];
+const todayLocal = () => { const date = new Date(); return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`; };
 
 function referenceLabel(document: DocumentRef) {
   const extension = document.name.split(".").pop()?.toUpperCase();
@@ -32,7 +33,7 @@ export function Requests() {
   const [search,setSearch]=useState(""), [status,setStatus]=useState("all"), [neededBy,setNeededBy]=useState(""), [sort,setSort]=useState("recent");
   if(!state)return null;
   const rows=state.requests.filter(r=>(state.siteFilter==="all"||r.siteId===state.siteFilter)&&`${r.ref} ${r.items.map(i=>i.name).join(" ")}`.toLowerCase().includes(search.toLowerCase())&&(status==="all"||r.status===status)&&(!neededBy||r.items.some(item=>item.neededDate && item.neededDate<=neededBy))).sort((a,b)=>sort==="needed"?(earliestNeededDate(a)||"9999").localeCompare(earliestNeededDate(b)||"9999"):b.updatedAt.localeCompare(a.updatedAt));
-  return <><PageHeader eyebrow="MATERIAL REQUEST REGISTER" title="Material requests" description="Requirements, PM decisions, quotations, and linked purchases." actions={state.role==="Site Personnel"?<Link className="button primary" href="/requests/new">+ New MRF</Link>:undefined}/><div className="toolbar"><input aria-label="Search requests" placeholder="Search MRF or material" value={search} onChange={e=>setSearch(e.target.value)}/><select aria-label="Request status" value={status} onChange={e=>setStatus(e.target.value)}>{["all","draft","submitted","returned","approved","rejected"].map(s=><option key={s} value={s}>{s==="all"?"All statuses":s}</option>)}</select><input aria-label="Needed by date" type="date" value={neededBy} onChange={e=>setNeededBy(e.target.value)}/><select aria-label="Sort requests" value={sort} onChange={e=>setSort(e.target.value)}><option value="recent">Recently updated</option><option value="needed">Needed soonest</option></select></div><div className="table-frame"><table><thead><tr><th>MRF / material</th><th>Project</th><th>Earliest needed</th><th>Status</th><th>Updated</th></tr></thead><tbody>{rows.map(r=><tr key={r.id}><td><Link className="table-primary" href={`/requests/${r.id}`}>{r.ref}</Link><small>{r.items.map(i=>`${i.quantity} ${i.unit} ${i.name}`).join(", ")}</small></td><td>{siteName(state,r.siteId)}</td><td>{earliestNeededDate(r)?dateText(earliestNeededDate(r)):"—"}</td><td><Badge value={r.status}/></td><td>{dateText(r.updatedAt)}</td></tr>)}</tbody></table>{!rows.length&&<Empty detail={state.requests.length ? "Try a different search, filter, or site." : "No material requests yet. Site Personnel can create the first MRF."}/>}</div></>;
+  return <><PageHeader eyebrow="MATERIAL REQUEST REGISTER" title="Material requests" description="Requirements, PM decisions, quotations, and linked purchases." actions={state.role==="Site Personnel"?<Link className="button primary" href="/requests/new">+ New MRF</Link>:undefined}/><div className="toolbar"><input aria-label="Search requests" placeholder="Search MRF or material" value={search} onChange={e=>setSearch(e.target.value)}/><select aria-label="Request status" value={status} onChange={e=>setStatus(e.target.value)}>{["all","draft","submitted","returned","approved","rejected"].map(s=><option key={s} value={s}>{s==="all"?"All statuses":s}</option>)}</select><input aria-label="Needed by date" type="date" value={neededBy} onChange={e=>setNeededBy(e.target.value)}/><select aria-label="Sort requests" value={sort} onChange={e=>setSort(e.target.value)}><option value="recent">Recently updated</option><option value="needed">Needed soonest</option></select></div><div className="table-frame"><table><thead><tr><th>MRF / material</th><th>Project</th><th>Earliest needed</th><th>Status</th><th>Updated</th></tr></thead><tbody>{rows.map(r=><tr key={r.id}><td><Link className="table-primary" href={`/requests/${r.id}`}>{r.ref || "Unnumbered draft"}</Link><small>{r.items.map(i=>`${i.quantity} ${i.unit} ${i.name}`).join(", ")}</small></td><td>{siteName(state,r.siteId)}</td><td>{earliestNeededDate(r)?dateText(earliestNeededDate(r)):"—"}</td><td><Badge value={r.status}/></td><td>{dateText(r.updatedAt)}</td></tr>)}</tbody></table>{!rows.length&&<Empty detail={state.requests.length ? "Try a different search, filter, or site." : "No material requests yet. Site Personnel can create the first MRF."}/>}</div></>;
 }
 
 export function RequestForm({ id }: { id?: string }) {
@@ -50,6 +51,7 @@ export function RequestForm({ id }: { id?: string }) {
   const scopeDocument = scopeState.id === id && scopeState.touched ? scopeState.document : original?.scopeDocument;
   const attachedDocuments = [...(scopeDocument ? [{ ...scopeDocument, type: "Scope" }] : []), ...documents];
   const [error, setError] = useState("");
+  const [formFieldError, setFormFieldError] = useState<{ field: "ref" | "requestDate"; message: string } | null>(null);
   const [attachmentError, setAttachmentError] = useState("");
   const [dragActive, setDragActive] = useState(false);
   const [copyFields, setCopyFields] = useState<Record<MaterialCopyField, boolean>>({ unit: false, neededDate: false, purpose: false, location: false, remarks: false });
@@ -157,7 +159,7 @@ export function RequestForm({ id }: { id?: string }) {
     const form = new FormData(event.currentTarget);
     if (intent === "submit" && !await confirm(original ? "Resubmit this MRF?" : "Submit this MRF?", "The Project Manager will receive this request for a decision.", original ? "Resubmit MRF" : "Submit MRF")) return;
     const result = await run({
-      type: "saveRequest", id, intent, siteId: String(form.get("site")), scopeDocument,
+      type: "saveRequest", id, intent, siteId: String(form.get("site")), ref: String(form.get("ref")), requestDate: String(form.get("requestDate")), scopeDocument,
       requestedBy: String(form.get("requestedBy")), approvedBy: String(form.get("approvedBy")), purchaser: String(form.get("purchaser")), financeOfficer: String(form.get("financeOfficer")), items, documents,
     });
     if (result.ok) {
@@ -167,7 +169,10 @@ export function RequestForm({ id }: { id?: string }) {
       router.push(`/requests/${result.recordId}`);
     }
     else {
-      setError(result.message);
+      const field = result.field === "ref" || result.field === "requestDate" ? result.field : null;
+      setFormFieldError(field ? { field, message: result.message } : null);
+      setError(field ? "" : result.message);
+      if (field) document.getElementById(field)?.focus();
       if (result.field === "items") {
         const invalid = items.find(item => !item.name.trim() || !item.unit.trim() || !Number.isFinite(item.quantity) || item.quantity <= 0 || !item.neededDate.trim() || !item.location.trim());
         if (invalid) {
@@ -186,12 +191,14 @@ export function RequestForm({ id }: { id?: string }) {
   </>;
 
   return <>
-    <PageHeader eyebrow={original ? "REVISE MATERIAL REQUEST" : "NEW MATERIAL REQUEST"} title={original ? `Edit ${original.ref}` : "Create MRF"} description="Capture the work need, material quantities, and document references."/>
+    <PageHeader eyebrow={original ? "REVISE MATERIAL REQUEST" : "NEW MATERIAL REQUEST"} title={original ? `Edit ${original.ref || "unnumbered draft"}` : "Create MRF"} description="Capture the work need, material quantities, and document references."/>
     <form className="form-stack" noValidate onSubmit={save}>
       <section className="panel">
         <h2 className="panel-title">General information</h2>
         <div className="form-grid">
           <Field label="Project / site"><select name="site" defaultValue={original?.siteId || (state.siteFilter !== "all" ? state.siteFilter : state.sites[0].id)}>{state.sites.map(site => <option key={site.id} value={site.id}>{site.name}</option>)}</select></Field>
+          <Field label="M.R.F No." error={formFieldError?.field === "ref" ? formFieldError.message : undefined}><input id="ref" name="ref" defaultValue={original?.ref || ""} placeholder="Enter the company reference" autoComplete="off" aria-invalid={formFieldError?.field === "ref"} onChange={() => setFormFieldError(null)}/></Field>
+          <Field label="Request Date" error={formFieldError?.field === "requestDate" ? formFieldError.message : undefined}><input id="requestDate" name="requestDate" type="date" defaultValue={original?.requestDate || todayLocal()} aria-invalid={formFieldError?.field === "requestDate"} onChange={() => setFormFieldError(null)}/></Field>
           <Field label="Requested by"><input name="requestedBy" defaultValue={original?.requestedBy || ""}/></Field>
           <Field label="Approved by"><input name="approvedBy" defaultValue={original?.approvedBy || ""}/></Field>
           <Field label="Purchaser/Procurement Officer"><input name="purchaser" defaultValue={original?.purchaser || ""}/></Field>
@@ -312,8 +319,8 @@ export function RequestDetail({ id }: { id: string }) {
   if(!state)return null; const request=state.requests.find(r=>r.id===id); if(!request)return <MissingRecord name="MRF" listHref="/requests"/>;
   const pos=posForRequest(state,request),po=pos[0];
   const decide=async(choice:"approve"|"return"|"reject",reason?:string)=>{if(!await confirm(`${choice === "approve" ? "Approve" : choice === "return" ? "Return" : "Reject"} ${request.ref}?`,choice === "approve" ? "Procurement can begin collecting supplier quotations." : choice === "return" ? "Site Personnel will revise this request." : "This request will close.",`${choice === "approve" ? "Approve" : choice === "return" ? "Return" : "Reject"} request`,choice === "reject"))return;const result=await run({type:"reviewRequest",id,decision:choice,reason});if(!result.ok)setError(result.message);else{setDecision(null);setError("");}};
-  return <><RecordHeader backHref="/requests" backLabel="Material requests" eyebrow={siteName(state,request.siteId)} title={request.ref} badges={<><Badge value={request.status}/>{po&&<Badge value={po.status}/>}</>}/>
-    <div className="request-detail-layout"><div className="request-detail-overview"><section className="panel"><h2 className="panel-title">General information</h2><div className="data-rows"><div><span>Requested by</span><strong>{request.requestedBy || "—"}</strong></div><div><span>Approved by</span><strong>{request.approvedBy || "—"}</strong></div><div><span>Purchaser/Procurement Officer</span><strong>{request.purchaser || "—"}</strong></div><div><span>Finance Officer</span><strong>{request.financeOfficer || "—"}</strong></div></div>{request.scope && !request.scopeDocument && <p className="helper-note">Legacy scope note: {request.scope}</p>}{request.reason&&<div className="callout warn"><strong>Review reason</strong><p>{request.reason}</p></div>}</section>
+  return <><RecordHeader backHref="/requests" backLabel="Material requests" eyebrow={siteName(state,request.siteId)} title={request.ref || "Unnumbered draft"} badges={<><Badge value={request.status}/>{po&&<Badge value={po.status}/>}</>}/>
+    <div className="request-detail-layout"><div className="request-detail-overview"><section className="panel"><h2 className="panel-title">General information</h2><div className="data-rows"><div><span>M.R.F No.</span><strong>{request.ref || "—"}</strong></div><div><span>Request Date</span><strong>{request.requestDate ? dateText(request.requestDate) : "—"}</strong></div><div><span>Requested by</span><strong>{request.requestedBy || "—"}</strong></div><div><span>Approved by</span><strong>{request.approvedBy || "—"}</strong></div><div><span>Purchaser/Procurement Officer</span><strong>{request.purchaser || "—"}</strong></div><div><span>Finance Officer</span><strong>{request.financeOfficer || "—"}</strong></div></div>{request.scope && !request.scopeDocument && <p className="helper-note">Legacy scope note: {request.scope}</p>}{request.reason&&<div className="callout warn"><strong>Review reason</strong><p>{request.reason}</p></div>}</section>
     <section className="panel"><h2 className="panel-title">Documents and links</h2>{(request.scopeDocument || request.documents.length > 0) && <Documents docs={[...(request.scopeDocument ? [request.scopeDocument] : []), ...request.documents]} showType={false} />}{pos.map(linked => <Link className="data-link" href={`/purchase-orders/${linked.id}`} key={linked.id}><div><strong>{linked.ref}</strong><small>{supplierName(state,linked)} · {money(poTotal(state,linked))}</small></div><Badge value={linked.status}/></Link>)}{!request.scopeDocument && !request.documents.length && !pos.length && <p className="muted">No documents or links recorded.</p>}</section></div>
     <RequestMaterialList key={request.id} state={state} siteId={request.siteId} items={request.items}/>
     {state.role==="Site Personnel"&&["draft","returned"].includes(request.status)&&<section className="action-bar"><div><strong>{request.status==="returned"?"Revision requested":"Draft request"}</strong><p>Update the MRF before submitting it to the Project Manager.</p></div><Link className="button primary" href={`/requests/${id}/edit`}>Edit MRF</Link></section>}

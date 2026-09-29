@@ -57,14 +57,13 @@ test("staged split awards enforce both quantity caps and generate supplier POs a
   assert.equal(applyCommand(state, { type: "stageAward", requestId: request.id, quoteId: b.id, quoteLineId: b.lines[0].id, quantity: 5 }, context).ok, false);
   state = execute(state, { type: "stageAward", requestId: request.id, quoteId: b.id, quoteLineId: b.lines[0].id, quantity: 4 });
   const before = state.pos.length;
-  assert.equal(applyCommand(state, { type: "generateAwardPOs", requestId: request.id, reasons: { [state.quotes.find(value => value.id === a.id).supplierId]: "Confirmed Supplier A" } }, context).ok, false);
-  assert.equal(state.pos.length, before);
-  const reasons = Object.fromEntries([a, b].map(quote => [state.quotes.find(value => value.id === quote.id).supplierId, `Confirmed ${quote.supplierDetails.name}`]));
-  state = execute(state, { type: "generateAwardPOs", requestId: request.id, reasons });
+  state = execute(state, { type: "generateAwardPOs", requestId: request.id, reasons: { [state.quotes.find(value => value.id === a.id).supplierId]: "Confirmed Supplier A" } });
   assert.equal(state.pos.length, before + 2);
   assert.equal(state.pendingAwards.length, 0);
   const first = state.pos.at(-2);
   const second = state.pos.at(-1);
+  assert.equal(first.selectionReason, "Confirmed Supplier A");
+  assert.equal(second.selectionReason, "");
   const duplicateSupplier = applyCommand(state, { type: "savePO", id: first.id, quoteId: second.quoteId, lines: first.lines, notes: "", finalize: false, reason: first.selectionReason }, context);
   assert.equal(duplicateSupplier.ok, false);
   assert.match(duplicateSupplier.message, /active PO already exists/);
@@ -97,10 +96,10 @@ test("a finalized quote revision blocks old draft PO finalization until Procurem
   assert.equal(state.pos.at(-1).quoteId, quote.id);
 });
 
-test("v4 browser data migrates to v6 with prior POs and awardable legacy quotations", () => {
+test("v4 browser data migrates to v7 with prior POs and awardable legacy quotations", () => {
   const old = structuredClone(seedDemo()); old.version = 4; delete old.pendingAwards; old.quotes.forEach(quote => { delete quote.reviewStatus; delete quote.lines; });
   const migrated = migrateV3OrV4(old);
-  assert.equal(migrated.version, 6);
+  assert.equal(migrated.version, 7);
   assert.equal(migrated.pos[0].quoteId, old.pos[0].quoteId);
   assert.equal(migrated.quotes[0].reviewStatus, "finalized");
   assert.equal(migrated.quotes[0].lines[0].requestItemId, "m1-i1");
