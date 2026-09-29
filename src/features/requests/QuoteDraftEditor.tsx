@@ -9,13 +9,13 @@ import { quoteLineTotal } from "@/src/domain/pricing";
 import { quoteTotal } from "@/src/domain/selectors";
 import type { DemoSnapshot, MRF, Quote, QuoteAdjustment, QuoteLine, SupplierQuoteDetails } from "@/src/domain/types";
 
-type Props = { state: DemoSnapshot; request: MRF; quote: Quote; onSave: (quote: Quote) => Promise<boolean>; onFinalize: () => Promise<void> };
+type Props = { state: DemoSnapshot; request: MRF; quote: Quote; onSave: (quote: Quote) => Promise<boolean>; onFinalize: () => Promise<void>; onAttach: (files: File[]) => Promise<void>; onRemoveDocument: (fileId: string) => Promise<void> };
 const num = (value: unknown) => Number.isFinite(Number(value)) ? Number(value) : 0;
 const format = (currency: string | undefined, value: number) => currency === "PHP" || !currency ? money(value) : `${currency} ${value.toFixed(2)}`;
 const blankLine = (): QuoteLine => ({ id: newId("offer"), description: "", quantity: 0, unit: "", unitPrice: 0, brand: "", specification: "", requestItemId: "", conversionFactor: 1, varianceReason: "", matchConfirmed: false, matchConfidence: "low", discountType: "none", discountValue: 0, taxRate: 0, printedTotal: null });
 const emptySupplier = (): SupplierQuoteDetails => ({ name: "", address: "", tin: "", contactName: "", email: "", phone: "" });
 
-export function QuoteDraftEditor({ state, request, quote, onSave, onFinalize }: Props) {
+export function QuoteDraftEditor({ state, request, quote, onSave, onFinalize, onAttach, onRemoveDocument }: Props) {
   const [expandedLineId, setExpandedLineId] = useState<string | null>(quote.lines?.length === 1 && !quote.lines[0].description ? quote.lines[0].id : null);
   const issues = quoteReviewIssues(state, quote);
   const patch = (fields: Partial<Quote>) => void onSave({ ...quote, ...fields });
@@ -40,6 +40,9 @@ export function QuoteDraftEditor({ state, request, quote, onSave, onFinalize }: 
       <Field label="Delivery terms"><input value={quote.deliveryTerms || ""} onChange={event => patch({ deliveryTerms: event.target.value })}/></Field>
       <Field label="Quotation notes"><textarea value={quote.quoteNotes || ""} onChange={event => patch({ quoteNotes: event.target.value })}/></Field>
     </div>
+    <h3 className="subheading">Supplier quotation documents</h3>
+    <p className="helper-note">Attach the supplier&apos;s original PDF or images. A document is required before finalization, including for manually entered quotations.</p>
+    <div className="quote-document-attachments">{quote.documents.map(document => <div className="quote-document-attachment" key={document.fileId || document.name}><span>{document.name}</span>{document.fileId && <button type="button" className="text-link" onClick={() => void onRemoveDocument(document.fileId!)}>Remove</button>}</div>)}<label className="button secondary file-button">+ Add supplier files<input type="file" accept=".pdf,.jpg,.jpeg,.png,.webp" multiple onChange={event => { const files = Array.from(event.target.files || []); event.target.value = ""; if (files.length) void onAttach(files); }}/></label></div>
     <h3 className="subheading">Offered lines</h3>
     {quote.lines?.map((offer, index) => <article className="quote-review-line" key={offer.id}><div className="quote-line-summary"><button type="button" className="quote-line-toggle" aria-expanded={expandedLineId === offer.id} onClick={() => setExpandedLineId(current => current === offer.id ? null : offer.id)}><span>Line {index + 1}{offer.sourcePage ? ` · page ${offer.sourcePage}` : ""}</span><strong>{offer.description || "Unnamed offered material"}</strong><small>{offer.quantity} {offer.unit || "units"} · {format(quote.currency, offer.unitPrice)} each · {offer.requestItemId ? `Matched to ${request.items.find(item => item.id === offer.requestItemId)?.name || "MRF material"}` : "Unmatched / extra"}</small><small>{offer.requestItemId ? offer.matchConfirmed ? "MRF match confirmed" : "MRF match needs review" : "Cannot be awarded"}</small></button><button className="text-link" type="button" onClick={() => patch({ lines: quote.lines?.filter(value => value.id !== offer.id) })}>Remove line</button></div><div hidden={expandedLineId !== offer.id} className="quote-line-details"><div className="quote-match-row"><Field label="Required MRF material"><select value={offer.requestItemId} onChange={event => line(offer.id, { requestItemId: event.target.value, matchConfirmed: false })}><option value="">Unmatched / extra</option>{request.items.map(item => <option key={item.id} value={item.id}>{item.name} · {item.quantity} {item.unit} required</option>)}</select></Field>{offer.requestItemId && <p>Requested: {request.items.find(item => item.id === offer.requestItemId)?.quantity} {request.items.find(item => item.id === offer.requestItemId)?.unit}. Compare the supplier description, unit, and price before confirming.</p>}</div><div className="form-grid">
       <Field label="Description"><input value={offer.description} onChange={event => line(offer.id, { description: event.target.value })}/></Field>

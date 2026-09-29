@@ -28,6 +28,7 @@ try {
   ws.onmessage = event => { const message = JSON.parse(event.data); if (message.method === "Page.javascriptDialogOpening") ws.send(JSON.stringify({ id: ++nextId, method: "Page.handleJavaScriptDialog", params: { accept: true } })); if (message.id && pending.has(message.id)) { const entry = pending.get(message.id); pending.delete(message.id); if (message.error) entry.reject(new Error(JSON.stringify(message.error))); else entry.resolve(message.result); } };
   const call = (method, params = {}) => new Promise((resolve, reject) => { const id = ++nextId; const timer = setTimeout(() => { pending.delete(id); reject(new Error(`CDP timeout: ${method}`)); }, 15000); pending.set(id, { resolve: result => { clearTimeout(timer); resolve(result); }, reject: error => { clearTimeout(timer); reject(error); } }); ws.send(JSON.stringify({ id, method, params })); });
   await call("Runtime.enable"); await call("Page.enable");
+  await call("Page.addScriptToEvaluateOnNewDocument", { source: `(() => { const original = window.fetch.bind(window); window.fetch = (input, init) => { const url = typeof input === 'string' ? input : input.url; const reply = data => Promise.resolve(new Response(JSON.stringify(data), { status: 200, headers: { 'Content-Type': 'application/json' } })); if (url === '/api/drive/quotes') return reply({ ticket: 'quote-smoke-ticket', offset: 0 }); if (url === '/api/drive/quotes/chunk') return reply({ driveFileId: 'quote-smoke-file', url: 'https://drive.google.com/file/d/quote-smoke-file/view' }); if (url === '/api/drive/purchase-orders') return reply({ fileId: 'po-smoke-file', url: 'https://drive.google.com/file/d/po-smoke-file/view' }); return original(input, init); }; })();` });
   const run = async code => { const result = await call("Runtime.evaluate", { expression: `(()=>{${code}})()`, returnByValue: true }); if (result.exceptionDetails) throw new Error(result.exceptionDetails.exception?.description || result.exceptionDetails.text); return result.result.value; };
   const wait = async code => { for (let attempt = 0; attempt < 120; attempt++) { try { if (await run(code)) return; } catch {} await sleep(125); } throw new Error(`Timed out: ${code}`); };
   const navigate = async route => { await call("Page.navigate", { url: `${baseUrl}${route}` }); await wait(`return location.pathname === ${JSON.stringify(route)} && !!document.querySelector('h1');`); await sleep(150); };
@@ -36,17 +37,17 @@ try {
   const click = async label => { await wait(`return [...document.querySelectorAll('button')].some(button=>button.textContent.trim().includes(${JSON.stringify(label)}));`); await run(`const button=[...document.querySelectorAll('button')].find(value=>value.textContent.trim().includes(${JSON.stringify(label)}));button.click();return true;`); await acceptPending(); };
   const upload = async (file, selector) => { await wait(`return !!document.querySelector(${JSON.stringify(selector)});`); const { root } = await call("DOM.getDocument"); const { nodeId } = await call("DOM.querySelector", { nodeId: root.nodeId, selector }); if (!nodeId) throw new Error("Quote file input missing"); await call("DOM.setFileInputFiles", { nodeId, files: [file] }); };
   const fillLabel = async (label, value) => { await wait(`return [...document.querySelectorAll('.quote-review label.field')].some(x=>x.querySelector('span')?.textContent===${JSON.stringify(label)});`); await run(`const field=[...document.querySelectorAll('.quote-review label.field')].find(x=>x.querySelector('span')?.textContent===${JSON.stringify(label)});const el=field.querySelector('input,select,textarea');const kind=el.tagName==='TEXTAREA'?HTMLTextAreaElement:el.tagName==='SELECT'?HTMLSelectElement:HTMLInputElement;Object.getOwnPropertyDescriptor(kind.prototype,'value').set.call(el,${JSON.stringify(String(value))});el.dispatchEvent(new Event(el.tagName==='SELECT'?'change':'input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));return true;`); };
-  const snapshot = () => run("return JSON.parse(localStorage.getItem('hml-constructsync-demo-v6'));");
+  const snapshot = () => run("return JSON.parse(localStorage.getItem('hml-constructsync-demo-v9'));");
 
   await wait("return location.pathname==='/sign-in' && !!document.querySelector('.signin-form');");
   await fill("#demo-email", "procurement@constructsync.example");
   await fill("#demo-password", "Demo123!");
   await click("Sign in");
   await wait("return location.pathname==='/dashboard';");
-  await run(`localStorage.setItem('hml-constructsync-demo-v6', ${JSON.stringify(JSON.stringify({ ...seedDemo(), role: "Procurement" }))}); return true;`);
+  await run(`localStorage.setItem('hml-constructsync-demo-v9', ${JSON.stringify(JSON.stringify({ ...seedDemo(), role: "Procurement" }))}); return true;`);
   await call("Page.reload", { ignoreCache: true });
-  await wait("return location.pathname==='/dashboard' && JSON.parse(localStorage.getItem('hml-constructsync-demo-v6')).sites.length===2;");
-  await run("const state=JSON.parse(localStorage.getItem('hml-constructsync-demo-v6'));const request=structuredClone(state.requests.find(value=>value.id==='m3'));request.id='quote-smoke';request.ref='MRF-2026-999';request.items[0].id='quote-smoke-item';request.items[0].quantity=20;state.requests.push(request);state.role='Procurement';localStorage.setItem('hml-constructsync-demo-v6',JSON.stringify(state));return true;");
+  await wait("return location.pathname==='/dashboard' && JSON.parse(localStorage.getItem('hml-constructsync-demo-v9')).sites.length===2;");
+  await run("const state=JSON.parse(localStorage.getItem('hml-constructsync-demo-v9'));const request=structuredClone(state.requests.find(value=>value.id==='m3'));request.id='quote-smoke';request.ref='MRF-2026-999';request.items[0].id='quote-smoke-item';request.items[0].quantity=20;state.requests.push(request);state.sites.find(site=>site.id===request.siteId).driveFolderId='smoke-project-folder';state.role='Procurement';localStorage.setItem('hml-constructsync-demo-v9',JSON.stringify(state));return true;");
   await navigate("/requests/quote-smoke/quotes");
 
   async function review(file, supplier, reference, price) {
@@ -54,8 +55,13 @@ try {
     await click("Supplier quotation group");
     await upload(file, '.quote-upload-group:last-of-type input[type=file]');
     await wait(`return [...document.querySelectorAll('.quote-upload-group')].some(value=>value.textContent.includes(${JSON.stringify(path.basename(file))}));`);
-    await click("Continue manually");
+    await click("Enter manually");
+    const groupNumber = await run("return document.querySelectorAll('.quote-upload-group').length;");
+    await click(`Supplier quotation ${groupNumber}`);
     await wait("return !!document.querySelector('.quote-review');");
+    await click("View documents");
+    await wait("return !!document.querySelector('.quote-documents-dialog[open] .quote-document-preview iframe[src^=blob], .quote-documents-dialog[open] .quote-document-preview img[src^=blob]');");
+    await run("document.querySelector('.quote-documents-dialog [aria-label=\"Close document preview\"]').click();return true;");
     await fillLabel("Supplier name", supplier);
     await fillLabel("Quotation reference", reference);
     await fillLabel("Description", "Plywood 18mm");
@@ -70,7 +76,7 @@ try {
     }
     await run("document.querySelector('.quote-review .quote-check input[type=checkbox]').click();return true;");
     await click("Finalize quotation");
-    await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v6')).quotes.some(q=>q.ref===${JSON.stringify(reference)}&&q.reviewStatus==='finalized');`);
+    await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v9')).quotes.some(q=>q.ref===${JSON.stringify(reference)}&&q.archive?.status==='complete');`);
   }
   await review(pdf, "MetroBuild Materials", "SMOKE-A", 700);
   await review(image, "SolidSpan Trading", "SMOKE-B", 680);
@@ -79,7 +85,7 @@ try {
   await click("Allocate");
   async function award(reference, quantity) {
     await run(`const section=[...document.querySelectorAll('section.panel')].find(value=>value.querySelector('h2')?.textContent.includes(${JSON.stringify(reference)}));if(!section)throw Error('Supplier allocation missing');const el=section.querySelector('.quote-award-line input[type=number]');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(el,${JSON.stringify(String(quantity))});el.dispatchEvent(new Event('input',{bubbles:true}));return true;`);
-    await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v6')).pendingAwards.some(value=>value.quantity===${quantity});`);
+    await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v9')).pendingAwards.some(value=>value.quantity===${quantity});`);
     await run(`const section=[...document.querySelectorAll('section.panel')].find(value=>value.querySelector('h2')?.textContent.includes(${JSON.stringify(reference)}));const el=section.querySelector('textarea');Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,'value').set.call(el,'Confirmed price and availability');el.dispatchEvent(new Event('input',{bubbles:true}));return true;`);
   }
   await award("SMOKE-A", 8);
@@ -89,7 +95,7 @@ try {
   await award("SMOKE-A", 8);
   await award("SMOKE-B", 12);
   await click("Generate supplier PO drafts");
-  await wait("return JSON.parse(localStorage.getItem('hml-constructsync-demo-v6')).pos.filter(po=>po.mrfId==='quote-smoke').length===2;");
+  await wait("return JSON.parse(localStorage.getItem('hml-constructsync-demo-v9')).pos.filter(po=>po.mrfId==='quote-smoke').length===2;");
   const state = await snapshot();
   const pos = state.pos.filter(po => po.mrfId === "quote-smoke");
   assert.equal(pos.length, 2);
@@ -102,13 +108,13 @@ try {
   await navigate(`/purchase-orders/${firstPo.id}/edit`);
   await run("const form=document.querySelector('form.form-stack');form.requestSubmit(form.querySelector('button[value=finalize]'));return true;");
   await acceptPending();
-  await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v6')).pos.find(value=>value.id===${JSON.stringify(firstPo.id)}).status==='finalized';`);
+  await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v9')).pos.find(value=>value.id===${JSON.stringify(firstPo.id)}).status==='finalized';`);
   await run("document.querySelector('.masthead-role').click();return true;");
   await wait("return !!document.querySelector('.role-options');");
   await run("[...document.querySelectorAll('.role-options button')].find(value=>value.querySelector('strong')?.textContent==='Finance').click();return true;");
   await navigate(`/finance/${firstPo.id}`);
   await click("Approve budget");
-  await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v6')).pos.find(value=>value.id===${JSON.stringify(firstPo.id)}).status==='approved';`);
+  await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v9')).pos.find(value=>value.id===${JSON.stringify(firstPo.id)}).status==='approved';`);
   await navigate(`/purchase-orders/${firstPo.id}`);
   await wait("return !!document.querySelector('.po-print');");
   assert.equal(await run("return !!document.querySelector('.po-preview-stamp');"), false);
