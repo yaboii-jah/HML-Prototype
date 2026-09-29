@@ -84,7 +84,6 @@ export function AppShell({ children }: { children: ReactNode }) {
       <div className="side-brand"><Link className="brand-logo" href="/dashboard" onClick={() => setMenuOpen(false)} aria-label="HML ConstructSync dashboard"><Image src="/company%20-%20logo.webp" alt="HML Technologies and Services Inc." width={190} height={45} priority/></Link><button className="mobile-close icon-button" aria-label="Close navigation" onClick={() => setMenuOpen(false)}><Icon name="close"/></button></div>
       <div className="side-product"><strong>ConstructSync</strong><span>Project operations</span></div>
       <nav aria-label="Main navigation"><div className="nav-group"><span className="side-caption">Your workspace</span>{primaryItems.map(navLink)}</div>{["Plan and request", "Purchase", "Receive and account", "Manage"].map(group => { const items = secondaryItems.filter(item => item.group === group); return items.length ? <div className="nav-group" key={group}><span className="side-caption">{group}</span>{items.map(navLink)}</div> : null; })}</nav>
-      <div className="side-foot"><span className="demo-dot"/>Prototype / mock data</div>
     </aside>
     <div className="workspace">
       <header className="masthead">
@@ -97,7 +96,6 @@ export function AppShell({ children }: { children: ReactNode }) {
           <button className="masthead-role" onClick={() => setRolesOpen(true)} aria-label={`Current role: ${snapshot.role}. Switch role`}><span className="role-avatar">{snapshot.role.slice(0, 1)}</span><span className="role-label"><strong>{snapshot.role}</strong><small>Switch role</small></span><Icon name="chevron" size={16}/></button>
         </div>
       </header>
-      <div className="mobile-demo"><span className="demo-dot"/>Prototype / mock data</div>
       <main className="workspace-content">{children}</main>
     </div>
     {rolesOpen && <div className="modal-backdrop" onMouseDown={() => setRolesOpen(false)}>
