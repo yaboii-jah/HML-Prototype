@@ -2,13 +2,13 @@
 
 > **Living document:** This is the canonical, implementation-aligned context for the application. Update this file in the same change whenever a major implementation changes the product scope, business workflow, domain model, permissions, routes, persistence, seeded walkthrough, architecture, or verification strategy. Do not record small visual polish, copy edits, or isolated bug fixes unless they change one of those areas.
 
-**Last verified:** 2026-09-28
+**Last verified:** 2026-09-29
 **Application version:** Prototype (`package.json` 0.1.0)
-**State schema:** `DemoSnapshot` version 7
+**State schema:** `DemoSnapshot` version 9
 
 ## Product in one paragraph
 
-HML ConstructSync is a browser-only construction operations prototype that demonstrates the linked journey from a Material Request Form (MRF) through Project Manager review, supplier quotation draft and finalization, staged supplier awards, Purchase Order (PO) preparation, Finance review, supplier serving, delivery receiving, site inventory posting, material usage, and Accounting document/payment tracking. A fresh workspace starts empty so a presenter can enter each project and operational record manually. Procurement creates supplier references from finalized quotations. It uses simulated role switching, browser `localStorage` for records, and IndexedDB for uploaded MRF and supplier quotation files. A local Next.js server route can parse quotations with Gemini when `GEMINI_API_KEY` is configured. It has no authentication, database, shared file storage, supplier portal, or payment integration.
+HML ConstructSync is a browser-local construction operations prototype, also deployed on Vercel for one-presenter company demonstrations. It demonstrates the linked journey from a Material Request Form (MRF) through Project Manager review, Google Drive archival, supplier quotation review, Purchase Order (PO) preparation, Finance review, delivery, inventory, and Accounting tracking. A fresh workspace starts empty. It uses simulated roles, browser `localStorage` for records, and IndexedDB for uploaded MRF and supplier quotation files. On PM approval, server routes archive a generated MRF PDF and its supporting PDF to a mapped Google Drive project folder. Finalized supplier quotations and Finance-approved POs also archive to Drive. The server can parse quotations with Gemini when configured. It has no app-level authentication, shared record database, supplier portal, or payment integration.
 
 ## Current product boundary
 
@@ -16,7 +16,9 @@ HML ConstructSync is a browser-only construction operations prototype that demon
 - Role switching changes permitted actions and dashboard tasks. It is a presentation of authorization rules, not security.
 - Site filtering changes dashboard and queue context without creating separate tenant data.
 - All operational changes pass through typed domain commands and update one linked snapshot.
-- MRF and supplier quotation files are kept in the uploading browser's IndexedDB and linked to snapshot metadata. MRF uploads accept any file type and size the browser can store; documents are optional for submission. When files are added, the first fills the scope slot, the next fills the signed MRF slot, and later files are supporting documents. Older MRF attachment references remain metadata only. Each ordered supplier group of PDF and/or image files represents one supplier quote.
+- The combined MRF support file is one required PDF of at most 50 MB, kept in the uploading browser's IndexedDB. It contains the hardcopy MRF, key plan, and work scope. Supplier quotation PDFs/images remain browser-local and receive Drive copies after finalization. Older MRF attachment references remain metadata for migration only.
+- Drive credentials, the company root folder ID, and the upload-token key stay on the server. Administrator maps each project folder within that root. Vercel Drive routes require explicit enablement and Vercel Authentication for All Deployments, including production; simulated app roles do not secure them.
+- Credential and project-folder setup is described in `docs/GOOGLE_DRIVE_SETUP.md`. The standard local dev and start scripts bind to loopback.
 - The Gemini API key stays in the local Next.js server environment. Simulated roles do not secure the parsing endpoint; this integration is intended for local use only.
 - For local parsing, copy `.env.example` to `.env.local`, set `GEMINI_API_KEY`, and restart `next dev`. Quotation review's manual fallback works without a key.
 - External actions such as serving a PO and recording payment are demonstrations only.
@@ -27,12 +29,13 @@ HML ConstructSync is a browser-only construction operations prototype that demon
 ```text
 Site Personnel creates/submits MRF
   -> Project Manager approves, returns, or rejects
-  -> Procurement groups supplier files or enters a quotation manually, checks extracted details and MRF matches, and finalizes each quote
+  -> Approved MRF form and support PDF archive to the project's Google Drive folder; Procurement waits for completion
+  -> Procurement groups supplier files or enters a quotation manually, attaches supplier originals, checks details and MRF matches, finalizes each quote, and archives its files
   -> Procurement compares finalized offers and stages justified, capped quantity awards across suppliers
   -> Procurement generates one draft PO per awarded supplier
   -> Procurement finalizes PO for Finance
-  -> Finance approves, holds, returns, or rejects
-  -> Procurement serves an approved PO
+  -> Finance approves, holds, returns, or rejects; an approved PO PDF archives to Drive
+  -> Procurement serves an approved, archived PO
   -> Logistics schedules delivery batch(es)
   -> Site Personnel confirms accepted quantities
   -> Site Personnel reviews and posts accepted stock once
@@ -47,14 +50,14 @@ The statuses for the request, PO/Finance review, delivery, inventory posting, do
 
 | Role | Main implemented responsibilities |
 | --- | --- |
-| Site Personnel | Create/save/submit or revise MRFs; confirm receiving; post accepted stock; record usage and stock adjustments. |
-| Project Manager | Approve submitted MRFs or return/reject them with a reason. |
+| Site Personnel | Create/save/submit MRFs with one support PDF; revise returned or reopened requests; confirm receiving; post accepted stock; record usage and stock adjustments. |
+| Project Manager | Approve submitted MRFs, return/reject them, reopen archived approved requests for correction, and retry failed Drive archives. |
 | Procurement | Upload grouped or manually entered supplier quotations, save and finalize reviewed revisions, confirm material matches and discrepancies, stage split awards, create/edit/finalize supplier-specific POs, and serve Finance-approved POs. |
 | Finance | Set PO priority; approve, hold, return, or reject POs; approval is constrained by available site budget. |
 | Logistics | Schedule delivery batches against the unscheduled balance of a served PO. |
 | Accounting / Auditing | Track invoice/receipt review, discrepancies, payment references, and justified stock adjustments. |
 | Management | Read cross-project reports and inspect exceptions; no operational approval commands. |
-| Administrator | Add projects/sites, maintain Project Manager names and activity visibility; clear all workspace data with confirmation. |
+| Administrator | Add projects/sites, map and validate their Drive folders, maintain PM assignments, inspect activity, retry archives, and clear browser workspace data. |
 
 The domain command layer in `src/domain/commands.ts` is the authority for permissions and transition validation. Hiding an action in the UI is not sufficient authorization.
 
@@ -63,21 +66,22 @@ The domain command layer in `src/domain/commands.ts` is the authority for permis
 ### Material requests
 
 - States: `draft`, `submitted`, `returned`, `approved`, `rejected`.
-- Only Site Personnel can create or edit an MRF, and only drafts or returned records are editable.
-- Submission requires request details and at least one valid item. MRF documents are optional and do not block submission; uploads accept any file type and size the browser can store.
+- Only Site Personnel can create/edit drafts, returned requests, or PM-reopened corrections. A reopened request with linked quotations or POs permits only a support-PDF change; an earlier reopened request permits full editing.
+- Submission requires request details, at least one valid item, and one combined supporting PDF. The browser validates PDF type, signature, and 50 MB limit before storing it locally.
 - General request information includes a manually entered, globally unique M.R.F No. and editable Request Date, plus Requested by, Approved by, Purchaser/Procurement Officer, and Finance Officer names. All six fields are required for submission but may be blank in a draft. Request Date is document metadata and may be in the future; system timestamps still drive activity and report filters.
 - Each material carries its own date needed, purpose, delivery location, and remarks. Submission requires a name, unit, positive quantity, date, and location; purpose and remarks may be blank. Register and project summaries show the earliest material date.
-- Only a submitted MRF can be reviewed by a Project Manager.
+- A submitted MRF or submitted correction can be reviewed by PM. PM approval requires a mapped project Drive folder. An insufficient PDF is returned to Site Personnel for replacement.
 - The PM material cards display current on-hand site stock by exact material name and unit. Approval does not reserve or deduct stock.
 - Return and rejection require a reason of at least five characters.
-- Only approved MRFs can receive quotations.
+- PM approval records an `archive.pending` state and attempts Drive upload. The generated MRF PDF and supporting PDF are stored in separate subfolders under `<project>/<MRF number>/`. Supporting PDFs are uploaded in 3 MiB resumable chunks to fit Vercel's request limit. A failed upload leaves the MRF approved but Procurement paused; PM or Administrator retries manually. Completed archives retain numbered file pairs across reapprovals.
+- PM may reopen an archived approved MRF. New Procurement actions pause during correction and archive pending states. Earlier quotations/POs stay linked. Procurement continues only after archive completion.
 - Workflow handoffs and consequential decisions use a confirmation dialog; draft saves and routine edits do not. Successful actions use a brief global toast, while action failures remain visible in page banners and field corrections remain beside their inputs.
 
 ### Quotations and purchase orders
 
 - Quotations begin as persistent drafts and may cover some MRF lines. They retain offered lines, discounts and charges, supplier details, commercial terms, source file IDs, and immutable finalized revisions. Older seeded quotations remain readable as legacy references without original file bytes.
-- The quotation queue has one group per supplier; each group accepts up to 12 ordered PDF/JPG/PNG/WebP files, 20 MB per file and 45 MB combined. A single Extract with AI action processes ready groups separately with a visible per-group processing state. The general Enter manually action can attach a queued group's files, including after an extraction failure, or start a file-free draft. Draft review cards open on click; source documents open in a multi-file preview dialog.
-- Gemini proposes extracted data and MRF matches only. Procurement checks the original, corrects pricing and supplier details, confirms each match and unit conversion, and explains any remaining discrepancy before finalization. Manual entry works without a file or API key. Unfinalized drafts can be deleted; finalized quotations remain immutable.
+- The quotation queue has one group per supplier; each group accepts up to 12 ordered PDF/JPG/PNG/WebP files, 20 MB per file and 45 MB combined. A single Extract with AI action processes ready groups separately with a visible per-group processing state. The general Enter manually action can attach a queued group's files, including after an extraction failure, or start a file-free draft that must receive supplier files before finalization. Draft review cards open on click; source documents open in a multi-file preview dialog.
+- Gemini proposes extracted data and MRF matches only. Procurement checks the original, corrects pricing and supplier details, confirms each match and unit conversion, and explains any remaining discrepancy before finalization. Manual entry needs no API key, but newly finalized quotations require supplier PDF/image originals and a completed Drive archive before award. Unfinalized drafts can be deleted; finalized quotations remain immutable.
 - Finalized quotations can be compared without a fixed quote count. Procurement may record a supplier selection reason; awards are staged and persist until PO generation. Only PHP quotations are awardable.
 - Each PO stores its awarded MRF quantities and source quotation revision. Multiple POs may share one MRF; a material may be split across suppliers. Active PO and staged allocations cannot exceed requested MRF quantities or the supplier's quoted quantity; rejected POs release their allocation.
 - Award generation creates one draft PO per supplier from the staged quantities. Procurement confirms each PO's line discounts and other charges. Draft and Finance-returned POs may be edited; a draft using an older quote revision needs an explicit reason before finalizing. Finalized purchasing details are locked.
@@ -85,7 +89,7 @@ The domain command layer in `src/domain/commands.ts` is the authority for permis
 - PO states: `draft`, `finalized`, `hold`, `returned`, `rejected`, `approved`, `served`.
 - Only draft or Finance-returned POs can be edited. Finalizing sends the PO to Finance.
 - Finance can review `finalized` or `hold` POs. Hold, return, and rejection require a reason.
-- Finance approval fails when the PO total exceeds the site's currently available budget.
+- Finance approval fails when the PO total exceeds the site's currently available budget. Approved POs receive a generated Drive PDF; serving waits for its archive to complete.
 - Only an approved PO can be served. Served purchasing details are locked.
 
 ### Budget
@@ -137,10 +141,10 @@ Keep business rules out of page components where practical. New state transition
 
 ## Persistence and recovery
 
-- Current storage key: `hml-constructsync-demo-v7`.
+- Current storage key: `hml-constructsync-demo-v9`.
 - On first load, the repository creates an empty workspace if no saved state exists.
-- Compatible data migrates from v6, v5, v4, v3, `hml-constructsync-demo-v2`, `hml-buildsync-demo-v2`, or version-1 `hml-buildsync-demo-v1`. Previous request-wide material details are copied to each item, IDs and edits are preserved, and Request Date is backfilled from each MRF's creation timestamp. Legacy quotes are upgraded to finalized records. Legacy category values and scope text remain stored for compatibility but are no longer editable in the workflow.
-- MRF and quotation originals are browser-local. Clearing browser data removes them; the Gemini Files API is not used as permanent document storage.
+- Compatible data migrates from v8, v7, v6, v5, v4, v3, `hml-constructsync-demo-v2`, `hml-buildsync-demo-v2`, or version-1 `hml-buildsync-demo-v1`. Previous request-wide material details are copied to each item, IDs and edits are preserved, and Request Date is backfilled from each MRF's creation timestamp. Existing approved records without archive metadata remain readable and usable as legacy data; test data may be cleared manually before a Drive demo.
+- MRF and quotation originals remain browser-local. Successful MRF archival also creates numbered Drive copies; clearing browser data removes local records/files but does not delete Drive files. The Gemini Files API is not used as permanent document storage.
 - Malformed saved data enters an explicit recovery state instead of being silently overwritten.
 - If storage is unavailable, the app continues with volatile in-tab state and displays a warning.
 - Clear workspace restores the empty baseline, removes recognized legacy keys, and clears browser-local MRF and quotation files. Existing saved work remains until explicitly cleared.
@@ -154,9 +158,9 @@ Any incompatible snapshot change requires a schema-version decision and a migrat
 | --- | --- |
 | `/` | Redirects legacy query links or defaults to `/dashboard`. |
 | `/dashboard` | Role-specific metrics and derived task queue. |
-| `/projects`, `/projects/[siteId]` | Project register and site workspace. |
+| `/projects`, `/projects/[siteId]` | Project register and site workspace, including mapped Drive folder browsing and name search. |
 | `/requests`, `/requests/new` | MRF register and creation. |
-| `/requests/[id]`, `/requests/[id]/edit` | MRF detail/review and editable draft/return form. |
+| `/requests/[id]`, `/requests/[id]/edit` | MRF detail/review, editable draft/return/correction form, Drive archive status, retry, and version links. |
 | `/requests/[id]/quotes` | Guided grouped upload or manual quote entry, saved review and finalization, comparison, staged split awards, and PO generation. |
 | `/suppliers` | Supplier directory derived from finalized quotations. |
 | `/purchase-orders`, `/purchase-orders/[id]` | PO register and linked detail. |
@@ -167,7 +171,8 @@ Any incompatible snapshot change requires a schema-version decision and a migrat
 | `/inventory`, `/inventory/[siteId]/[materialId]` | Site inventory and material movement history. |
 | `/accounting`, `/accounting/[poId]` | Accounting queue and PO document/payment record. |
 | `/reports` | Management cross-project reporting. |
-| `/admin` | Project creation, Project Manager assignments, recent activity, and a confirmed clear-workspace action. |
+| `/admin` | Project creation, Project Manager assignments, Drive folder mapping, activity, and a confirmed clear-workspace action. |
+| `/api/drive/validate`, `/api/drive/archive`, `/api/drive/archive/chunk`, `/api/drive/files` | Protected project folder validation, resumable PDF archive, and project folder browsing/search. |
 
 All workspace routes are wrapped by `app/(workspace)/layout.tsx`, which applies the data gate and application shell.
 
@@ -207,7 +212,7 @@ The domain test suite currently protects these high-value behaviors:
 - Accounting authority for payments and stock corrections remains provisional.
 - The budget commitment calculation is a display rule pending client validation.
 - Formal purchase closure is not modeled.
-- Tax, VAT/EWT, accruals, bank balances, detailed ledgers, real notifications, shared uploads, email, and integrations are out of scope.
+- Tax, VAT/EWT, accruals, bank balances, detailed ledgers, real notifications, shared record storage, email, Drive quotation import, and PO export to Drive are out of scope.
 - The year embedded in generated PO references is currently fixed to `2026`.
 - The repository is deliberately local-first and single-browser; concurrent multi-user behavior is not modeled.
 
@@ -241,3 +246,5 @@ When updating it:
 | 2026-09-28 | Changed new and cleared workspaces to start empty, added Administrator project creation and clear action, and added first-MRF setup guidance. |
 | 2026-09-28 | Removed category and supplier setup from Admin, added reopenable MRF scope and signed files, optional material purpose, mixed-file supplier groups, batch AI action, draft deletion, decision dialogs, and version 6 migration. |
 | 2026-09-28 | Added manual globally unique M.R.F numbers and editable Request Dates with version 7 migration, and streamlined quotation upload, review cards, and document preview. |
+| 2026-09-29 | Added required combined MRF PDF, project Drive folder mapping, post-approval PDF archiving with manual retry and version history, project file browsing, correction workflow, and version 8 migration. |
+| 2026-09-29 | Adapted Drive archiving for a protected one-presenter Vercel deployment with explicit enablement, encrypted resumable upload tickets, 3 MiB chunks, and upload-status recovery. |

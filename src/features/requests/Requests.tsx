@@ -12,6 +12,8 @@ import { newId } from "@/src/domain/ids";
 import { earliestNeededDate, posForRequest, poTotal, siteName, stockFor, supplierName } from "@/src/domain/selectors";
 import type { DemoSnapshot, DocumentRef, Item } from "@/src/domain/types";
 import { deleteLocalFile, saveRequestFile } from "./quote-files";
+import { procurementReady, supportingPdf } from "@/src/domain/request-archive";
+import { syncApprovedRequest } from "./archive-request";
 
 const MATERIAL_COPY_FIELDS = [
   { key: "unit", label: "Unit" },
@@ -22,11 +24,6 @@ const MATERIAL_COPY_FIELDS = [
 ] as const;
 type MaterialCopyField = (typeof MATERIAL_COPY_FIELDS)[number]["key"];
 const todayLocal = () => { const date = new Date(); return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`; };
-
-function referenceLabel(document: DocumentRef) {
-  const extension = document.name.split(".").pop()?.toUpperCase();
-  return extension ? `${extension} file` : "Document file";
-}
 
 export function Requests() {
   const { snapshot: state } = useDemo();
@@ -49,7 +46,8 @@ export function RequestForm({ id }: { id?: string }) {
   const documents = documentState.id === id && documentState.touched ? documentState.documents : original?.documents || [];
   const [scopeState, setScopeState] = useState<{ id?: string; touched: boolean; document?: DocumentRef }>(() => ({ id, touched: false }));
   const scopeDocument = scopeState.id === id && scopeState.touched ? scopeState.document : original?.scopeDocument;
-  const attachedDocuments = [...(scopeDocument ? [{ ...scopeDocument, type: "Scope" }] : []), ...documents];
+  const documentsOnly = original?.correction?.scope === "documents";
+  const activeSupportingPdf = documents.find(document => document.type === "Supporting PDF");
   const [error, setError] = useState("");
   const [formFieldError, setFormFieldError] = useState<{ field: "ref" | "requestDate"; message: string } | null>(null);
   const [attachmentError, setAttachmentError] = useState("");
@@ -126,26 +124,14 @@ export function RequestForm({ id }: { id?: string }) {
 
   const addFiles = async (files: FileList | null) => {
     if (!files?.length) return;
-    const nextDocuments: DocumentRef[] = [];
-    const problems: string[] = [];
-    let nextScopeDocument = scopeDocument;
-    let hasSignedMrf = documents.some(document => document.type === "Signed MRF" && document.fileId);
-    for (const file of Array.from(files)) {
-      const role = !nextScopeDocument?.fileId ? "Scope" : !hasSignedMrf ? "Signed MRF" : "Supporting document";
-      try {
-        const saved = await saveRequestFile(file, role);
-        pendingFileIds.current.add(saved.fileId!);
-        if (role === "Scope") nextScopeDocument = saved;
-        else {
-          nextDocuments.push(saved);
-          if (role === "Signed MRF") hasSignedMrf = true;
-        }
-      }
-      catch { problems.push(`${file.name} could not be saved in this browser.`); }
-    }
-    if (nextScopeDocument !== scopeDocument) setScopeState({ id, touched: true, document: nextScopeDocument });
-    if (nextDocuments.length) updateDocuments(current => [...current, ...nextDocuments]);
-    setAttachmentError(problems.join(" "));
+    const file = files[0];
+    if (files.length !== 1 || file.type !== "application/pdf" || !file.name.toLowerCase().endsWith(".pdf") || file.size > 50 * 1024 * 1024 || await file.slice(0, 5).text() !== "%PDF-") { setAttachmentError("Choose one valid PDF up to 50 MB."); return; }
+    try {
+      const saved = await saveRequestFile(file, "Supporting PDF");
+      pendingFileIds.current.add(saved.fileId!);
+      updateDocuments(() => [saved]);
+      setAttachmentError("");
+    } catch { setAttachmentError("The PDF could not be saved in this browser."); }
   };
 
   const onPickFiles = (event: ChangeEvent<HTMLInputElement>) => {
@@ -159,8 +145,8 @@ export function RequestForm({ id }: { id?: string }) {
     const form = new FormData(event.currentTarget);
     if (intent === "submit" && !await confirm(original ? "Resubmit this MRF?" : "Submit this MRF?", "The Project Manager will receive this request for a decision.", original ? "Resubmit MRF" : "Submit MRF")) return;
     const result = await run({
-      type: "saveRequest", id, intent, siteId: String(form.get("site")), ref: String(form.get("ref")), requestDate: String(form.get("requestDate")), scopeDocument,
-      requestedBy: String(form.get("requestedBy")), approvedBy: String(form.get("approvedBy")), purchaser: String(form.get("purchaser")), financeOfficer: String(form.get("financeOfficer")), items, documents,
+      type: "saveRequest", id, intent, siteId: documentsOnly ? original!.siteId : String(form.get("site")), ref: documentsOnly ? original!.ref : String(form.get("ref")), requestDate: documentsOnly ? original!.requestDate : String(form.get("requestDate")), scopeDocument,
+      requestedBy: documentsOnly ? original!.requestedBy : String(form.get("requestedBy")), approvedBy: documentsOnly ? original!.approvedBy : String(form.get("approvedBy")), purchaser: documentsOnly ? original!.purchaser : String(form.get("purchaser")), financeOfficer: documentsOnly ? original!.financeOfficer : String(form.get("financeOfficer")), items, documents,
     });
     if (result.ok) {
       const keptIds = new Set([scopeDocument?.fileId, ...documents.map(document => document.fileId)].filter((value): value is string => !!value));
@@ -193,6 +179,8 @@ export function RequestForm({ id }: { id?: string }) {
   return <>
     <PageHeader eyebrow={original ? "REVISE MATERIAL REQUEST" : "NEW MATERIAL REQUEST"} title={original ? `Edit ${original.ref || "unnumbered draft"}` : "Create MRF"} description="Capture the work need, material quantities, and document references."/>
     <form className="form-stack" noValidate onSubmit={save}>
+      {original?.correction && <div className="callout warn"><strong>PM requested a correction</strong><p>{original.correction.reason}</p><p>{documentsOnly ? "Only the supporting PDF can be replaced because Procurement has started." : "Update the request and supporting PDF, then resubmit."}</p></div>}
+      <fieldset className="request-edit-fields" disabled={documentsOnly}>
       <section className="panel">
         <h2 className="panel-title">General information</h2>
         <div className="form-grid">
@@ -249,28 +237,18 @@ export function RequestForm({ id }: { id?: string }) {
           }) : <div className="material-search-empty"><strong>No materials match “{materialSearch}”.</strong><button type="button" className="text-link" onClick={() => setMaterialSearch("")}>Clear search</button></div>}
         </div>
       </section>
+      </fieldset>
       <section className="panel">
-        <div className="panel-heading"><h2 id="references-heading">Document references</h2><span className="reference-count">{attachedDocuments.length} attached</span></div>
-        <p className="reference-note">Files fill the missing scope and signed MRF slots in that order; additional files are supporting documents. Files are kept in this browser so reviewers can open them.</p>
-        {original?.scope && !scopeDocument && <p className="helper-note">Previous scope text: {original.scope}. Upload the scope file before resubmitting.</p>}
+        <div className="panel-heading"><h2 id="references-heading">Combined supporting PDF</h2><span className="reference-count">{activeSupportingPdf ? "1 attached" : "Required to submit"}</span></div>
+        <p className="reference-note">Attach one PDF containing the hardcopy MRF, key plan, and work scope. It stays in this browser during PM review and is archived to Drive after approval.</p>
         <div className={`reference-dropzone${dragActive ? " is-active" : ""}`} onDragEnter={event => { event.preventDefault(); setDragActive(true); }} onDragOver={event => { event.preventDefault(); setDragActive(true); }} onDragLeave={event => { event.preventDefault(); setDragActive(false); }} onDrop={(event: DragEvent<HTMLDivElement>) => { event.preventDefault(); setDragActive(false); addFiles(event.dataTransfer.files); }}>
-          <input ref={inputRef} className="reference-file-input" type="file" multiple aria-label="Choose document references" onChange={onPickFiles}/>
+          <input ref={inputRef} className="reference-file-input" type="file" accept="application/pdf,.pdf" aria-label="Choose combined supporting PDF" onChange={onPickFiles}/>
           <svg className="reference-upload-icon" viewBox="0 0 48 48" aria-hidden="true"><path d="M11 4h17l9 9v18H11z"/><path d="M28 4v9h9"/><circle cx="33" cy="35" r="10"/><path d="M33 39v-9m-4 4 4-4 4 4"/></svg>
-          <p>Drag and drop the scope, signed MRF, and supporting files here or <button type="button" className="reference-choose" onClick={() => inputRef.current?.click()}>Choose files</button></p>
-          <small>Any file type · Files are stored in this browser</small>
+          <p>Drag and drop the combined PDF here or <button type="button" className="reference-choose" onClick={() => inputRef.current?.click()}>Choose PDF</button></p>
+          <small>PDF only · Up to 50 MB</small>
         </div>
         <InlineError message={attachmentError}/>
-        {attachedDocuments.length > 0 && <div className="reference-file-list" aria-label="Attached document references">
-          {attachedDocuments.map((document, index) => <div className="reference-file" key={document.fileId || `${index}-${document.name}`}>
-            <span className="reference-file-icon" aria-hidden="true">{document.name.toLowerCase().endsWith(".pdf") ? "PDF" : /\.(jpe?g|png|webp|gif|bmp)$/i.test(document.name) ? "IMG" : "FILE"}</span>
-            <div className="reference-file-detail"><strong title={document.name}>{document.name}</strong><small>{referenceLabel(document)}</small></div>
-            <button type="button" className="reference-remove" aria-label={`Remove ${document.name}`} onClick={() => {
-              if (document.type === "Scope") setScopeState({ id, touched: true });
-              else updateDocuments(current => current.filter((_, documentIndex) => documentIndex !== index - (scopeDocument ? 1 : 0)));
-              setAttachmentError("");
-            }}>×</button>
-          </div>)}
-        </div>}
+        {activeSupportingPdf && <div className="reference-file-list" aria-label="Attached supporting PDF"><div className="reference-file"><span className="reference-file-icon" aria-hidden="true">PDF</span><div className="reference-file-detail"><strong title={activeSupportingPdf.name}>{activeSupportingPdf.name}</strong><small>Stored in this browser until and after Drive archiving</small></div><button type="button" className="reference-remove" aria-label={`Remove ${activeSupportingPdf.name}`} onClick={() => { updateDocuments(() => []); setAttachmentError(""); }}>×</button></div></div>}
       </section>
       <InlineError message={invalidItemId ? "" : error}/>
       <div className="form-actions"><Link className="button secondary" href={original ? `/requests/${original.id}` : "/requests"}>Cancel</Link><button className="button secondary" type="submit" value="draft">Save draft</button><button className="button primary" type="submit" value="submit">{original ? "Resubmit MRF" : "Submit MRF"}</button></div>
@@ -315,18 +293,25 @@ function RequestMaterialList({ state, siteId, items }: { state: DemoSnapshot; si
 
 export function RequestDetail({ id }: { id: string }) {
   const { snapshot: state, run }=useDemo(); const [decision,setDecision]=useState<"return"|"reject"|null>(null),[error,setError]=useState("");
+  const [archiving,setArchiving]=useState(false),[reopenOpen,setReopenOpen]=useState(false);
   const { confirm, confirmation } = useConfirmation();
   if(!state)return null; const request=state.requests.find(r=>r.id===id); if(!request)return <MissingRecord name="MRF" listHref="/requests"/>;
   const pos=posForRequest(state,request),po=pos[0];
-  const decide=async(choice:"approve"|"return"|"reject",reason?:string)=>{if(!await confirm(`${choice === "approve" ? "Approve" : choice === "return" ? "Return" : "Reject"} ${request.ref}?`,choice === "approve" ? "Procurement can begin collecting supplier quotations." : choice === "return" ? "Site Personnel will revise this request." : "This request will close.",`${choice === "approve" ? "Approve" : choice === "return" ? "Return" : "Reject"} request`,choice === "reject"))return;const result=await run({type:"reviewRequest",id,decision:choice,reason});if(!result.ok)setError(result.message);else{setDecision(null);setError("");}};
+  const currentArchive = request.archive?.versions.at(-1);
+  const archive=async(source=state)=>{const current=source.requests.find(value=>value.id===id),site=source.sites.find(value=>value.id===current?.siteId);if(!current||!site)return;setArchiving(true);const result=await syncApprovedRequest(current,site,run);setError(result.ok?"":result.message);setArchiving(false);};
+  const decide=async(choice:"approve"|"return"|"reject",reason?:string)=>{if(!await confirm(`${choice === "approve" ? "Approve" : choice === "return" ? "Return" : "Reject"} ${request.ref}?`,choice === "approve" ? "The approved MRF and supporting PDF will be archived to Google Drive before Procurement begins." : choice === "return" ? "Site Personnel will revise this request." : "This request will close.",`${choice === "approve" ? "Approve" : choice === "return" ? "Return" : "Reject"} request`,choice === "reject"))return;const result=await run({type:"reviewRequest",id,decision:choice,reason});if(!result.ok)setError(result.message);else{setDecision(null);setError("");if(choice==="approve")await archive(result.snapshot);}};
   return <><RecordHeader backHref="/requests" backLabel="Material requests" eyebrow={siteName(state,request.siteId)} title={request.ref || "Unnumbered draft"} badges={<><Badge value={request.status}/>{po&&<Badge value={po.status}/>}</>}/>
     <div className="request-detail-layout"><div className="request-detail-overview"><section className="panel"><h2 className="panel-title">General information</h2><div className="data-rows"><div><span>M.R.F No.</span><strong>{request.ref || "—"}</strong></div><div><span>Request Date</span><strong>{request.requestDate ? dateText(request.requestDate) : "—"}</strong></div><div><span>Requested by</span><strong>{request.requestedBy || "—"}</strong></div><div><span>Approved by</span><strong>{request.approvedBy || "—"}</strong></div><div><span>Purchaser/Procurement Officer</span><strong>{request.purchaser || "—"}</strong></div><div><span>Finance Officer</span><strong>{request.financeOfficer || "—"}</strong></div></div>{request.scope && !request.scopeDocument && <p className="helper-note">Legacy scope note: {request.scope}</p>}{request.reason&&<div className="callout warn"><strong>Review reason</strong><p>{request.reason}</p></div>}</section>
     <section className="panel"><h2 className="panel-title">Documents and links</h2>{(request.scopeDocument || request.documents.length > 0) && <Documents docs={[...(request.scopeDocument ? [request.scopeDocument] : []), ...request.documents]} showType={false} />}{pos.map(linked => <Link className="data-link" href={`/purchase-orders/${linked.id}`} key={linked.id}><div><strong>{linked.ref}</strong><small>{supplierName(state,linked)} · {money(poTotal(state,linked))}</small></div><Badge value={linked.status}/></Link>)}{!request.scopeDocument && !request.documents.length && !pos.length && <p className="muted">No documents or links recorded.</p>}</section></div>
     <RequestMaterialList key={request.id} state={state} siteId={request.siteId} items={request.items}/>
-    {state.role==="Site Personnel"&&["draft","returned"].includes(request.status)&&<section className="action-bar"><div><strong>{request.status==="returned"?"Revision requested":"Draft request"}</strong><p>Update the MRF before submitting it to the Project Manager.</p></div><Link className="button primary" href={`/requests/${id}/edit`}>Edit MRF</Link></section>}
-    {state.role==="Project Manager"&&request.status==="submitted"&&<section className="panel"><div className="panel-heading"><h2>PM decision</h2></div><p className="helper-note">Review current on-hand site stock for each requested material above. Quantities match the material name and unit; approval does not reserve stock.</p><div className="button-row"><button className="button primary" onClick={()=>void decide("approve")}>Approve request</button><button className="button secondary" onClick={()=>setDecision("return")}>Return with reason</button><button className="button danger-outline" onClick={()=>setDecision("reject")}>Reject with reason</button></div>{decision&&<form className="decision-panel" onSubmit={e=>{e.preventDefault();void decide(decision,String(new FormData(e.currentTarget).get("reason")));}}><Field label={`${decision==="return"?"Return":"Rejection"} reason`}><textarea name="reason" required minLength={5}/></Field><InlineError message={error}/><div className="button-row"><button type="button" className="button secondary" onClick={()=>setDecision(null)}>Cancel</button><button className="button primary">Continue to confirmation</button></div></form>}</section>}
+    {state.role==="Site Personnel"&&(["draft","returned"].includes(request.status)||request.correction?.status==="requested")&&<section className="action-bar"><div><strong>{request.correction?.status==="requested"||request.status==="returned"?"Revision requested":"Draft request"}</strong><p>{request.correction?.scope==="documents"?"Replace the supporting PDF and resubmit it to the Project Manager.":"Update the MRF before submitting it to the Project Manager."}</p></div><Link className="button primary" href={`/requests/${id}/edit`}>Edit MRF</Link></section>}
+    {state.role==="Project Manager"&&(request.status==="submitted"||request.correction?.status==="submitted")&&<section className="panel"><div className="panel-heading"><h2>PM decision</h2></div><p className="helper-note">Review current on-hand site stock for each requested material above. Quantities match the material name and unit; approval does not reserve stock.</p><div className="button-row"><button className="button primary" onClick={()=>void decide("approve")}>Approve request</button><button className="button secondary" onClick={()=>setDecision("return")}>Return with reason</button>{!request.correction&&<button className="button danger-outline" onClick={()=>setDecision("reject")}>Reject with reason</button>}</div>{decision&&<form className="decision-panel" onSubmit={e=>{e.preventDefault();void decide(decision,String(new FormData(e.currentTarget).get("reason")));}}><Field label={`${decision==="return"?"Return":"Rejection"} reason`}><textarea name="reason" required minLength={5}/></Field><InlineError message={error}/><div className="button-row"><button type="button" className="button secondary" onClick={()=>setDecision(null)}>Cancel</button><button className="button primary">Continue to confirmation</button></div></form>}</section>}
+    {request.archive && <section className="panel"><div className="panel-heading"><h2>Google Drive archive</h2><Badge value={request.archive.status === "complete" ? "Complete" : "Pending"}/></div>{request.archive.status === "pending" ? <><p className="helper-note">Procurement waits until the generated MRF and supporting PDF are both in the project folder.</p>{request.archive.error && <div className="callout warn"><strong>Archive needs a retry</strong><p>{request.archive.error}</p></div>}{["Project Manager","Administrator"].includes(state.role) && <button className="button primary" disabled={archiving} onClick={()=>void archive()}>{archiving ? "Archiving…" : "Retry Drive archive"}</button>}</> : <p className="helper-note">The latest approved PDFs are available in the project folder.</p>}{request.archive.versions.map(version=><div className="data-rows" key={version.version}><div><span>Version {version.version}{currentArchive?.version===version.version ? " · Current" : ""}</span><strong><a href={version.formUrl} target="_blank" rel="noreferrer">MRF Form ↗</a> · <a href={version.supportUrl} target="_blank" rel="noreferrer">Supporting PDF ↗</a></strong></div></div>)}</section>}
+    {request.correction && <div className="callout warn"><strong>Correction {request.correction.status}</strong><p>{request.correction.reason}</p><p>New Procurement actions are paused until PM reapproval and Drive archiving.</p></div>}
+    {state.role==="Project Manager"&&request.status==="approved"&&!request.correction&&request.archive?.status==="complete"&&<section className="panel"><h2 className="panel-title">Correct approved MRF</h2><p className="helper-note">Site Personnel will revise the same request. Once quotations or POs exist, only the supporting PDF can change.</p>{reopenOpen ? <form onSubmit={async event=>{event.preventDefault();const reason=String(new FormData(event.currentTarget).get("reason")||"");const result=await run({type:"reopenApprovedRequest",id,reason});setError(result.ok?"":result.message);if(result.ok)setReopenOpen(false);}}><Field label="Correction reason"><textarea name="reason" required minLength={5}/></Field><div className="button-row"><button type="button" className="button secondary" onClick={()=>setReopenOpen(false)}>Cancel</button><button className="button primary">Send back to Site Personnel</button></div></form> : <button className="button secondary" onClick={()=>setReopenOpen(true)}>Reopen for correction</button>}</section>}
+    <InlineError message={error}/>
     {confirmation}
-    {request.status==="approved"&&<section className="action-bar"><div><strong>Supplier comparison</strong><p>{state.quotes.filter(q=>q.mrfId===id).length} quotations on file. The lowest price is highlighted but never selected automatically.</p></div><Link className="button primary" href={`/requests/${id}/quotes`}>Compare quotations →</Link></section>}
+    {procurementReady(request)&&<section className="action-bar"><div><strong>Supplier comparison</strong><p>{state.quotes.filter(q=>q.mrfId===id).length} quotations on file. The lowest price is highlighted but never selected automatically.</p></div><Link className="button primary" href={`/requests/${id}/quotes`}>Compare quotations →</Link></section>}
     <Timeline state={state} ids={[id,...pos.map(linked=>linked.id)]}/></div></>;
 }
 

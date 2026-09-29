@@ -27,16 +27,28 @@ export function Admin() {
     setError(result.ok ? "" : result.message);
   };
 
+  const saveDriveFolder = async (event: FormEvent<HTMLFormElement>, siteId: string) => {
+    event.preventDefault();
+    const folder = String(new FormData(event.currentTarget).get("folder") || "");
+    try {
+      const response = await fetch("/api/drive/validate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ folder }) });
+      const result = await response.json() as { id?: string; error?: string };
+      if (!response.ok || !result.id) throw new Error(result.error || "The Drive folder could not be validated.");
+      const saved = await run({ type: "setProjectDriveFolder", siteId, folderId: result.id });
+      setError(saved.ok ? "" : saved.message);
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "The Drive folder could not be validated."); }
+  };
+
   return <>
     <PageHeader eyebrow="WORKSPACE SETTINGS" title="Administration" description="Manage projects and review workspace activity."/>
     <section className="panel">
       <h2 className="panel-title">Projects and Project Managers</h2>
       {!state.sites.length && <p className="helper-note">Add the first project below to make it available on material requests.</p>}
-      {state.sites.map(site => <form className="admin-row" key={site.id} onSubmit={event => void saveManager(event, site.id)}>
+      {state.sites.map(site => <div className="admin-row" key={site.id}><form onSubmit={event => void saveManager(event, site.id)}>
         <h3>{site.name}</h3>
         <div className="form-grid"><Field label="Project Manager"><input name="manager" defaultValue={site.manager}/></Field></div>
         {state.role === "Administrator" && <button className="button secondary">Save Project Manager</button>}
-      </form>)}
+      </form><form className="drive-folder-form" onSubmit={event => void saveDriveFolder(event, site.id)}><Field label="Google Drive project folder"><input name="folder" type="text" defaultValue={site.driveFolderId ? `https://drive.google.com/drive/folders/${site.driveFolderId}` : ""} placeholder="Paste the project folder URL"/></Field>{state.role === "Administrator" && <button className="button secondary">Validate and save folder</button>}<small>Required before PM approval. The folder must be inside the configured company root.</small></form></div>)}
       {state.role === "Administrator" && <form className="subform" onSubmit={event => void addProject(event)}>
         <h3>Add project / site</h3>
         <div className="form-grid">

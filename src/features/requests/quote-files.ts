@@ -31,7 +31,7 @@ export async function saveQuoteFiles(files: File[]): Promise<DocumentRef[]> {
   } finally { database.close(); }
 }
 
-export async function saveRequestFile(file: File, kind: "Scope" | "Signed MRF" | "Supporting document"): Promise<DocumentRef> {
+export async function saveRequestFile(file: File, kind: "Scope" | "Signed MRF" | "Supporting document" | "Supporting PDF"): Promise<DocumentRef> {
   const database = await openFiles();
   try {
     const fileId = newId("request-file");

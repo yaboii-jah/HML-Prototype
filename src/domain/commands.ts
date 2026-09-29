@@ -2,18 +2,25 @@ import { newId, nextRef } from "./ids.ts";
 import { acceptedFor, budgetFor, inventoryFor, orderedFor, outstandingFor, paidTotal, poItems, poTotal, requestForPO, schedulableFor, stockFor } from "./selectors.ts";
 import { hasFinalizedSuccessor, isFinalizedQuote, latestFinalizedQuotes, quoteReviewIssues } from "./procurement.ts";
 import { poLineTotal } from "./pricing.ts";
-import { ROLES, type DemoSnapshot, type DocumentRef, type DocumentStatus, type Item, type POAdjustment, type POLine, type Priority, type Quote, type Role } from "./types.ts";
+import { procurementReady, supportingPdf } from "./request-archive.ts";
+import { ROLES, type ArchivedQuoteFile, type DemoSnapshot, type DocumentRef, type DocumentStatus, type Item, type POAdjustment, type POLine, type Priority, type Quote, type Role } from "./types.ts";
 
 export type Command =
   | { type: "setRole"; role: Role }
   | { type: "setSiteFilter"; siteId: string }
   | { type: "saveRequest"; id?: string; intent: "draft" | "submit"; siteId: string; ref: string; requestDate: string; scopeDocument?: DocumentRef; requestedBy: string; approvedBy: string; purchaser: string; financeOfficer: string; items: Item[]; documents: DocumentRef[] }
   | { type: "reviewRequest"; id: string; decision: "approve" | "return" | "reject"; reason?: string }
+  | { type: "reopenApprovedRequest"; id: string; reason: string }
+  | { type: "completeRequestArchive"; id: string; formFileId: string; supportFileId: string; formUrl: string; supportUrl: string }
+  | { type: "failRequestArchive"; id: string; error: string }
+  | { type: "setProjectDriveFolder"; siteId: string; folderId: string }
   | { type: "addQuote"; requestId: string; supplierId: string; ref: string; prices: Record<string, number>; available: string; leadDays: number; terms: string; document?: string }
   | { type: "saveReviewedQuote"; requestId: string; supplierId: string; ref: string; available: string; leadDays: number; terms: string; documents: DocumentRef[]; lines: Quote["lines"]; currency: string; tax: number; freight: number; discount: number; validity: string; extraction: "gemini" | "manual"; supersedesId?: string }
   | { type: "saveQuoteDraft"; quote: Quote }
   | { type: "deleteQuoteDraft"; id: string }
   | { type: "finalizeQuote"; id: string }
+  | { type: "completeQuoteArchive"; id: string; files: ArchivedQuoteFile[] }
+  | { type: "failQuoteArchive"; id: string; error: string }
   | { type: "stageAward"; requestId: string; quoteId: string; quoteLineId: string; quantity: number }
   | { type: "generateAwardPOs"; requestId: string; reasons: Record<string, string> }
   | { type: "createAwardPO"; requestId: string; quoteId: string; lines: POLine[]; tax: number; freight: number; discount: number; reason: string; notes: string }
@@ -21,6 +28,8 @@ export type Command =
   | { type: "savePO"; id: string; quoteId: string; notes: string; finalize: boolean; lines?: POLine[]; tax?: number; freight?: number; discount?: number; adjustments?: POAdjustment[]; reason?: string; supersededReason?: string }
   | { type: "setPriority"; id: string; priority: Priority }
   | { type: "reviewPO"; id: string; decision: "approve" | "hold" | "return" | "reject"; reason?: string }
+  | { type: "completePOArchive"; id: string; fileId: string; url: string }
+  | { type: "failPOArchive"; id: string; error: string }
   | { type: "servePO"; id: string }
   | { type: "createBatch"; poId: string; scheduledDate: string; evidence: string; delayReason: string; expected: Record<string, number> }
   | { type: "confirmBatch"; id: string; lines: Record<string, { accepted: number; issue: string }> }
@@ -44,8 +53,9 @@ const validRequestDate = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value) &&
 
 function awardError(state: DemoSnapshot, requestId: string, quote: Quote, lines: POLine[], tax: number, freight: number, discount: number, excludingPoId?: string) {
   const request = state.requests.find(r => r.id === requestId);
-  if (!request || request.status !== "approved" || quote.mrfId !== requestId || !quote.lines?.length) return "Choose a reviewed quotation for an approved MRF.";
+  if (!procurementReady(request) || quote.mrfId !== requestId || !quote.lines?.length) return "Choose a reviewed quotation for an approved MRF.";
   if (!isFinalizedQuote(quote) || quote.currency && quote.currency !== "PHP") return "Only finalized PHP quotations can be awarded.";
+  if (quote.archive && quote.archive.status !== "complete") return "Archive this supplier quotation to Google Drive before awarding it.";
   if (!lines.length || [tax, freight, discount].some(value => !nonnegative(value))) return "Enter awarded lines and valid PO charges.";
   const awarded = new Map<string, number>();
   const usedOffers = new Map<string, number>();
@@ -91,7 +101,8 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       if (!state.sites.some(s => s.id === command.siteId)) return fail("Choose a valid site.", "siteId");
       const original = command.id ? state.requests.find(r => r.id === command.id) : undefined;
       if (command.id && !original) return fail("MRF not found.");
-      if (original && !["draft", "returned"].includes(original.status)) return fail("Only draft or returned MRFs can be edited.");
+      const correcting = original?.status === "approved" && original.correction?.status === "requested";
+      if (original && !["draft", "returned"].includes(original.status) && !correcting) return fail("Only draft, returned, or reopened MRFs can be edited.");
       const ref = (command.ref || "").trim();
       const requestDate = (command.requestDate || "").trim();
       if (command.intent === "submit") {
@@ -100,10 +111,21 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
         if (!validRequestDate(requestDate)) return fail("Enter a valid Request Date before submitting.", "requestDate");
         if (![command.requestedBy, command.approvedBy, command.purchaser, command.financeOfficer].every(x => x.trim())) return fail("Complete the request's general information before submitting.");
         if (!command.items.length || command.items.some(i => !i.name.trim() || !i.unit.trim() || !positive(i.quantity) || !i.neededDate.trim() || !i.location.trim())) return fail("Each material needs a name, unit, positive quantity, date needed, and delivery location.", "items");
+        if (command.documents.filter(document => document.type === "Supporting PDF" && !!document.fileId).length !== 1) return fail("Attach one combined supporting PDF before submitting.", "documents");
       }
       const items = command.items.map(i => ({ ...i, name: i.name.trim(), unit: i.unit.trim(), id: i.id || id("item"), neededDate: i.neededDate.trim(), purpose: i.purpose.trim(), location: i.location.trim(), remarks: i.remarks.trim() }));
       const fields = { ref, requestDate, siteId: command.siteId, category: original?.category || "", scope: original?.scope || "", scopeDocument: command.scopeDocument, requestedBy: command.requestedBy.trim(), approvedBy: command.approvedBy.trim(), purchaser: command.purchaser.trim(), financeOfficer: command.financeOfficer.trim(), items, documents: command.documents.filter(d => d.name.trim()), status: command.intent === "submit" ? "submitted" as const : "draft" as const, reason: undefined, updatedAt: at };
-      if (original) { Object.assign(original, fields); log(original.id, command.intent === "submit" ? "MRF revised and resubmitted" : "MRF draft saved"); return done(command.intent === "submit" ? "MRF submitted to the Project Manager." : "MRF draft saved.", original.id); }
+      if (original) {
+        if (correcting) {
+          if (original.correction?.scope === "documents" && (ref !== original.ref || requestDate !== original.requestDate || command.siteId !== original.siteId || JSON.stringify(items) !== JSON.stringify(original.items) || fields.requestedBy !== original.requestedBy || fields.approvedBy !== original.approvedBy || fields.purchaser !== original.purchaser || fields.financeOfficer !== original.financeOfficer)) return fail("Only the supporting PDF can change after procurement has started.");
+          original.documents = fields.documents;
+          if (original.correction?.scope === "full") Object.assign(original, { ...fields, status: "approved" });
+          if (command.intent === "submit") original.correction = { ...original.correction!, status: "submitted" };
+          original.updatedAt = at;
+        } else Object.assign(original, fields);
+        log(original.id, command.intent === "submit" ? "MRF revised and resubmitted" : "MRF draft saved");
+        return done(command.intent === "submit" ? "MRF submitted to the Project Manager." : "MRF draft saved.", original.id);
+      }
       const requestId = id("mrf");
       state.requests.push({ id: requestId, createdAt: at, ...fields });
       log(requestId, command.intent === "submit" ? "MRF submitted" : "MRF draft saved");
@@ -112,32 +134,64 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
     case "reviewRequest": {
       if (!permit("Project Manager")) return fail("Switch to Project Manager to review an MRF.");
       const request = state.requests.find(r => r.id === command.id);
-      if (!request || request.status !== "submitted") return fail("This MRF is no longer awaiting PM review.");
+      if (!request || request.status !== "submitted" && !(request.status === "approved" && request.correction?.status === "submitted")) return fail("This MRF is no longer awaiting PM review.");
       if (command.decision !== "approve" && !reasonOK(command.reason)) return fail("Enter a reason of at least five characters.", "reason");
+      if (command.decision === "approve" && !state.sites.find(site => site.id === request.siteId)?.driveFolderId) return fail("Map this project's Google Drive folder before approval.");
+      if (command.decision === "approve" && !supportingPdf(request)) return fail("A combined supporting PDF is required before approval.");
+      if (request.correction) {
+        if (command.decision === "reject") return fail("Return the correction to Site Personnel instead.");
+        if (command.decision === "return") request.correction = { ...request.correction, status: "requested", reason: command.reason!.trim() };
+        else { request.correction = undefined; request.archive = { status: "pending", approvedAt: at, versions: request.archive?.versions || [] }; }
+        request.updatedAt = at;
+        log(request.id, command.decision === "approve" ? "MRF correction approved; Drive archive pending" : "MRF correction returned", command.reason);
+        return done(command.decision === "approve" ? "MRF correction approved. Archiving to Drive." : "MRF correction returned.");
+      }
       request.status = command.decision === "approve" ? "approved" : command.decision === "return" ? "returned" : "rejected";
+      if (command.decision === "approve") request.archive = { status: "pending", approvedAt: at, versions: [] };
       request.reason = command.decision === "approve" ? undefined : command.reason?.trim();
       request.updatedAt = at;
       log(request.id, `MRF ${request.status}`, request.reason);
-      return done(command.decision === "approve" ? "MRF approved. Procurement is next." : `MRF ${request.status}.`);
+      return done(command.decision === "approve" ? "MRF approved. Google Drive archiving is next." : `MRF ${request.status}.`);
+    }
+    case "reopenApprovedRequest": {
+      if (!permit("Project Manager")) return fail("Switch to Project Manager to reopen an MRF.");
+      const request = state.requests.find(value => value.id === command.id);
+      if (!request || request.status !== "approved" || request.correction || request.archive?.status !== "complete") return fail("Only an archived approved MRF can be reopened.");
+      if (!reasonOK(command.reason)) return fail("Explain the correction in at least five characters.");
+      const hasPurchasing = state.quotes.some(value => value.mrfId === request.id) || state.pos.some(value => value.mrfId === request.id);
+      request.correction = { status: "requested", scope: hasPurchasing ? "documents" : "full", reason: command.reason.trim() };
+      request.updatedAt = at;
+      log(request.id, "MRF reopened for correction", command.reason);
+      return done("Site Personnel can revise this MRF.");
+    }
+    case "completeRequestArchive": {
+      if (!permit("Project Manager", "Administrator")) return fail("Switch to Project Manager or Administrator to complete an MRF archive.");
+      const request = state.requests.find(value => value.id === command.id);
+      if (!request || request.status !== "approved" || request.archive?.status !== "pending" || request.correction) return fail("This MRF is not awaiting a Drive archive.");
+      if (![command.formFileId, command.supportFileId, command.formUrl, command.supportUrl].every(Boolean)) return fail("The Drive archive is incomplete.");
+      request.archive.versions.push({ version: request.archive.versions.length + 1, formFileId: command.formFileId, supportFileId: command.supportFileId, formUrl: command.formUrl, supportUrl: command.supportUrl, archivedAt: at });
+      request.archive.status = "complete";
+      request.archive.error = undefined;
+      request.updatedAt = at;
+      log(request.id, "MRF archived to Google Drive");
+      return done("MRF archived to Google Drive. Procurement can continue.");
+    }
+    case "failRequestArchive": {
+      if (!permit("Project Manager", "Administrator")) return fail("Switch to Project Manager or Administrator to update an MRF archive.");
+      const request = state.requests.find(value => value.id === command.id);
+      if (!request || request.archive?.status !== "pending") return fail("This MRF is not awaiting a Drive archive.");
+      request.archive.error = command.error.slice(0, 300);
+      request.updatedAt = at;
+      return done("Drive archive pending. Retry from this request.");
     }
     case "addQuote": {
-      if (!permit("Procurement")) return fail("Switch to Procurement to add quotations.");
-      const request = state.requests.find(r => r.id === command.requestId);
-      if (!request || request.status !== "approved") return fail("Only an approved MRF can receive quotations.");
-      if (!state.suppliers.some(s => s.id === command.supplierId)) return fail("Choose a valid supplier.", "supplierId");
-      if (state.quotes.some(q => q.mrfId === request.id && q.supplierId === command.supplierId)) return fail("This supplier already has a quote for the MRF.");
-      if (!command.ref.trim() || !command.available.trim() || !command.terms.trim() || !nonnegative(command.leadDays)) return fail("Complete the quotation reference, availability, lead time, and terms.");
-      if (request.items.some(item => !positive(command.prices[item.id]))) return fail("Enter a positive unit price for every material.", "prices");
-      const quoteId = id("quote");
-      state.quotes.push({ id: quoteId, mrfId: request.id, supplierId: command.supplierId, ref: command.ref.trim(), prices: command.prices, available: command.available.trim(), leadDays: command.leadDays, terms: command.terms.trim(), documents: command.document?.trim() ? [{ name: command.document.trim(), type: "Reference" }] : [] });
-      log(request.id, "Supplier quotation added");
-      return done("Quotation added.", quoteId);
+      return fail("Use the quotation review workflow and attach the supplier's original document.");
     }
     case "saveQuoteDraft": {
       if (!permit("Procurement")) return fail("Switch to Procurement to review quotations.");
       const incoming = command.quote;
       const request = state.requests.find(value => value.id === incoming.mrfId);
-      if (!request || request.status !== "approved") return fail("Only an approved MRF can receive quotations.");
+      if (!procurementReady(request)) return fail("This MRF must be approved, archived, and free of pending corrections before Procurement can continue.");
       if (!incoming.id || !Array.isArray(incoming.lines) || !Array.isArray(incoming.adjustments)) return fail("The quotation draft is incomplete.");
       const existing = state.quotes.find(value => value.id === incoming.id);
       if (existing && existing.reviewStatus !== "draft") return fail("Finalized quotations cannot be changed. Create a revision.");
@@ -146,7 +200,7 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       if (incoming.supersedesId && !previousQuote) return fail("Choose a finalized quotation to revise.");
       if (!existing && state.quotes.some(value => value.id === incoming.id)) return fail("Quotation ID already exists.");
       if (!existing && incoming.supersedesId && state.quotes.some(value => value.supersedesId === incoming.supersedesId && value.reviewStatus === "draft")) return fail("A draft revision already exists for this quotation.");
-      const draft: Quote = { ...incoming, reviewStatus: "draft", prices: {}, version: existing?.version || (previousQuote?.version || 0) + 1, documents: existing?.documents || incoming.documents, reviewedAt: undefined };
+      const draft: Quote = { ...incoming, reviewStatus: "draft", prices: {}, version: existing?.version || (previousQuote?.version || 0) + 1, documents: incoming.documents, archive: undefined, reviewedAt: undefined };
       if (existing) Object.assign(existing, draft);
       else state.quotes.push(draft);
       return done(existing ? "Quotation draft saved." : "Quotation draft created.", draft.id);
@@ -155,6 +209,7 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       if (!permit("Procurement")) return fail("Switch to Procurement to remove quotation drafts.");
       const quote = state.quotes.find(value => value.id === command.id && value.reviewStatus === "draft");
       if (!quote) return fail("Only an unfinalized quotation draft can be removed.");
+      if (!procurementReady(state.requests.find(value => value.id === quote.mrfId))) return fail("Procurement is paused until the MRF archive is ready.");
       if (state.pendingAwards.some(value => value.quoteId === quote.id) || state.pos.some(value => value.quoteId === quote.id)) return fail("Remove linked awards before deleting this draft.");
       state.quotes = state.quotes.filter(value => value.id !== quote.id);
       log(quote.mrfId, "Quotation draft removed");
@@ -164,6 +219,7 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       if (!permit("Procurement")) return fail("Switch to Procurement to finalize quotations.");
       const quote = state.quotes.find(value => value.id === command.id && value.reviewStatus === "draft");
       if (!quote) return fail("Quotation draft not found.");
+      if (!procurementReady(state.requests.find(value => value.id === quote.mrfId))) return fail("Procurement is paused until the MRF archive is ready.");
       const issues = quoteReviewIssues(state, quote);
       if (issues.length) return fail(issues[0]);
       const supplierName = quote.supplierDetails?.name.trim() || state.suppliers.find(value => value.id === quote.supplierId)?.name || "";
@@ -180,20 +236,38 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       quote.supplierId = supplierId;
       quote.reviewStatus = "finalized";
       quote.reviewedAt = at;
+      quote.archive = { status: "pending", files: [] };
       quote.lines = quote.lines?.map(line => ({ ...line, matchConfirmed: line.requestItemId ? true : false }));
       log(quote.id, "Supplier quotation finalized");
       return done("Quotation finalized for comparison and awards.", quote.id);
+    }
+    case "completeQuoteArchive": {
+      if (!permit("Procurement", "Administrator")) return fail("Switch to Procurement or Administrator to archive a quotation.");
+      const quote = state.quotes.find(value => value.id === command.id);
+      if (!quote || quote.reviewStatus !== "finalized" || quote.archive?.status !== "pending") return fail("This quotation is not awaiting a Drive archive.");
+      if (quote.documents.length !== command.files.length || quote.documents.some(document => !command.files.some(file => file.localFileId === document.fileId && file.driveFileId && file.url))) return fail("The quotation archive is incomplete.");
+      quote.archive = { status: "complete", files: command.files };
+      log(quote.id, "Supplier quotation archived to Google Drive");
+      return done("Supplier quotation archived to Google Drive.");
+    }
+    case "failQuoteArchive": {
+      if (!permit("Procurement", "Administrator")) return fail("Switch to Procurement or Administrator to update a quotation archive.");
+      const quote = state.quotes.find(value => value.id === command.id);
+      if (!quote || quote.archive?.status !== "pending") return fail("This quotation is not awaiting a Drive archive.");
+      quote.archive.error = command.error.slice(0, 300);
+      return done("Quotation archive pending. Retry the upload.");
     }
     case "stageAward": {
       if (!permit("Procurement")) return fail("Switch to Procurement to allocate materials.");
       const request = state.requests.find(value => value.id === command.requestId);
       const quote = state.quotes.find(value => value.id === command.quoteId && value.mrfId === command.requestId);
       const offer = quote?.lines?.find(value => value.id === command.quoteLineId);
-      if (!request || request.status !== "approved" || !quote || !offer || !offer.requestItemId) return fail("Choose a matching offer for an approved MRF.");
+      if (!procurementReady(request) || !quote || !offer || !offer.requestItemId) return fail("Choose a matching offer for an archived approved MRF.");
       if (!Number.isFinite(command.quantity) || command.quantity < 0) return fail("Enter a valid award quantity.");
       const existing = state.pendingAwards.find(value => value.quoteLineId === offer.id && value.requestId === request.id);
       if (command.quantity === 0) { state.pendingAwards = state.pendingAwards.filter(value => value.id !== existing?.id); return done("Award removed."); }
       if (!isFinalizedQuote(quote) || hasFinalizedSuccessor(state, quote.id) || quote.currency && quote.currency !== "PHP") return fail("Use the current finalized PHP quotation.");
+      if (quote.archive && quote.archive.status !== "complete") return fail("Archive this supplier quotation to Google Drive before awarding it.");
       const otherPending = state.pendingAwards.filter(value => value.requestId === request.id && value.id !== existing?.id);
       const usedRequest = state.pos.filter(value => value.mrfId === request.id && value.status !== "rejected").reduce((sum, po) => sum + orderedFor(state, po, offer.requestItemId), 0) + otherPending.filter(value => value.itemId === offer.requestItemId).reduce((sum, value) => sum + value.quantity, 0);
       const usedOffer = state.pos.filter(value => value.quoteId === quote.id && value.status !== "rejected").reduce((sum, po) => sum + (po.lines || []).filter(value => value.quoteLineId === offer.id).reduce((total, value) => total + value.quantity, 0), 0);
@@ -206,12 +280,14 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
     }
     case "generateAwardPOs": {
       if (!permit("Procurement")) return fail("Switch to Procurement to prepare POs.");
+      if (!procurementReady(state.requests.find(value => value.id === command.requestId))) return fail("Procurement is paused until the MRF archive is ready.");
       const pending = state.pendingAwards.filter(value => value.requestId === command.requestId);
       if (!pending.length) return fail("Stage at least one supplier award.");
       const groups = new Map<string, typeof pending>();
       for (const award of pending) {
         const quote = state.quotes.find(value => value.id === award.quoteId);
         if (!quote || !isFinalizedQuote(quote) || hasFinalizedSuccessor(state, quote.id) || quote.currency && quote.currency !== "PHP") return fail("A staged quotation changed. Review the allocations again.");
+        if (quote.archive && quote.archive.status !== "complete") return fail("Archive the supplier quotation before generating a PO.");
         const group = groups.get(quote.id) || [];
         group.push(award);
         groups.set(quote.id, group);
@@ -244,9 +320,9 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
     case "saveReviewedQuote": {
       if (!permit("Procurement")) return fail("Switch to Procurement to review quotations.");
       const request = state.requests.find(r => r.id === command.requestId);
-      if (!request || request.status !== "approved") return fail("Only an approved MRF can receive quotations.");
+      if (!procurementReady(request)) return fail("This MRF must be approved and archived before Procurement can continue.");
       if (!state.suppliers.some(s => s.id === command.supplierId)) return fail("Choose a valid supplier.");
-      if (!command.ref.trim() || command.currency !== "PHP" || !Array.isArray(command.lines) || !command.lines.length || !command.documents.length) return fail("Add a PHP quotation with its source file and quoted lines.");
+      if (!command.ref.trim() || command.currency !== "PHP" || !Array.isArray(command.lines) || !command.lines.length || !command.documents.length || command.documents.some(document => !document.fileId || !["application/pdf", "image/jpeg", "image/png", "image/webp"].includes(document.type))) return fail("Add a PHP quotation with its supplier source file and quoted lines.");
       if ([command.tax, command.freight, command.discount].some(value => !nonnegative(value)) || !nonnegative(command.leadDays)) return fail("Enter valid quotation charges and lead time.");
       if (command.lines.some(line => !line.description.trim() || !line.unit.trim() || !positive(line.quantity) || !positive(line.unitPrice) || !positive(line.conversionFactor) || (line.requestItemId && !request.items.some(item => item.id === line.requestItemId)))) return fail("Review each quoted line, quantity, price, and material match.");
       const prior = command.supersedesId ? state.quotes.find(q => q.id === command.supersedesId && q.mrfId === request.id && q.supplierId === command.supplierId) : undefined;
@@ -254,7 +330,7 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       const current = state.quotes.filter(q => q.mrfId === request.id && q.supplierId === command.supplierId && !state.quotes.some(later => later.supersedesId === q.id));
       if (current.length && (!prior || !current.some(q => q.id === prior.id))) return fail("Choose the current supplier quotation as the revision being replaced.");
       const quoteId = id("quote");
-      state.quotes.push({ id: quoteId, mrfId: request.id, supplierId: command.supplierId, ref: command.ref.trim(), prices: {}, available: command.available.trim(), leadDays: command.leadDays, terms: command.terms.trim(), documents: command.documents, lines: command.lines.map(line => ({ ...line, id: line.id || id("offer"), description: line.description.trim(), unit: line.unit.trim(), brand: line.brand.trim(), specification: line.specification.trim(), varianceReason: line.varianceReason.trim() })), version: (prior?.version || 0) + 1, supersedesId: prior?.id, currency: "PHP", tax: command.tax, freight: command.freight, discount: command.discount, validity: command.validity.trim(), extraction: command.extraction });
+      state.quotes.push({ id: quoteId, mrfId: request.id, supplierId: command.supplierId, ref: command.ref.trim(), prices: {}, available: command.available.trim(), leadDays: command.leadDays, terms: command.terms.trim(), documents: command.documents, archive: { status: "pending", files: [] }, reviewStatus: "finalized", lines: command.lines.map(line => ({ ...line, id: line.id || id("offer"), description: line.description.trim(), unit: line.unit.trim(), brand: line.brand.trim(), specification: line.specification.trim(), varianceReason: line.varianceReason.trim() })), version: (prior?.version || 0) + 1, supersedesId: prior?.id, currency: "PHP", tax: command.tax, freight: command.freight, discount: command.discount, validity: command.validity.trim(), extraction: command.extraction });
       log(request.id, "Supplier quotation reviewed");
       return done("Quotation saved for comparison.", quoteId);
     }
@@ -274,7 +350,8 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       if (!permit("Procurement")) return fail("Switch to Procurement to prepare a PO.");
       const request = state.requests.find(r => r.id === command.requestId);
       const quote = state.quotes.find(q => q.id === command.quoteId && q.mrfId === request?.id);
-      if (!request || request.status !== "approved" || !quote) return fail("Choose a quote for an approved MRF.");
+      if (!procurementReady(request) || !quote) return fail("Choose a quote for an archived approved MRF.");
+      if (quote.archive && quote.archive.status !== "complete") return fail("Archive the supplier quotation before creating a PO.");
       if (state.pos.some(p => p.mrfId === request.id && p.status !== "rejected")) return fail("Use the material award flow to create another PO for this MRF.");
       if (!reasonOK(command.reason)) return fail("Explain the supplier choice in at least five characters.", "reason");
       const poId = id("po");
@@ -286,6 +363,7 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       if (!permit("Procurement")) return fail("Switch to Procurement to edit a PO.");
       const po = state.pos.find(p => p.id === command.id);
       if (!po || !["draft", "returned"].includes(po.status)) return fail("This PO is locked for editing.");
+      if (!procurementReady(state.requests.find(value => value.id === po.mrfId))) return fail("Procurement is paused until the MRF archive is ready.");
       const quote = state.quotes.find(q => q.id === command.quoteId && q.mrfId === po.mrfId);
       if (!quote) return fail("Choose a quote linked to this MRF.");
       if (state.pos.some(value => value.id !== po.id && value.mrfId === po.mrfId && value.status !== "rejected" && state.quotes.find(source => source.id === value.quoteId)?.supplierId === quote.supplierId)) return fail("An active PO already exists for this supplier and MRF. Edit that PO instead.");
@@ -329,17 +407,35 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
         if (!request) return fail("The linked MRF is missing.");
         if (poTotal(state, po) > budgetFor(state, request.siteId).available) return fail("This PO exceeds the available project budget.");
         po.status = "approved"; po.reviewReason = undefined; po.updatedAt = at; log(po.id, "Budget approved");
-        return done("Budget approved. Procurement can serve the PO.");
+        po.archive = { status: "pending" };
+        return done("Budget approved. Archive the PO before serving it.");
       }
       if (!reasonOK(command.reason)) return fail("Enter a reason of at least five characters.", "reason");
       po.status = command.decision === "hold" ? "hold" : command.decision === "return" ? "returned" : "rejected";
       po.reviewReason = command.reason?.trim(); po.updatedAt = at; log(po.id, `Finance ${po.status}`, po.reviewReason);
       return done(`PO ${po.status}.`);
     }
+    case "completePOArchive": {
+      if (!permit("Finance", "Procurement", "Administrator")) return fail("Switch to Finance, Procurement, or Administrator to archive a PO.");
+      const po = state.pos.find(value => value.id === command.id);
+      if (!po || po.status !== "approved" || po.archive?.status !== "pending" || !command.fileId || !command.url) return fail("This PO is not awaiting a Drive archive.");
+      po.archive = { status: "complete", fileId: command.fileId, url: command.url };
+      log(po.id, "Purchase order archived to Google Drive");
+      return done("Purchase order archived to Google Drive.");
+    }
+    case "failPOArchive": {
+      if (!permit("Finance", "Procurement", "Administrator")) return fail("Switch to Finance, Procurement, or Administrator to update a PO archive.");
+      const po = state.pos.find(value => value.id === command.id);
+      if (!po || po.archive?.status !== "pending") return fail("This PO is not awaiting a Drive archive.");
+      po.archive.error = command.error.slice(0, 300);
+      return done("PO archive pending. Retry the upload.");
+    }
     case "servePO": {
       if (!permit("Procurement")) return fail("Switch to Procurement to serve a PO.");
       const po = state.pos.find(p => p.id === command.id);
       if (!po || po.status !== "approved") return fail("Finance approval is required before serving.");
+      if (po.archive && po.archive.status !== "complete") return fail("Archive the approved PO to Google Drive before serving it.");
+      if (!procurementReady(state.requests.find(value => value.id === po.mrfId))) return fail("Procurement is paused until the MRF archive is ready.");
       po.status = "served"; po.updatedAt = at; log(po.id, "PO served");
       return done("PO served. Logistics is next.");
     }
@@ -434,6 +530,14 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       if (!site || !command.manager.trim()) return fail("Enter the Project Manager's name.");
       site.manager = command.manager.trim(); log(site.id, "Project Manager updated");
       return done("Project Manager saved.");
+    }
+    case "setProjectDriveFolder": {
+      if (!permit("Administrator")) return fail("Switch to Administrator to map a project folder.");
+      const site = state.sites.find(value => value.id === command.siteId);
+      if (!site || !command.folderId.trim()) return fail("Choose a valid project folder.");
+      site.driveFolderId = command.folderId.trim();
+      log(site.id, "Google Drive project folder mapped");
+      return done("Project Drive folder saved.");
     }
     case "addSite": {
       if (!permit("Administrator")) return fail("Switch to Administrator to add a project.");

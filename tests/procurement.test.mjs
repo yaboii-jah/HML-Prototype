@@ -16,7 +16,8 @@ const setup = () => {
   state = execute(state, { type: "setRole", role: "Procurement" });
   return { state, request };
 };
-const draft = (requestId, supplier, price, suffix) => ({ id: `draft-${suffix}`, mrfId: requestId, supplierId: "", ref: `Q-${suffix}`, prices: {}, available: "In stock", leadDays: 3, terms: "30 days", documents: [], lines: [{ id: `line-${suffix}`, description: "Plywood", quantity: 10, unit: "sheet", unitPrice: price, brand: "", specification: "", requestItemId: "procurement-item", conversionFactor: 1, varianceReason: "", matchConfidence: "medium", matchConfirmed: false, discountType: "fixed", discountValue: 100, taxRate: 0, printedTotal: 10 * price - 90, discrepancyReason: "" }], currency: "PHP", extraction: "manual", reviewStatus: "draft", supplierDetails: { name: supplier, address: "", tin: "", contactName: "", email: "", phone: "" }, adjustments: [{ id: `shipping-${suffix}`, label: "Freight", kind: "shipping", calculation: "fixed", value: 50 }] });
+const draft = (requestId, supplier, price, suffix) => ({ id: `draft-${suffix}`, mrfId: requestId, supplierId: "", ref: `Q-${suffix}`, prices: {}, available: "In stock", leadDays: 3, terms: "30 days", documents: [{ name: `supplier-${suffix}.pdf`, type: "application/pdf", fileId: `source-${suffix}` }], lines: [{ id: `line-${suffix}`, description: "Plywood", quantity: 10, unit: "sheet", unitPrice: price, brand: "", specification: "", requestItemId: "procurement-item", conversionFactor: 1, varianceReason: "", matchConfidence: "medium", matchConfirmed: false, discountType: "fixed", discountValue: 100, taxRate: 0, printedTotal: 10 * price - 90, discrepancyReason: "" }], currency: "PHP", extraction: "manual", reviewStatus: "draft", supplierDetails: { name: supplier, address: "", tin: "", contactName: "", email: "", phone: "" }, adjustments: [{ id: `shipping-${suffix}`, label: "Freight", kind: "shipping", calculation: "fixed", value: 50 }] });
+const archive = (state, quoteId) => { const quote = state.quotes.find(value => value.id === quoteId); return execute(state, { type: "completeQuoteArchive", id: quoteId, files: quote.documents.map(document => ({ localFileId: document.fileId, driveFileId: `drive-${document.fileId}`, url: `https://drive.google.com/file/d/drive-${document.fileId}/view`, name: document.name })) }); };
 
 test("Procurement can remove an unfinalized quotation draft without changing finalized offers", () => {
   let { state, request } = setup();
@@ -25,6 +26,46 @@ test("Procurement can remove an unfinalized quotation draft without changing fin
   state = execute(state, { type: "deleteQuoteDraft", id: quote.id });
   assert.equal(state.quotes.some(value => value.id === quote.id), false);
   assert.equal(applyCommand(state, { type: "deleteQuoteDraft", id: state.quotes[0].id }, context).ok, false);
+});
+
+test("manual quotation needs a supplier file and completed Drive archive before award", () => {
+  let { state, request } = setup();
+  const quote = draft(request.id, "Supplier A", 700, "required-file");
+  quote.documents = [];
+  quote.lines[0].matchConfirmed = true;
+  quote.lines[0].printedTotal = null;
+  state = execute(state, { type: "saveQuoteDraft", quote });
+  const missing = applyCommand(state, { type: "finalizeQuote", id: quote.id }, context);
+  assert.equal(missing.ok, false);
+  assert.match(missing.message, /supplier quotation PDF or image/);
+  quote.documents = [{ name: "supplier.pdf", type: "application/pdf", fileId: "supplier-file" }];
+  state = execute(state, { type: "saveQuoteDraft", quote });
+  state = execute(state, { type: "finalizeQuote", id: quote.id });
+  assert.equal(applyCommand(state, { type: "stageAward", requestId: request.id, quoteId: quote.id, quoteLineId: quote.lines[0].id, quantity: 1 }, context).ok, false);
+  state = archive(state, quote.id);
+  state = execute(state, { type: "stageAward", requestId: request.id, quoteId: quote.id, quoteLineId: quote.lines[0].id, quantity: 1 });
+  assert.equal(state.pendingAwards.length, 1);
+});
+
+test("Finance approval waits for PO PDF archive before serving", () => {
+  let { state, request } = setup();
+  const quote = draft(request.id, "Supplier A", 700, "po-archive");
+  quote.lines[0].matchConfirmed = true;
+  quote.lines[0].printedTotal = null;
+  state = execute(state, { type: "saveQuoteDraft", quote });
+  state = execute(state, { type: "finalizeQuote", id: quote.id });
+  state = archive(state, quote.id);
+  state = execute(state, { type: "createAwardPO", requestId: request.id, quoteId: quote.id, lines: [{ itemId: request.items[0].id, quoteLineId: quote.lines[0].id, quantity: 2, unitPrice: 700 }], tax: 0, freight: 0, discount: 0, reason: "Supplier selected for price", notes: "" });
+  const po = state.pos.at(-1);
+  state = execute(state, { type: "savePO", id: po.id, quoteId: quote.id, lines: po.lines, tax: 0, freight: 0, discount: 0, notes: "", reason: po.selectionReason, finalize: true });
+  state = execute(state, { type: "setRole", role: "Finance" });
+  state = execute(state, { type: "reviewPO", id: po.id, decision: "approve" });
+  assert.equal(state.pos.at(-1).archive.status, "pending");
+  state = execute(state, { type: "setRole", role: "Procurement" });
+  assert.equal(applyCommand(state, { type: "servePO", id: po.id }, context).ok, false);
+  state = execute(state, { type: "completePOArchive", id: po.id, fileId: "drive-po", url: "https://drive.google.com/file/d/drive-po/view" });
+  state = execute(state, { type: "servePO", id: po.id });
+  assert.equal(state.pos.at(-1).status, "served");
 });
 
 test("quote drafts persist through commands and cannot finalize with unresolved match or printed total", () => {
@@ -44,6 +85,7 @@ test("quote drafts persist through commands and cannot finalize with unresolved 
   state = execute(state, { type: "saveQuoteDraft", quote });
   state = execute(state, { type: "finalizeQuote", id: quote.id });
   assert.equal(state.quotes.at(-1).reviewStatus, "finalized");
+  assert.equal(state.quotes.at(-1).archive.status, "pending");
   assert.equal(state.suppliers.some(value => value.name === "Supplier A"), true);
   assert.equal(applyCommand(state, { type: "saveQuoteDraft", quote }, context).ok, false);
 });
@@ -51,7 +93,7 @@ test("quote drafts persist through commands and cannot finalize with unresolved 
 test("staged split awards enforce both quantity caps and generate supplier POs atomically", () => {
   let { state, request } = setup();
   const a = draft(request.id, "Supplier A", 700, "a"), b = draft(request.id, "Supplier B", 680, "b");
-  for (const quote of [a, b]) { quote.lines[0].matchConfirmed = true; quote.lines[0].discrepancyReason = "Confirmed by supplier"; state = execute(state, { type: "saveQuoteDraft", quote }); state = execute(state, { type: "finalizeQuote", id: quote.id }); }
+  for (const quote of [a, b]) { quote.lines[0].matchConfirmed = true; quote.lines[0].discrepancyReason = "Confirmed by supplier"; state = execute(state, { type: "saveQuoteDraft", quote }); state = execute(state, { type: "finalizeQuote", id: quote.id }); state = archive(state, quote.id); }
   assert.equal(applyCommand(state, { type: "stageAward", requestId: request.id, quoteId: a.id, quoteLineId: a.lines[0].id, quantity: 11 }, context).ok, false);
   state = execute(state, { type: "stageAward", requestId: request.id, quoteId: a.id, quoteLineId: a.lines[0].id, quantity: 6 });
   assert.equal(applyCommand(state, { type: "stageAward", requestId: request.id, quoteId: b.id, quoteLineId: b.lines[0].id, quantity: 5 }, context).ok, false);
@@ -81,7 +123,7 @@ test("staged split awards enforce both quantity caps and generate supplier POs a
 test("a finalized quote revision blocks old draft PO finalization until Procurement explains its choice", () => {
   let { state, request } = setup();
   const quote = draft(request.id, "Supplier A", 700, "a"); quote.lines[0].matchConfirmed = true; quote.lines[0].discrepancyReason = "Supplier confirmed amount";
-  state = execute(state, { type: "saveQuoteDraft", quote }); state = execute(state, { type: "finalizeQuote", id: quote.id });
+  state = execute(state, { type: "saveQuoteDraft", quote }); state = execute(state, { type: "finalizeQuote", id: quote.id }); state = archive(state, quote.id);
   state = execute(state, { type: "stageAward", requestId: request.id, quoteId: quote.id, quoteLineId: quote.lines[0].id, quantity: 5 });
   const supplierId = state.quotes.find(value => value.id === quote.id).supplierId;
   state = execute(state, { type: "generateAwardPOs", requestId: request.id, reasons: { [supplierId]: "Confirmed supplier selection" } });
@@ -96,10 +138,10 @@ test("a finalized quote revision blocks old draft PO finalization until Procurem
   assert.equal(state.pos.at(-1).quoteId, quote.id);
 });
 
-test("v4 browser data migrates to v7 with prior POs and awardable legacy quotations", () => {
+test("v4 browser data migrates to v9 with prior POs and awardable legacy quotations", () => {
   const old = structuredClone(seedDemo()); old.version = 4; delete old.pendingAwards; old.quotes.forEach(quote => { delete quote.reviewStatus; delete quote.lines; });
   const migrated = migrateV3OrV4(old);
-  assert.equal(migrated.version, 7);
+  assert.equal(migrated.version, 9);
   assert.equal(migrated.pos[0].quoteId, old.pos[0].quoteId);
   assert.equal(migrated.quotes[0].reviewStatus, "finalized");
   assert.equal(migrated.quotes[0].lines[0].requestItemId, "m1-i1");
