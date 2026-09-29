@@ -21,7 +21,7 @@ test("v8 browser records migrate without forcing old quotations and POs into new
   const prior = seedDemo();
   prior.version = 8;
   const migrated = migrateV8(prior);
-  assert.equal(migrated.version, 9);
+  assert.equal(migrated.version, 10);
   assert.equal(migrated.quotes[0].archive, undefined);
   assert.equal(migrated.pos[0].archive, undefined);
   assert.equal(migrated.quotes[0].id, prior.quotes[0].id);
@@ -142,7 +142,7 @@ test("v1 migration preserves edited records and rejects malformed saved data", (
   old.activity[0].action = "PO served (Demo)";
   old.movements[2].reason = "Opening demo stock";
   const migrated = migrateLegacy(old);
-  assert.equal(migrated.version, 9);
+  assert.equal(migrated.version, 10);
   assert.equal(migrated.requests[0].scope, "Edited old scope");
   assert.equal(migrated.requests[0].id, "m1");
   assert.equal(migrated.requests[0].requestDate, old.requests[0].createdAt.slice(0, 10));
@@ -156,7 +156,7 @@ test("v1 migration preserves edited records and rejects malformed saved data", (
   assert.equal(migrated.activity[0].action, "PO served");
   assert.equal(migrated.movements[2].reason, "Opening stock balance");
   assert.equal(migrateLegacy({ version: 1, role: "Site Personnel" }), null);
-  const saved = new Map([["hml-constructsync-demo-v9", "not-json"]]);
+  const saved = new Map([["hml-constructsync-demo-v10", "not-json"]]);
   const previous = globalThis.localStorage;
   const previousWindow = globalThis.window;
   globalThis.localStorage = { getItem: key => saved.get(key) ?? null, setItem: (key, value) => saved.set(key, value) };
@@ -172,7 +172,7 @@ test("v5 workspace migrates without losing legacy request or linked purchasing r
   const prior = { ...seedDemo(), version: 5 };
   prior.requests[0].scope = "Legacy slab scope";
   const migrated = migrateV5(prior);
-  assert.equal(migrated.version, 9);
+  assert.equal(migrated.version, 10);
   assert.equal(migrated.requests[0].scope, "Legacy slab scope");
   assert.equal(migrated.pos[0].mrfId, prior.pos[0].mrfId);
   assert.equal(migrated.requests[0].scopeDocument, undefined);
@@ -225,7 +225,7 @@ test("MRF Drive archive gates Procurement and retains versions after a document 
 test("v6 workspace preserves MRF references and backfills Request Date", () => {
   const prior = { ...seedDemo(), version: 6, requests: seedDemo().requests.map(record => { const request = structuredClone(record); delete request.requestDate; return request; }) };
   const migrated = migrateV6(prior);
-  assert.equal(migrated.version, 9);
+  assert.equal(migrated.version, 10);
   assert.equal(migrated.requests[0].ref, prior.requests[0].ref);
   assert.equal(migrated.requests[0].requestDate, prior.requests[0].createdAt.slice(0, 10));
   assert.equal(migrated.pos[0].mrfId, prior.pos[0].mrfId);
@@ -234,7 +234,7 @@ test("v6 workspace preserves MRF references and backfills Request Date", () => {
 test("v7 workspace keeps existing purchasing records usable after migration", () => {
   const prior = { ...seedDemo(), version: 7 };
   const migrated = migrateV7(prior);
-  assert.equal(migrated.version, 9);
+  assert.equal(migrated.version, 10);
   assert.equal(migrated.requests[0].ref, prior.requests[0].ref);
   assert.equal(migrated.pos[0].mrfId, prior.pos[0].mrfId);
   assert.equal(migrated.requests[0].archive, undefined);
@@ -263,7 +263,7 @@ test("previous BuildSync v2 records migrate to ConstructSync without changing us
     assert.equal(view.snapshot.suppliers[1].contact, "Custom purchasing contact");
     assert.equal(view.snapshot.activity[0].action, "PO served");
     assert.equal(view.snapshot.requests[0].id, "m1");
-    assert.equal(JSON.parse(saved.get("hml-constructsync-demo-v9")).requests[0].id, "m1");
+    assert.equal(JSON.parse(saved.get("hml-constructsync-demo-v10")).requests[0].id, "m1");
   } finally { globalThis.localStorage = priorStorage; globalThis.window = priorWindow; }
 });
 
@@ -278,7 +278,7 @@ test("current ConstructSync v2 data copies request details to every material", (
   try {
     const view = new LocalDemoRepository().getSnapshot();
     assert.equal(view.status, "ready");
-    assert.equal(view.snapshot.version, 9);
+    assert.equal(view.snapshot.version, 10);
     assert.deepEqual(view.snapshot.requests[0].items.map(item => item.id), ["m1-i1", "m1-i2"]);
     assert.deepEqual(view.snapshot.requests[0].items.map(item => item.purpose), ["Edited purpose", "Edited purpose"]);
     assert.equal(view.snapshot.requests[0].requestedBy, "");
@@ -340,7 +340,7 @@ test("quotation revisions preserve the version linked to an existing PO", () => 
   assert.equal(poTotal(state, state.pos.find(value => value.id === po.id)), 3500);
 });
 
-test("v3 browser records migrate to v9 without changing linked POs", () => {
+test("v3 browser records migrate to v10 without changing linked POs", () => {
   const previousStorage = globalThis.localStorage, previousWindow = globalThis.window;
   const old = { ...seedDemo(), version: 3 };
   const saved = new Map([["hml-constructsync-demo-v3", JSON.stringify(old)]]);
@@ -348,7 +348,7 @@ test("v3 browser records migrate to v9 without changing linked POs", () => {
   globalThis.window = { addEventListener() {} };
   try {
     const view = new LocalDemoRepository().getSnapshot();
-    assert.equal(view.snapshot.version, 9);
+    assert.equal(view.snapshot.version, 10);
     assert.equal(view.snapshot.pos[0].quoteId, old.pos[0].quoteId);
     assert.equal(view.snapshot.quotes[0].ref, old.quotes[0].ref);
     assert.equal(saved.has("hml-constructsync-demo-v3"), false);
