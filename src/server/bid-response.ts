@@ -1,6 +1,6 @@
 import { XLSX_MIME } from "../domain/bid-reports.ts";
 
-export function bidWorkbookResponse(bytes: Uint8Array) {
+export function bidWorkbookResponse(bytes: Uint8Array, mime = XLSX_MIME) {
   let offset = 0;
   // Stream downloads rather than buffering the HTTP response at the deployment boundary.
   const stream = new ReadableStream<Uint8Array>({
@@ -10,5 +10,5 @@ export function bidWorkbookResponse(bytes: Uint8Array) {
       controller.enqueue(bytes.subarray(offset, end)); offset = end;
     },
   });
-  return new Response(stream, { headers: { "Content-Type": XLSX_MIME, "Cache-Control": "no-store" } });
+  return new Response(stream, { headers: { "Content-Type": mime, "Cache-Control": "no-store" } });
 }

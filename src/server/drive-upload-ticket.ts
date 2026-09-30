@@ -20,7 +20,7 @@ function encryptionKey() {
 function validSessionUri(value: string) {
   try {
     const uri = new URL(value);
-    return uri.protocol === "https:" && uri.hostname === "www.googleapis.com" && uri.pathname === "/upload/drive/v3/files" && uri.searchParams.get("uploadType") === "resumable" && !!uri.searchParams.get("upload_id");
+    return uri.protocol === "https:" && uri.hostname === "www.googleapis.com" && /^\/upload\/drive\/v3\/files(?:\/[A-Za-z0-9_-]+)?$/.test(uri.pathname) && uri.searchParams.get("uploadType") === "resumable" && !!uri.searchParams.get("upload_id");
   } catch { return false; }
 }
 

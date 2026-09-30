@@ -1,5 +1,5 @@
 import { materialId } from "./ids.ts";
-import { poLineTotal, quoteLineTotal, totalWithAdjustments } from "./pricing.ts";
+import { poFinancialBreakdown, poLineTotal, quoteLineTotal, totalWithAdjustments } from "./pricing.ts";
 import type { DemoSnapshot, MRF, PO, Quote } from "./types.ts";
 
 export const requestForPO = (state: DemoSnapshot, po: PO) => state.requests.find(r => r.id === po.mrfId);
@@ -12,11 +12,11 @@ export const poItems = (state: DemoSnapshot, po: PO) => {
   return request?.items.filter(item => !po.lines || po.lines.some(line => line.itemId === item.id)) ?? [];
 };
 export const orderedFor = (state: DemoSnapshot, po: PO, itemId: string) => po.lines ? po.lines.filter(line => line.itemId === itemId).reduce((sum, line) => sum + line.quantity, 0) : requestForPO(state, po)?.items.find(item => item.id === itemId)?.quantity ?? 0;
-export const poItemTotal = (state: DemoSnapshot, po: PO, itemId: string) => po.lines ? po.lines.filter(line => line.itemId === itemId).reduce((sum, line) => sum + poLineTotal(line), 0) : orderedFor(state, po, itemId) * (quoteForPO(state, po)?.prices[itemId] || 0);
+export const poItemTotal = (state: DemoSnapshot, po: PO, itemId: string) => po.lines ? po.financial ? poFinancialBreakdown(po).lines.filter(value => value.line.itemId === itemId).reduce((sum, value) => sum + value.amount, 0) : po.lines.filter(line => line.itemId === itemId).reduce((sum, line) => sum + poLineTotal(line), 0) : orderedFor(state, po, itemId) * (quoteForPO(state, po)?.prices[itemId] || 0);
 export const quoteTotal = (state: DemoSnapshot, quote: Quote) => quote.lines
   ? quote.adjustments ? totalWithAdjustments(quote.lines.reduce((sum, line) => sum + quoteLineTotal(line), 0), quote.adjustments) : quote.lines.reduce((sum, line) => sum + quoteLineTotal(line), 0) + (quote.tax || 0) + (quote.freight || 0) - (quote.discount || 0)
   : state.requests.find(r => r.id === quote.mrfId)?.items.reduce((sum, item) => sum + item.quantity * (quote.prices[item.id] || 0), 0) ?? 0;
-export const poTotal = (state: DemoSnapshot, po: PO) => po.lines
+export const poTotal = (state: DemoSnapshot, po: PO) => po.financial ? poFinancialBreakdown(po).net : po.lines
   ? po.adjustments ? totalWithAdjustments(po.lines.reduce((sum, line) => sum + poLineTotal(line), 0), po.adjustments) : po.lines.reduce((sum, line) => sum + poLineTotal(line), 0) + (po.tax || 0) + (po.freight || 0) - (po.discount || 0)
   : (quoteForPO(state, po) ? quoteTotal(state, quoteForPO(state, po)!) : 0);
 export const paidTotal = (state: DemoSnapshot, poId: string) => state.payments.filter(p => p.poId === poId).reduce((sum, p) => sum + p.amount, 0);

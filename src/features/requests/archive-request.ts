@@ -50,7 +50,7 @@ export async function syncApprovedRequest(request: MRF, site: Site, run: Run) {
     const blob = await readQuoteFile(document.fileId);
     if (!blob) throw new Error("The supporting PDF is no longer available in this browser.");
     if (blob.size < 5 || blob.size > 50 * 1024 * 1024 || await blob.slice(0, 5).text() !== "%PDF-") throw new Error("The supporting PDF is invalid. Replace it before archiving.");
-    const response = await fetch("/api/drive/archive", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ request, projectFolderId: site.driveFolderId, projectName: site.name, supportSize: blob.size }) });
+    const response = await fetch("/api/drive/archive", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ request, projectFolderId: site.driveFolderId, projectName: site.name, projectLocation: site.location, supportSize: blob.size }) });
     const started = await archiveResponse(response);
     const result = complete(started) ? started : started.ticket && Number.isInteger(started.offset) ? await uploadSupportingPdf(blob, started.ticket, started.offset!) : undefined;
     if (!result || !complete(result)) throw new Error("Drive did not confirm both PDF uploads.");

@@ -2,7 +2,7 @@ import type { DemoSnapshot } from "../../domain/types.ts";
 
 export function blankWorkspace(): DemoSnapshot {
   return {
-    version: 10,
+    version: 11,
     bidReports: [],
     role: "Site Personnel",
     siteFilter: "all",

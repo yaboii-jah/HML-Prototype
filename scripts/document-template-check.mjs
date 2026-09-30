@@ -1,0 +1,28 @@
+import fs from 'node:fs';
+import { seedDemo } from '../src/mock/fixtures/seed.ts';
+import { captureBidReport } from '../src/domain/bid-reports.ts';
+import { initializePoDocument } from '../src/domain/po-document.ts';
+import { resolveComparisonSelections } from '../src/domain/comparison-report.ts';
+import { generatePoPdf } from '../src/server/template-po-pdf.ts';
+import { generateMrfPdf } from '../src/server/template-mrf-pdf.ts';
+import { generateBidPdf } from '../src/server/bid-pdf.ts';
+import { generateBidWorkbook } from '../src/server/bid-workbook.ts';
+
+const directory='.next/template-check';fs.mkdirSync(directory,{recursive:true});
+const state=seedDemo(),request=state.requests[0],quote=state.quotes[0],po=state.pos[0],site=state.sites[0];
+site.driveFolderId='template-check-folder';
+initializePoDocument(po,request,quote,site,'2026-07-22T12:00:00Z');
+po.ref='HML-CHD2-BR20-007.1';request.ref='187';po.financial={vatStatus:'VAT',priceBasis:'inclusive',vatRate:12,ewtGoods:10858.90,ewtServices:357.14,reviewed:true};
+const input=[['W14 x 22 lbs x 6.0m',23,8070.34],['W18 x 55 lbs x 6.0m',15,21270.34],['W18 x 50 lbs x 6.0m',12,19270.34],['W14 x 26 lbs x 6.0m',10,9670.34],['W18 x 38 lbs x 6.0m',17,14470.34],['MS Plate 4ft x 8ft x 10mm',10,9995.34],['Angle Bar 3" x 3" x 8mm x 6.0m',20,1881.34]];
+request.items=input.map(([name,quantity],n)=>({id:`sample-${n}`,name,quantity,unit:'PCS',neededDate:'2026-07-22',purpose:'',location:'',remarks:''}));
+po.lines=input.map(([,quantity,unitPrice],n)=>({itemId:`sample-${n}`,quoteLineId:`sample-line-${n}`,quantity,unitPrice}));
+po.adjustments=[{id:'delivery',label:'Delivery Fee',kind:'shipping',calculation:'fixed',value:20000,included:true,confirmed:true}];po.notes='';
+po.document={date:'2026-07-22',vendorName:'Al-one Steel Enterprises Inc.',vendorAddress:'A&M Ramos Bld., Aguinaldo Hi-way, Imus, Ca',vendorContact:'Richard Ramirez',vendorPhone:'0917 102 2439',bankName:'BDO',bankAccountName:'AL One Steel Enterprises Inc.',bankAccountNumber:'0048 3801 5911',shipToName:'Tagaytay Treatment and Rehabilitation Center',shipToAddress:'Purok 2, Brgy. Kaysuyo, Alfonso, Cavite',shipToContact:'Louie Dequeros',shipToPhone:'0926 616 7068',requisitioner:'ENGR. RESLIE LABAYNA',terms:'PREPAID',fob:'KAYSUYO',shippingTerms:'DELIVERY'};
+fs.writeFileSync(`${directory}/po.pdf`,await generatePoPdf(po,request,quote,site.name));
+const mrf={...request,ref:'MRF-TRAUMA-HML-384',requestDate:'2026-09-14',items:[{id:'outlet',name:'CONVENIENCE OUTLET - GFCI, DUPLEX WIDE SERIES (EAGLE BRAND )',quantity:51,unit:'SETS',neededDate:'',purpose:'',location:'',remarks:'FOR 2ND & 3RD FLOOR ONLY'}],requestedBy:'ARRIANE AYA M. BAYLON',approvedBy:'ENGR. TONYRICK TEJOSO',purchaser:'',financeOfficer:'',signatoryTitles:['Project Architect','Project Manager','',''],documents:[{name:'MRF-TRAUMA-HML-384 df.pdf',type:'Supporting PDF',fileId:'support'}]};
+fs.writeFileSync(`${directory}/mrf.pdf`,await generateMrfPdf(mrf,'BGHMC TRAUMA CENTER','BGH COMPOUND, BAGUIO CITY'));
+const bids=seedDemo();bids.sites[0].driveFolderId='template-check-folder';
+const report={id:'sample-bid',requestId:'m1',version:1,generatedAt:'2026-09-30T12:00:00Z',fileName:'comparison.xlsx',data:captureBidReport(bids,'m1'),pdf:{fileName:'comparison.pdf',archive:{status:'pending'}},archive:{status:'pending'}};
+report.comparisonRevision=2; report.comparisonSelections=resolveComparisonSelections(report.data);
+fs.writeFileSync(`${directory}/comparison.pdf`,await generateBidPdf(report));fs.writeFileSync(`${directory}/comparison.xlsx`,await generateBidWorkbook(report));
+console.log(`Document fixtures written to ${directory}`);
