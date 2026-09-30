@@ -34,3 +34,9 @@ button.quote-source-main{width:100%;padding-right:42px;cursor:pointer}button.quo
 @media(max-width:700px){.quote-source{grid-template-columns:1fr}.quote-source-actions{justify-content:flex-start;padding:0 15px 14px}.quote-documents-layout{grid-template-columns:1fr}.quote-documents-list{max-height:130px}.quote-document-preview{height:50dvh;min-height:260px}.quote-group-actions{width:100%;justify-content:space-between}}
 @media(prefers-reduced-motion:reduce){.quote-spinner{animation:none}}
 .bid-report-row{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:18px 0;border-top:1px solid var(--line)}.bid-report-row small{display:block;margin-top:4px;color:var(--muted)}@media(max-width:780px){.bid-report-row{align-items:stretch;flex-direction:column}}
+.document-preview-dialog { width: min(96vw, 1200px); max-width: 1200px; padding: 20px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface, white); color: var(--text, #17202a); }
+.document-preview-dialog::backdrop { background: rgb(0 0 0 / .55); }
+.document-preview-dialog iframe { width: 100%; height: 78vh; border: 0; background: #eee; }
+.comparison-alternatives { margin: 16px 0; padding: 16px; border: 1px solid var(--line); border-radius: 10px; }
+.comparison-alternatives .field { display: grid; gap: 6px; margin-top: 12px; }
+.comparison-alternatives select { width: 100%; min-width: 0; }

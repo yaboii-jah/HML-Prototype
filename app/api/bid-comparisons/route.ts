@@ -1,5 +1,6 @@
 import { MAX_BID_FILE, validBidReport } from "@/src/domain/bid-reports";
 import { bidWorkbookResponse } from "@/src/server/bid-response";
+import { generateBidPdf } from "@/src/server/bid-pdf";
 import { generateBidWorkbook } from "@/src/server/bid-workbook";
 import { sameOriginError, driveError } from "@/src/server/local-drive";
 
@@ -11,8 +12,10 @@ export async function POST(request: Request) {
   try {
     const report: unknown = await request.json();
     if (!validBidReport(report)) return Response.json({ error: "The frozen bid comparison is invalid." }, { status: 400 });
-    const bytes = await generateBidWorkbook(report);
+    const format = new URL(request.url).searchParams.get("format") || "xlsx";
+    if (!["xlsx", "pdf"].includes(format)) return Response.json({ error: "Unknown report format." }, { status: 400 });
+    const bytes = format === "pdf" ? await generateBidPdf(report) : await generateBidWorkbook(report);
     if (bytes.length > MAX_BID_FILE) return Response.json({ error: "The workbook exceeds the 50 MB report limit." }, { status: 413 });
-    return bidWorkbookResponse(bytes);
+    return bidWorkbookResponse(bytes, format === "pdf" ? "application/pdf" : undefined);
   } catch (cause) { return Response.json({ error: driveError(cause) }, { status: 400 }); }
 }

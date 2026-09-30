@@ -4,7 +4,7 @@
 
 **Last verified:** 2026-09-30
 **Application version:** Prototype (`package.json` 0.1.0)
-**State schema:** `DemoSnapshot` version 10
+**State schema:** `DemoSnapshot` version 11
 
 ## Product in one paragraph
 
@@ -74,6 +74,7 @@ The domain command layer in `src/domain/commands.ts` is the authority for permis
 - The PM material cards display current on-hand site stock by exact material name and unit. Approval does not reserve or deduct stock.
 - Return and rejection require a reason of at least five characters.
 - PM approval records an `archive.pending` state and attempts Drive upload. The generated MRF PDF and supporting PDF are stored in separate subfolders under `<project>/<MRF number>/`. Supporting PDFs are uploaded in 3 MiB resumable chunks to fit Vercel's request limit. A failed upload leaves the MRF approved but Procurement paused; PM or Administrator retries manually. Completed archives retain numbered file pairs across reapprovals.
+- New MRF PDFs and print previews retain the supplied NUMMER ETT branding and Letter landscape grid, including sixteen material slots, instructions, a blue supporting-file link and four signatory blocks. Generated values are centered and uppercase; request-date styling and attachment filename/link formatting are preserved. Formatting does not change stored input. Optional job-title inputs and printed titles are removed; existing title metadata is retained for compatibility. Extra rows or long cells continue on additional pages. Drive reserves the supporting file ID before generating the form, then fills that same file through resumable upload.
 - PM may reopen an archived approved MRF. New Procurement actions pause during correction and archive pending states. Earlier quotations/POs stay linked. Procurement continues only after archive completion.
 - Workflow handoffs and consequential decisions use a confirmation dialog; draft saves and routine edits do not. Successful actions use a brief global toast, while action failures remain visible in page banners and field corrections remain beside their inputs.
 
@@ -85,7 +86,10 @@ The domain command layer in `src/domain/commands.ts` is the authority for permis
 - Finalized quotations can be compared without a fixed quote count. Procurement may record a supplier selection reason; awards are staged and persist until PO generation. Only PHP quotations are awardable.
 - Each PO stores its awarded MRF quantities and source quotation revision. Multiple POs may share one MRF; a material may be split across suppliers. Active PO and staged allocations cannot exceed requested MRF quantities or the supplier's quoted quantity; rejected POs release their allocation.
 - Award generation creates one draft PO per supplier from the staged quantities. Procurement confirms each PO's line discounts and other charges. Draft and Finance-returned POs may be edited; a draft using an older quote revision needs an explicit reason before finalizing. Finalized purchasing details are locked.
-- PO printouts show each item's MRF delivery location. Draft printouts carry a preview watermark until Finance approval.
+- Generated PO PDFs and print previews retain the supplied HML artwork and company header on Letter portrait pages. Vendor/bank/ship-to, reference and terms cells wrap and expand before material pagination; the complete linked MRF reference stays in its header field. The material grid keeps eleven rows when space permits, with measured row heights, VAT boxes and EWT/net totals. Ordinary shipping terms no longer generate a separate description-only form. Genuine long information or material overflow uses continuation pages. Editing screens retain their existing layout.
+- New POs store per-order document fields: date, vendor address/contact/phone, bank and account details, ship-to details, requisitioner, payment terms, F.O.B. and shipping terms. Known quotation/project values prefill these fields. Date, vendor name, ship-to name/address, requisitioner and payment terms are required at finalization.
+- New POs require an explicit review of VAT/NON-VAT status, inclusive/exclusive prices, an editable VAT rate (default 12%) and manual EWT goods/services amounts (zero allowed). The PO VAT setting replaces inherited quotation line taxes and tax adjustments. Included non-tax charges and discounts can be VAT taxable or exempt. Exclusive taxable inputs receive VAT once; inclusive and NON-VAT inputs receive no additional VAT. EWT reduces the gross purchase value to net supplier payable. Finance, commitments, payment caps and payment status use that net value. Existing POs without financial settings retain their original calculations.
+- Draft printouts carry a preview watermark until Finance approval. Previously archived PDFs remain unchanged.
 - PO states: `draft`, `finalized`, `hold`, `returned`, `rejected`, `approved`, `served`.
 - Only draft or Finance-returned POs can be edited. Finalizing sends the PO to Finance.
 - Finance can review `finalized` or `hold` POs. Hold, return, and rejection require a reason.
@@ -94,12 +98,14 @@ The domain command layer in `src/domain/commands.ts` is the authority for permis
 
 ### Bid comparison reports
 
-- Procurement generates fixed, versioned Excel reports in the quotation workspace's PO preparation step. Generation requires an approved MRF with no correction or pending archive, a mapped project folder, at least one non-rejected PO, and no draft or Finance-returned POs. Finalized, held, approved, and served POs qualify; partial material coverage is allowed.
-- Reports contain Bid comparison, Quotation details, and Awards sheets using existing app fields. They include latest finalized PHP quotations and any older finalized revision referenced by a PO, mark excluded non-PHP bids, retain unmatched offers in the details sheet, and show awarded and remaining quantities. The lowest effective price per MRF unit is highlighted, including ties; no supplier is automatically selected.
-- Formulas use the domain's pricing rules and carry cached results. Quotation totals include unmatched lines and quotation-wide charges; matched material amounts are displayed separately. Excel edits do not update application records or saved versions.
-- Each report freezes project, MRF, bid, and PO inputs. Metadata and frozen inputs persist in the snapshot; generated XLSX bytes stay in IndexedDB with a SHA-256 identity. Changes to the transaction require an explicit new report version.
-- Generation downloads the workbook and attempts a Drive archive beneath `<project>/<MRF number>/Bid Comparisons`. Dedicated encrypted upload tickets and 3 MiB chunks support workbooks up to 50 MB. A Drive failure leaves the download available and exposes a Procurement retry; retries reuse the report identity. All MRF viewers may download saved reports and open their Drive links, including after later corrections or Finance returns.
-- Missing local workbook caches restore the exact archived bytes through a protected route validating project ancestry and report tags. A hash mismatch is reported. Browser workspace clearing removes report records and cached bytes, while Drive copies remain.
+- Procurement generates fixed, versioned Excel and PDF reports in the quotation workspace's PO preparation step. Generation requires an approved MRF with no correction or pending archive, a mapped project folder, at least one non-rejected PO, and no draft or Finance-returned POs. Finalized, held, approved, and served POs qualify; partial material coverage is allowed.
+- New comparison versions use the supplied grid's field structure and supplier colors with centered values. Only actual suppliers appear, and their columns fill the table width. PDF remains Letter landscape with at most eleven suppliers per page; additional suppliers or genuinely long content continue. Descriptions and commercial-term rows are measured before pagination, and delivery information has separate space from quotation links. BOQ AMOUNT stays blank.
+- Each supplier contributes one latest finalized PHP quotation, including suppliers without awards. Drafts and non-PHP bids are excluded. When multiple offers match one MRF material, Procurement explicitly chooses one alternative for that supplier/material before generation; report selections do not change awards.
+- UNIT COST is the raw quoted price divided by its confirmed conversion factor. TOTAL COST is required MRF quantity multiplied by that converted price, rounded to cents. GRAND TOTAL sums these material totals and excludes discounts, taxes, freight and unmatched offers. Partial offered quantities are identified; missing prices remain blank, and incomplete supplier totals are labeled. These are comparison projections, not changes to quotation or PO financial calculations.
+- New Excel exports contain one continuous Bid comparison worksheet with all suppliers and materials, no supporting sheets and no frozen-pane dividers. Formulas reference only the worksheet's quantity/unit-price inputs and carry cached results matching PDF amounts. Long text continues within the same worksheet; printing may span pages. Every archived quotation source file has its own clickable link row. Excel edits do not update application records or saved versions.
+- Each report freezes project, MRF, bid, PO inputs and selected alternatives. New reports set comparisonRevision 2; additive metadata keeps snapshot schema 11 compatible. Reports without this revision retain the original eleven-slot layout, actual-offered/effective pricing, supporting worksheets and legacy retry behavior. Metadata and frozen inputs persist in the snapshot; XLSX and PDF bytes stay in IndexedDB, each with its own SHA-256 identity and generation/archive status. Existing saved and pending versions remain unchanged; obtain corrections through a new report version.
+- Generation makes both downloads available and independently attempts their Drive archives beneath `<project>/<MRF number>/Bid Comparisons`. Dedicated encrypted tickets bind the artifact type; 3 MiB chunks support files up to 50 MB. A failure leaves the other artifact available and exposes a Procurement retry; retries reuse the report identity. All MRF viewers may download saved reports and open their Drive links, including after later corrections or Finance returns.
+- Missing local caches restore the exact archived bytes through a protected route validating project ancestry, artifact type and report tags. A hash mismatch is reported. Browser workspace clearing removes report records and cached bytes, while Drive copies remain.
 
 ### Budget
 
@@ -150,9 +156,9 @@ Keep business rules out of page components where practical. New state transition
 
 ## Persistence and recovery
 
-- Current storage key: `hml-constructsync-demo-v10`.
+- Current storage key: `hml-constructsync-demo-v11`.
 - On first load, the repository creates an empty workspace if no saved state exists.
-- Compatible data migrates from v9, v8, v7, v6, v5, v4, v3, `hml-constructsync-demo-v2`, `hml-buildsync-demo-v2`, or version-1 `hml-buildsync-demo-v1`. Existing work gains an empty bid-report collection. Previous request-wide material details are copied to each item, IDs and edits are preserved, and Request Date is backfilled from each MRF's creation timestamp. Existing approved records without archive metadata remain readable and usable as legacy data; test data may be cleared manually before a Drive demo.
+- Compatible data migrates from v10, v9, v8, v7, v6, v5, v4, v3, `hml-constructsync-demo-v2`, `hml-buildsync-demo-v2`, or version-1 `hml-buildsync-demo-v1`. The v10 migration preserves original PO calculations and saved report artifacts without opting old POs into VAT/EWT settings or adding a PDF to an existing frozen report. Older work gains an empty bid-report collection where needed. Previous request-wide material details are copied to each item, IDs and edits are preserved, and Request Date is backfilled from each MRF's creation timestamp. Existing approved records without archive metadata remain readable and usable as legacy data; test data may be cleared manually before a Drive demo.
 - MRF and quotation originals remain browser-local. Successful MRF archival also creates numbered Drive copies; clearing browser data removes local records/files but does not delete Drive files. The Gemini Files API is not used as permanent document storage.
 - Malformed saved data enters an explicit recovery state instead of being silently overwritten.
 - If storage is unavailable, the app continues with volatile in-tab state and displays a warning.
@@ -182,7 +188,8 @@ Any incompatible snapshot change requires a schema-version decision and a migrat
 | `/reports` | Management cross-project reporting. |
 | `/admin` | Project creation, Project Manager assignments, Drive folder mapping, activity, and a confirmed clear-workspace action. |
 | `/api/drive/validate`, `/api/drive/archive`, `/api/drive/archive/chunk`, `/api/drive/files` | Protected project folder validation, resumable PDF archive, and project folder browsing/search. |
-| `/api/bid-comparisons`, `/api/drive/bid-comparisons`, `/api/drive/bid-comparisons/chunk` | Server XLSX generation, protected report archival/download, and dedicated resumable XLSX upload. |
+| `/api/documents/preview` | Generates the same MRF/PO PDFs used for archival for browser preview, download and printing. |
+| `/api/bid-comparisons`, `/api/drive/bid-comparisons`, `/api/drive/bid-comparisons/chunk` | Server XLSX/PDF generation, protected report archival/download, and dedicated resumable uploads bound to artifact type. |
 
 All workspace routes are wrapped by `app/(workspace)/layout.tsx`, which applies the data gate and application shell.
 
@@ -216,6 +223,7 @@ The domain test suite currently protects these high-value behaviors:
 - Quote review/finalization, staged split award caps, charge confirmation, quote revisions, and version-4 migration.
 - Legacy URL routing.
 - Bid report readiness, immutable versions, v9 migration, workbook formulas and cached totals, quotation revisions, partial awards, and dedicated XLSX upload validation. The quotation browser walkthrough also verifies Drive failure/retry, exact cache recovery, report persistence, and Finance downloads.
+- Comparison revision 2 protects raw converted unit prices, required-quantity projections, explicit alternatives, incomplete coverage, dynamic supplier counts, single-sheet formulas, complete long text, clickable quotation links, and legacy report dispatch. PDF regressions verify complete PO references, ordinary shipping terms on one page, MRF capitalization, attachment casing and preserved input. Browser verification exercises alternative selection before generation.
 
 ## Known assumptions and non-goals
 
@@ -250,7 +258,9 @@ When updating it:
 
 | Date | Context change |
 | --- | --- |
+| 2026-09-30 | Corrected MRF capitalization/alignment and removed job titles; made PO fields resize; added comparison revision 2 with explicit alternatives, required-quantity material totals, actual supplier columns and one continuous Excel sheet, preserving every earlier report version. |
 | 2026-09-30 | Added immutable versioned Excel bid comparisons with three formula-based sheets, PO readiness gates, IndexedDB file caches, resumable Drive archival, exact download recovery, and v9-to-v10 migration. |
+| 2026-09-30 | Replaced generated MRF/PO/comparison formats with supplied company forms; added matching PDF previews, comparison PDF/Excel artifacts, per-PO document fields, reviewed VAT/manual EWT/net financial semantics, linked MRF support uploads, continuation pages, and schema v11 migration preserving existing records. |
 | 2026-09-24 | Created the canonical application context from the implemented routes, domain model, command rules, persistence layer, seed data, and tests. |
 | 2026-09-25 | Moved request detail fields to each material, added general information names, and migrated saved snapshots to version 3. |
 | 2026-09-25 | Added browser-local supplier quotation files, Gemini extraction review, material-level comparison, split supplier awards, and version 4 data migration. |

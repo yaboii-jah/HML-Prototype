@@ -11,8 +11,9 @@ import { dateText, money } from "@/src/domain/format";
 import { newId } from "@/src/domain/ids";
 import { earliestNeededDate, posForRequest, poTotal, siteName, stockFor, supplierName } from "@/src/domain/selectors";
 import type { DemoSnapshot, DocumentRef, Item } from "@/src/domain/types";
+import { DocumentPreview } from "@/src/components/DocumentPreview";
 import { deleteLocalFile, saveRequestFile } from "./quote-files";
-import { procurementReady, supportingPdf } from "@/src/domain/request-archive";
+import { procurementReady } from "@/src/domain/request-archive";
 import { syncApprovedRequest } from "./archive-request";
 
 const MATERIAL_COPY_FIELDS = [
@@ -44,7 +45,7 @@ export function RequestForm({ id }: { id?: string }) {
   const [items, setItems] = useState<Item[]>(() => original?.items.map(item => ({ ...item })) || [{ id: newId("item"), name: "", unit: "bag", quantity: 1, neededDate: new Date().toISOString().slice(0, 10), purpose: "", location: "", remarks: "" }]);
   const [documentState, setDocumentState] = useState<{ id?: string; touched: boolean; documents: DocumentRef[] }>(() => ({ id, touched: false, documents: [] }));
   const documents = documentState.id === id && documentState.touched ? documentState.documents : original?.documents || [];
-  const [scopeState, setScopeState] = useState<{ id?: string; touched: boolean; document?: DocumentRef }>(() => ({ id, touched: false }));
+  const [scopeState] = useState<{ id?: string; touched: boolean; document?: DocumentRef }>(() => ({ id, touched: false }));
   const scopeDocument = scopeState.id === id && scopeState.touched ? scopeState.document : original?.scopeDocument;
   const documentsOnly = original?.correction?.scope === "documents";
   const activeSupportingPdf = documents.find(document => document.type === "Supporting PDF");
@@ -145,7 +146,7 @@ export function RequestForm({ id }: { id?: string }) {
     const form = new FormData(event.currentTarget);
     if (intent === "submit" && !await confirm(original ? "Resubmit this MRF?" : "Submit this MRF?", "The Project Manager will receive this request for a decision.", original ? "Resubmit MRF" : "Submit MRF")) return;
     const result = await run({
-      type: "saveRequest", id, intent, siteId: documentsOnly ? original!.siteId : String(form.get("site")), ref: documentsOnly ? original!.ref : String(form.get("ref")), requestDate: documentsOnly ? original!.requestDate : String(form.get("requestDate")), scopeDocument,
+      type: "saveRequest", id, intent, specialInstructions: documentsOnly ? original!.specialInstructions : String(form.get("specialInstructions") || ""), signatoryTitles: original?.signatoryTitles, siteId: documentsOnly ? original!.siteId : String(form.get("site")), ref: documentsOnly ? original!.ref : String(form.get("ref")), requestDate: documentsOnly ? original!.requestDate : String(form.get("requestDate")), scopeDocument,
       requestedBy: documentsOnly ? original!.requestedBy : String(form.get("requestedBy")), approvedBy: documentsOnly ? original!.approvedBy : String(form.get("approvedBy")), purchaser: documentsOnly ? original!.purchaser : String(form.get("purchaser")), financeOfficer: documentsOnly ? original!.financeOfficer : String(form.get("financeOfficer")), items, documents,
     });
     if (result.ok) {
@@ -190,7 +191,7 @@ export function RequestForm({ id }: { id?: string }) {
           <Field label="Requested by"><input name="requestedBy" defaultValue={original?.requestedBy || ""}/></Field>
           <Field label="Approved by"><input name="approvedBy" defaultValue={original?.approvedBy || ""}/></Field>
           <Field label="Purchaser/Procurement Officer"><input name="purchaser" defaultValue={original?.purchaser || ""}/></Field>
-          <Field label="Finance Officer"><input name="financeOfficer" defaultValue={original?.financeOfficer || ""}/></Field>
+          <Field label="Finance Officer"><input name="financeOfficer" defaultValue={original?.financeOfficer || ""}/></Field><Field label="Comments / special instructions"><textarea name="specialInstructions" defaultValue={original?.specialInstructions || ""}/></Field>
         </div>
       </section>
       <section className="panel materials-panel" aria-label="Materials">
@@ -301,7 +302,7 @@ export function RequestDetail({ id }: { id: string }) {
   const archive=async(source=state)=>{const current=source.requests.find(value=>value.id===id),site=source.sites.find(value=>value.id===current?.siteId);if(!current||!site)return;setArchiving(true);const result=await syncApprovedRequest(current,site,run);setError(result.ok?"":result.message);setArchiving(false);};
   const decide=async(choice:"approve"|"return"|"reject",reason?:string)=>{if(!await confirm(`${choice === "approve" ? "Approve" : choice === "return" ? "Return" : "Reject"} ${request.ref}?`,choice === "approve" ? "The approved MRF and supporting PDF will be archived to Google Drive before Procurement begins." : choice === "return" ? "Site Personnel will revise this request." : "This request will close.",`${choice === "approve" ? "Approve" : choice === "return" ? "Return" : "Reject"} request`,choice === "reject"))return;const result=await run({type:"reviewRequest",id,decision:choice,reason});if(!result.ok)setError(result.message);else{setDecision(null);setError("");if(choice==="approve")await archive(result.snapshot);}};
   return <><RecordHeader backHref="/requests" backLabel="Material requests" eyebrow={siteName(state,request.siteId)} title={request.ref || "Unnumbered draft"} badges={<><Badge value={request.status}/>{po&&<Badge value={po.status}/>}</>}/>
-    <div className="request-detail-layout"><div className="request-detail-overview"><section className="panel"><h2 className="panel-title">General information</h2><div className="data-rows"><div><span>M.R.F No.</span><strong>{request.ref || "—"}</strong></div><div><span>Request Date</span><strong>{request.requestDate ? dateText(request.requestDate) : "—"}</strong></div><div><span>Requested by</span><strong>{request.requestedBy || "—"}</strong></div><div><span>Approved by</span><strong>{request.approvedBy || "—"}</strong></div><div><span>Purchaser/Procurement Officer</span><strong>{request.purchaser || "—"}</strong></div><div><span>Finance Officer</span><strong>{request.financeOfficer || "—"}</strong></div></div>{request.scope && !request.scopeDocument && <p className="helper-note">Legacy scope note: {request.scope}</p>}{request.reason&&<div className="callout warn"><strong>Review reason</strong><p>{request.reason}</p></div>}</section>
+    <div className="request-detail-layout"><div className="request-detail-overview"><section className="panel"><h2 className="panel-title">General information</h2><DocumentPreview kind="mrf" request={request} project={state.sites.find(site => site.id === request.siteId)!}/><div className="data-rows"><div><span>M.R.F No.</span><strong>{request.ref || "—"}</strong></div><div><span>Request Date</span><strong>{request.requestDate ? dateText(request.requestDate) : "—"}</strong></div><div><span>Requested by</span><strong>{request.requestedBy || "—"}</strong></div><div><span>Approved by</span><strong>{request.approvedBy || "—"}</strong></div><div><span>Purchaser/Procurement Officer</span><strong>{request.purchaser || "—"}</strong></div><div><span>Finance Officer</span><strong>{request.financeOfficer || "—"}</strong></div></div>{request.scope && !request.scopeDocument && <p className="helper-note">Legacy scope note: {request.scope}</p>}{request.reason&&<div className="callout warn"><strong>Review reason</strong><p>{request.reason}</p></div>}</section>
     <section className="panel"><h2 className="panel-title">Documents and links</h2>{(request.scopeDocument || request.documents.length > 0) && <Documents docs={[...(request.scopeDocument ? [request.scopeDocument] : []), ...request.documents]} showType={false} />}{pos.map(linked => <Link className="data-link" href={`/purchase-orders/${linked.id}`} key={linked.id}><div><strong>{linked.ref}</strong><small>{supplierName(state,linked)} · {money(poTotal(state,linked))}</small></div><Badge value={linked.status}/></Link>)}{!request.scopeDocument && !request.documents.length && !pos.length && <p className="muted">No documents or links recorded.</p>}</section></div>
     <RequestMaterialList key={request.id} state={state} siteId={request.siteId} items={request.items}/>
     {state.role==="Site Personnel"&&(["draft","returned"].includes(request.status)||request.correction?.status==="requested")&&<section className="action-bar"><div><strong>{request.correction?.status==="requested"||request.status==="returned"?"Revision requested":"Draft request"}</strong><p>{request.correction?.scope==="documents"?"Replace the supporting PDF and resubmit it to the Project Manager.":"Update the MRF before submitting it to the Project Manager."}</p></div><Link className="button primary" href={`/requests/${id}/edit`}>Edit MRF</Link></section>}

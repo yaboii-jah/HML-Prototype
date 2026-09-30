@@ -7,7 +7,9 @@ import { poTotal } from "../src/domain/selectors.ts";
 
 let sequence = 0;
 const context = { now: () => "2026-09-27T10:00:00.000Z", id: prefix => `${prefix}-proc-${++sequence}` };
-const execute = (state, command) => { const result = applyCommand(state, command, context); assert.equal(result.ok, true, result.message); return result.snapshot; };
+const execute = (state, command) => {
+  if (command.type === "savePO" && command.finalize) { const po = state.pos.find(value => value.id === command.id); if (po?.financial) command = { ...command, document: po.document, financial: { ...po.financial, reviewed: true }, adjustments: command.adjustments || po.adjustments?.map(value => ({ ...value, confirmed: true })) }; }
+  const result = applyCommand(state, command, context); assert.equal(result.ok, true, result.message); return result.snapshot; };
 const setup = () => {
   let state = seedDemo();
   const request = structuredClone(state.requests.find(value => value.id === "m3"));
@@ -138,10 +140,10 @@ test("a finalized quote revision blocks old draft PO finalization until Procurem
   assert.equal(state.pos.at(-1).quoteId, quote.id);
 });
 
-test("v4 browser data migrates to v10 with prior POs and awardable legacy quotations", () => {
+test("v4 browser data migrates to v11 with prior POs and awardable legacy quotations", () => {
   const old = structuredClone(seedDemo()); old.version = 4; delete old.pendingAwards; old.quotes.forEach(quote => { delete quote.reviewStatus; delete quote.lines; });
   const migrated = migrateV3OrV4(old);
-  assert.equal(migrated.version, 10);
+  assert.equal(migrated.version, 11);
   assert.equal(migrated.pos[0].quoteId, old.pos[0].quoteId);
   assert.equal(migrated.quotes[0].reviewStatus, "finalized");
   assert.equal(migrated.quotes[0].lines[0].requestItemId, "m1-i1");

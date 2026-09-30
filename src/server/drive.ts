@@ -2,11 +2,11 @@ import "server-only";
 import { GoogleAuth, OAuth2Client } from "google-auth-library";
 import { XLSX_MIME } from "../domain/bid-reports.ts";
 
-export type DriveFile = { id: string; name: string; mimeType: string; parents?: string[]; webViewLink?: string; appProperties?: Record<string, string>; capabilities?: { canAddChildren?: boolean } };
+export type DriveFile = { id: string; name: string; mimeType: string; size?: string; parents?: string[]; webViewLink?: string; appProperties?: Record<string, string>; capabilities?: { canAddChildren?: boolean } };
 const FOLDER = "application/vnd.google-apps.folder";
 const API = "https://www.googleapis.com/drive/v3/files";
 const UPLOAD = "https://www.googleapis.com/upload/drive/v3/files";
-const fields = "id,name,mimeType,parents,webViewLink,appProperties,capabilities(canAddChildren)";
+const fields = "id,name,mimeType,size,parents,webViewLink,appProperties,capabilities(canAddChildren)";
 
 export function folderIdFromInput(input: string) {
   const value = input.trim();
@@ -109,9 +109,9 @@ async function beginPdfUpload(parentId: string, name: string, size: number, tag:
   return beginUpload(parentId, name, size, "application/pdf", tag);
 }
 
-async function beginUpload(parentId: string, name: string, size: number, mime: string, tag: Record<string, string>) {
+async function beginUpload(parentId: string, name: string, size: number, mime: string, tag: Record<string, string>, existingFileId?: string) {
   const authorization = await token();
-  const start = await fetch(`${UPLOAD}?uploadType=resumable&supportsAllDrives=true&fields=${encodeURIComponent(fields)}`, { method: "POST", headers: { Authorization: `Bearer ${authorization}`, "Content-Type": "application/json; charset=UTF-8", "X-Upload-Content-Type": mime, "X-Upload-Content-Length": String(size) }, body: JSON.stringify({ name, mimeType: mime, parents: [parentId], appProperties: tag }), cache: "no-store", redirect: "manual" });
+  const start = await fetch(`${UPLOAD}${existingFileId ? `/${encodeURIComponent(existingFileId)}` : ""}?uploadType=resumable&supportsAllDrives=true&fields=${encodeURIComponent(fields)}`, { method: existingFileId ? "PATCH" : "POST", headers: { Authorization: `Bearer ${authorization}`, "Content-Type": "application/json; charset=UTF-8", "X-Upload-Content-Type": mime, "X-Upload-Content-Length": String(size) }, body: JSON.stringify({ name, mimeType: mime, ...(existingFileId ? {} : { parents: [parentId] }), appProperties: tag }), cache: "no-store", redirect: "manual" });
   const location = start.headers.get("location");
   if (!start.ok || !location) throw new Error(`Google Drive could not start the file upload (${start.status}).`);
   return location;
@@ -119,24 +119,27 @@ async function beginUpload(parentId: string, name: string, size: number, mime: s
 
 const fileUrl = (file: DriveFile) => file.webViewLink || `https://drive.google.com/file/d/${file.id}/view`;
 
-export async function prepareBidFile(projectFolderId: string, requestId: string, requestRef: string, reportId: string, version: number, fileName: string, sha256: string, size: number) {
+export async function prepareBidFile(projectFolderId: string, requestId: string, requestRef: string, reportId: string, version: number, fileName: string, sha256: string, size: number, format: "xlsx" | "pdf" = "xlsx") {
   await validateProjectFolder(projectFolderId);
   const requestTag = { hmlRequestId: requestId };
   const requestFolder = await createFolder(projectFolderId, safeName(requestRef), requestTag, false);
   const folder = await createFolder(requestFolder.id, "Bid Comparisons", requestTag);
-  const tag = { ...requestTag, hmlBidId: reportId, hmlVersion: String(version), hmlType: "bid-comparison", hmlSha256: sha256 };
-  const existing = await taggedChild(folder.id, fileName, { hmlBidId: reportId }, false);
+  const tag = { ...requestTag, hmlBidId: reportId, hmlVersion: String(version), hmlType: "bid-comparison", hmlFormat: format, hmlSha256: sha256 };
+  const legacy = format === "xlsx" ? await taggedChild(folder.id, fileName, { hmlBidId: reportId }, true) : undefined;
+  const existing = await taggedChild(folder.id, fileName, { hmlBidId: reportId, hmlFormat: format }, false) || (legacy?.mimeType === XLSX_MIME ? legacy : undefined);
   if (existing) {
     if (existing.appProperties?.hmlSha256 !== sha256) throw new Error("This report version already has a different archived workbook.");
     return { driveFileId: existing.id, url: fileUrl(existing) };
   }
-  return { sessionUri: await beginUpload(folder.id, safeName(fileName), size, XLSX_MIME, tag) };
+  const extension = format === "pdf" ? ".pdf" : ".xlsx";
+  const name = safeName(fileName.slice(0, -extension.length)).slice(0, 120 - extension.length) + extension;
+  return { sessionUri: await beginUpload(folder.id, name, size, format === "pdf" ? "application/pdf" : XLSX_MIME, tag) };
 }
 
-export async function downloadBidFile(projectFolderId: string, requestId: string, reportId: string, fileId: string) {
+export async function downloadBidFile(projectFolderId: string, requestId: string, reportId: string, fileId: string, format: "xlsx" | "pdf" = "xlsx") {
   await validateProjectFolder(projectFolderId);
   const file = await getDriveFile(fileId);
-  if (file.mimeType !== XLSX_MIME || file.appProperties?.hmlType !== "bid-comparison" || file.appProperties?.hmlBidId !== reportId || file.appProperties?.hmlRequestId !== requestId || !await isWithinFolder(fileId, projectFolderId)) throw new Error("The archived workbook is outside this report's project or has invalid report metadata.");
+  if ((file.mimeType !== (format === "pdf" ? "application/pdf" : XLSX_MIME) || format === "pdf" && file.appProperties?.hmlFormat !== "pdf") || file.appProperties?.hmlType !== "bid-comparison" || file.appProperties?.hmlBidId !== reportId || file.appProperties?.hmlRequestId !== requestId || !await isWithinFolder(fileId, projectFolderId)) throw new Error("The archived workbook is outside this report's project or has invalid report metadata.");
   return Buffer.from(await (await drive(`${API}/${encodeURIComponent(fileId)}?alt=media&supportsAllDrives=true`)).arrayBuffer());
 }
 
@@ -174,20 +177,22 @@ export async function documentUploadStatus(sessionUri: string, total: number) {
   return { offset: result.offset, driveFileId: result.supportFileId, url: result.supportUrl };
 }
 
-export async function prepareRequestArchive(projectFolderId: string, requestId: string, ref: string, version: number, form: Uint8Array, supportSize: number) {
+export async function prepareRequestArchive(projectFolderId: string, requestId: string, ref: string, version: number, form: Uint8Array | ((supportUrl: string) => Promise<Uint8Array>), supportSize: number) {
   await validateProjectFolder(projectFolderId);
   const requestName = safeName(ref);
   const requestTag = { hmlRequestId: requestId };
   const requestFolder = await createFolder(projectFolderId, requestName, requestTag, false);
   const formFolder = await createFolder(requestFolder.id, "MRF Form", requestTag);
   const supportFolder = await createFolder(requestFolder.id, "Supporting Documents", requestTag);
-  const formFile = await uploadPdf(formFolder.id, `${requestName}-v${version}.pdf`, form, { ...requestTag, hmlVersion: String(version), hmlType: "form" });
   const supportName = `${requestName}-support-v${version}.pdf`;
   const supportTag = { ...requestTag, hmlVersion: String(version), hmlType: "support" };
-  const supportFile = await taggedChild(supportFolder.id, supportName, supportTag);
+  let supportFile = await taggedChild(supportFolder.id, supportName, supportTag);
+  if (!supportFile) supportFile = await (await drive(`${API}?supportsAllDrives=true&fields=${encodeURIComponent(fields)}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: supportName, mimeType: "application/pdf", parents: [supportFolder.id], appProperties: supportTag }) })).json() as DriveFile;
+  const formBytes = typeof form === "function" ? await form(fileUrl(supportFile)) : form;
+  const formFile = await uploadPdf(formFolder.id, `${requestName}-v${version}.pdf`, formBytes, { ...requestTag, hmlVersion: String(version), hmlType: "form" });
   const formResult = { formFileId: formFile.id, formUrl: fileUrl(formFile) };
-  if (supportFile) return { ...formResult, supportFileId: supportFile.id, supportUrl: fileUrl(supportFile) };
-  const sessionUri = await beginPdfUpload(supportFolder.id, supportName, supportSize, supportTag);
+  if (Number(supportFile.size) > 0) return { ...formResult, supportFileId: supportFile.id, supportUrl: fileUrl(supportFile) };
+  const sessionUri = await beginUpload(supportFolder.id, supportName, supportSize, "application/pdf", supportTag, supportFile.id);
   return { ...formResult, sessionUri };
 }
 

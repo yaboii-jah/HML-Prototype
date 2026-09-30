@@ -79,8 +79,10 @@ test("XLSX contains correct formulas, cached results, converted bids, unmatched 
   quote.lines.push({ ...quote.lines[0], id: "alternate", quantity: 5, unitPrice: 2100, discountType: "fixed", discountValue: 10 });
   quote.lines.push({ ...quote.lines[0], id: "unmatched", requestItemId: "", quantity: 1, unitPrice: 50 });
   quote.adjustments = [{ id: "freight", label: "Freight", kind: "shipping", calculation: "percentage", value: 5 }, { id: "discount", label: "Discount", kind: "discount", calculation: "percentage", value: 2 }];
-  state = execute(state, { type: "createBidReport", requestId: "m1" });
+  state = execute(state, { type: "createBidReport", requestId: "m1", comparisonSelections: { [quote.id]: { [quote.lines[0].requestItemId]: quote.lines[0].id } } });
   const report = state.bidReports[0];
+  // Older frozen reports still use the original workbook and quoted-quantity calculations.
+  delete report.comparisonRevision; delete report.comparisonSelections;
   const bytes = await generateBidWorkbook(report);
   assert.equal(bytes.subarray(0, 4).toString("hex"), "504b0304");
   const book = new ExcelJS.Workbook(); await book.xlsx.load(bytes);
@@ -91,8 +93,8 @@ test("XLSX contains correct formulas, cached results, converted bids, unmatched 
   assert.equal(details.getCell("R9").result, quoteLineTotal(quote.lines[0]));
   assert.equal(details.getCell("S9").result, 50);
   assert.equal(details.getCell("T9").result, quoteLineTotal(quote.lines[0]) / 50);
-  assert.equal(comparison.getCell("G9").result, 50);
-  assert.equal(comparison.getCell("I10").result, quoteLineTotal(quote.lines[1]));
+  assert.equal(comparison.getCell("F12").result, quoteLineTotal(quote.lines[0]) / 50);
+  assert.equal(comparison.getCell("G13").result, quoteLineTotal(quote.lines[1]));
   assert.equal(details.getCell("E11").value, "Unmatched");
   const totalRows = []; details.eachRow(row => { if (row.getCell(1).value === "Total (PHP)") totalRows.push(row); });
   assert.deepEqual(totalRows.map(row => row.getCell(18).result), report.data.offers.map(offer => quoteTotal(state, offer.quote)));
@@ -102,7 +104,10 @@ test("XLSX contains correct formulas, cached results, converted bids, unmatched 
   assert.equal(awards.lastRow.getCell(5).result, 40);
   assert.equal(comparison.views[0].state, "frozen");
   assert.equal(comparison.pageSetup.orientation, "landscape");
-  assert.ok(comparison.model.conditionalFormattings.length);
+  assert.equal(comparison.model.conditionalFormattings.length, 0);
+  assert.equal(comparison.getCell("F12").fill.fgColor.argb, "FFF2CC");
+  assert.equal(comparison.getCell("E12").value, null);
+  assert.equal(comparison.getCell("AA11").value, "TOTAL COST");
   const invalid = structuredClone(report); invalid.data.offers[0].quote.lines[0].unitPrice = Infinity;
   assert.equal(validBidReport(invalid), false);
   assert.throws(() => buildBidWorkbook(invalid), /invalid/);
@@ -110,11 +115,11 @@ test("XLSX contains correct formulas, cached results, converted bids, unmatched 
   assert.equal(validBidReport(injected), false);
 });
 
-test("v9 saved work migrates to v10 and report history survives repository reload", async () => {
+test("v9 saved work migrates to v11 and report history survives repository reload", async () => {
   const old = fixture(); old.version = 9; delete old.bidReports;
   old.requests[0].scope = "Keep this browser edit";
   const migrated = migrateV9(old);
-  assert.equal(migrated.version, 10); assert.deepEqual(migrated.bidReports, []);
+  assert.equal(migrated.version, 11); assert.deepEqual(migrated.bidReports, []);
   assert.equal(migrated.requests[0].scope, old.requests[0].scope);
   const previousWindow = globalThis.window, previousStorage = globalThis.localStorage;
   const saved = new Map([["hml-constructsync-demo-v9", JSON.stringify(old)]]);
