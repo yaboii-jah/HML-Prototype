@@ -1,5 +1,6 @@
 import "server-only";
 import { GoogleAuth, OAuth2Client } from "google-auth-library";
+import { XLSX_MIME } from "../domain/bid-reports.ts";
 
 export type DriveFile = { id: string; name: string; mimeType: string; parents?: string[]; webViewLink?: string; appProperties?: Record<string, string>; capabilities?: { canAddChildren?: boolean } };
 const FOLDER = "application/vnd.google-apps.folder";
@@ -117,6 +118,27 @@ async function beginUpload(parentId: string, name: string, size: number, mime: s
 }
 
 const fileUrl = (file: DriveFile) => file.webViewLink || `https://drive.google.com/file/d/${file.id}/view`;
+
+export async function prepareBidFile(projectFolderId: string, requestId: string, requestRef: string, reportId: string, version: number, fileName: string, sha256: string, size: number) {
+  await validateProjectFolder(projectFolderId);
+  const requestTag = { hmlRequestId: requestId };
+  const requestFolder = await createFolder(projectFolderId, safeName(requestRef), requestTag, false);
+  const folder = await createFolder(requestFolder.id, "Bid Comparisons", requestTag);
+  const tag = { ...requestTag, hmlBidId: reportId, hmlVersion: String(version), hmlType: "bid-comparison", hmlSha256: sha256 };
+  const existing = await taggedChild(folder.id, fileName, { hmlBidId: reportId }, false);
+  if (existing) {
+    if (existing.appProperties?.hmlSha256 !== sha256) throw new Error("This report version already has a different archived workbook.");
+    return { driveFileId: existing.id, url: fileUrl(existing) };
+  }
+  return { sessionUri: await beginUpload(folder.id, safeName(fileName), size, XLSX_MIME, tag) };
+}
+
+export async function downloadBidFile(projectFolderId: string, requestId: string, reportId: string, fileId: string) {
+  await validateProjectFolder(projectFolderId);
+  const file = await getDriveFile(fileId);
+  if (file.mimeType !== XLSX_MIME || file.appProperties?.hmlType !== "bid-comparison" || file.appProperties?.hmlBidId !== reportId || file.appProperties?.hmlRequestId !== requestId || !await isWithinFolder(fileId, projectFolderId)) throw new Error("The archived workbook is outside this report's project or has invalid report metadata.");
+  return Buffer.from(await (await drive(`${API}/${encodeURIComponent(fileId)}?alt=media&supportsAllDrives=true`)).arrayBuffer());
+}
 
 export async function prepareQuoteFile(projectFolderId: string, requestId: string, requestRef: string, quoteId: string, supplierId: string, supplier: string, version: number, index: number, name: string, mime: string, size: number) {
   await validateProjectFolder(projectFolderId);

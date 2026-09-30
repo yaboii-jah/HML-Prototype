@@ -1,4 +1,5 @@
 import { newId, nextRef } from "./ids.ts";
+import { bidReportReadiness, captureBidReport } from "./bid-reports.ts";
 import { acceptedFor, budgetFor, inventoryFor, orderedFor, outstandingFor, paidTotal, poItems, poTotal, requestForPO, schedulableFor, stockFor } from "./selectors.ts";
 import { hasFinalizedSuccessor, isFinalizedQuote, latestFinalizedQuotes, quoteReviewIssues } from "./procurement.ts";
 import { poLineTotal } from "./pricing.ts";
@@ -6,6 +7,11 @@ import { procurementReady, supportingPdf } from "./request-archive.ts";
 import { ROLES, type ArchivedQuoteFile, type DemoSnapshot, type DocumentRef, type DocumentStatus, type Item, type POAdjustment, type POLine, type Priority, type Quote, type Role } from "./types.ts";
 
 export type Command =
+  | { type: "createBidReport"; requestId: string }
+  | { type: "saveBidReportFile"; id: string; localFileId: string; sha256: string }
+  | { type: "failBidGeneration"; id: string; error: string }
+  | { type: "completeBidArchive"; id: string; fileId: string; url: string }
+  | { type: "failBidArchive"; id: string; error: string }
   | { type: "setRole"; role: Role }
   | { type: "setSiteFilter"; siteId: string }
   | { type: "saveRequest"; id?: string; intent: "draft" | "submit"; siteId: string; ref: string; requestDate: string; scopeDocument?: DocumentRef; requestedBy: string; approvedBy: string; purchaser: string; financeOfficer: string; items: Item[]; documents: DocumentRef[] }
@@ -88,6 +94,42 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
   const permit = (...roles: Role[]) => roles.includes(actor);
 
   switch (command.type) {
+    case "createBidReport": {
+      if (!permit("Procurement")) return fail("Switch to Procurement to generate a bid comparison.");
+      const error = bidReportReadiness(state, command.requestId);
+      if (error) return fail(error);
+      const data = captureBidReport(state, command.requestId);
+      const version = Math.max(0, ...state.bidReports.filter(report => report.requestId === command.requestId).map(report => report.version)) + 1;
+      const reportId = id("bid");
+      const ref = data.request.ref.replace(/[^A-Za-z0-9_-]/g, "_").slice(0, 100) || "MRF";
+      state.bidReports.push({ id: reportId, requestId: command.requestId, version, generatedAt: at, fileName: `${ref}-bid-comparison-v${version}.xlsx`, data, archive: { status: "pending" } });
+      log(command.requestId, `Bid comparison v${version} captured`);
+      return done("Bid comparison captured. Generating workbook…", reportId);
+    }
+    case "saveBidReportFile":
+    case "failBidGeneration":
+    case "completeBidArchive":
+    case "failBidArchive": {
+      if (!permit("Procurement")) return fail("Switch to Procurement to update a bid comparison archive.");
+      const report = state.bidReports.find(value => value.id === command.id);
+      if (!report) return fail("Bid comparison not found.");
+      if (command.type === "saveBidReportFile") {
+        if (!command.localFileId || !/^[a-f0-9]{64}$/.test(command.sha256)) return fail("The generated workbook is invalid.");
+        if (report.sha256 && report.sha256 !== command.sha256) return fail("A saved report version cannot be replaced.");
+        report.localFileId = command.localFileId; report.sha256 = command.sha256; delete report.generationError;
+        return done("Excel workbook ready.");
+      }
+      if (command.type === "failBidGeneration") { if (!report.sha256) report.generationError = command.error; return done("Workbook generation needs retry."); }
+      if (report.archive.status === "complete") return done("Bid comparison already archived.");
+      if (command.type === "completeBidArchive") {
+        if (!report.sha256 || !command.fileId || !command.url.startsWith("https://drive.google.com/")) return fail("The workbook archive is invalid.");
+        report.archive = { status: "complete", fileId: command.fileId, url: command.url };
+        log(report.requestId, `Bid comparison v${report.version} archived`);
+        return done("Bid comparison archived to Google Drive.");
+      }
+      report.archive.error = command.error;
+      return done("Excel workbook is available; Drive archive needs retry.");
+    }
     case "setRole":
       if (!ROLES.includes(command.role)) return fail("Unknown role.");
       state.role = command.role;

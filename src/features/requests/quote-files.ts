@@ -13,6 +13,19 @@ function openFiles(): Promise<IDBDatabase> {
   });
 }
 
+export async function saveGeneratedFile(fileId: string, blob: Blob): Promise<void> {
+  const database = await openFiles();
+  try {
+    await new Promise<void>((resolve, reject) => {
+      const transaction = database.transaction(STORE, "readwrite");
+      transaction.objectStore(STORE).put(blob, fileId);
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
+      transaction.onabort = () => reject(transaction.error || new Error("The generated file could not be saved."));
+    });
+  } finally { database.close(); }
+}
+
 export async function saveQuoteFiles(files: File[]): Promise<DocumentRef[]> {
   const database = await openFiles();
   try {

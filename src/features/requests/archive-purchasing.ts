@@ -1,6 +1,6 @@
 import type { Command, CommandResult } from "@/src/domain/commands";
 import type { DemoSnapshot, PO, Quote } from "@/src/domain/types";
-import { readQuoteFile } from "./quote-files";
+import { readQuoteFile } from "./quote-files.ts";
 
 type Run = (command: Command) => Promise<CommandResult>;
 type UploadResponse = { error?: string; ticket?: string; offset?: number; driveFileId?: string; fileId?: string; url?: string };
@@ -12,24 +12,24 @@ async function responseJson(response: Response): Promise<UploadResponse> {
   return result;
 }
 
-async function uploadFile(blob: Blob, ticket: string, firstOffset: number) {
+export async function uploadDocument(blob: Blob, ticket: string, firstOffset: number, endpoint = "/api/drive/quotes/chunk") {
   let offset = firstOffset;
   let stalled = 0;
   while (offset < blob.size) {
     const size = Math.min(CHUNK, blob.size - offset);
     let result: UploadResponse;
     let response: Response | undefined;
-    try { response = await fetch("/api/drive/quotes/chunk", { method: "PUT", headers: { "Content-Type": "application/octet-stream", "x-drive-upload-ticket": ticket, "x-drive-upload-offset": String(offset) }, body: blob.slice(offset, offset + size) }); } catch {}
+    try { response = await fetch(endpoint, { method: "PUT", headers: { "Content-Type": "application/octet-stream", "x-drive-upload-ticket": ticket, "x-drive-upload-offset": String(offset) }, body: blob.slice(offset, offset + size) }); } catch {}
     if (response?.ok || response && response.status < 500) result = await responseJson(response);
-    else result = await responseJson(await fetch("/api/drive/quotes/chunk", { method: "POST", headers: { "x-drive-upload-ticket": ticket } }));
+    else result = await responseJson(await fetch(endpoint, { method: "POST", headers: { "x-drive-upload-ticket": ticket } }));
     if (result.driveFileId && result.url) return result;
     if (!Number.isInteger(result.offset) || result.offset! < 0 || result.offset! > blob.size) throw new Error("Drive returned an invalid upload position.");
     stalled = result.offset === offset ? stalled + 1 : 0;
-    if (stalled > 2) throw new Error("The quotation upload did not advance. Retry the archive.");
+    if (stalled > 2) throw new Error("The document upload did not advance. Retry the archive.");
     offset = result.offset!;
   }
-  const result = await responseJson(await fetch("/api/drive/quotes/chunk", { method: "POST", headers: { "x-drive-upload-ticket": ticket } }));
-  if (!result.driveFileId || !result.url) throw new Error("Drive did not confirm the quotation upload.");
+  const result = await responseJson(await fetch(endpoint, { method: "POST", headers: { "x-drive-upload-ticket": ticket } }));
+  if (!result.driveFileId || !result.url) throw new Error("Drive did not confirm the document upload.");
   return result;
 }
 
@@ -47,7 +47,7 @@ export async function syncFinalizedQuote(state: DemoSnapshot, quote: Quote, run:
       const blob = await readQuoteFile(document.fileId);
       if (!blob) throw new Error(`The original quotation file ${document.name} is missing from this browser. Create a revision and attach it again.`);
       const start = await responseJson(await fetch("/api/drive/quotes", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ quote, mrf, projectFolderId: site.driveFolderId, index, size: blob.size }) }));
-      const result = start.driveFileId && start.url ? start : start.ticket && Number.isInteger(start.offset) ? await uploadFile(blob, start.ticket, start.offset!) : undefined;
+      const result = start.driveFileId && start.url ? start : start.ticket && Number.isInteger(start.offset) ? await uploadDocument(blob, start.ticket, start.offset!) : undefined;
       if (!result?.driveFileId || !result.url) throw new Error("Drive did not confirm the quotation file.");
       files.push({ localFileId: document.fileId, driveFileId: result.driveFileId, url: result.url, name: document.name });
     }
