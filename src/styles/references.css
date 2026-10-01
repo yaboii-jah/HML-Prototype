@@ -55,6 +55,7 @@ html[data-theme="dark"] .reference-upload-icon path:nth-child(2){fill:#35455b;st
 .request-review-materials{list-style:none;margin:0;padding:0}
 .request-review-materials li{display:grid;gap:3px;border-top:1px solid var(--line);padding:12px 0;overflow-wrap:anywhere}
 .request-review-materials span{font-size:12px;color:var(--muted)}
+.request-review-instructions{overflow-wrap:anywhere;white-space:pre-wrap}
 @media(max-width:650px){
   .request-steps{gap:5px;margin-bottom:20px}
   .request-steps button{flex-direction:column;gap:6px;padding:10px 2px;font-size:11px}

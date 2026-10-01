@@ -1,3 +1,8 @@
+import { initializePoDocument } from "./po-document.ts";
+import { resolveComparisonSelections } from "./comparison-report.ts";
+import type { ComparisonSelections } from "./types.ts";
+import type { PO, MRF } from "./types.ts";
+import { poFinancialError } from "./pricing.ts";
 import { newId, nextRef } from "./ids.ts";
 import { bidReportReadiness, captureBidReport } from "./bid-reports.ts";
 import { acceptedFor, budgetFor, inventoryFor, orderedFor, outstandingFor, paidTotal, poItems, poTotal, requestForPO, schedulableFor, stockFor } from "./selectors.ts";
@@ -7,14 +12,14 @@ import { procurementReady, supportingPdf } from "./request-archive.ts";
 import { ROLES, type ArchivedQuoteFile, type DemoSnapshot, type DocumentRef, type DocumentStatus, type Item, type POAdjustment, type POLine, type Priority, type Quote, type Role } from "./types.ts";
 
 export type Command =
-  | { type: "createBidReport"; requestId: string }
-  | { type: "saveBidReportFile"; id: string; localFileId: string; sha256: string }
-  | { type: "failBidGeneration"; id: string; error: string }
-  | { type: "completeBidArchive"; id: string; fileId: string; url: string }
-  | { type: "failBidArchive"; id: string; error: string }
+  | { type: "createBidReport"; requestId: string; comparisonSelections?: ComparisonSelections }
+  | { type: "saveBidReportFile"; format?: "xlsx" | "pdf"; id: string; localFileId: string; sha256: string }
+  | { type: "failBidGeneration"; format?: "xlsx" | "pdf"; id: string; error: string }
+  | { type: "completeBidArchive"; format?: "xlsx" | "pdf"; id: string; fileId: string; url: string }
+  | { type: "failBidArchive"; format?: "xlsx" | "pdf"; id: string; error: string }
   | { type: "setRole"; role: Role }
   | { type: "setSiteFilter"; siteId: string }
-  | { type: "saveRequest"; id?: string; intent: "draft" | "submit"; siteId: string; ref: string; requestDate: string; scopeDocument?: DocumentRef; requestedBy: string; approvedBy: string; purchaser: string; financeOfficer: string; items: Item[]; documents: DocumentRef[] }
+  | { type: "saveRequest"; specialInstructions?: string; signatoryTitles?: string[]; id?: string; intent: "draft" | "submit"; siteId: string; ref: string; requestDate: string; scopeDocument?: DocumentRef; requestedBy: string; approvedBy: string; purchaser: string; financeOfficer: string; items: Item[]; documents: DocumentRef[] }
   | { type: "reviewRequest"; id: string; decision: "approve" | "return" | "reject"; reason?: string }
   | { type: "reopenApprovedRequest"; id: string; reason: string }
   | { type: "completeRequestArchive"; id: string; formFileId: string; supportFileId: string; formUrl: string; supportUrl: string }
@@ -31,7 +36,7 @@ export type Command =
   | { type: "generateAwardPOs"; requestId: string; reasons: Record<string, string> }
   | { type: "createAwardPO"; requestId: string; quoteId: string; lines: POLine[]; tax: number; freight: number; discount: number; reason: string; notes: string }
   | { type: "createPO"; requestId: string; quoteId: string; reason: string; notes: string }
-  | { type: "savePO"; id: string; quoteId: string; notes: string; finalize: boolean; lines?: POLine[]; tax?: number; freight?: number; discount?: number; adjustments?: POAdjustment[]; reason?: string; supersededReason?: string }
+  | { type: "savePO"; document?: PO["document"]; financial?: PO["financial"]; id: string; quoteId: string; notes: string; finalize: boolean; lines?: POLine[]; tax?: number; freight?: number; discount?: number; adjustments?: POAdjustment[]; reason?: string; supersededReason?: string }
   | { type: "setPriority"; id: string; priority: Priority }
   | { type: "reviewPO"; id: string; decision: "approve" | "hold" | "return" | "reject"; reason?: string }
   | { type: "completePOArchive"; id: string; fileId: string; url: string }
@@ -92,19 +97,23 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
   const log = (entity: string, action: string, reason?: string) => state.activity.unshift({ id: id("act"), entity, action, reason: reason?.trim() || undefined, actor, at });
   const done = (message: string, recordId?: string): CommandResult => ({ ok: true, snapshot: state, recordId, message });
   const permit = (...roles: Role[]) => roles.includes(actor);
+  const initializePo = (po: PO, request: MRF, quote: Quote) => { initializePoDocument(po, request, quote, state.sites.find(value => value.id === request.siteId)!, at); po.document!.vendorName ||= state.suppliers.find(value => value.id === quote.supplierId)?.name || ""; };
 
   switch (command.type) {
     case "createBidReport": {
       if (!permit("Procurement")) return fail("Switch to Procurement to generate a bid comparison.");
       const error = bidReportReadiness(state, command.requestId);
       if (error) return fail(error);
-      const data = captureBidReport(state, command.requestId);
+      const data = captureBidReport(state, command.requestId, true);
+      let comparisonSelections: ComparisonSelections;
+      try { comparisonSelections = resolveComparisonSelections(data, command.comparisonSelections); }
+      catch (cause) { return fail(cause instanceof Error ? cause.message : "Review the comparison alternatives."); }
       const version = Math.max(0, ...state.bidReports.filter(report => report.requestId === command.requestId).map(report => report.version)) + 1;
       const reportId = id("bid");
       const ref = data.request.ref.replace(/[^A-Za-z0-9_-]/g, "_").slice(0, 100) || "MRF";
-      state.bidReports.push({ id: reportId, requestId: command.requestId, version, generatedAt: at, fileName: `${ref}-bid-comparison-v${version}.xlsx`, data, archive: { status: "pending" } });
+      state.bidReports.push({ id: reportId, requestId: command.requestId, version, comparisonRevision: 2, comparisonSelections, generatedAt: at, fileName: `${ref}-bid-comparison-v${version}.xlsx`, data, pdf: { fileName: `${ref}-bid-comparison-v${version}.pdf`, archive: { status: "pending" } }, archive: { status: "pending" } });
       log(command.requestId, `Bid comparison v${version} captured`);
-      return done("Bid comparison captured. Generating workbook…", reportId);
+      return done("Bid comparison captured. Generating Excel and PDF…", reportId);
     }
     case "saveBidReportFile":
     case "failBidGeneration":
@@ -113,22 +122,24 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       if (!permit("Procurement")) return fail("Switch to Procurement to update a bid comparison archive.");
       const report = state.bidReports.find(value => value.id === command.id);
       if (!report) return fail("Bid comparison not found.");
+      const artifact = command.format === "pdf" ? report.pdf : report;
+      if (!artifact) return fail("This legacy report has no saved PDF artifact. Generate a new version.");
       if (command.type === "saveBidReportFile") {
         if (!command.localFileId || !/^[a-f0-9]{64}$/.test(command.sha256)) return fail("The generated workbook is invalid.");
-        if (report.sha256 && report.sha256 !== command.sha256) return fail("A saved report version cannot be replaced.");
-        report.localFileId = command.localFileId; report.sha256 = command.sha256; delete report.generationError;
-        return done("Excel workbook ready.");
+        if (artifact.sha256 && artifact.sha256 !== command.sha256) return fail("A saved report version cannot be replaced.");
+        artifact.localFileId = command.localFileId; artifact.sha256 = command.sha256; delete artifact.generationError;
+        return done(command.format === "pdf" ? "Comparison PDF ready." : "Excel workbook ready.");
       }
-      if (command.type === "failBidGeneration") { if (!report.sha256) report.generationError = command.error; return done("Workbook generation needs retry."); }
-      if (report.archive.status === "complete") return done("Bid comparison already archived.");
+      if (command.type === "failBidGeneration") { if (!artifact.sha256) artifact.generationError = command.error; return done("Workbook generation needs retry."); }
+      if (artifact.archive.status === "complete") return done("Bid comparison already archived.");
       if (command.type === "completeBidArchive") {
-        if (!report.sha256 || !command.fileId || !command.url.startsWith("https://drive.google.com/")) return fail("The workbook archive is invalid.");
-        report.archive = { status: "complete", fileId: command.fileId, url: command.url };
+        if (!artifact.sha256 || !command.fileId || !command.url.startsWith("https://drive.google.com/")) return fail("The workbook archive is invalid.");
+        artifact.archive = { status: "complete", fileId: command.fileId, url: command.url };
         log(report.requestId, `Bid comparison v${report.version} archived`);
         return done("Bid comparison archived to Google Drive.");
       }
-      report.archive.error = command.error;
-      return done("Excel workbook is available; Drive archive needs retry.");
+      artifact.archive.error = command.error;
+      return done("The report file is available; Drive archive needs retry.");
     }
     case "setRole":
       if (!ROLES.includes(command.role)) return fail("Unknown role.");
@@ -156,10 +167,10 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
         if (command.documents.filter(document => document.type === "Supporting PDF" && !!document.fileId).length !== 1) return fail("Attach one combined supporting PDF before submitting.", "documents");
       }
       const items = command.items.map(i => ({ ...i, name: i.name.trim(), unit: i.unit.trim(), id: i.id || id("item"), neededDate: i.neededDate.trim(), purpose: i.purpose.trim(), location: i.location.trim(), remarks: i.remarks.trim() }));
-      const fields = { ref, requestDate, siteId: command.siteId, category: original?.category || "", scope: original?.scope || "", scopeDocument: command.scopeDocument, requestedBy: command.requestedBy.trim(), approvedBy: command.approvedBy.trim(), purchaser: command.purchaser.trim(), financeOfficer: command.financeOfficer.trim(), items, documents: command.documents.filter(d => d.name.trim()), status: command.intent === "submit" ? "submitted" as const : "draft" as const, reason: undefined, updatedAt: at };
+      const fields = { specialInstructions: command.specialInstructions?.trim() || "", signatoryTitles: command.signatoryTitles?.slice(0, 4).map(value => value.trim()) || [], ref, requestDate, siteId: command.siteId, category: original?.category || "", scope: original?.scope || "", scopeDocument: command.scopeDocument, requestedBy: command.requestedBy.trim(), approvedBy: command.approvedBy.trim(), purchaser: command.purchaser.trim(), financeOfficer: command.financeOfficer.trim(), items, documents: command.documents.filter(d => d.name.trim()), status: command.intent === "submit" ? "submitted" as const : "draft" as const, reason: undefined, updatedAt: at };
       if (original) {
         if (correcting) {
-          if (original.correction?.scope === "documents" && (ref !== original.ref || requestDate !== original.requestDate || command.siteId !== original.siteId || JSON.stringify(items) !== JSON.stringify(original.items) || fields.requestedBy !== original.requestedBy || fields.approvedBy !== original.approvedBy || fields.purchaser !== original.purchaser || fields.financeOfficer !== original.financeOfficer)) return fail("Only the supporting PDF can change after procurement has started.");
+          if (original.correction?.scope === "documents" && (ref !== original.ref || requestDate !== original.requestDate || command.siteId !== original.siteId || JSON.stringify(items) !== JSON.stringify(original.items) || fields.requestedBy !== original.requestedBy || fields.approvedBy !== original.approvedBy || fields.purchaser !== original.purchaser || fields.financeOfficer !== original.financeOfficer || fields.specialInstructions !== (original.specialInstructions || "") || JSON.stringify(fields.signatoryTitles) !== JSON.stringify(original.signatoryTitles || []))) return fail("Only the supporting PDF can change after procurement has started.");
           original.documents = fields.documents;
           if (original.correction?.scope === "full") Object.assign(original, { ...fields, status: "approved" });
           if (command.intent === "submit") original.correction = { ...original.correction!, status: "submitted" };
@@ -353,6 +364,7 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
         ]).map(value => ({ ...value, included: true, confirmed: false }));
         const poId = id("po");
         state.pos.push({ id: poId, ref: nextRef("PO-2026", state.pos), mrfId: command.requestId, quoteId, lines, adjustments, status: "draft", priority: "Normal", notes: "", selectionReason, createdAt: at, updatedAt: at });
+        initializePo(state.pos[state.pos.length - 1], state.requests.find(value => value.id === command.requestId)!, quote);
         firstId ||= poId;
         log(poId, "PO drafted from staged supplier award", selectionReason || undefined);
       }
@@ -385,6 +397,7 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       if (!reasonOK(command.reason)) return fail("Explain the supplier choice in at least five characters.");
       const poId = id("po");
       state.pos.push({ id: poId, ref: nextRef("PO-2026", state.pos), mrfId: command.requestId, quoteId: quote.id, lines: command.lines, tax: command.tax, freight: command.freight, discount: command.discount, status: "draft", priority: "Normal", notes: command.notes.trim(), selectionReason: command.reason.trim(), createdAt: at, updatedAt: at });
+      initializePo(state.pos[state.pos.length - 1], state.requests.find(value => value.id === command.requestId)!, quote!);
       log(poId, "PO drafted from awarded quotation", command.reason);
       return done("PO draft created.", poId);
     }
@@ -393,11 +406,13 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       const request = state.requests.find(r => r.id === command.requestId);
       const quote = state.quotes.find(q => q.id === command.quoteId && q.mrfId === request?.id);
       if (!procurementReady(request) || !quote) return fail("Choose a quote for an archived approved MRF.");
+      if (!isFinalizedQuote(quote) || quote.currency && quote.currency !== "PHP") return fail("Only finalized PHP quotations can be awarded.");
       if (quote.archive && quote.archive.status !== "complete") return fail("Archive the supplier quotation before creating a PO.");
       if (state.pos.some(p => p.mrfId === request.id && p.status !== "rejected")) return fail("Use the material award flow to create another PO for this MRF.");
       if (!reasonOK(command.reason)) return fail("Explain the supplier choice in at least five characters.", "reason");
       const poId = id("po");
       state.pos.push({ id: poId, ref: nextRef("PO-2026", state.pos), mrfId: request.id, quoteId: quote.id, status: "draft", priority: "Normal", notes: command.notes.trim(), selectionReason: command.reason.trim(), createdAt: at, updatedAt: at });
+      initializePo(state.pos[state.pos.length - 1], request, quote);
       log(poId, "PO drafted", command.reason);
       return done("PO draft created.", poId);
     }
@@ -421,6 +436,12 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
           po.adjustments = command.adjustments;
         }
         po.selectionReason = (command.reason ?? po.selectionReason).trim();
+      }
+      if (po.financial) {
+        if (command.document) po.document = command.document;
+        if (command.financial) po.financial = command.financial;
+        const financialError = poFinancialError(po, command.finalize);
+        if (financialError) return fail(financialError);
       }
       if (command.finalize) {
         if (po.lines?.some(line => line.discountType === "fixed" && line.fixedDiscountConfirmed !== true)) return fail("Confirm each fixed line discount before Finance review.");

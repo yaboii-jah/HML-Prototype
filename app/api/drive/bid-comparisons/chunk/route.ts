@@ -22,7 +22,7 @@ export async function PUT(request: Request) {
     const length = request.headers.get("content-length");
     if (!offset || length && Number(length) > 3 * 1024 * 1024) return Response.json({ error: "The workbook chunk is invalid." }, { status: 400 });
     const bytes = new Uint8Array(await request.arrayBuffer());
-    if (!validBidChunk(Number(offset), ticket.total, bytes) || length && Number(length) !== bytes.length) return Response.json({ error: "The workbook chunk is invalid." }, { status: 400 });
-    return Response.json(await sendDocumentChunk(ticket.sessionUri, Number(offset), ticket.total, bytes, XLSX_MIME));
+    if (!validBidChunk(Number(offset), ticket.total, bytes, ticket.format) || length && Number(length) !== bytes.length) return Response.json({ error: "The workbook chunk is invalid." }, { status: 400 });
+    return Response.json(await sendDocumentChunk(ticket.sessionUri, Number(offset), ticket.total, bytes, ticket.format === "pdf" ? "application/pdf" : XLSX_MIME));
   } catch (cause) { return Response.json({ error: driveError(cause) }, { status: 502 }); }
 }

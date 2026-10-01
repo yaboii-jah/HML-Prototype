@@ -1,3 +1,7 @@
+import { populateComparisonSheet, comparisonSheetPages } from "./comparison-workbook.ts";
+import { buildCurrentComparisonWorkbook } from "./current-comparison-workbook.ts";
+import { comparisonOverflow } from "./comparison-overflow.ts";
+import { poFinancialBreakdown } from "../domain/pricing.ts";
 import ExcelJS from "exceljs";
 import { bidLines, bidPoLines, bidPoTotal, bidQuoteTotal, validBidReport } from "../domain/bid-reports.ts";
 import { poLineTotal, quoteLineTotal, roundMoney } from "../domain/pricing.ts";
@@ -6,7 +10,6 @@ import type { BidReport, POAdjustment, QuoteAdjustment } from "../domain/types.t
 const MONEY = '"₱" #,##0.00;[Red]("₱" #,##0.00)';
 const QUANTITY = '#,##0.####';
 const NAVY = "17334F";
-const TEAL = "E3F2EF";
 const GREY = "EDF1F5";
 
 function header(sheet: ExcelJS.Worksheet, report: BidReport, columns: number, title: string) {
@@ -85,15 +88,17 @@ const legacyCharges = (value: { tax?: number; freight?: number; discount?: numbe
 
 export function buildBidWorkbook(report: BidReport) {
   if (!validBidReport(report)) throw new Error("The frozen bid report is invalid.");
+  if (report.comparisonRevision === 2) return buildCurrentComparisonWorkbook(report);
   const book = new ExcelJS.Workbook();
   book.creator = "HML ConstructSync";
   book.created = new Date(report.generatedAt); book.modified = new Date(report.generatedAt);
   book.calcProperties.fullCalcOnLoad = true;
-  const comparison = book.addWorksheet("Bid comparison");
+  const comparisonPages = comparisonSheetPages(report);
+  const comparisonSheets = comparisonPages.map((page,index) => book.addWorksheet(index === 0 ? "Bid comparison" : `Comparison ${index + 1}`));
   const details = book.addWorksheet("Quotation details");
   const awards = book.addWorksheet("Awards");
   const { data } = report;
-  header(comparison, report, 5 + data.offers.length * 4, "Bid comparison");
+
   header(details, report, 23, "Quotation details");
   header(awards, report, 18, "Awards");
   headings(details, 8, ["Supplier", "Quotation", "Revision", "Revision use", "MRF material", "Offered material", "Unit", "Conversion to MRF unit", "Quoted quantity", "Original unit price", "Discount type", "Discount value", "Tax %", "Base", "Discount", "After discount", "Tax amount", "Quoted amount", "MRF quantity", "Effective price / MRF unit", "Brand / specification", "Difference / notes", "Supplier item code"]);
@@ -127,70 +132,46 @@ export function buildBidWorkbook(report: BidReport) {
     details.addRow([]);
   }
 
-  comparison.mergeCells(7, 1, 7, 5); comparison.getCell(7, 1).value = "Requested MRF materials";
-  const labels = ["Material", "Requested quantity", "Unit", "Date needed", "Delivery location"];
-  data.offers.forEach((offer, index) => {
-    const start = 6 + index * 4;
-    comparison.mergeCells(7, start, 7, start + 3);
-    comparison.getCell(7, start).value = `${offer.supplierName} · ${offer.quote.ref} · v${offer.quote.version || 1} · ${offer.source}`;
-    labels.push("Offered material", "Quoted quantity (MRF unit)", "Effective unit price", "Actual quoted amount");
-  });
-  comparison.getRow(7).height = 45; comparison.getRow(7).alignment = { wrapText: true, vertical: "middle" }; comparison.getRow(7).font = { bold: true };
-  headings(comparison, 8, labels);
-  const matched = data.offers.map(() => [] as string[]);
-  for (const item of data.request.items) {
-    const offers = data.offers.map(offer => bidLines(data, offer.quote).filter(line => line.requestItemId === item.id));
-    const count = Math.max(1, ...offers.map(lines => lines.length));
-    const start = comparison.rowCount + 1;
-    const priceCells: string[] = [];
-    for (let index = 0; index < count; index++) {
-      const row = comparison.addRow([index === 0 ? item.name : "", index === 0 ? item.quantity : null, index === 0 ? item.unit : "", index === 0 ? item.neededDate : "", index === 0 ? item.location : ""]);
-      offers.forEach((lines, offerIndex) => {
-        const column = 6 + offerIndex * 4;
-        const line = lines[index];
-        if (!line) { if (index === 0) row.getCell(column).value = "Not quoted"; return; }
-        const source = detailRows.get(`${data.offers[offerIndex].quote.id}/${line.id}`)!;
-        row.getCell(column).value = line.description;
-        formula(row.getCell(column + 1), `'Quotation details'!S${source}`, line.quantity * line.conversionFactor, false);
-        formula(row.getCell(column + 2), `'Quotation details'!T${source}`, quoteLineTotal(line) / (line.quantity * line.conversionFactor));
-        formula(row.getCell(column + 3), `'Quotation details'!R${source}`, quoteLineTotal(line));
-        priceCells.push(row.getCell(column + 2).address);
-        matched[offerIndex].push(row.getCell(column + 3).address);
-      });
-    }
-    priceCells.forEach(address => comparison.addConditionalFormatting({ ref: address, rules: [{ type: "expression", priority: 1, formulae: [`AND(ISNUMBER(${address}),${address}=MIN(${priceCells.join(",")}))`], style: { fill: { type: "pattern", pattern: "solid", fgColor: { argb: "C7E9DA" } }, font: { bold: true, color: { argb: "14533B" } } } }] }));
-    for (let row = start; row < start + count; row++) comparison.getRow(row).height = 36;
-  }
-  const matchedRow = comparison.rowCount + 1;
-  comparison.getCell(matchedRow, 1).value = "Matched material amounts";
-  const totalRow = matchedRow + 1;
-  comparison.getCell(totalRow, 1).value = "Full quotation total (all lines and charges)";
-  data.offers.forEach((offer, index) => {
-    const column = 9 + index * 4;
-    const amount = bidLines(data, offer.quote).filter(line => data.request.items.some(item => item.id === line.requestItemId)).reduce((sum, line) => sum + quoteLineTotal(line), 0);
-    formula(comparison.getCell(matchedRow, column), matched[index].length ? `SUM(${matched[index].join(",")})` : "0", amount);
-    formula(comparison.getCell(totalRow, column), `'Quotation details'!R${quoteTotals.get(offer.quote.id)}`, bidQuoteTotal(data, offer.quote));
-  });
-  comparison.addRow(["Lowest effective unit price includes line discounts and tax; excludes quotation-wide charges. Highlighting does not select a supplier."]);
-  for (const excluded of data.excluded) comparison.addRow([`Excluded non-PHP bid: ${excluded.supplierName} · ${excluded.ref} · v${excluded.version} · ${excluded.currency}`]);
-
   headings(awards, 8, ["PO", "Supplier", "Source quotation", "Revision", "PO state", "Material / charge", "Unit", "Award quantity", "Unit price", "Discount type", "Discount value", "Tax %", "Base", "Discount", "After discount", "Tax amount", "Amount", "Selection reason / notes"]);
   const awardRows = new Map<string, number[]>();
   for (const po of data.pos) {
     const offer = data.offers.find(value => value.quote.id === po.quoteId)!;
+    const financial = po.financial ? poFinancialBreakdown(po) : undefined;
+    const vatRate = po.financial?.vatStatus === "VAT" && po.financial.priceBasis === "exclusive" ? po.financial.vatRate : 0;
     const first = awards.rowCount + 1;
     let subtotal = 0;
-    for (const line of bidPoLines(data, po)) {
+    for (const [index, line] of bidPoLines(data, po).entries()) {
       const item = data.request.items.find(value => value.id === line.itemId);
       const row = awards.addRow([po.ref, offer.supplierName, offer.quote.ref, offer.quote.version || 1, po.status, item?.name || line.itemId, item?.unit || ""]);
-      const total = poLineTotal(line); subtotal += total;
-      linePricing(awards, row.number, 8, line.quantity, line.unitPrice, line.discountType || "none", line.discountValue || 0, line.taxRate || 0, total);
+      const total = financial ? financial.lines[index].amount : poLineTotal(line); subtotal += total;
+      linePricing(awards, row.number, 8, line.quantity, line.unitPrice, line.discountType || "none", line.discountValue || 0, financial ? vatRate : line.taxRate || 0, total);
       row.getCell(18).value = [po.selectionReason, po.notes, po.supersededReason, !po.lines ? "Legacy award quantities inferred from MRF" : ""].filter(Boolean).join(" · ");
       awardRows.set(line.itemId, [...awardRows.get(line.itemId) || [], row.number]);
     }
     const row = awards.rowCount + 1;
     formula(awards.getCell(row, 17), row > first ? `SUM(Q${first}:Q${row - 1})` : "0", subtotal);
-    if (!po.lines) {
+    if (po.financial && financial) {
+      awards.getCell(row, 6).value = `Line subtotal · ${po.financial.vatStatus} · ${po.financial.priceBasis} · VAT ${po.financial.vatRate}%`;
+      const inputSubtotal = first < row ? `SUM(O${first}:O${row - 1})` : "0";
+      for (const entry of financial.adjustments) {
+        const adjustmentRow = awards.addRow([po.ref, offer.supplierName, "", "", "", `${entry.adjustment.label} · ${entry.adjustment.taxable === false ? "VAT exempt" : "VAT taxable"}`]);
+        adjustmentRow.getCell(16).value = entry.adjustment.value;
+        const input = `P${adjustmentRow.number}`;
+        const base = entry.adjustment.calculation === "percentage" ? `ROUND(${inputSubtotal}*${input}/100,2)` : input;
+        const multiplier = entry.adjustment.taxable === false ? 1 : 1 + vatRate / 100;
+        formula(adjustmentRow.getCell(17), `${entry.adjustment.kind === "discount" ? "-" : ""}ROUND((${base})*${multiplier},2)`, entry.amount);
+      }
+      const grossRow = awards.addRow([po.ref, offer.supplierName, "", "", "", "Gross purchase value"]).number;
+      formula(awards.getCell(grossRow, 17), `ROUND(SUM(Q${row}:Q${grossRow - 1}),2)`, financial.gross);
+      for (const [label, amount] of [["EWT (goods)", financial.ewtGoods], ["EWT (services)", financial.ewtServices]] as const) {
+        const deduction = awards.addRow([po.ref, offer.supplierName, "", "", "", label]);
+        deduction.getCell(16).value = amount;
+        formula(deduction.getCell(17), `-P${deduction.number}`, -amount);
+      }
+      const net = awards.addRow([po.ref, offer.supplierName, "", "", "", "Net supplier payable"]);
+      formula(net.getCell(17), `ROUND(SUM(Q${grossRow}:Q${net.number - 1}),2)`, financial.net);
+      net.font = { bold: true };
+    } else if (!po.lines) {
       awards.getCell(row + 1, 6).value = "Legacy PO total from source quotation";
       formula(awards.getCell(row + 1, 17), `'Quotation details'!R${quoteTotals.get(po.quoteId)}`, bidPoTotal(data, po));
     } else totals(awards, 17, 6, row, subtotal, po.adjustments || legacyCharges(po), bidPoTotal(data, po), !!po.adjustments);
@@ -206,9 +187,23 @@ export function buildBidWorkbook(report: BidReport) {
     formula(row.getCell(4), rows.length ? `SUM(${rows.map(n => `H${n}`).join(",")})` : "0", quantity, false);
     formula(row.getCell(5), `MAX(0,C${row.number}-D${row.number})`, Math.max(0, item.quantity - quantity), false);
   }
-  for (const sheet of book.worksheets) {
+  for (const sheet of [details, awards]) {
     sheet.columns.forEach((column, i) => { column.width = i === 0 ? 30 : 20; });
-    sheet.eachRow((row, index) => { if (index <= 8) return; row.eachCell(cell => { cell.alignment = { wrapText: true, vertical: "top" }; cell.border = { bottom: { style: "hair", color: { argb: "D5DEE6" } } }; if (index % 2 === 0) cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: sheet.name === "Bid comparison" ? TEAL : GREY } }; }); });
+    sheet.eachRow((row, index) => { if (index <= 8) return; row.eachCell(cell => { cell.alignment = { wrapText: true, vertical: "top" }; cell.border = { bottom: { style: "hair", color: { argb: "D5DEE6" } } }; if (index % 2 === 0) cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: GREY } }; }); });
+  }
+  comparisonSheets.forEach((sheet,index) => populateComparisonSheet(sheet, report, comparisonPages[index], detailRows, quoteTotals));
+  const overflow = comparisonOverflow(comparisonSheets);
+  for (let start = 0; start < overflow.length; start += 13) {
+    const sheet = book.addWorksheet(`Continued text ${start / 13 + 1}`);
+    populateComparisonSheet(sheet, report, { offers: [], rows: [], supplierOffset: 0, rowOffset: 0 }, detailRows, quoteTotals);
+    sheet.getCell("B1").value = "Continued cell contents";
+    overflow.slice(start, start + 13).forEach((line, index) => { sheet.getCell(index + 12, 2).value = line; });
+  }
+  // Lowest-price annotations stay off the company comparison layout.
+  for (const item of data.request.items) {
+    const candidates = data.offers.filter(offer => offer.source !== "PO source").flatMap(offer => bidLines(data, offer.quote).filter(line => line.requestItemId === item.id).map(line => ({ row: detailRows.get(`${offer.quote.id}/${line.id}`)!, price: quoteLineTotal(line)/(line.quantity*line.conversionFactor) })));
+    const lowest = Math.min(...candidates.map(value => value.price));
+    candidates.filter(value => value.price === lowest).forEach(value => { details.getCell(value.row,20).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "C7E9DA" } }; details.getCell(value.row,20).note = "Lowest effective price for this MRF material; supplier selection remains manual."; });
   }
   return book;
 }

@@ -11,11 +11,11 @@ Start with a test workspace. Prepare a combined MRF supporting PDF and two suppl
 - [ ] **Administrator:** Create a project, assign its PM, set its budget, and map its Drive folder.
 - [ ] **Site Personnel:** Follow **Request details → Materials → Review & submit**. Attach the supporting PDF on the final step and submit. Check that PM sees it.
 - [ ] **PM / Site Personnel:** Return the MRF with a reason, revise it, and resubmit. Check that its reference stays the same.
-- [ ] **Project Manager:** Approve the MRF. Wait for both PDFs to archive before Procurement continues.
+- [ ] **Project Manager:** Check the company MRF print preview and approve. Wait for both PDFs to archive before Procurement continues.
 - [ ] **Procurement:** Add supplier quotations manually or with AI. Review details and material matches, finalize, and wait for their Drive archives.
 - [ ] **Procurement:** Compare offers, award quantities with a reason, generate the supplier PO(s), and finalize for Finance.
-- [ ] **Procurement:** Generate a bid comparison Excel report once no active POs are draft or returned. Check its download and Drive copy.
-- [ ] **Finance / Procurement:** Return a PO with a reason, revise and finalize it again, then approve within budget. Wait for its PDF archive.
+- [ ] **Procurement:** Generate bid comparison PDF and Excel reports once no active POs are draft or returned. Check downloads and Drive copies.
+- [ ] **Finance / Procurement:** Return and revise a PO, review VAT, withholding and print fields, then approve within budget. Wait for its PDF archive.
 - [ ] **Procurement:** Mark the approved, archived PO served. Check that Logistics can schedule it.
 - [ ] **Logistics / Site Personnel:** Schedule a partial delivery, confirm accepted quantities, and post stock once. Check the remaining balance.
 - [ ] **Site Personnel:** Record usage, then receive and post the remaining delivery. Check inventory and movement history.

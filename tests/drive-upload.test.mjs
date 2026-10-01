@@ -16,6 +16,8 @@ test("encrypted Drive upload tickets preserve a session and reject tampering and
     assert.equal(token.includes("upload_id"), false);
     assert.equal(openDriveUploadTicket(token).total, 50 * 1024 * 1024);
     assert.equal(openDriveUploadTicket(token).requestId, "mrf-1");
+    const updateToken = sealDriveUploadTicket({ requestId: "mrf-1", version: 2, total: 100, sessionUri: sessionUri.replace("files?", "files/reserved-support-id?"), formFileId: "form-1", formUrl: "https://drive.google.com/form-1" });
+    assert.match(openDriveUploadTicket(updateToken).sessionUri, /files\/reserved-support-id/);
     assert.throws(() => openDriveUploadTicket(`${token[0] === "A" ? "B" : "A"}${token.slice(1)}`), /invalid/);
     Date.now = () => previousNow() + 61 * 60 * 1000;
     assert.throws(() => openDriveUploadTicket(token), /expired/);

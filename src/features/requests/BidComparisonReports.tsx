@@ -5,51 +5,80 @@ import { useDemo } from "@/src/app-state/DemoProvider";
 import { useConfirmation } from "@/src/components/ui/ConfirmDialog";
 import { InlineError } from "@/src/components/ui/Primitives";
 import { bidReportReadiness } from "@/src/domain/bid-reports";
-import type { BidReport } from "@/src/domain/types";
+import { captureBidReport } from "@/src/domain/bid-reports";
+import { comparisonOffers, materialOffers, resolveComparisonSelections } from "@/src/domain/comparison-report";
+import type { BidReport, ComparisonSelections } from "@/src/domain/types";
 import { archiveBidWorkbook, downloadBidWorkbook, getBidWorkbook } from "./bid-report-files";
 
 export function BidComparisonReports({ requestId }: { requestId: string }) {
   const { snapshot, run } = useDemo();
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
+  const [selections, setSelections] = useState<ComparisonSelections>({});
   const { confirm, confirmation } = useConfirmation();
   if (!snapshot) return null;
   const procurement = snapshot.role === "Procurement";
   const readiness = bidReportReadiness(snapshot, requestId);
+  const currentData = !readiness ? captureBidReport(snapshot, requestId, true) : undefined;
+  const alternatives = currentData ? comparisonOffers(currentData).flatMap(offer => currentData.request.items.flatMap(item => {
+    const lines = materialOffers(currentData, offer, item);
+    return lines.length > 1 ? [{ offer, item, lines }] : [];
+  })) : [];
   const reports = snapshot.bidReports.filter(report => report.requestId === requestId).sort((a, b) => b.version - a.version);
-  const process = async (report: BidReport, action: "download" | "generate" | "archive") => {
+  const process = async (report: BidReport, action: "download" | "generate" | "archive", selectedFormat: "xlsx" | "pdf" = "xlsx") => {
     setBusy(report.id); setError("");
     try {
-      const workbook = await getBidWorkbook(report, procurement ? run : undefined);
-      if (action !== "archive") downloadBidWorkbook(workbook.blob, report.fileName);
-      if (action !== "download") await archiveBidWorkbook(workbook.report, workbook.blob, run);
+      const errors: string[] = [];
+      for (const format of action === "download" ? [selectedFormat] : report.pdf ? ["xlsx", "pdf"] as const : ["xlsx"] as const) {
+        try {
+          const artifact = format === "pdf" ? report.pdf! : report;
+          const workbook = await getBidWorkbook(report, procurement ? run : undefined, format);
+          if (action === "download") downloadBidWorkbook(workbook.blob, artifact.fileName);
+          else await archiveBidWorkbook(workbook.report, workbook.blob, run, format);
+        } catch (cause) { errors.push(`${format.toUpperCase()}: ${cause instanceof Error ? cause.message : "The report could not be processed."}`); }
+      }
+      if (errors.length) throw new Error(errors.join(" "));
     } catch (cause) { setError(cause instanceof Error ? cause.message : "The bid report could not be processed."); }
     finally { setBusy(""); }
   };
   const generate = async () => {
-    if (!await confirm(reports.length ? "Generate a new bid comparison version?" : "Generate bid comparison?", "Capture the current PHP bids and PO awards in a fixed Excel workbook. Download it and archive a copy to Google Drive.", "Generate report")) return;
+    if (!currentData) return;
+    let selected: ComparisonSelections;
+    try {
+      const active: ComparisonSelections = {};
+      for (const { offer, item, lines } of alternatives) {
+        const choice = selections[offer.quote.id]?.[item.id];
+        if (lines.some(line => line.id === choice)) (active[offer.quote.id] ||= {})[item.id] = choice;
+      }
+      selected = resolveComparisonSelections(currentData, active);
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Choose the comparison alternatives."); return; }
+    if (!await confirm(reports.length ? "Generate a new bid comparison version?" : "Generate bid comparison?", "Save the current supplier bids and selected alternatives as PDF and a single comparison worksheet. Material totals use the required MRF quantity and exclude taxes, discounts and freight.", "Generate report")) return;
     setBusy("new"); setError("");
     try {
-      const result = await run({ type: "createBidReport", requestId });
+      const result = await run({ type: "createBidReport", requestId, comparisonSelections: selected });
       if (!result.ok) { setError(result.message); return; }
       await process(result.snapshot.bidReports.find(report => report.id === result.recordId)!, "generate");
     } finally { setBusy(""); }
   };
   return <section className="panel">
-    <div className="panel-heading"><div><h2>Bid comparison reports</h2><p className="helper-note">Saved Excel versions include PHP bid comparisons, quotation details, and PO awards. Partial material coverage is shown.</p></div>
+    <div className="panel-heading"><div><h2>Bid comparison reports</h2><p className="helper-note">New PDF and Excel versions compare required MRF quantities at quoted unit prices. Excel contains one comparison worksheet; previous versions retain their original format.</p></div>
       {procurement && <button className="button primary" type="button" disabled={!!busy || !!readiness} onClick={() => void generate()}>{busy === "new" ? "Generating…" : reports.length ? "Generate new version" : "Generate bid comparison"}</button>}
     </div>
     {procurement && readiness && <p className="helper-note">{readiness}</p>}
+    {procurement && alternatives.length > 0 && <fieldset className="comparison-alternatives" disabled={!!busy}><legend>Choose comparison alternatives</legend><p className="helper-note">Choose one offer per supplier and material. These choices apply to this report and do not change PO awards.</p>{alternatives.map(({ offer, item, lines }) => <label className="field" key={`${offer.quote.id}/${item.id}`}><span>{offer.supplierName} · {item.name}</span><select value={lines.some(line => line.id === selections[offer.quote.id]?.[item.id]) ? selections[offer.quote.id][item.id] : ""} onChange={event => setSelections(current => ({ ...current, [offer.quote.id]: { ...current[offer.quote.id], [item.id]: event.target.value } }))}><option value="">Choose an offer</option>{lines.map(line => <option key={line.id} value={line.id}>{line.description} · {line.brand} {line.specification} · PHP {line.unitPrice.toLocaleString("en-PH")} / {line.unit} · offered {line.quantity}</option>)}</select></label>)}</fieldset>}
     {!reports.length && <p className="muted">No saved bid comparison yet.</p>}
     {reports.map(report => <article className="bid-report-row" key={report.id}>
       <div><strong>Bid comparison v{report.version}</strong><small>{new Date(report.generatedAt).toLocaleString()} · {report.data.project.name}</small><small>{report.sha256 ? report.archive.status === "complete" ? "Archived to Google Drive" : "Workbook ready · Drive archive pending" : "Workbook generation pending"}</small>
         {(report.generationError || report.archive.error) && <p className="field-error">{report.generationError || report.archive.error}</p>}
+        {report.pdf && <><small>{report.pdf.sha256 ? report.pdf.archive.status === "complete" ? "PDF archived to Google Drive" : "PDF ready · Drive archive pending" : "PDF generation pending"}</small>{(report.pdf.generationError || report.pdf.archive.error) && <p className="field-error">{report.pdf.generationError || report.pdf.archive.error}</p>}</>}
       </div>
       <div className="button-row">
         {report.sha256 && <button className="button secondary" type="button" disabled={!!busy} onClick={() => void process(report, "download")}>Download Excel</button>}
-        {procurement && !report.sha256 && <button className="button secondary" type="button" disabled={!!busy} onClick={() => void process(report, "generate")}>Retry generation</button>}
-        {procurement && report.sha256 && report.archive.status !== "complete" && <button className="button secondary" type="button" disabled={!!busy} onClick={() => void process(report, "archive")}>Retry Drive archive</button>}
+        {report.pdf?.sha256 && <button className="button secondary" type="button" disabled={!!busy} onClick={() => void process(report, "download", "pdf")}>Download PDF</button>}
+        {procurement && (!report.sha256 || report.pdf && !report.pdf.sha256) && <button className="button secondary" type="button" disabled={!!busy} onClick={() => void process(report, "generate")}>Retry generation</button>}
+        {procurement && (report.sha256 && report.archive.status !== "complete" || report.pdf?.sha256 && report.pdf.archive.status !== "complete") && <button className="button secondary" type="button" disabled={!!busy} onClick={() => void process(report, "archive")}>Retry Drive archive</button>}
         {report.archive.url && <a className="text-link" href={report.archive.url} target="_blank" rel="noopener noreferrer">Open in Drive</a>}
+        {report.pdf?.archive.url && <a className="text-link" href={report.pdf.archive.url} target="_blank" rel="noopener noreferrer">Open PDF in Drive</a>}
         {busy === report.id && <span role="status">Processing report…</span>}
       </div>
     </article>)}
