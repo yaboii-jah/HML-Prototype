@@ -2,7 +2,7 @@
 
 > **Living document:** This is the canonical, implementation-aligned context for the application. Update this file in the same change whenever a major implementation changes the product scope, business workflow, domain model, permissions, routes, persistence, seeded walkthrough, architecture, or verification strategy. Do not record small visual polish, copy edits, or isolated bug fixes unless they change one of those areas.
 
-**Last verified:** 2026-09-30
+**Last verified:** 2026-10-02
 **Application version:** Prototype (`package.json` 0.1.0)
 **State schema:** `DemoSnapshot` version 10
 
@@ -66,6 +66,7 @@ The domain command layer in `src/domain/commands.ts` is the authority for permis
 ### Material requests
 
 - States: `draft`, `submitted`, `returned`, `approved`, `rejected`.
+- New MRFs, draft edits, returns, and full corrections use three steps: Request details, Materials, and Review & submit. Next validates the current step; Back and review Edit links retain entered values and files. The final step accepts the supporting PDF and shows a request summary before submission confirmation. Save draft permits incomplete information from every step and opens the saved record. Step progress is temporary; refresh restores explicitly saved work. PDF-only corrections open on the final step with request details read-only.
 - Only Site Personnel can create/edit drafts, returned requests, or PM-reopened corrections. A reopened request with linked quotations or POs permits only a support-PDF change; an earlier reopened request permits full editing.
 - Submission requires request details, at least one valid item, and one combined supporting PDF. The browser validates PDF type, signature, and 50 MB limit before storing it locally.
 - General request information includes a manually entered, globally unique M.R.F No. and editable Request Date, plus Requested by, Approved by, Purchaser/Procurement Officer, and Finance Officer names. All six fields are required for submission but may be blank in a draft. Request Date is document metadata and may be in the future; system timestamps still drive activity and report filters.
@@ -210,6 +211,7 @@ The domain test suite currently protects these high-value behaviors:
 
 - Seeded purchasing, delivery, inventory, and budget consistency.
 - MRF permission/review rules and ID preservation after return/resubmission.
+- The browser walkthrough covers MRF step validation, navigation and file retention, incomplete draft saving/reopening, final confirmation, returned-request resubmission, PDF-only corrections, and responsive step layouts.
 - Single stock posting, outstanding quantities, site isolation, and nonnegative inventory.
 - Payment movement from commitment to spent without double-reducing available budget.
 - Version-1 and version-2 storage migration plus malformed-data recovery.
@@ -250,6 +252,7 @@ When updating it:
 
 | Date | Context change |
 | --- | --- |
+| 2026-10-02 | Added a three-step MRF creation and revision flow with per-step validation, review summary, incomplete draft saves, and a direct final-step path for PDF-only corrections; snapshot version remains 10. |
 | 2026-09-30 | Added immutable versioned Excel bid comparisons with three formula-based sheets, PO readiness gates, IndexedDB file caches, resumable Drive archival, exact download recovery, and v9-to-v10 migration. |
 | 2026-09-24 | Created the canonical application context from the implemented routes, domain model, command rules, persistence layer, seed data, and tests. |
 | 2026-09-25 | Moved request detail fields to each material, added general information names, and migrated saved snapshots to version 3. |
