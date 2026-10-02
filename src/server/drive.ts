@@ -1,3 +1,5 @@
+import type { AccountingDocument, Batch, MRF, PO } from "../domain/types.ts";
+import { ACCOUNTING_MIMES, MAX_ACCOUNTING_FILE } from "../domain/accounting-documents.ts";
 import "server-only";
 import { GoogleAuth, OAuth2Client } from "google-auth-library";
 import { XLSX_MIME } from "../domain/bid-reports.ts";
@@ -222,3 +224,26 @@ async function uploadResult(response: Response): Promise<{ offset: number; suppo
 }
 
 const safeName = (value: string) => value.replace(/[\\/:*?"<>|]/g, "-").trim().slice(0, 120) || "MRF";
+
+export async function prepareAccountingFile(projectFolderId: string, mrf: MRF, po: PO, batch: Batch, document: AccountingDocument) {
+  await validateProjectFolder(projectFolderId);
+  const requestTag = { hmlRequestId: mrf.id };
+  const requestFolder = await createFolder(projectFolderId, safeName(mrf.ref), requestTag, false);
+  const accounting = await createFolder(requestFolder.id, "Accounting Documents", requestTag);
+  const poFolder = await createFolder(accounting.id, safeName(po.ref), { ...requestTag, hmlPoId: po.id }, false);
+  const batchFolder = await createFolder(poFolder.id, safeName(batch.ref), { ...requestTag, hmlPoId: po.id, hmlBatchId: batch.id }, false);
+  const tags = { ...requestTag, hmlPoId: po.id, hmlBatchId: batch.id, hmlDocumentId: document.id, hmlType: "accounting-document", hmlSha256: document.sha256 };
+  const existing = await taggedChild(batchFolder.id, document.name, { hmlDocumentId: document.id }, false);
+  if (existing) {
+    if (existing.appProperties?.hmlSha256 !== document.sha256 || existing.mimeType !== document.mime) throw new Error("This evidence already has a different Drive copy.");
+    return { driveFileId: existing.id, url: fileUrl(existing) };
+  }
+  return { sessionUri: await beginUpload(batchFolder.id, safeName(document.name), document.size, document.mime, tags) };
+}
+export async function downloadAccountingFile(projectFolderId: string, requestId: string, poId: string, batchId: string, documentId: string, fileId: string) {
+  await validateProjectFolder(projectFolderId);
+  const file = await getDriveFile(fileId), tags = file.appProperties;
+  if (!ACCOUNTING_MIMES.some(mime => mime === file.mimeType) || tags?.hmlType !== "accounting-document" || tags.hmlRequestId !== requestId || tags.hmlPoId !== poId || tags.hmlBatchId !== batchId || tags.hmlDocumentId !== documentId || Number(file.size) > MAX_ACCOUNTING_FILE || !await isWithinFolder(fileId, projectFolderId)) throw new Error("This accounting file is outside its project or has invalid document metadata.");
+  const bytes = Buffer.from(await (await drive(`${API}/${encodeURIComponent(fileId)}?alt=media&supportsAllDrives=true`)).arrayBuffer());
+  return { bytes, mime: file.mimeType };
+}

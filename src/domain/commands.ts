@@ -1,3 +1,6 @@
+import { validAccountingDocument, MAX_ACCOUNTING_BATCH } from "./accounting-documents.ts";
+import type { AccountingDocument } from "./types.ts";
+import { validDriveFileLink } from "./drive-links.ts";
 import { initializePoDocument } from "./po-document.ts";
 import { resolveComparisonSelections } from "./comparison-report.ts";
 import type { ComparisonSelections } from "./types.ts";
@@ -12,6 +15,9 @@ import { procurementReady, supportingPdf } from "./request-archive.ts";
 import { ROLES, type ArchivedQuoteFile, type DemoSnapshot, type DocumentRef, type DocumentStatus, type Item, type POAdjustment, type POLine, type Priority, type Quote, type Role } from "./types.ts";
 
 export type Command =
+  | { type: "attachAccountingDocuments"; poId: string; batchId: string; documents: Pick<AccountingDocument, "name" | "kind" | "mime" | "size" | "localFileId" | "sha256">[] }
+  | { type: "completeAccountingArchive"; poId: string; documentId: string; fileId: string; url: string }
+  | { type: "failAccountingArchive"; poId: string; documentId: string; error: string }
   | { type: "createBidReport"; requestId: string; comparisonSelections?: ComparisonSelections }
   | { type: "saveBidReportFile"; format?: "xlsx" | "pdf"; id: string; localFileId: string; sha256: string }
   | { type: "failBidGeneration"; format?: "xlsx" | "pdf"; id: string; error: string }
@@ -111,7 +117,7 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       const version = Math.max(0, ...state.bidReports.filter(report => report.requestId === command.requestId).map(report => report.version)) + 1;
       const reportId = id("bid");
       const ref = data.request.ref.replace(/[^A-Za-z0-9_-]/g, "_").slice(0, 100) || "MRF";
-      state.bidReports.push({ id: reportId, requestId: command.requestId, version, comparisonRevision: 2, comparisonSelections, generatedAt: at, fileName: `${ref}-bid-comparison-v${version}.xlsx`, data, pdf: { fileName: `${ref}-bid-comparison-v${version}.pdf`, archive: { status: "pending" } }, archive: { status: "pending" } });
+      state.bidReports.push({ id: reportId, requestId: command.requestId, version, comparisonRevision: 3, comparisonSelections, generatedAt: at, fileName: `${ref}-bid-comparison-v${version}.xlsx`, data, pdf: { fileName: `${ref}-bid-comparison-v${version}.pdf`, archive: { status: "pending" } }, archive: { status: "pending" } });
       log(command.requestId, `Bid comparison v${version} captured`);
       return done("Bid comparison captured. Generating Excel and PDF…", reportId);
     }
@@ -133,7 +139,7 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       if (command.type === "failBidGeneration") { if (!artifact.sha256) artifact.generationError = command.error; return done("Workbook generation needs retry."); }
       if (artifact.archive.status === "complete") return done("Bid comparison already archived.");
       if (command.type === "completeBidArchive") {
-        if (!artifact.sha256 || !command.fileId || !command.url.startsWith("https://drive.google.com/")) return fail("The workbook archive is invalid.");
+        if (!artifact.sha256 || !command.fileId || !validDriveFileLink(command.url, command.fileId)) return fail("The workbook archive is invalid.");
         artifact.archive = { status: "complete", fileId: command.fileId, url: command.url };
         log(report.requestId, `Bid comparison v${report.version} archived`);
         return done("Bid comparison archived to Google Drive.");
@@ -564,6 +570,37 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       state.movements.push({ id: movementId, siteId: command.siteId, itemName: command.itemName, unit: command.unit, quantity: signed, kind: command.kind, reason: command.reason.trim(), actor, at });
       log(movementId, `${command.kind} recorded`, command.reason);
       return done(`${command.kind === "usage" ? "Usage" : "Adjustment"} recorded.`, movementId);
+    }
+    case "attachAccountingDocuments": {
+      if (!permit("Site Personnel")) return fail("Switch to Site Personnel to upload delivery documents.");
+      const batch = state.batches.find(value => value.id === command.batchId && value.poId === command.poId && ["confirmed", "posted"].includes(value.status));
+      const po = state.pos.find(value => value.id === command.poId && value.status === "served");
+      if (!batch || !po) return fail("Confirm this delivered batch before uploading accounting documents.");
+      let record = state.accounting.find(value => value.poId === command.poId);
+      const existing = (record?.documents || []).filter(value => value.batchId === batch.id);
+      if (!command.documents.length || command.documents.some(value => !validAccountingDocument(value)) || existing.length + command.documents.length > 12 || [...existing, ...command.documents].reduce((total, value) => total + value.size, 0) > MAX_ACCOUNTING_BATCH) return fail("Use up to 12 PDF or image files, at most 20 MB each and 45 MB per batch.");
+      const fileIds = [...(record?.documents || []).map(value => value.localFileId), ...command.documents.map(value => value.localFileId)];
+      if (new Set(fileIds).size !== fileIds.length) return fail("This document is already attached.");
+      if (!record) { record = { poId: po.id, invoiceRef: "", receiptRef: "", review: "Incomplete", note: "", documents: [] }; state.accounting.push(record); }
+      record.documents = [...(record.documents || []), ...command.documents.map(value => ({ ...value, id: id("account-doc"), batchId: batch.id, uploadedAt: at, uploadedBy: actor, archive: { status: "pending" as const } }))];
+      if (record.review === "Complete") record.review = "Under Review";
+      log(po.id, `Accounting evidence attached for ${batch.ref}`);
+      return done("Accounting documents saved. Archiving to Google Drive…");
+    }
+    case "completeAccountingArchive":
+    case "failAccountingArchive": {
+      if (!permit("Site Personnel", "Accounting / Auditing", "Administrator")) return fail("Switch to Site Personnel, Accounting or Administrator to archive accounting documents.");
+      const document = state.accounting.find(value => value.poId === command.poId)?.documents?.find(value => value.id === command.documentId);
+      if (!document) return fail("Accounting document not found.");
+      if (document.archive.status === "complete") return done("Accounting document already archived.");
+      if (command.type === "completeAccountingArchive") {
+        if (!validDriveFileLink(command.url, command.fileId)) return fail("The accounting document archive is invalid.");
+        document.archive = { status: "complete", fileId: command.fileId, url: command.url };
+        log(command.poId, "Accounting document archived");
+        return done("Accounting document archived to Google Drive.");
+      }
+      document.archive.error = command.error;
+      return done("Accounting document saved; Drive archive needs retry.");
     }
     case "saveDocuments": {
       if (!permit("Accounting / Auditing")) return fail("Switch to Accounting to review documents.");

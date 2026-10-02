@@ -71,8 +71,8 @@ export function validBidReport(value: unknown): value is BidReport {
   try {
     const report = value as BidReport;
     const data = report.data;
-    if (report.comparisonRevision !== undefined && report.comparisonRevision !== 2) return false;
-    if (report.comparisonRevision === 2) {
+    if (report.comparisonRevision !== undefined && ![2, 3].includes(report.comparisonRevision)) return false;
+    if ((report.comparisonRevision === 2 || report.comparisonRevision === 3)) {
       if (!report.comparisonSelections) return false;
       const selections = resolveComparisonSelections(data, report.comparisonSelections);
       for (const [quoteId, items] of Object.entries(selections)) for (const [itemId, lineId] of Object.entries(items)) {

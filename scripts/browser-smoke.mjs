@@ -37,6 +37,13 @@ try {
     window.__driveSmokeStatusChecks = 0;
     let firstResponseLost = false;
     let quoteUploadIndex = 0;
+    const accountingFiles = new Map();
+    const storedEvidence = async (key, blob) => {
+      const database = await new Promise((resolve,reject) => { const request=indexedDB.open('smoke-drive-files',1);request.onupgradeneeded=()=>request.result.createObjectStore('documents');request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error); });
+      try { return await new Promise((resolve,reject) => { const transaction=database.transaction('documents',blob?'readwrite':'readonly'),store=transaction.objectStore('documents'),request=blob?store.put(blob,key):store.get(key);transaction.oncomplete=()=>resolve(request.result);transaction.onerror=()=>reject(transaction.error); }); }
+      finally { database.close(); }
+    };
+    let accountingFailOnce = true;
     window.fetch = (input, init) => {
       const url = typeof input === 'string' ? input : input.url;
       if (url === '/api/drive/archive') return reply({ ticket: 'smoke-ticket', offset: 0 });
@@ -50,6 +57,22 @@ try {
       }
       if (url === '/api/drive/quotes') { quoteUploadIndex = JSON.parse(init.body).index; return reply({ ticket: 'smoke-quote-ticket', offset: 0 }); }
       if (url === '/api/drive/quotes/chunk') return reply({ driveFileId: 'smoke-quote-' + quoteUploadIndex, url: 'https://drive.google.com/file/d/smoke-quote-' + quoteUploadIndex + '/view' });
+      if (url === '/api/drive/accounting-documents') {
+        if (accountingFailOnce) { accountingFailOnce = false; return Promise.resolve(new Response(JSON.stringify({error:'Simulated accounting archive outage'}),{status:503,headers:{'Content-Type':'application/json'}})); }
+        const body = JSON.parse(init.body), key = body.document.id;
+        if (!accountingFiles.has(key)) accountingFiles.set(key, { parts:[], size:body.document.size, offset:0 });
+        return reply({ ticket:key, offset:accountingFiles.get(key).offset });
+      }
+      if (url === '/api/drive/accounting-documents/chunk') {
+        const key=init.headers['x-drive-upload-ticket'], file=accountingFiles.get(key);
+        if (init.method === 'PUT') { file.parts.push(init.body); file.offset += init.body.size; }
+        if (file.offset < file.size) return reply({offset:file.offset});
+        return storedEvidence(key,new Blob(file.parts)).then(()=>reply({driveFileId:key,url:'https://drive.google.com/file/d/'+key+'/view'}));
+      }
+      if (url.startsWith('/api/drive/accounting-documents?')) {
+        const key=new URL(url,location.origin).searchParams.get('documentId');
+        return storedEvidence(key).then(blob=>new Response(blob,{headers:{'Content-Type':'application/pdf'}}));
+      }
       if (url === '/api/drive/purchase-orders') return reply({ fileId: 'smoke-po-id', url: 'https://drive.google.com/file/d/smoke-po-id/view' });
       return originalFetch(input, init);
     };
@@ -63,8 +86,48 @@ try {
   const uploadFiles = async (selector, files) => { const { root } = await call("DOM.getDocument"); const { nodeId } = await call("DOM.querySelector", { nodeId: root.nodeId, selector }); if (!nodeId) throw new Error(`Missing file input: ${selector}`); await call("DOM.setFileInputFiles", { nodeId, files }); };
   const submit = async (selector, button) => { await wait(`return !!document.querySelector(${JSON.stringify(selector)});`); const result = await run(`const form=document.querySelector(${JSON.stringify(selector)});if(!form)throw Error('Missing form');const submitter=${button ? `form.querySelector(${JSON.stringify(button)})` : "undefined"};form.requestSubmit(submitter);return true;`); await acceptPending(); return result; };
   const state = () => run("return JSON.parse(localStorage.getItem('hml-constructsync-demo-v11'));");
+  const requestStep = () => run("return document.querySelector('.request-steps [aria-current=step]')?.textContent.trim();");
+  const checkRequestWidths = async step => {
+    for (const width of [1440, 1024, 768, 414, 375, 320]) {
+      await call("Emulation.setDeviceMetricsOverride", { width, height: 900, deviceScaleFactor: 1, mobile: width < 800 });
+      await run("window.scrollTo(0,0);return true;");
+      await sleep(250);
+      assert.equal(await run(`return document.documentElement.scrollWidth <= ${width} + 1;`), true, `Request step ${step} must fit at ${width}px`);
+      assert.equal(await run("return [...document.querySelectorAll('.request-steps button')].every(button=>button.scrollWidth<=button.clientWidth+1);"), true, `Step labels must fit at ${width}px`);
+      for (const theme of ["light", "dark"]) {
+        await run(`document.documentElement.dataset.theme=${JSON.stringify(theme)};return true;`);
+        await checkContrast();
+        if (step < 3) await checkFocusContrast(step === 1 ? "#ref" : ".materials-toolbar input");
+      }
+      if (width <= 768) assert.equal(await run("return [...document.querySelectorAll('.button,.icon-button,.masthead-role,.text-link,.reference-choose')].filter(el=>{const r=el.getBoundingClientRect();return r.width&&r.height&&!el.closest('[hidden]');}).every(el=>el.getBoundingClientRect().height>=44);"), true, "Mobile actions need 44px touch targets");
+      await run("document.documentElement.dataset.theme='light';return true;");
+      if (width === 1440 || width === 375) await writeFile(path.join(profile, `request-step-${step}-${width}.png`), Buffer.from((await call("Page.captureScreenshot", { format: "png" })).data, "base64"));
+    }
+    await call("Emulation.clearDeviceMetricsOverride");
+  };
   const installFixture = async () => { await run(`localStorage.setItem('hml-constructsync-demo-v11', ${JSON.stringify(JSON.stringify(seedDemo()))}); return true;`); await call("Page.reload", { ignoreCache: true }); };
-  const role = async name => { await run("document.querySelector('.masthead-role').click();return true;"); await wait("return !!document.querySelector('.role-options');"); await run(`const button=[...document.querySelectorAll('.role-options button')].find(x=>x.querySelector('strong')?.textContent===${JSON.stringify(name)});if(!button)throw Error('Role missing');button.click();return true;`); await wait(`return document.querySelector('.masthead-role')?.textContent.includes(${JSON.stringify(name)});`); };
+  const role = async name => { await wait("const button=document.querySelector('.masthead-role');if(!button)return false;button.click();return true;"); await wait("return !!document.querySelector('.role-modal[open] .role-options');"); await run(`const button=[...document.querySelectorAll('.role-options button')].find(x=>x.querySelector('strong')?.textContent===${JSON.stringify(name)});if(!button)throw Error('Role missing');button.click();return true;`); await wait(`return document.querySelector('.masthead-role')?.textContent.includes(${JSON.stringify(name)}) && !document.querySelector('.role-modal[open]') && location.pathname==='/dashboard';`); };
+  const checkContrast = async (selector = "p,small,dt,th,.side-caption,.side-link,.field>span,.button,.text-link,.badge", collect = false) => {
+    const failures = await run(`
+      const canvas=document.createElement('canvas');canvas.width=canvas.height=1;
+      const ctx=canvas.getContext('2d',{willReadFrequently:true});
+      const luminance=rgb=>rgb.slice(0,3).map(v=>v/255).map(v=>v<=.04045?v/12.92:((v+.055)/1.055)**2.4).reduce((sum,v,i)=>sum+v*[.2126,.7152,.0722][i],0);
+      const rgb=color=>{ctx.clearRect(0,0,1,1);ctx.fillStyle=color;ctx.fillRect(0,0,1,1);return [...ctx.getImageData(0,0,1,1).data];};
+      const background=el=>{const ancestors=[];for(let node=el;node;node=node.parentElement)ancestors.unshift(node);ctx.fillStyle='white';ctx.fillRect(0,0,1,1);for(const node of ancestors){ctx.fillStyle=getComputedStyle(node).backgroundColor;ctx.fillRect(0,0,1,1);}return [...ctx.getImageData(0,0,1,1).data];};
+      const dialog=document.querySelector('dialog[open]');
+      return [...(dialog||document).querySelectorAll(${JSON.stringify(selector)})].filter(el=>{const r=el.getBoundingClientRect();return r.width&&r.height&&r.top<innerHeight&&r.bottom>0&&getComputedStyle(el).visibility!=='hidden'&&!el.closest(':disabled,[aria-disabled=true],[hidden]');}).flatMap(el=>{
+        const style=getComputedStyle(el),bg=luminance(background(el)),fg=luminance(rgb(style.color)),ratio=(Math.max(bg,fg)+.05)/(Math.min(bg,fg)+.05);
+        const large=parseFloat(style.fontSize)>=24||(parseFloat(style.fontSize)>=18.66&&Number(style.fontWeight)>=700);
+        return ratio>=(large?3:4.5)-.02?[]:[{page:location.pathname,theme:document.documentElement.dataset.theme,element:el.className,text:el.textContent.trim().slice(0,45),ratio:Number(ratio.toFixed(2))}];
+      });
+    `);
+    if (collect) return failures;
+    assert.deepEqual(failures, [], "Visible text must have adequate contrast");
+  };
+  const checkFocusContrast = async selector => {
+    await run(`document.querySelector(${JSON.stringify(selector)}).focus();return true;`);
+    assert.equal(await run(`const el=document.querySelector(${JSON.stringify(selector)}),style=getComputedStyle(el),canvas=document.createElement('canvas');canvas.width=canvas.height=1;const ctx=canvas.getContext('2d');const lum=color=>{ctx.fillStyle=color;ctx.fillRect(0,0,1,1);return [...ctx.getImageData(0,0,1,1).data].slice(0,3).map(v=>v/255).map(v=>v<=.04045?v/12.92:((v+.055)/1.055)**2.4).reduce((sum,v,i)=>sum+v*[.2126,.7152,.0722][i],0);};const ring=lum(style.outlineColor),surface=lum(style.backgroundColor);return parseFloat(style.outlineWidth)>=2&&(Math.max(ring,surface)+.05)/(Math.min(ring,surface)+.05)>=3;`), true, "Focused controls need a contrasting ring");
+  };
   console.log("Browser ready; checking demo sign-in");
   await wait("return location.pathname === '/sign-in' && !!document.querySelector('.signin-form');");
   assert.equal(await run("return new URLSearchParams(location.search).get('next');"), "/dashboard");
@@ -93,12 +156,16 @@ try {
   for (const [width, height] of [[320, 568], [375, 812], [414, 812], [768, 812]]) {
     await call("Emulation.setDeviceMetricsOverride", { width, height, deviceScaleFactor: 1, mobile: true });
     await sleep(150);
-    assert.equal(await run("return document.documentElement.scrollWidth <= innerWidth;"), true, `Sign-in must not scroll horizontally at ${width}px`);
-    assert.equal(await run("return document.documentElement.scrollHeight <= innerHeight;"), true, `Sign-in must not scroll vertically at ${width}x${height}px`);
+    assert.equal(await run(`return document.documentElement.scrollWidth <= ${width};`), true, `Sign-in must not scroll horizontally at ${width}px`);
+    await run("document.querySelector('.signin-submit').scrollIntoView({block:'nearest'});return true;");
     assert.equal(await run("return document.querySelector('.signin-submit').getBoundingClientRect().bottom <= innerHeight;"), true, `Sign-in action must remain visible at ${width}x${height}px`);
     await writeFile(path.join(profile, width === 375 ? "sign-in-mobile.png" : `sign-in-${width}.png`), Buffer.from((await call("Page.captureScreenshot", { format: "png" })).data, "base64"));
   }
+  await call("Emulation.setDeviceMetricsOverride", { width: 375, height: 400, deviceScaleFactor: 1, mobile: true });
+  await run("document.querySelector('.signin-submit').scrollIntoView({block:'end'});return true;");
+  assert.equal(await run("return document.querySelector('.signin-submit').getBoundingClientRect().bottom <= innerHeight && window.scrollY > 0;"), true, "Short sign-in screens must scroll to the action");
   await call("Emulation.setDeviceMetricsOverride", { width: 320, height: 568, deviceScaleFactor: 1, mobile: true });
+  await run("window.scrollTo(0,0);return true;");
   assert.equal(await run("return document.querySelector('.signin-role-options') === null;"), true);
   await run("document.querySelector('.signin-role-trigger').click();return true;");
   await wait("return !!document.querySelector('.signin-role-options');");
@@ -114,7 +181,8 @@ try {
   await click("Sign in", ".signin-form button");
   await wait("return !!document.querySelector('.signin-error');");
   assert.equal(await run("return location.pathname;"), "/sign-in");
-  assert.equal(await run("return document.querySelector('.signin-card').getBoundingClientRect().bottom <= innerHeight;"), true, "Sign-in error must fit on a short phone");
+  await run("document.querySelector('.signin-error').scrollIntoView({block:'nearest'});return true;");
+  assert.equal(await run("return document.querySelector('.signin-error').getBoundingClientRect().bottom <= innerHeight;"), true, "Sign-in error must be reachable on a short phone");
   await call("Emulation.clearDeviceMetricsOverride");
   await run("document.querySelector('.signin-role-trigger').click();return true;");
   await run("document.querySelector('[aria-label=\"Fill Site Personnel demo credentials\"]').click();return true;");
@@ -127,7 +195,7 @@ try {
   assert.equal(await run("return document.querySelector('.report-empty h2')?.textContent;"), "No projects to report yet");
   assert.equal(await run("return document.querySelectorAll('.empty').length;"), 0, "An empty report should show one useful starting state");
   await writeFile(path.join(profile, "report-empty.png"), Buffer.from((await call("Page.captureScreenshot", { format: "png" })).data, "base64"));
-  for (const [route, message] of [["/requests", "No material requests yet"], ["/suppliers", "No suppliers yet"], ["/purchase-orders", "No purchase orders yet"], ["/inventory", "No site stock yet"], ["/accounting", "No purchase orders are ready"]]) {
+  for (const [route, message] of [["/requests", "No material requests yet"], ["/suppliers", "No suppliers yet"], ["/purchase-orders", "No purchase orders yet"], ["/inventory", "No site stock yet"], ["/accounting", "No purchase orders are linked"]]) {
     await navigate(route);
     assert.equal(await run(`return document.querySelector('.empty')?.textContent.includes(${JSON.stringify(message)});`), true, `${route} should explain its empty state`);
   }
@@ -173,11 +241,83 @@ try {
   await writeFile(path.join(profile, "dashboard-mobile.png"), Buffer.from((await call("Page.captureScreenshot", { format: "png" })).data, "base64"));
   await call("Emulation.clearDeviceMetricsOverride");
   console.log("Dashboard ready; creating request");
+  for (const theme of ["light", "dark"]) {
+    await run(`document.documentElement.dataset.theme=${JSON.stringify(theme)};return true;`);
+    await checkContrast();
+  }
+  await run("document.documentElement.dataset.theme='light';document.querySelector('.masthead-role').focus();document.querySelector('.masthead-role').click();return true;");
+  await wait("return !!document.querySelector('.role-modal[open]');");
+  for (let index = 0; index < 14; index++) {
+    await call("Input.dispatchKeyEvent", { type: "keyDown", key: "Tab", code: "Tab", windowsVirtualKeyCode: 9 });
+    await call("Input.dispatchKeyEvent", { type: "keyUp", key: "Tab", code: "Tab", windowsVirtualKeyCode: 9 });
+    assert.equal(await run("return !!document.activeElement.closest('.role-modal');"), true, "Role dialog must contain keyboard focus");
+  }
+  for (let index = 0; index < 14; index++) {
+    await call("Input.dispatchKeyEvent", { type: "keyDown", key: "Tab", code: "Tab", windowsVirtualKeyCode: 9, modifiers: 8 });
+    await call("Input.dispatchKeyEvent", { type: "keyUp", key: "Tab", code: "Tab", windowsVirtualKeyCode: 9, modifiers: 8 });
+    assert.equal(await run("return !!document.activeElement.closest('.role-modal');"), true, "Role dialog must contain reverse keyboard navigation");
+  }
+  await call("Input.dispatchKeyEvent", { type: "keyDown", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 });
+  await call("Input.dispatchKeyEvent", { type: "keyUp", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 });
+  await wait("return !document.querySelector('.role-modal[open]');");
+  assert.equal(await run("return document.activeElement === document.querySelector('.masthead-role');"), true, "Closing the role dialog restores focus");
+  assert.equal(await run("return !document.querySelector('.toast');"), true, "Routine actions should not show success toasts");
+  await run("const saved=JSON.parse(localStorage.getItem('hml-constructsync-demo-v11'));saved.requests.find(r=>r.id==='m7').ref='MRFTRAUMAHML20260000000384';localStorage.setItem('hml-constructsync-demo-v11',JSON.stringify(saved));return true;");
+  await navigate("/requests/m7/edit");
+  await call("Emulation.setDeviceMetricsOverride", { width: 320, height: 900, deviceScaleFactor: 1, mobile: true });
+  assert.equal(await run("return document.documentElement.scrollWidth <= 321;"), true, "A long unbroken reference must fit the configured 320px viewport");
+  await call("Emulation.clearDeviceMetricsOverride");
+  await installFixture();
+  await navigate("/requests/m1");
+  assert.equal(await run("return [...document.querySelectorAll('.request-material-trigger')].every(button=>button.getAttribute('aria-expanded')==='false');"),true,'Request material cards start collapsed');
+  const materialLink=await run("return document.querySelector('.request-material-match a')?.getAttribute('href');");
+  assert.ok(materialLink,'Matched materials link to their supplier comparison');
+  await navigate(materialLink);
+  assert.equal(await run("return document.querySelectorAll('.material-comparison.is-focused').length;"),1,'Material navigation highlights the relevant comparison');
+  const pageContrastFailures = new Map();
+  for (const [page, pageRole] of [["/projects","Management"],["/projects/site-a","Administrator"],["/suppliers","Procurement"],["/requests/m1/quotes","Procurement"],["/purchase-orders/po2/edit","Procurement"],["/finance/po3","Finance"],["/deliveries","Logistics"],["/inventory","Site Personnel"],["/accounting/po1","Accounting / Auditing"],["/accounting","Accounting / Auditing"],["/reports","Management"],["/admin","Administrator"]]) {
+    await role(pageRole);
+    await navigate(page);
+    for (const width of [1440,1024,768,414,375,320]) {
+      await call("Emulation.setDeviceMetricsOverride", { width, height: 900, deviceScaleFactor: 1, mobile: width < 800 });
+      await sleep(250);
+      await run("window.scrollTo(0,0);return true;");
+      assert.equal(await run(`return document.documentElement.scrollWidth <= ${width}+1 && document.querySelector('h1').scrollWidth <= document.querySelector('h1').clientWidth+1;`), true, `${page} must fit at ${width}px`);
+      if (page.includes('/edit') && page.startsWith('/purchase-orders')) assert.equal(await run("const button=document.querySelector('.po-edit-actions button[value=finalize]');const bounds=button.getBoundingClientRect();return bounds.top>=0&&bounds.bottom<=innerHeight;"),true,'PO finalization stays visible');
+      for (const theme of ["light","dark"]) {
+        await run(`document.documentElement.dataset.theme=${JSON.stringify(theme)};return true;`);
+        for (const failure of await checkContrast(undefined, true)) pageContrastFailures.set(JSON.stringify(failure), failure);
+      }
+      if (width===320) await writeFile(path.join(profile, `ui-${page.replaceAll('/','-')}.png`), Buffer.from((await call("Page.captureScreenshot", { format: "png" })).data, "base64"));
+    }
+  }
+  assert.deepEqual([...pageContrastFailures.values()], [], "App pages must have adequate contrast in both themes");
+  await call("Emulation.clearDeviceMetricsOverride");
+  await run("document.documentElement.dataset.theme='light';return true;");
+  await role("Site Personnel");
   await navigate("/requests");
   await call("Emulation.setDeviceMetricsOverride", { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false });
   await writeFile(path.join(profile, "request-register.png"), Buffer.from((await call("Page.captureScreenshot", { format: "png" })).data, "base64"));
   await call("Emulation.clearDeviceMetricsOverride");
   await navigate("/requests/new");
+  await fill('input[name="requestedBy"]', "Incomplete draft author");
+  await submit('form.form-stack', 'button[value="draft"]');
+  await wait("return !!document.querySelector('.record-header');");
+  const incompleteDraft = (await state()).requests.at(-1);
+  assert.equal(incompleteDraft.status, "draft");
+  assert.equal(incompleteDraft.ref, "");
+  assert.equal(await run("return !document.querySelector('.toast');"), true, "Saving a draft must not show a redundant toast");
+  await navigate(`/requests/${incompleteDraft.id}/edit`);
+  assert.equal(await requestStep(), "1Request details");
+  assert.equal(await run("return document.querySelector('input[name=requestedBy]').value;"), "Incomplete draft author");
+  await installFixture();
+  await navigate("/requests/new");
+  await checkRequestWidths(1);
+  await run("document.querySelector('.request-wizard details').open=false;return true;");
+  await click("Next", ".request-wizard-actions button");
+  assert.equal(await requestStep(), "1Request details");
+  assert.equal(await run("return document.activeElement.id;"), "ref");
+  assert.equal(await run("return !!document.querySelector('button[value=submit]');"), false, "Submit is only available on the final step");
   await call("Emulation.setDeviceMetricsOverride", { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false });
   await writeFile(path.join(profile, "request-form.png"), Buffer.from((await call("Page.captureScreenshot", { format: "png" })).data, "base64"));
   for (const width of [375, 320]) {
@@ -188,11 +328,27 @@ try {
   }
   await call("Emulation.clearDeviceMetricsOverride");
   await fill('input[name="ref"]', "MRF-SMOKE-01");
+  await fill('input[name="requestDate"]', "");
+  await click("Next", ".request-wizard-actions button");
+  assert.equal(await run("return document.activeElement.id;"), "requestDate");
   await fill('input[name="requestDate"]', "2030-10-29");
+  await click("Next", ".request-wizard-actions button");
+  assert.equal(await run("return document.activeElement.id;"), "requestedBy");
   await fill('input[name="requestedBy"]', "Joel Reyes");
   await fill('input[name="approvedBy"]', "Mara Santos");
   await fill('input[name="purchaser"]', "Nina Valdez");
   await fill('input[name="financeOfficer"]', "Rafael Lim");
+  await fill('textarea[name="specialInstructions"]', "Deliver after the slab inspection.");
+  await run("document.querySelector('input[name=financeOfficer]').dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true,cancelable:true}));return true;");
+  await wait("return document.querySelector('.request-steps [aria-current=step]')?.textContent==='2Materials';");
+  assert.equal(await run("return document.activeElement === document.querySelector('.request-step-heading h2');"), true, "Step heading receives keyboard focus");
+  await checkRequestWidths(2);
+  await click("Next", ".request-wizard-actions button");
+  assert.equal(await requestStep(), "2Materials");
+  assert.equal(await run("return document.activeElement.name.startsWith('material-');"), true);
+  await click("Back", ".request-wizard-actions button");
+  assert.equal(await run("return document.querySelector('input[name=ref]').value;"), "MRF-SMOKE-01");
+  await click("Next", ".request-wizard-actions button");
   await fill('.material-card input[name^="material-"]', "Portland cement smoke lot");
   await fill('.material-card input[name^="quantity-"]', 20);
   await fill('.material-card input[name^="purpose-"]', "Ground floor slab construction");
@@ -201,9 +357,15 @@ try {
   await fill('.material-card input[name^="unit-"]', "roll");
   await fill('.material-card textarea[name^="remarks-"]', "Coordinate after the inspection.");
   await click("+ Add material");
+  assert.equal(await run("return document.querySelector('.material-add-dialog').open;"), true, "Add material opens its dialog");
   await run("for (const field of ['date needed','purpose','remarks']) document.querySelector('[aria-label=\"Copy '+field+' from selected material\"]').click();return true;");
   await click("Add material", ".material-add-actions button");
   await wait("return document.querySelectorAll('.material-card').length===2;");
+  await fill('input[aria-label="Search materials by name or details"]', "Portland cement smoke lot");
+  await click("Next", ".request-wizard-actions button");
+  assert.equal(await requestStep(), "2Materials");
+  assert.equal(await run("return document.querySelector('input[aria-label=\"Search materials by name or details\"]').value;"), "", "Validation reveals a filtered-out invalid material");
+  assert.equal(await run("return document.activeElement.name === document.querySelectorAll('.material-card')[1].querySelector('input[name^=\"material-\"]').name;"), true);
   assert.equal(await run("const card=document.querySelectorAll('.material-card')[1];return card.querySelector('input[name^=\"needed-\"]').value;"), "2030-10-30");
   assert.equal(await run("const card=document.querySelectorAll('.material-card')[1];return card.querySelector('input[name^=\"purpose-\"]').value;"), "Ground floor slab construction");
   assert.equal(await run("const card=document.querySelectorAll('.material-card')[1];return card.querySelector('textarea[name^=\"remarks-\"]').value;"), "Coordinate after the inspection.");
@@ -226,15 +388,32 @@ try {
   await wait("return document.querySelectorAll('.material-card').length===2;");
   await run("document.querySelector('[aria-label=\"Remove material 2\"]').click();return true;");
   await wait("return document.querySelectorAll('.material-card').length===1;");
+  await click("Next", ".request-wizard-actions button");
+  assert.equal(await requestStep(), "3Review & submit");
+  await checkRequestWidths(3);
+  assert.equal(await run("return document.querySelector('.request-review').textContent.includes('Portland cement smoke lot');"), true);
+  assert.equal(await run("return document.querySelector('.request-review-instructions').textContent.includes('Deliver after the slab inspection.');"), true);
+  await submit('form.form-stack', 'button[value="submit"]');
+  assert.equal(await run("return !!document.querySelector('.confirm-dialog[open]');"), false, "Missing PDF is checked before confirmation");
+  assert.equal(await run("return document.activeElement.textContent;"), "Choose PDF");
   assert.equal(await run("return document.querySelectorAll('input[type=file]').length;"), 1, "MRF has one supporting PDF input");
   await uploadFiles('input[type="file"]', [sampleReference]);
   await wait("return document.querySelector('.reference-file-list')?.children.length === 1;");
   assert.equal(await run("return document.querySelector('.reference-count')?.textContent;"), "1 attached");
   assert.equal(await run("return document.querySelector('.reference-note')?.textContent.includes('stays in this browser');"), true);
+  await click("Edit details", ".request-review button");
+  assert.equal(await requestStep(), "1Request details");
+  await click("Next", ".request-wizard-actions button");
+  assert.equal(await run("return document.querySelector('.material-card input[name^=\"material-\"]').value;"), "Portland cement smoke lot");
+  await click("Next", ".request-wizard-actions button");
+  assert.equal(await run("return document.querySelector('.reference-file-detail strong').textContent;"), "Signed smoke MRF.pdf");
+  await click("Edit materials", ".request-review button");
+  await click("Next", ".request-wizard-actions button");
+  const requestsBeforeSubmission = (await state()).requests.length;
   await run("document.querySelector('form.form-stack').requestSubmit(document.querySelector('button[value=submit]'));return true;");
   await wait("return !!document.querySelector('.confirm-dialog[open]');");
   await run("document.querySelector('.confirm-dialog[open] .confirm-actions button:first-child').click();return true;");
-  assert.equal((await state()).requests.length, 9, "Canceling the submission must leave requests unchanged");
+  assert.equal((await state()).requests.length, requestsBeforeSubmission, "Canceling the submission must leave requests unchanged");
   await submit('form.form-stack', 'button[value="submit"]');
   await wait("return location.pathname.startsWith('/requests/') && !!document.querySelector('.record-header');");
   await call("Emulation.setDeviceMetricsOverride", { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false });
@@ -243,12 +422,33 @@ try {
   let snapshot = await state(); const request = snapshot.requests.at(-1); assert.equal(request.status, "submitted"); assert.equal(request.requestedBy, "Joel Reyes"); assert.equal(request.items[0].purpose, "Ground floor slab construction"); assert.equal(request.items[0].location, "Tower 2 staging area"); assert.deepEqual(request.documents.map(document => document.name), ["Signed smoke MRF.pdf"]); assert.equal(request.documents[0].type, "Supporting PDF"); assert.equal(request.documents.every(document => !!document.fileId), true, "Uploaded documents should be reopenable");
   assert.equal(request.ref, "MRF-SMOKE-01");
   assert.equal(request.requestDate, "2030-10-29");
+  assert.equal(request.specialInstructions, "Deliver after the slab inspection.");
+  await click("Print preview");
+  await wait("return !!document.querySelector('dialog[aria-label=\"MRF print preview\"][open] iframe');");
+  assert.equal(await run("const viewer=document.querySelector('dialog[aria-label=\"MRF print preview\"] iframe');return viewer.src.startsWith('blob:');"), true);
+  for (const [width, height] of [[1440,900],[768,900],[414,600],[375,400],[320,568]]) {
+    await call("Emulation.setDeviceMetricsOverride", { width, height, deviceScaleFactor: 1, mobile: width < 800 });
+    for (const theme of ["light", "dark"]) {
+      await run(`document.documentElement.dataset.theme=${JSON.stringify(theme)};return true;`);
+      await checkContrast("h2,.button");
+    }
+    assert.equal(await run(`const dialog=document.querySelector('.document-preview-dialog'),r=dialog.getBoundingClientRect(),viewer=dialog.querySelector('iframe').getBoundingClientRect();return r.left>=0&&r.right<=${width}+1&&r.top>=0&&r.bottom<=${height}+1&&viewer.height>0&&viewer.bottom<=r.bottom;`), true, "Preview and controls must fit the viewport");
+    if (width===320) await writeFile(path.join(profile, "mrf-preview-mobile-dark.png"), Buffer.from((await call("Page.captureScreenshot", { format: "png" })).data, "base64"));
+  }
+  await run("document.documentElement.dataset.theme='light';return true;");
+  await call("Emulation.clearDeviceMetricsOverride");
+  await click("Close", 'dialog[aria-label="MRF print preview"] button');
   console.log("Request submitted", request.id);
   await role("Project Manager"); await navigate(`/requests/${request.id}`); await click("Return with reason");
   await fill('textarea[name="reason"]', "Clarify the slab work package"); await submit('form.decision-panel');
   await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v11')).requests.find(x=>x.id===${JSON.stringify(request.id)}).status==='returned';`);
-  await role("Site Personnel"); await navigate(`/requests/${request.id}/edit`); await wait("return document.querySelector('.reference-file-list')?.children.length === 1;"); await submit('form.form-stack', 'button[value="submit"]');
+  await role("Site Personnel"); await navigate(`/requests/${request.id}/edit`);
+  assert.equal(await requestStep(), "1Request details");
+  await click("Next", ".request-wizard-actions button");
+  await click("Next", ".request-wizard-actions button");
+  await wait("return document.querySelector('.reference-file-list')?.children.length === 1;"); await submit('form.form-stack', 'button[value="submit"]');
   await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v11')).requests.find(x=>x.id===${JSON.stringify(request.id)}).status==='submitted';`);
+  assert.equal((await state()).requests.find(x => x.id === request.id).specialInstructions, request.specialInstructions);
   await run(`const saved=JSON.parse(localStorage.getItem('hml-constructsync-demo-v11'));saved.sites.find(site=>site.id===${JSON.stringify(request.siteId)}).driveFolderId='smoke-project-folder';localStorage.setItem('hml-constructsync-demo-v11',JSON.stringify(saved));return true;`);
   await call("Page.reload", { ignoreCache: true });
   await wait("return !!document.querySelector('.masthead-role');");
@@ -271,6 +471,16 @@ try {
   await run("document.querySelector('.quote-review .quote-check input[type=checkbox]').click();return true;");
   await uploadFiles('.quote-review input[type=file]', [sampleScope, sampleImage]);
   await wait("return document.querySelectorAll('.quote-document-attachment').length === 2;");
+  for (const width of [1440,1024,768,414,375,320]) {
+    await call("Emulation.setDeviceMetricsOverride", { width,height:900,deviceScaleFactor:1,mobile:width<800 });
+    await sleep(250);
+    await run("document.querySelector('.quote-review-line').scrollIntoView({block:'start'});return true;");
+    assert.equal(await run("return document.documentElement.scrollWidth<=innerWidth+1;"),true,`Offered-line review must fit at ${width}px`);
+    for (const theme of ["light","dark"]) { await run(`document.documentElement.dataset.theme=${JSON.stringify(theme)};return true;`); await checkContrast(); }
+    await run("document.documentElement.dataset.theme='light';return true;");
+    if (width===1440 || width===375) await writeFile(path.join(profile,`quote-review-${width}.png`),Buffer.from((await call("Page.captureScreenshot",{format:"png"})).data,"base64"));
+  }
+  await call("Emulation.clearDeviceMetricsOverride");
   await click("Finalize quotation");
   await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v11')).quotes.some(q=>q.ref==='QT-SMOKE-001'&&q.archive?.status==='complete');`);
   assert.equal((await state()).quotes.find(q=>q.ref==='QT-SMOKE-001').archive.files.length, 2);
@@ -281,14 +491,27 @@ try {
   await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v11')).pos.some(p=>p.mrfId===${JSON.stringify(request.id)});`);
   snapshot = await state(); const po = snapshot.pos.at(-1); assert.equal(po.status, "draft");
   console.log("PO drafted", po.id);
-  console.log("Opening PO edit"); await navigate(`/purchase-orders/${po.id}/edit`); await wait("return !!document.querySelector('form.form-stack');"); console.log("Submitting PO edit"); await fill('input[name="poDocument.terms"]', '30 days after delivery'); await run("document.querySelector('input[name=financialReviewed]').click();return true;"); await submit('form.form-stack', 'button[value="finalize"]'); console.log("PO edit submitted");
+  console.log("Opening PO edit"); await navigate(`/purchase-orders/${po.id}/edit`); await wait("return !!document.querySelector('form.form-stack');");
+  await fill('.quote-award-line input[type=number]',-1);await fill('input[name="ewtGoods"]',-1);
+  await run("document.querySelectorAll('.po-edit-form details').forEach(section=>section.open=false);return true;");
+  await submit('form.form-stack','button[value="finalize"]');
+  await wait("return document.activeElement===document.querySelector('.po-edit-form :invalid');");
+  await fill('.quote-award-line input[type=number]',20);await fill('input[name="ewtGoods"]',0);
+  await fill('input[name="poDocument.terms"]', '');
+  await run("document.querySelector('input[name=financialReviewed]').click();const section=[...document.querySelectorAll('details')].find(section=>section.querySelector('[name=\"poDocument.terms\"]'));section.open=false;return true;");
+  await submit('form.form-stack','button[value="finalize"]');
+  await wait("return document.activeElement.name==='poDocument.terms';");
+  assert.equal((await state()).pos.find(value=>value.id===po.id).status,'draft','Invalid document fields must block finalization');
+  console.log("Submitting PO edit"); await fill('input[name="poDocument.terms"]', '30 days after delivery'); await run("document.querySelector('input[name=financialReviewed]').click();return true;"); await submit('form.form-stack', 'button[value="finalize"]'); console.log("PO edit submitted");
   await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v11')).pos.find(x=>x.id===${JSON.stringify(po.id)}).status==='finalized';`);
+  await wait(`return location.pathname===${JSON.stringify(`/purchase-orders/${po.id}`)} && !!document.querySelector('.record-header');`);
   await role("Finance"); await navigate(`/finance/${po.id}`); await click("Hold with reason"); await fill('textarea[name="reason"]', "Confirm revised delivery window"); await submit('form.decision-panel');
   await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v11')).pos.find(x=>x.id===${JSON.stringify(po.id)}).status==='hold';`);
   await click("Return with reason"); await fill('textarea[name="reason"]', "Add confirmed supplier schedule"); await submit('form.decision-panel');
   await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v11')).pos.find(x=>x.id===${JSON.stringify(po.id)}).status==='returned';`);
   await role("Procurement"); await navigate(`/purchase-orders/${po.id}/edit`); await fill('textarea[name="notes"]', "Supplier confirmed Tuesday delivery"); await run("document.querySelector('input[name=financialReviewed]').click();return true;"); await submit('form.form-stack', 'button[value="finalize"]');
   await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v11')).pos.find(x=>x.id===${JSON.stringify(po.id)}).status==='finalized';`);
+  await wait(`return location.pathname===${JSON.stringify(`/purchase-orders/${po.id}`)} && !!document.querySelector('.record-header');`);
   await role("Finance"); await navigate(`/finance/${po.id}`); await click("Approve budget");
   await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v11')).pos.find(x=>x.id===${JSON.stringify(po.id)}).archive?.status==='complete';`);
   await role("Procurement"); await navigate(`/purchase-orders/${po.id}`); await click("Mark PO served");
@@ -299,12 +522,38 @@ try {
   snapshot = await state(); const batch = snapshot.batches.at(-1); assert.equal(batch.status, "expected");
   await role("Site Personnel"); await navigate(`/deliveries/${batch.id}`); await fill('input[name^="accepted-"]', 12); await click("Confirm received quantities");
   await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v11')).batches.find(x=>x.id===${JSON.stringify(batch.id)}).status==='confirmed';`);
+  await uploadFiles('input[aria-label="Upload accounting documents"]', [unsupportedReference]);
+  await wait("return document.querySelector('.accounting-evidence .inline-error')?.textContent.includes('Use up to');");
+  assert.equal((await state()).accounting.find(value=>value.poId===po.id)?.documents?.length || 0, 0);
+  await uploadFiles('input[aria-label="Upload accounting documents"]', [sampleReference]);
+  await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v11')).accounting.find(value=>value.poId===${JSON.stringify(po.id)})?.documents?.[0]?.archive.error;`);
+  assert.equal(await run("return !!document.querySelector('.archive-job.has-error');"), true, 'Archive failure must remain visible');
+  await click("Retry archive", ".accounting-evidence button");
+  await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v11')).accounting.find(value=>value.poId===${JSON.stringify(po.id)}).documents[0].archive.status==='complete';`);
+  const uploadedEvidence = (await state()).accounting.find(value=>value.poId===po.id).documents[0];
+  assert.equal(uploadedEvidence.batchId,batch.id);
+  assert.equal((await state()).payments.some(value=>value.poId===po.id),false,'Evidence must not record a payment');
+  await click("View file", ".accounting-evidence button"); await wait("return !!document.querySelector('.evidence-preview iframe');");
+  for (const width of [768,414,375,320]) {
+    await call("Emulation.setDeviceMetricsOverride",{width,height:650,deviceScaleFactor:1,mobile:true});
+    assert.equal(await run("const dialog=document.querySelector('.evidence-preview'),button=[...dialog.querySelectorAll('button')].find(value=>value.textContent==='Close'),bounds=button.getBoundingClientRect();return dialog.scrollWidth<=dialog.clientWidth+1&&bounds.top>=0&&bounds.bottom<=innerHeight;"),true,`Evidence preview must fit at ${width}px`);
+    if(width===375) await writeFile(path.join(profile,"accounting-evidence-preview-375.png"),Buffer.from((await call("Page.captureScreenshot",{format:"png"})).data,"base64"));
+  }
+  await call("Emulation.clearDeviceMetricsOverride");
+  await click("Close", ".evidence-preview button");
   await click("Post to site stock"); await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v11')).batches.find(x=>x.id===${JSON.stringify(batch.id)}).status==='posted';`);
   snapshot = await state(); assert.equal(snapshot.movements.filter(m => m.batchId === batch.id && m.kind === "receipt").length, 1);
   await navigate("/inventory"); await click("Portland cement smoke lot", "a.table-primary"); await wait("return location.pathname.startsWith('/inventory/site-a/');");
   await fill('input[name="quantity"]', 5); await fill('textarea[name="reason"]', "Ground floor slab pour"); await click("Record movement");
   snapshot = await state(); assert.equal(snapshot.movements.filter(m => m.itemName === "Portland cement smoke lot").reduce((n, m) => n + m.quantity, 0), 7);
-  await role("Accounting / Auditing"); await navigate(`/accounting/${po.id}`); await fill('input[name="invoice"]', "INV-SMOKE-01"); await fill('input[name="receipt"]', "DR-SMOKE-01"); await fill('select[name="review"]', "Complete"); await click("Save document review");
+  await role("Accounting / Auditing"); await navigate("/accounting");
+  await fill('input[aria-label="Search accounting"]',request.ref);
+  assert.equal(await run(`return [...document.querySelectorAll('.accounting-group a')].some(link=>link.textContent===${JSON.stringify(po.ref)});`),true,'Accounting must group the PO under its MRF');
+  await navigate(`/accounting/${po.id}`);
+  await call("Runtime.evaluate", { expression: `(async()=>{const database=await new Promise((resolve,reject)=>{const request=indexedDB.open('hml-quotation-files',1);request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error);});await new Promise((resolve,reject)=>{const transaction=database.transaction('files','readwrite');transaction.objectStore('files').delete(${JSON.stringify(uploadedEvidence.localFileId)});transaction.oncomplete=resolve;transaction.onerror=reject;});database.close();})()`, awaitPromise:true });
+  await click("View file", ".accounting-evidence button"); await wait("return !!document.querySelector('.evidence-preview iframe');");
+  assert.equal(await run("return !!document.querySelector('.evidence-preview a[download]');"),true,'Accounting can restore and download the archived evidence');
+  await click("Close", ".evidence-preview button"); await fill('input[name="invoice"]', "INV-SMOKE-01"); await fill('input[name="receipt"]', "DR-SMOKE-01"); await fill('select[name="review"]', "Complete"); await click("Save document review");
   console.log("Accounting review");
   await fill('input[name="amount"]', 1000); await fill('input[name="reference"]', "BANK-SMOKE-01"); await click("Record payment reference");
   snapshot = await state(); assert.equal(snapshot.payments.find(p => p.poId === po.id)?.amount, 1000);
@@ -316,6 +565,32 @@ try {
   await call("Emulation.clearDeviceMetricsOverride");
   await call("Page.reload", { ignoreCache: true }); await wait("return document.querySelector('h1')?.textContent==='Operations report';");
   snapshot = await state(); assert.equal(snapshot.requests.find(r => r.id === request.id)?.status, "approved");
+  await role("Project Manager");
+  await navigate(`/requests/${request.id}`);
+  await click("Reopen for correction");
+  await fill('textarea[name="reason"]', "Replace the supporting PDF after purchasing");
+  await submit('form:has(textarea[name="reason"])');
+  await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v11')).requests.find(r=>r.id===${JSON.stringify(request.id)}).correction?.scope==='documents';`);
+  await role("Site Personnel");
+  await navigate(`/requests/${request.id}/edit`);
+  assert.equal(await requestStep(), "3Review & submit");
+  assert.equal(await run("return document.querySelector('fieldset.request-edit-fields').disabled;"), true);
+  assert.equal(await run("return document.querySelectorAll('.request-review button').length;"), 0, "PDF-only corrections have no detail-edit links");
+  assert.equal(await run("return [...document.querySelectorAll('.request-wizard-actions button')].some(button=>button.textContent==='Back');"), false);
+  await uploadFiles('input[type="file"]', [sampleScope]);
+  await wait("return document.querySelector('.reference-file-detail strong')?.textContent==='Scope smoke.pdf';");
+  await submit('form.form-stack', 'button[value="submit"]');
+  await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v11')).requests.find(r=>r.id===${JSON.stringify(request.id)}).correction?.status==='submitted';`);
+  snapshot = await state();
+  const corrected = snapshot.requests.find(r=>r.id===request.id);
+  assert.deepEqual(corrected.items, request.items);
+  assert.equal(corrected.ref, request.ref);
+  assert.equal(corrected.requestDate, request.requestDate);
+  assert.equal(corrected.requestedBy, request.requestedBy);
+  await role("Project Manager");
+  await navigate(`/requests/${request.id}`);
+  await click("Approve request");
+  await wait(`return !JSON.parse(localStorage.getItem('hml-constructsync-demo-v11')).requests.find(r=>r.id===${JSON.stringify(request.id)}).correction;`);
   await call("Page.navigate", { url: `${baseUrl}/?view=requests&kind=request&id=${request.id}` });
   await wait(`return location.pathname===${JSON.stringify(`/requests/${request.id}`)};`);
   await wait("return !!document.querySelector('.masthead-role');");

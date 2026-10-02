@@ -7,7 +7,7 @@ registerHooks({ resolve(specifier, context, nextResolve) {
   if (specifier === 'google-auth-library') return { url: 'data:text/javascript,' + encodeURIComponent('export class OAuth2Client { setCredentials() {} async getAccessToken() { return {token:"test-only-token"}; } } export class GoogleAuth {}'), shortCircuit: true };
   return nextResolve(specifier, context);
 } });
-const { prepareRequestArchive, prepareBidFile } = await import('../src/server/drive.ts');
+const { prepareRequestArchive, prepareBidFile, prepareAccountingFile, downloadAccountingFile } = await import('../src/server/drive.ts');
 
 function driveFixture(t) {
   const previousFetch = globalThis.fetch, previousEnv = { ...process.env };
@@ -58,4 +58,25 @@ test('Drive treats the XLSX and PDF of one bid version as distinct immutable fil
   files.set(pdfSession.file.id,{...pdfSession.file,size:'20'});
   const recovered=await prepareBidFile('project-folder-12345','mrf-1','MRF-001','report-1',1,'bid.pdf',hash,20,'pdf');assert.equal(recovered.driveFileId,pdfSession.file.id);
   await assert.rejects(prepareBidFile('project-folder-12345','mrf-1','MRF-001','report-1',1,'bid.pdf','b'.repeat(64),20,'pdf'),/different archived/);
+});
+
+test('accounting evidence archives into its MRF/PO/batch folders and reuses the exact file on retry', async t => {
+  const { files, sessions, events } = driveFixture(t);
+  const document = { id:'evidence-1',batchId:'batch-1',name:'Receipt.pdf',mime:'application/pdf',size:1024,sha256:'a'.repeat(64) };
+  const mrf = {id:'mrf-1',ref:'MRF-1'}, po={id:'po-1',ref:'PO-1'}, batch={id:'batch-1',ref:'DEL-1'};
+  const result = await prepareAccountingFile('project-folder-12345',mrf,po,batch,document);
+  const session = sessions.get(new URL(result.sessionUri).searchParams.get('upload_id'));
+  assert.equal(session.file.appProperties.hmlDocumentId,document.id);
+  assert.equal(session.file.appProperties.hmlPoId,po.id);
+  assert.equal(session.file.appProperties.hmlBatchId,batch.id);
+  let parent = files.get(session.file.parents[0]);assert.equal(parent.name,'DEL-1');
+  parent=files.get(parent.parents[0]);assert.equal(parent.name,'PO-1');
+  parent=files.get(parent.parents[0]);assert.equal(parent.name,'Accounting Documents');
+  files.set(session.file.id,{...session.file,size:'1024'});
+  const starts = events.filter(value=>value.url.includes('/upload/')).length;
+  const retried = await prepareAccountingFile('project-folder-12345',mrf,po,batch,document);
+  assert.equal(retried.driveFileId,session.file.id);
+  assert.equal(events.filter(value=>value.url.includes('/upload/')).length,starts);
+  await assert.rejects(prepareAccountingFile('project-folder-12345',mrf,po,batch,{...document,sha256:'b'.repeat(64)}),/different Drive copy/);
+  await assert.rejects(downloadAccountingFile('project-folder-12345','mrf-1','different-po','batch-1',document.id,session.file.id),/invalid document metadata/);
 });

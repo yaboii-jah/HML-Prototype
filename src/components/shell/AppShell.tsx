@@ -1,9 +1,10 @@
 "use client";
 
+import { ArchiveStatus } from "@/src/components/ui/ArchiveStatus";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { useDemo } from "@/src/app-state/DemoProvider";
 import { tasksFor } from "@/src/domain/queues";
 import { ROLES, type Role } from "@/src/domain/types";
@@ -66,9 +67,18 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [rolesOpen, setRolesOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const roleDialogRef = useRef<HTMLDialogElement>(null);
+  const roleTriggerRef = useRef<HTMLButtonElement>(null);
   const theme = useSyncExternalStore(subscribeTheme, getTheme, getServerTheme);
   const pathname = usePathname();
   const router = useRouter();
+  useEffect(() => {
+    const dialog = roleDialogRef.current;
+    if (rolesOpen && dialog && !dialog.open) {
+      dialog.showModal();
+      dialog.querySelector<HTMLButtonElement>(".role-options .selected")?.focus();
+    } else if (!rolesOpen && dialog?.open) dialog.close();
+  }, [rolesOpen]);
   useEffect(() => { if (!notice) return; const timer = setTimeout(clearNotice, 4500); return () => clearTimeout(timer); }, [notice, clearNotice]);
   useEffect(() => { const onKeyDown = (event: KeyboardEvent) => { if (event.key === "Escape") { setRolesOpen(false); setNotificationsOpen(false); setMenuOpen(false); } }; window.addEventListener("keydown", onKeyDown); return () => window.removeEventListener("keydown", onKeyDown); }, []);
   if (!snapshot) return null;
@@ -93,19 +103,27 @@ export function AppShell({ children }: { children: ReactNode }) {
           <label className="site-context"><span>Project</span><select aria-label="Site context" value={snapshot.siteFilter} onChange={event => void run({ type: "setSiteFilter", siteId: event.target.value })}><option value="all">All sites</option>{snapshot.sites.map(site => <option key={site.id} value={site.id}>{site.name}</option>)}</select></label>
           <button className="theme-toggle icon-button" type="button" aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`} aria-pressed={theme === "dark"} title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`} onClick={() => { const nextTheme = theme === "dark" ? "light" : "dark"; document.documentElement.dataset.theme = nextTheme; try { localStorage.setItem("constructsync-theme", nextTheme); } catch {} }}><Icon name={theme === "dark" ? "sun" : "moon"}/></button>
           <div className="notification-wrap"><button className="notification-trigger icon-button" aria-label={`Notifications${tasks.length ? `, ${tasks.length} tasks` : ""}`} aria-expanded={notificationsOpen} onClick={() => setNotificationsOpen(!notificationsOpen)}><Icon name="bell"/>{tasks.length > 0 && <i>{tasks.length}</i>}</button>{notificationsOpen && <div className="notification-popover"><div className="popover-heading"><strong>Needs attention</strong><span>{tasks.length} tasks</span></div>{tasks.length ? tasks.slice(0, 7).map(task => <Link key={task.href + task.title} href={task.href} onClick={() => setNotificationsOpen(false)}><b>{task.title}</b><small>{task.detail} · {task.waiting} days</small></Link>) : <p>Nothing waiting for this role.</p>}</div>}</div>
-          <button className="masthead-role" onClick={() => setRolesOpen(true)} aria-label={`Current role: ${snapshot.role}. Switch role`}><span className="role-avatar">{snapshot.role.slice(0, 1)}</span><span className="role-label"><strong>{snapshot.role}</strong><small>Switch role</small></span><Icon name="chevron" size={16}/></button>
+          <button ref={roleTriggerRef} className="masthead-role" onClick={() => setRolesOpen(true)} aria-haspopup="dialog" aria-label={`Current role: ${snapshot.role}. Switch role`}><span className="role-avatar">{snapshot.role.slice(0, 1)}</span><span className="role-label"><strong>{snapshot.role}</strong><small>Switch role</small></span><Icon name="chevron" size={16}/></button>
         </div>
       </header>
-      <main className="workspace-content">{children}</main>
+      <main className="workspace-content"><ArchiveStatus/>{children}</main>
     </div>
-    {rolesOpen && <div className="modal-backdrop" onMouseDown={() => setRolesOpen(false)}>
-      <div className="modal role-modal" role="dialog" aria-modal="true" aria-label="Choose demo role" onMouseDown={event => event.stopPropagation()}>
+    <dialog ref={roleDialogRef} className="modal role-modal" aria-label="Choose demo role" onCancel={() => setRolesOpen(false)} onClose={() => { setRolesOpen(false); roleTriggerRef.current?.focus({ preventScroll: true }); }} onKeyDown={event => {
+      if (event.key !== "Tab") return;
+      const buttons = event.currentTarget.querySelectorAll<HTMLButtonElement>("button:not(:disabled)");
+      const first = buttons[0], last = buttons[buttons.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+    }} onClick={event => {
+      if (event.target !== event.currentTarget) return;
+      const bounds = event.currentTarget.getBoundingClientRect();
+      if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) setRolesOpen(false);
+    }}>
         <div className="modal-head"><div><span className="eyebrow">Demo access</span><h2>Switch role</h2></div><button aria-label="Close role selector" className="icon-button" onClick={() => setRolesOpen(false)}><Icon name="close"/></button></div>
         <p>Choose a role to see its work queue and available actions.</p>
         <div className="role-options">{ROLES.map(role => <button autoFocus={role === snapshot.role} className={role === snapshot.role ? "selected" : ""} key={role} onClick={async () => { const result = await run({ type: "setRole", role }); if (!result.ok) return; setRolesOpen(false); router.push("/dashboard"); }}><span>{role.slice(0, 1)}</span><strong>{role}</strong></button>)}</div>
         <div className="role-modal-actions"><span>Signed in for this browser only</span><button type="button" className="button secondary" onClick={() => { signOut(); setRolesOpen(false); router.replace("/sign-in"); }}>Sign out</button></div>
-      </div>
-    </div>}
+    </dialog>
     {notice && <div className="toast" role="status">{notice}</div>}
   </div>;
 }

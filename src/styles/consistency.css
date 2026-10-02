@@ -1,0 +1,96 @@
+/* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V4
+ * Existing HML workspace · modern-minimal · accessibility and layout corrections */
+
+html,body{overflow-x:clip}
+h1,h2,h3{min-width:0;overflow-wrap:anywhere;font-style:normal}
+.page-header>div,.record-header>div,.panel-heading>div{min-width:0}
+.text-link,.back-link,.side-link{white-space:nowrap}
+.panel-heading{gap:var(--space-md);margin-bottom:var(--space-md)}
+.panel-heading h2,.panel-heading h3{min-width:0}
+.panel-heading>.text-link{flex-shrink:0}
+.panel,.site-tile,.quote-panel{padding:var(--space-panel);margin-bottom:var(--space-md)}
+.form-stack>.panel{margin-bottom:var(--space-md)}
+.content-grid,.dashboard-grid,.dashboard-main,.dashboard-secondary,.site-grid,.supplier-grid,.delivery-grid,.admin-supplier-grid{gap:var(--space-md)}
+:is(.content-grid,.dashboard-grid,.dashboard-main,.dashboard-secondary,.site-grid,.supplier-grid,.delivery-grid,.admin-supplier-grid)>.panel{margin:0}
+.request-detail-overview{gap:var(--space-md)}
+.request-detail-overview>.panel{padding:var(--space-panel-detail)}
+.request-detail-layout{gap:var(--space-lg)}
+.request-detail-layout>.panel{margin:0}
+.request-materials-panel{padding:var(--space-panel)}
+.request-review-details{gap:var(--space-sm) var(--space-panel)}
+.button-row,.form-actions,.header-actions{gap:var(--space-sm)}
+.transaction-reference{display:block;color:var(--muted);margin-bottom:var(--space-xs)}
+
+.quote-upload-group{border:1px solid var(--line);background:var(--surface);box-shadow:none}
+.quote-upload-group:nth-of-type(3n+2),.quote-upload-group:nth-of-type(3n){border-left-color:var(--line);background:var(--surface)}
+.quote-upload-group.status-processing{border-color:var(--accent);background:var(--surface)}
+.quote-upload-group.status-failed{border-color:var(--bad);background:var(--surface)}
+.quote-upload-group.status-completed{border-color:var(--good);background:var(--surface)}
+
+.signin-page{height:auto;min-height:100dvh;overflow:visible}
+.signin-intro,.signin-panel{min-height:min-content}
+.signin-panel{padding-block:var(--space-lg)}
+.signin-role-options{max-height:min(320px,30dvh)}
+
+.role-modal{margin:auto;border:1px solid var(--line);color:var(--ink);background:var(--surface);max-height:calc(100dvh - var(--space-lg));padding:var(--space-lg)}
+.role-modal::backdrop{background:var(--overlay)}
+.role-modal-actions{gap:var(--space-sm)}
+
+.document-preview-dialog{width:min(calc(100% - var(--space-lg)),1200px);height:min(90dvh,900px);max-height:calc(100dvh - var(--space-lg));padding:var(--space-panel);border:1px solid var(--line);background:var(--surface);color:var(--ink);overflow:hidden}
+.document-preview-dialog[open]{display:flex;flex-direction:column;gap:var(--space-md)}
+.document-preview-dialog::backdrop{background:var(--overlay)}
+.document-preview-dialog .panel-heading{flex:none;margin:0}
+.document-preview-dialog .button-row{margin:0;flex-shrink:0}
+.document-preview-dialog iframe{flex:1;min-height:0;height:auto;background:var(--paper)}
+
+:is(.side-caption,.side-foot,.top-context,.site-context,.role-label small,.masthead-role svg,.metric-strip small,.task-age,.stage-row,.purchase-pulse dt,.panel-total,.project-positions small,.site-code,.table-frame th){color:var(--muted)}
+.metric-icon.blue,.metric-icon.cyan{color:var(--brand)}
+.metric-icon.amber{color:var(--warn)}
+.metric-icon.teal{color:var(--good)}
+.button.primary,.button.primary:hover{color:var(--on-brand)}
+.button{transition:transform var(--dur-short) var(--ease-out)}
+.site-tile,.reference-dropzone{transition:none}
+.button.danger{color:var(--on-danger)}
+.button.secondary:hover{background:var(--control-hover)}
+.notification-trigger i{color:var(--on-brand)}
+.request-steps button[aria-current="step"] .request-step-number{color:var(--on-brand)}
+.reference-upload-icon path:last-child{stroke:var(--on-brand)}
+.toast{background:var(--brand);color:var(--on-brand)}
+.side-link{color:var(--muted)}
+input::placeholder,textarea::placeholder{color:var(--muted)}
+html[data-theme="dark"] input::placeholder,html[data-theme="dark"] textarea::placeholder{color:var(--muted)}
+
+/* Specific selectors keep older component focus rules from weakening the ring. */
+:is(button,a,input,select,textarea,[tabindex]):focus-visible,
+input:focus,select:focus,textarea:focus,
+.quote-manual-source:focus-visible,button.quote-source-main:focus-visible,
+.quote-documents-list button:focus-visible,.signin-field input:focus-visible{
+  outline:3px solid var(--focus);outline-offset:2px;
+}
+input:focus,select:focus,textarea:focus{border-color:var(--focus)}
+html[data-theme="dark"] :is(button,a,input,select,textarea,[tabindex]):focus-visible,
+html[data-theme="dark"] input:focus,html[data-theme="dark"] select:focus,html[data-theme="dark"] textarea:focus{outline-color:var(--focus)}
+.signin-intro :focus-visible{outline-color:var(--auth-glint)}
+.button:not(:disabled):active,.icon-button:not(:disabled):active{transform:translateY(1px)}
+
+@media(max-width:900px){.signin-page{grid-template-rows:auto auto}.signin-panel{padding-block:var(--space-md)}}
+@media(max-height:500px){.signin-role-options{position:static;margin-top:var(--space-xs);max-height:40dvh}}
+@media(max-width:800px),(pointer:coarse){
+  .button,.icon-button,.masthead-role,.side-link,.role-options button,.text-link,.back-link,.reference-choose,.reference-remove,.signin-story-stages button,.signin-story-playback,.site-context select,input:not([type=checkbox]):not([type=radio]),select{min-height:44px}
+  .icon-button,.reference-remove,.masthead-role{min-width:44px}
+  .reference-remove{flex-basis:44px}
+  .text-link,.back-link,.reference-choose{display:inline-flex;align-items:center}
+  .masthead-right{gap:var(--space-xs)}
+}
+@media(max-width:650px){
+  .workspace-content{padding:var(--space-panel) var(--space-md) var(--space-xl)}
+  .panel,.site-tile,.quote-panel,.request-materials-panel,.request-detail-overview>.panel{padding:var(--space-panel-mobile)}
+  .panel-heading{flex-direction:column;align-items:flex-start;gap:var(--space-sm)}
+  .panel-heading .button-row{margin:0}
+  .request-detail-layout,.request-detail-overview{gap:var(--space-md)}
+  .document-preview-dialog{height:calc(100dvh - var(--space-lg));padding:var(--space-md)}
+  .role-modal{padding:var(--space-md)}
+  .masthead{padding-inline:var(--space-xs)}
+  .site-context select{width:100px;max-width:100px}
+}
+@media print{.role-modal,.document-preview-dialog{display:none!important}}

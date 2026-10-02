@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { CollapsibleSection } from "@/src/components/ui/CollapsibleSection";
 import { Field } from "@/src/components/ui/Primitives";
 import type { PODocument, POFinancial } from "@/src/domain/types";
 
@@ -13,9 +14,10 @@ export function readPoFinancial(form: FormData): POFinancial {
 }
 export function PoDocumentFields({ document, financial, reviewed, onReview }: { document: PODocument; financial: POFinancial; reviewed: boolean; onReview: (value: boolean) => void }) {
   const [vatStatus, setVatStatus] = useState(financial.vatStatus);
-  return <section className="panel"><h2 className="panel-title">Purchase order document</h2>
-    <div className="form-grid">{fields.map(([key, label]) => <Field key={key} label={label}><input name={`poDocument.${key}`} type={key === "date" ? "date" : "text"} defaultValue={document[key]} /></Field>)}</div>
-    <h3 className="subheading">VAT and withholding</h3>
+  return <section className="panel"><CollapsibleSection title="Purchase order document">
+    <div className="form-grid">{fields.filter(([key]) => !key.startsWith("bank")).map(([key, label]) => <Field key={key} label={label}><input name={`poDocument.${key}`} type={key === "date" ? "date" : "text"} defaultValue={document[key]} /></Field>)}</div>
+    <CollapsibleSection title="Bank details" defaultOpen={false}><div className="form-grid">{fields.filter(([key]) => key.startsWith("bank")).map(([key, label]) => <Field key={key} label={label}><input name={`poDocument.${key}`} defaultValue={document[key]}/></Field>)}</div></CollapsibleSection></CollapsibleSection>
+    <CollapsibleSection title="VAT and withholding">
     <p className="helper-note">Review the supplier&apos;s price basis. This VAT setting replaces inherited quotation line taxes and tax adjustments. Enter both EWT deductions, including zero where applicable. Finance and payments use the net total after EWT.</p>
     <div className="form-grid">
       <Field label="VAT status"><select name="vatStatus" value={vatStatus} onChange={event => setVatStatus(event.target.value as POFinancial["vatStatus"])}><option>VAT</option><option>NON-VAT</option></select></Field>
@@ -25,5 +27,6 @@ export function PoDocumentFields({ document, financial, reviewed, onReview }: { 
       <Field label="EWT (services)"><input name="ewtServices" type="number" min="0" step="0.01" defaultValue={financial.ewtServices}/></Field>
     </div>
     <label className="quote-check"><input name="financialReviewed" type="checkbox" checked={reviewed} onChange={event => onReview(event.target.checked)}/> I reviewed the VAT basis, source taxes and both EWT amounts.</label>
+    </CollapsibleSection>
   </section>;
 }
