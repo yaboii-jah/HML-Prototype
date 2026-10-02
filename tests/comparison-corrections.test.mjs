@@ -49,7 +49,7 @@ test('alternative selection is explicit, validated, frozen and independent of aw
   assert.match(applyCommand(state,{type:'createBidReport',requestId:'m1'},context).message,/Choose an alternative/);
   assert.equal(applyCommand(state,{type:'createBidReport',requestId:'m1',comparisonSelections:{[quote.id]:{[itemId]:'not-matching'}}},context).ok,false);
   const result = applyCommand(state,{type:'createBidReport',requestId:'m1',comparisonSelections:{[quote.id]:{[itemId]:'alternative'}}},context);
-  assert.equal(result.ok,true,result.message); assert.equal(result.snapshot.bidReports[0].comparisonRevision,2);
+  assert.equal(result.ok,true,result.message); assert.equal(result.snapshot.bidReports[0].comparisonRevision,3);
   assert.equal(result.snapshot.bidReports[0].comparisonSelections[quote.id][itemId],'alternative'); assert.deepEqual(result.snapshot.pos,before.pos); assert.deepEqual(state,before);
   quote.lines[1].unitPrice=999; assert.equal(result.snapshot.bidReports[0].data.offers[0].quote.lines[1].unitPrice,123);
   const invalid=structuredClone(result.snapshot.bidReports[0]); invalid.comparisonSelections[quote.id][itemId]='unknown'; assert.equal(validBidReport(invalid),false);
@@ -110,4 +110,27 @@ test('PO keeps the full MRF reference and ordinary shipping terms on one page; M
   const mrfText=mrf.getPages().flatMap(page=>pageText(mrf,page)).map(value=>value.text).join(' ');
   assert.match(mrfText,/MIXED CASE PROJECT/); assert.match(mrfText,/PORTLAND CEMENT/); assert.match(mrfText,/ARRIANE AYA/); assert.match(mrfText,/MixedCase attachment.pdf/); assert.doesNotMatch(mrfText,/Do not print|DO NOT PRINT/); assert.deepEqual(request,before);
   po.lines=Array.from({length:60},(_,n)=>({...po.lines[0],quantity:n+1})); const long=await PDFDocument.load(await generatePoPdf(po,request,quote,site.name)); assert.ok(long.getPageCount()>1); assert.match(pageText(long,long.getPages().at(-1)).map(value=>value.text).join(' '),/60/);
+});
+
+test('revision 3 removes coverage pages while retaining unquoted grid rows and frozen revision 2 rendering', async () => {
+  const { report } = fixture();
+  for (let i = 0; i < 6; i++) report.data.request.items.push({ ...report.data.request.items[0], id:`unquoted-${i}`,name:`Unquoted grid material ${i}`,quantity:5 });
+  const previous = structuredClone(report);
+  const oldBook = buildBidWorkbook(previous);
+  let hadCoverage = false; oldBook.worksheets[0].eachRow(row => row.eachCell(cell => { if (cell.value === 'Quotation Coverage') hadCoverage = true; }));
+  assert.equal(hadCoverage,true);
+  report.comparisonRevision = 3;
+  const book = buildBidWorkbook(report), sheet = book.worksheets[0];
+  assert.equal(book.worksheets.length,1);
+  const values = []; sheet.eachRow(row => row.eachCell(cell => values.push(String(cell.value || ''))));
+  assert.equal(values.includes('Quotation Coverage'),false);
+  assert.equal(values.some(value => /Item [0-9]+: not quoted/.test(value)),false);
+  assert.ok(values.includes('Unquoted grid material 5'));
+  const row = sheet.getRows(1,sheet.rowCount).find(value => value.getCell(2).value === 'Unquoted grid material 5');
+  assert.equal(row.getCell(6).value,''); assert.equal(row.getCell(7).value,'');
+  const pdf = await PDFDocument.load(await generateBidPdf(report));
+  const text = pdf.getPages().flatMap(page => pageText(pdf,page).map(value => value.text)).join(' ');
+  assert.doesNotMatch(text,/Quotation Coverage|Item [0-9]+: not quoted/);
+  assert.match(text,/Unquoted grid material 5/);
+  assert.equal(previous.comparisonRevision,2);
 });

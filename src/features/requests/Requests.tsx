@@ -1,5 +1,7 @@
 "use client";
 
+import { CollapsibleSection, revealField } from "@/src/components/ui/CollapsibleSection";
+import { useArchive } from "@/src/app-state/ArchiveProvider";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type ChangeEvent, type DragEvent, type FormEvent } from "react";
@@ -127,7 +129,7 @@ export function RequestForm({ id }: { id?: string }) {
     window.requestAnimationFrame(() => {
       const card = document.getElementById("material-card-" + item.id);
       card?.scrollIntoView({ behavior: "smooth", block: "center" });
-      document.getElementById(fieldId)?.focus({ preventScroll: true });
+      revealField(document.getElementById(fieldId));
     });
   };
   const updateItem = (itemId: string, patch: Partial<Item>) => {
@@ -179,7 +181,7 @@ export function RequestForm({ id }: { id?: string }) {
   const detailError = (field: keyof RequestDetails, message: string) => {
     setFormFieldError({ field, message });
     setStep(1);
-    window.requestAnimationFrame(() => document.getElementById(field)?.focus());
+    window.requestAnimationFrame(() => revealField(document.getElementById(field)));
     return false;
   };
   const validateDetails = () => {
@@ -217,7 +219,7 @@ export function RequestForm({ id }: { id?: string }) {
     if (intent === "submit" && step !== 3) { nextStep(); return; }
     if (intent === "submit") {
       if (!documentsOnly && (!validateDetails() || !validateMaterials())) return;
-      if (!activeSupportingPdf?.fileId) { setAttachmentError("Attach one combined supporting PDF before submitting."); choosePdfRef.current?.focus(); return; }
+      if (!activeSupportingPdf?.fileId) { setAttachmentError("Attach one combined supporting PDF before submitting."); revealField(choosePdfRef.current); return; }
     }
     saveInProgress.current = true;
     setSaving(true);
@@ -261,16 +263,17 @@ export function RequestForm({ id }: { id?: string }) {
       <div className="request-step-heading"><span className="eyebrow">STEP {step} OF 3</span><h2 ref={stepHeadingRef} tabIndex={-1}>{REQUEST_STEPS[step - 1]}</h2><p>{step === 1 ? "Choose the project and enter the names shown on the MRF." : step === 2 ? "List the materials the site needs. Purpose and remarks are optional." : "Attach the supporting PDF and check your request before sending it to the Project Manager."}</p></div>
       <fieldset className="request-edit-fields" disabled={documentsOnly}>
       <section className="panel" hidden={step !== 1}>
-        <h2 className="panel-title">General information</h2>
+        <CollapsibleSection title="General information">
         <div className="form-grid">
           <Field label="Project / site" error={formFieldError?.field === "siteId" ? formFieldError.message : undefined}><select id="siteId" name="site" value={details.siteId} aria-invalid={formFieldError?.field === "siteId"} onChange={event => updateDetails("siteId", event.target.value)}>{state.sites.map(site => <option key={site.id} value={site.id}>{site.name}</option>)}</select></Field>
           <Field label="M.R.F No." error={formFieldError?.field === "ref" ? formFieldError.message : undefined}><input id="ref" name="ref" value={details.ref} placeholder="Enter the company reference" autoComplete="off" aria-invalid={formFieldError?.field === "ref"} onChange={event => updateDetails("ref", event.target.value)}/></Field>
           <Field label="Request Date" error={formFieldError?.field === "requestDate" ? formFieldError.message : undefined}><input id="requestDate" name="requestDate" type="date" value={details.requestDate} aria-invalid={formFieldError?.field === "requestDate"} onChange={event => updateDetails("requestDate", event.target.value)}/></Field>
           {REQUEST_DETAIL_FIELDS.map(field => <Field key={field.name} label={field.label} error={formFieldError?.field === field.name ? formFieldError.message : undefined}><input id={field.name} name={field.name} value={details[field.name]} aria-invalid={formFieldError?.field === field.name} onChange={event => updateDetails(field.name, event.target.value)}/></Field>)}
-          <Field label="Comments / special instructions (optional)"><textarea name="specialInstructions" value={details.specialInstructions} onChange={event => updateDetails("specialInstructions", event.target.value)}/></Field>
+          <div className="material-card-wide"><CollapsibleSection title="Comments / special instructions" defaultOpen={false}><Field label="Comments / special instructions (optional)"><textarea name="specialInstructions" value={details.specialInstructions} onChange={event => updateDetails("specialInstructions", event.target.value)}/></Field></CollapsibleSection></div>
         </div>
+        </CollapsibleSection>
       </section>
-      <section className="panel materials-panel" aria-label="Materials" hidden={step !== 2}>
+      <section className="panel materials-panel" aria-label="Materials" hidden={step !== 2}><CollapsibleSection title="Requested materials">
         <div className="materials-toolbar">
           <span className="material-count" role="status">{normalizedMaterialSearch ? 'Showing ' + visibleItems.length + ' of ' + items.length : items.length + (items.length === 1 ? ' material' : ' materials')}</span>
           <input type="search" aria-label="Search materials by name or details" placeholder="Search name, purpose, location, or remarks" value={materialSearch} onChange={event => { const value = event.target.value; const query = value.trim().toLowerCase(); setMaterialSearch(value); const active = items.find(item => item.id === expandedItemId); if (!active || !matchesMaterialSearch(active, query)) setExpandedItemId(items.find(item => matchesMaterialSearch(item, query))?.id || null); }} onKeyDown={event => { if (event.key === 'Enter') event.preventDefault(); }}/>
@@ -313,10 +316,11 @@ export function RequestForm({ id }: { id?: string }) {
             </article>;
           }) : <div className="material-search-empty"><strong>No materials match “{materialSearch}”.</strong><button type="button" className="text-link" onClick={() => setMaterialSearch("")}>Clear search</button></div>}
         </div>
+        </CollapsibleSection>
       </section>
       </fieldset>
       <section className="panel" hidden={step !== 3}>
-        <div className="panel-heading"><h2 id="references-heading">Combined supporting PDF</h2><span className="reference-count">{activeSupportingPdf ? "1 attached" : "Required to submit"}</span></div>
+        <CollapsibleSection title="Combined supporting PDF" summary={<span className="reference-count">{activeSupportingPdf ? "1 attached" : "Required to submit"}</span>}>
         <p className="reference-note">Attach one PDF containing the hardcopy MRF, key plan, and work scope. It stays in this browser during PM review and is archived to Drive after approval.</p>
         <div className={`reference-dropzone${dragActive ? " is-active" : ""}`} onDragEnter={event => { event.preventDefault(); setDragActive(true); }} onDragOver={event => { event.preventDefault(); setDragActive(true); }} onDragLeave={event => { event.preventDefault(); setDragActive(false); }} onDrop={(event: DragEvent<HTMLDivElement>) => { event.preventDefault(); setDragActive(false); addFiles(event.dataTransfer.files); }}>
           <input ref={inputRef} className="reference-file-input" type="file" accept="application/pdf,.pdf" aria-label="Choose combined supporting PDF" disabled={savingPdf || saving} onChange={onPickFiles}/>
@@ -327,6 +331,7 @@ export function RequestForm({ id }: { id?: string }) {
         <InlineError message={attachmentError}/>
         {savingPdf && <p role="status">Saving PDF…</p>}
         {activeSupportingPdf && <div className="reference-file-list" aria-label="Attached supporting PDF"><div className="reference-file"><span className="reference-file-icon" aria-hidden="true">PDF</span><div className="reference-file-detail"><strong title={activeSupportingPdf.name}>{activeSupportingPdf.name}</strong><small>Stored in this browser until and after Drive archiving</small></div><button type="button" className="reference-remove" disabled={savingPdf || saving} aria-label={`Remove ${activeSupportingPdf.name}`} onClick={() => { updateDocuments(() => []); setAttachmentError(""); }}>×</button></div></div>}
+        </CollapsibleSection>
       </section>
       {step === 3 && <section className="panel request-review" aria-label="Request summary">
         <div className="panel-heading"><h2>Request summary</h2>{!documentsOnly && <button type="button" className="text-link" onClick={() => changeStep(1)}>Edit details</button>}</div>
@@ -342,8 +347,8 @@ export function RequestForm({ id }: { id?: string }) {
   </>;
 }
 
-function RequestMaterialList({ state, siteId, items }: { state: DemoSnapshot; siteId: string; items: Item[] }) {
-  const [expandedId, setExpandedId] = useState<string | null>(() => items[0]?.id ?? null);
+function RequestMaterialList({ state, siteId, items, requestId }: { state: DemoSnapshot; siteId: string; items: Item[]; requestId: string }) {
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   return <section className="panel request-materials-panel" aria-label="Materials">
     <div className="request-materials-heading">
@@ -357,10 +362,11 @@ function RequestMaterialList({ state, siteId, items }: { state: DemoSnapshot; si
           <h3 className="request-material-heading">
             <button type="button" className="request-material-trigger" aria-expanded={isExpanded} aria-controls={detailsId} onClick={() => setExpandedId(current => current === item.id ? null : item.id)}>
               <span className="request-material-index">Material {index + 1}</span>
-              <span className="request-material-name">{item.name || "Unnamed material"}</span>
+              <span className="request-material-name">{item.name || "Unnamed material"}<small className="request-material-summary">{item.quantity} {item.unit} · Needed {item.neededDate ? dateText(item.neededDate) : "—"}</small></span>
               <span className="request-material-indicator" aria-hidden="true">{isExpanded ? "−" : "+"}</span>
             </button>
           </h3>
+          {state.quotes.some(quote => quote.mrfId === requestId && quote.reviewStatus !== "draft" && quote.lines?.some(line => line.requestItemId === item.id)) && <div className="request-material-match"><small>Supplier offers match this material</small><Link className="text-link" href={`/requests/${requestId}/quotes?materialId=${encodeURIComponent(item.id)}`}>View matching offers</Link></div>}
           <div className="request-material-body" id={detailsId} hidden={!isExpanded}>
             <div className="data-rows">
               <div><span>Requested</span><strong>{item.quantity} {item.unit}</strong></div>
@@ -377,18 +383,19 @@ function RequestMaterialList({ state, siteId, items }: { state: DemoSnapshot; si
 }
 
 export function RequestDetail({ id }: { id: string }) {
+  const { perform } = useArchive();
   const { snapshot: state, run }=useDemo(); const [decision,setDecision]=useState<"return"|"reject"|null>(null),[error,setError]=useState("");
   const [archiving,setArchiving]=useState(false),[reopenOpen,setReopenOpen]=useState(false);
   const { confirm, confirmation } = useConfirmation();
   if(!state)return null; const request=state.requests.find(r=>r.id===id); if(!request)return <MissingRecord name="MRF" listHref="/requests"/>;
   const pos=posForRequest(state,request),po=pos[0];
   const currentArchive = request.archive?.versions.at(-1);
-  const archive=async(source=state)=>{const current=source.requests.find(value=>value.id===id),site=source.sites.find(value=>value.id===current?.siteId);if(!current||!site)return;setArchiving(true);const result=await syncApprovedRequest(current,site,run);setError(result.ok?"":result.message);setArchiving(false);};
+  const archive=async(source=state)=>{const current=source.requests.find(value=>value.id===id),site=source.sites.find(value=>value.id===current?.siteId);if(!current||!site)return;setArchiving(true);const result=await perform(`request-${current.id}`, `MRF ${current.ref}`, progress => syncApprovedRequest(current,site,run,progress));setError(result.ok?"":result.message);setArchiving(false);};
   const decide=async(choice:"approve"|"return"|"reject",reason?:string)=>{if(!await confirm(`${choice === "approve" ? "Approve" : choice === "return" ? "Return" : "Reject"} ${request.ref}?`,choice === "approve" ? "The approved MRF and supporting PDF will be archived to Google Drive before Procurement begins." : choice === "return" ? "Site Personnel will revise this request." : "This request will close.",`${choice === "approve" ? "Approve" : choice === "return" ? "Return" : "Reject"} request`,choice === "reject"))return;const result=await run({type:"reviewRequest",id,decision:choice,reason});if(!result.ok)setError(result.message);else{setDecision(null);setError("");if(choice==="approve")await archive(result.snapshot);}};
   return <><RecordHeader backHref="/requests" backLabel="Material requests" eyebrow={siteName(state,request.siteId)} title={request.ref || "Unnumbered draft"} badges={<><Badge value={request.status}/>{po&&<Badge value={po.status}/>}</>}/>
     <div className="request-detail-layout"><div className="request-detail-overview"><section className="panel"><h2 className="panel-title">General information</h2><DocumentPreview kind="mrf" request={request} project={state.sites.find(site => site.id === request.siteId)!}/><div className="data-rows"><div><span>M.R.F No.</span><strong>{request.ref || "—"}</strong></div><div><span>Request Date</span><strong>{request.requestDate ? dateText(request.requestDate) : "—"}</strong></div><div><span>Requested by</span><strong>{request.requestedBy || "—"}</strong></div><div><span>Approved by</span><strong>{request.approvedBy || "—"}</strong></div><div><span>Purchaser/Procurement Officer</span><strong>{request.purchaser || "—"}</strong></div><div><span>Finance Officer</span><strong>{request.financeOfficer || "—"}</strong></div></div>{request.scope && !request.scopeDocument && <p className="helper-note">Legacy scope note: {request.scope}</p>}{request.reason&&<div className="callout warn"><strong>Review reason</strong><p>{request.reason}</p></div>}</section>
     <section className="panel"><h2 className="panel-title">Documents and links</h2>{(request.scopeDocument || request.documents.length > 0) && <Documents docs={[...(request.scopeDocument ? [request.scopeDocument] : []), ...request.documents]} showType={false} />}{pos.map(linked => <Link className="data-link" href={`/purchase-orders/${linked.id}`} key={linked.id}><div><strong>{linked.ref}</strong><small>{supplierName(state,linked)} · {money(poTotal(state,linked))}</small></div><Badge value={linked.status}/></Link>)}{!request.scopeDocument && !request.documents.length && !pos.length && <p className="muted">No documents or links recorded.</p>}</section></div>
-    <RequestMaterialList key={request.id} state={state} siteId={request.siteId} items={request.items}/>
+    <RequestMaterialList key={request.id} requestId={request.id} state={state} siteId={request.siteId} items={request.items}/>
     {state.role==="Site Personnel"&&(["draft","returned"].includes(request.status)||request.correction?.status==="requested")&&<section className="action-bar"><div><strong>{request.correction?.status==="requested"||request.status==="returned"?"Revision requested":"Draft request"}</strong><p>{request.correction?.scope==="documents"?"Replace the supporting PDF and resubmit it to the Project Manager.":"Update the MRF before submitting it to the Project Manager."}</p></div><Link className="button primary" href={`/requests/${id}/edit`}>Edit MRF</Link></section>}
     {state.role==="Project Manager"&&(request.status==="submitted"||request.correction?.status==="submitted")&&<section className="panel"><div className="panel-heading"><h2>PM decision</h2></div><p className="helper-note">Review current on-hand site stock for each requested material above. Quantities match the material name and unit; approval does not reserve stock.</p><div className="button-row"><button className="button primary" onClick={()=>void decide("approve")}>Approve request</button><button className="button secondary" onClick={()=>setDecision("return")}>Return with reason</button>{!request.correction&&<button className="button danger-outline" onClick={()=>setDecision("reject")}>Reject with reason</button>}</div>{decision&&<form className="decision-panel" onSubmit={e=>{e.preventDefault();void decide(decision,String(new FormData(e.currentTarget).get("reason")));}}><Field label={`${decision==="return"?"Return":"Rejection"} reason`}><textarea name="reason" required minLength={5}/></Field><InlineError message={error}/><div className="button-row"><button type="button" className="button secondary" onClick={()=>setDecision(null)}>Cancel</button><button className="button primary">Continue to confirmation</button></div></form>}</section>}
     {request.archive && <section className="panel"><div className="panel-heading"><h2>Google Drive archive</h2><Badge value={request.archive.status === "complete" ? "Complete" : "Pending"}/></div>{request.archive.status === "pending" ? <><p className="helper-note">Procurement waits until the generated MRF and supporting PDF are both in the project folder.</p>{request.archive.error && <div className="callout warn"><strong>Archive needs a retry</strong><p>{request.archive.error}</p></div>}{["Project Manager","Administrator"].includes(state.role) && <button className="button primary" disabled={archiving} onClick={()=>void archive()}>{archiving ? "Archiving…" : "Retry Drive archive"}</button>}</> : <p className="helper-note">The latest approved PDFs are available in the project folder.</p>}{request.archive.versions.map(version=><div className="data-rows" key={version.version}><div><span>Version {version.version}{currentArchive?.version===version.version ? " · Current" : ""}</span><strong><a href={version.formUrl} target="_blank" rel="noreferrer">MRF Form ↗</a> · <a href={version.supportUrl} target="_blank" rel="noreferrer">Supporting PDF ↗</a></strong></div></div>)}</section>}

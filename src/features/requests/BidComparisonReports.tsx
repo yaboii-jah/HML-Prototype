@@ -1,5 +1,7 @@
 "use client";
 
+import { useArchive } from "@/src/app-state/ArchiveProvider";
+import type { ArchiveProgressListener } from "@/src/domain/archive-progress";
 import { useState } from "react";
 import { useDemo } from "@/src/app-state/DemoProvider";
 import { useConfirmation } from "@/src/components/ui/ConfirmDialog";
@@ -11,6 +13,7 @@ import type { BidReport, ComparisonSelections } from "@/src/domain/types";
 import { archiveBidWorkbook, downloadBidWorkbook, getBidWorkbook } from "./bid-report-files";
 
 export function BidComparisonReports({ requestId }: { requestId: string }) {
+  const { perform } = useArchive();
   const { snapshot, run } = useDemo();
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
@@ -32,9 +35,14 @@ export function BidComparisonReports({ requestId }: { requestId: string }) {
       for (const format of action === "download" ? [selectedFormat] : report.pdf ? ["xlsx", "pdf"] as const : ["xlsx"] as const) {
         try {
           const artifact = format === "pdf" ? report.pdf! : report;
-          const workbook = await getBidWorkbook(report, procurement ? run : undefined, format);
-          if (action === "download") downloadBidWorkbook(workbook.blob, artifact.fileName);
-          else await archiveBidWorkbook(workbook.report, workbook.blob, run, format);
+          const operation = async (progress?: ArchiveProgressListener) => {
+            progress?.({ phase: "preparing" });
+            const workbook = await getBidWorkbook(report, procurement ? run : undefined, format);
+            if (action === "download") downloadBidWorkbook(workbook.blob, artifact.fileName);
+            else await archiveBidWorkbook(workbook.report, workbook.blob, run, format, progress);
+          };
+          if (action === "download") await operation();
+          else await perform(`bid-${report.id}-${format}`, `Bid comparison v${report.version} ${format.toUpperCase()}`, operation);
         } catch (cause) { errors.push(`${format.toUpperCase()}: ${cause instanceof Error ? cause.message : "The report could not be processed."}`); }
       }
       if (errors.length) throw new Error(errors.join(" "));
@@ -62,7 +70,7 @@ export function BidComparisonReports({ requestId }: { requestId: string }) {
   };
   return <section className="panel">
     <div className="panel-heading"><div><h2>Bid comparison reports</h2><p className="helper-note">New PDF and Excel versions compare required MRF quantities at quoted unit prices. Excel contains one comparison worksheet; previous versions retain their original format.</p></div>
-      {procurement && <button className="button primary" type="button" disabled={!!busy || !!readiness} onClick={() => void generate()}>{busy === "new" ? "Generating…" : reports.length ? "Generate new version" : "Generate bid comparison"}</button>}
+      {procurement && <button className="button primary" type="button" disabled={!!busy || !!readiness} onClick={() => void generate()}>{busy ? "Processing…" : reports.length ? "Generate new version" : "Generate bid comparison"}</button>}
     </div>
     {procurement && readiness && <p className="helper-note">{readiness}</p>}
     {procurement && alternatives.length > 0 && <fieldset className="comparison-alternatives" disabled={!!busy}><legend>Choose comparison alternatives</legend><p className="helper-note">Choose one offer per supplier and material. These choices apply to this report and do not change PO awards.</p>{alternatives.map(({ offer, item, lines }) => <label className="field" key={`${offer.quote.id}/${item.id}`}><span>{offer.supplierName} · {item.name}</span><select value={lines.some(line => line.id === selections[offer.quote.id]?.[item.id]) ? selections[offer.quote.id][item.id] : ""} onChange={event => setSelections(current => ({ ...current, [offer.quote.id]: { ...current[offer.quote.id], [item.id]: event.target.value } }))}><option value="">Choose an offer</option>{lines.map(line => <option key={line.id} value={line.id}>{line.description} · {line.brand} {line.specification} · PHP {line.unitPrice.toLocaleString("en-PH")} / {line.unit} · offered {line.quantity}</option>)}</select></label>)}</fieldset>}

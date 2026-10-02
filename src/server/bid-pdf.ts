@@ -7,7 +7,7 @@ import { documentDate, documentMoney, documentTemplate, wrapText } from "./docum
 
 export async function generateBidPdf(report: BidReport) {
   if (!validBidReport(report)) throw new Error("The frozen bid report is invalid.");
-  if (report.comparisonRevision === 2) return generateCurrentComparisonPdf(report);
+  if ((report.comparisonRevision === 2 || report.comparisonRevision === 3)) return generateCurrentComparisonPdf(report);
   const template = await documentTemplate("comparison"), { pdf, text, regular, geometry } = template;
   const notes: string[] = [];
   const pages = comparisonPages(report);

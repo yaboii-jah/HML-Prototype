@@ -1,5 +1,6 @@
 "use client";
 
+import { ArchiveProvider } from "./ArchiveProvider";
 import { createContext, useContext, useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
 import { demoRepository, serverRepositoryView, type RepositoryView } from "@/src/mock/repository";
 import { demoSession, roleForDemoCredentials, serverSessionView, type DemoSessionView } from "./demo-session";
@@ -37,7 +38,7 @@ export function DemoProvider({ children }: { children: ReactNode }) {
     if (command.type === "setRole" && previousRole) demoSession.select(command.role);
     const result = await demoRepository.execute(command);
     if (!result.ok && command.type === "setRole" && previousRole) demoSession.select(previousRole);
-    if (result.ok && command.type !== "saveQuoteDraft" && command.type !== "stageAward") setNotice(result.message);
+    if (result.ok && ["completeRequestArchive", "completeQuoteArchive", "completePOArchive", "completeBidArchive"].includes(command.type)) setNotice(result.message);
     return result;
   };
   const signIn = async (email: string, password: string) => {
@@ -51,7 +52,7 @@ export function DemoProvider({ children }: { children: ReactNode }) {
   };
   const signOut = () => { demoSession.clear(); setNotice(""); };
   const reset = async () => { await demoRepository.reset(); setNotice("Workspace cleared. Start by adding a project."); };
-  return <DemoContext.Provider value={{ ...view, run, session, signIn, signOut, reset, notice, clearNotice: () => setNotice("") }}>{children}</DemoContext.Provider>;
+  return <ArchiveProvider><DemoContext.Provider value={{ ...view, run, session, signIn, signOut, reset, notice, clearNotice: () => setNotice("") }}>{children}</DemoContext.Provider></ArchiveProvider>;
 }
 
 export function useDemo() {

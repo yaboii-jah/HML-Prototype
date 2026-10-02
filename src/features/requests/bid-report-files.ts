@@ -1,3 +1,4 @@
+import type { ArchiveProgressListener } from "../../domain/archive-progress.ts";
 import type { Command, CommandResult } from "../../domain/commands.ts";
 import type { BidReport } from "../../domain/types.ts";
 import { XLSX_MIME } from "../../domain/bid-reports.ts";
@@ -50,15 +51,16 @@ export function downloadBidWorkbook(blob: Blob, fileName: string) {
   document.body.append(link); link.click(); link.remove();
   setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
-export async function archiveBidWorkbook(report: BidReport, blob: Blob, run: RunBidCommand, format: "xlsx" | "pdf" = "xlsx") {
+export async function archiveBidWorkbook(report: BidReport, blob: Blob, run: RunBidCommand, format: "xlsx" | "pdf" = "xlsx", progress?: ArchiveProgressListener) {
   const artifact = format === "pdf" ? report.pdf : report;
   if (!artifact) throw new Error("This version has no PDF artifact.");
   if (artifact.archive.status === "complete") return;
   try {
+    progress?.({ phase: "preparing" });
     if (!artifact.sha256 || await workbookDigest(blob) !== artifact.sha256) throw new Error("The workbook does not match this saved report version.");
     const response = await checked(await fetch("/api/drive/bid-comparisons", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ report, format, size: blob.size }) }));
     const start = await response.json();
-    const result = start.driveFileId && start.url ? start : start.ticket && Number.isInteger(start.offset) ? await uploadDocument(blob, start.ticket, start.offset, "/api/drive/bid-comparisons/chunk") : undefined;
+    const result = start.driveFileId && start.url ? start : start.ticket && Number.isInteger(start.offset) ? await uploadDocument(blob, start.ticket, start.offset, "/api/drive/bid-comparisons/chunk", progress) : undefined;
     if (!result?.driveFileId || !result.url) throw new Error("Drive did not confirm the workbook upload.");
     await save({ type: "completeBidArchive", format, id: report.id, fileId: result.driveFileId, url: result.url }, run);
   } catch (cause) {

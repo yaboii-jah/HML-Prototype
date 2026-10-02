@@ -1,3 +1,4 @@
+import type { ArchiveProgressListener } from "../../domain/archive-progress.ts";
 import type { Command, CommandResult } from "@/src/domain/commands";
 import { supportingPdf } from "@/src/domain/request-archive";
 import type { MRF, Site } from "@/src/domain/types";
@@ -17,8 +18,9 @@ function complete(result: ArchiveResponse): result is Required<Pick<ArchiveRespo
   return !!result.formFileId && !!result.supportFileId && !!result.formUrl && !!result.supportUrl;
 }
 
-async function uploadSupportingPdf(blob: Blob, ticket: string, initialOffset: number) {
+async function uploadSupportingPdf(blob: Blob, ticket: string, initialOffset: number, progress?: ArchiveProgressListener) {
   let offset = initialOffset;
+  progress?.({ phase: "uploading", loaded: offset, total: blob.size });
   let stalled = 0;
   while (offset < blob.size) {
     const length = Math.min(CHUNK, blob.size - offset);
@@ -31,11 +33,12 @@ async function uploadSupportingPdf(blob: Blob, ticket: string, initialOffset: nu
       const status = await fetch("/api/drive/archive/chunk", { method: "POST", headers: { "x-drive-upload-ticket": ticket } });
       result = await archiveResponse(status);
     }
-    if (complete(result)) return result;
+    if (complete(result)) { progress?.({ phase: "uploading", loaded: blob.size, total: blob.size }); return result; }
     if (!Number.isInteger(result.offset) || result.offset! < 0 || result.offset! > blob.size) throw new Error("Drive returned an invalid upload position.");
     stalled = result.offset === offset ? stalled + 1 : 0;
     if (stalled > 2) throw new Error("Drive did not advance the upload. Retry the archive from this request.");
     offset = result.offset!;
+    progress?.({ phase: "uploading", loaded: offset, total: blob.size });
   }
   const status = await fetch("/api/drive/archive/chunk", { method: "POST", headers: { "x-drive-upload-ticket": ticket } });
   const result = await archiveResponse(status);
@@ -43,8 +46,9 @@ async function uploadSupportingPdf(blob: Blob, ticket: string, initialOffset: nu
   return result;
 }
 
-export async function syncApprovedRequest(request: MRF, site: Site, run: Run) {
+export async function syncApprovedRequest(request: MRF, site: Site, run: Run, progress?: ArchiveProgressListener) {
   try {
+    progress?.({ phase: "preparing" });
     const document = supportingPdf(request);
     if (!document?.fileId || !site.driveFolderId) throw new Error("The supporting PDF or project Drive folder is missing.");
     const blob = await readQuoteFile(document.fileId);
@@ -52,7 +56,7 @@ export async function syncApprovedRequest(request: MRF, site: Site, run: Run) {
     if (blob.size < 5 || blob.size > 50 * 1024 * 1024 || await blob.slice(0, 5).text() !== "%PDF-") throw new Error("The supporting PDF is invalid. Replace it before archiving.");
     const response = await fetch("/api/drive/archive", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ request, projectFolderId: site.driveFolderId, projectName: site.name, projectLocation: site.location, supportSize: blob.size }) });
     const started = await archiveResponse(response);
-    const result = complete(started) ? started : started.ticket && Number.isInteger(started.offset) ? await uploadSupportingPdf(blob, started.ticket, started.offset!) : undefined;
+    const result = complete(started) ? started : started.ticket && Number.isInteger(started.offset) ? await uploadSupportingPdf(blob, started.ticket, started.offset!, progress) : undefined;
     if (!result || !complete(result)) throw new Error("Drive did not confirm both PDF uploads.");
     const saved = await run({ type: "completeRequestArchive", id: request.id, formFileId: result.formFileId, supportFileId: result.supportFileId, formUrl: result.formUrl, supportUrl: result.supportUrl });
     if (!saved.ok) throw new Error(saved.message);

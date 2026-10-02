@@ -54,7 +54,7 @@ export function buildComparisonTable(report: BidReport, offers: BidOffer[], supp
   info("terms", "Proposal\nTerms and\nSchedule", "Lead Time", offers.map(offer => `${offer.quote.leadDays} days`));
   info("terms", "", "Payment Terms", offers.map(offer => offer.quote.terms));
   info("terms", "", "Delivery Schedule", offers.map(offer => offer.quote.deliveryTerms || ""));
-  info("terms", "", "Quotation Coverage", offers.map(offer => comparisonCoverage(report, offer).gaps.join("\n") || "Full required quantity quoted"));
+  if (report.comparisonRevision !== 3) info("terms", "", "Quotation Coverage", offers.map(offer => comparisonCoverage(report, offer).gaps.join("\n") || "Full required quantity quoted"));
   for (let n = 0; n < Math.max(1, ...offers.map(offer => offer.quote.archive?.files.length || 0)); n++) {
     const links = supplierCells(offers.map(offer => offer.quote.archive?.files[n]?.name || ""));
     links.forEach((cell, index) => { cell.url = offers[index].quote.archive?.files[n]?.url; });

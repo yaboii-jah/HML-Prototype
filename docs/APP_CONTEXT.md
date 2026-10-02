@@ -8,7 +8,7 @@
 
 ## Product in one paragraph
 
-HML ConstructSync is a browser-local construction operations prototype, also deployed on Vercel for one-presenter company demonstrations. It demonstrates the linked journey from a Material Request Form (MRF) through Project Manager review, Google Drive archival, supplier quotation review, Purchase Order (PO) preparation, Finance review, delivery, inventory, and Accounting tracking. A fresh workspace starts empty. It uses simulated roles, browser `localStorage` for records, and IndexedDB for uploaded MRF and supplier quotation files. On PM approval, server routes archive a generated MRF PDF and its supporting PDF to a mapped Google Drive project folder. Finalized supplier quotations and Finance-approved POs also archive to Drive. The server can parse quotations with Gemini when configured. It has no app-level authentication, shared record database, supplier portal, or payment integration.
+HML ConstructSync is a browser-local construction operations prototype, also deployed on Vercel for one-presenter company demonstrations. It demonstrates the linked journey from a Material Request Form (MRF) through Project Manager review, Google Drive archival, supplier quotation review, Purchase Order (PO) preparation, Finance review, delivery, inventory, and Accounting tracking. A fresh workspace starts empty. It uses simulated roles, browser `localStorage` for records, and IndexedDB for uploaded MRF, supplier quotation and optional Accounting evidence files. On PM approval, server routes archive a generated MRF PDF and its supporting PDF to a mapped Google Drive project folder. Finalized supplier quotations and Finance-approved POs also archive to Drive. The server can parse quotations with Gemini when configured. It has no app-level authentication, shared record database, supplier portal, or payment integration.
 
 ## Current product boundary
 
@@ -37,10 +37,10 @@ Site Personnel creates/submits MRF
   -> Finance approves, holds, returns, or rejects; an approved PO PDF archives to Drive
   -> Procurement serves an approved, archived PO
   -> Logistics schedules delivery batch(es)
-  -> Site Personnel confirms accepted quantities
+  -> Site Personnel confirms accepted quantities and may upload optional Accounting evidence
   -> Site Personnel reviews and posts accepted stock once
   -> Site Personnel records usage; Site or Accounting may make reasoned adjustments
-  -> Accounting tracks documents and simulated payment references
+  -> Accounting views POs grouped by MRF, reviews linked evidence and tracks simulated payment references
   -> Management reviews cross-project status and exceptions
 ```
 
@@ -73,6 +73,7 @@ The domain command layer in `src/domain/commands.ts` is the authority for permis
 - Each material carries its own date needed, purpose, delivery location, and remarks. Submission requires a name, unit, positive quantity, date, and location; purpose and remarks may be blank. Register and project summaries show the earliest material date.
 - A submitted MRF or submitted correction can be reviewed by PM. PM approval requires a mapped project Drive folder. An insufficient PDF is returned to Site Personnel for replacement.
 - The PM material cards display current on-hand site stock by exact material name and unit. Approval does not reserve or deduct stock.
+- Form sections collapse without losing entered values; required sections start open and validation reveals the relevant field. Request material detail cards start closed with quantity/date summaries. Matching-offer links open the quotation comparison filtered by material ID.
 - Return and rejection require a reason of at least five characters.
 - PM approval records an `archive.pending` state and attempts Drive upload. The generated MRF PDF and supporting PDF are stored in separate subfolders under `<project>/<MRF number>/`. Supporting PDFs are uploaded in 3 MiB resumable chunks to fit Vercel's request limit. A failed upload leaves the MRF approved but Procurement paused; PM or Administrator retries manually. Completed archives retain numbered file pairs across reapprovals.
 - New MRF PDFs and print previews retain the supplied NUMMER ETT branding and Letter landscape grid, including sixteen material slots, instructions, a blue supporting-file link and four signatory blocks. Generated values are centered and uppercase; request-date styling and attachment filename/link formatting are preserved. Formatting does not change stored input. Optional job-title inputs and printed titles are removed; existing title metadata is retained for compatibility. Extra rows or long cells continue on additional pages. Drive reserves the supporting file ID before generating the form, then fills that same file through resumable upload.
@@ -93,6 +94,7 @@ The domain command layer in `src/domain/commands.ts` is the authority for permis
 - Draft printouts carry a preview watermark until Finance approval. Previously archived PDFs remain unchanged.
 - PO states: `draft`, `finalized`, `hold`, `returned`, `rejected`, `approved`, `served`.
 - Only draft or Finance-returned POs can be edited. Finalizing sends the PO to Finance.
+- Offered-line cards show quantity, unit price, MRF match and confirmation status before opening pricing/specification details. PO editing groups materials, adjustments, document details and VAT/EWT, with persistent Cancel, Save draft and Finalize actions.
 - Finance can review `finalized` or `hold` POs. Hold, return, and rejection require a reason.
 - Finance approval fails when the PO total exceeds the site's currently available budget. Approved POs receive a generated Drive PDF; serving waits for its archive to complete.
 - Only an approved PO can be served. Served purchasing details are locked.
@@ -104,8 +106,9 @@ The domain command layer in `src/domain/commands.ts` is the authority for permis
 - Each supplier contributes one latest finalized PHP quotation, including suppliers without awards. Drafts and non-PHP bids are excluded. When multiple offers match one MRF material, Procurement explicitly chooses one alternative for that supplier/material before generation; report selections do not change awards.
 - UNIT COST is the raw quoted price divided by its confirmed conversion factor. TOTAL COST is required MRF quantity multiplied by that converted price, rounded to cents. GRAND TOTAL sums these material totals and excludes discounts, taxes, freight and unmatched offers. Partial offered quantities are identified; missing prices remain blank, and incomplete supplier totals are labeled. These are comparison projections, not changes to quotation or PO financial calculations.
 - New Excel exports contain one continuous Bid comparison worksheet with all suppliers and materials, no supporting sheets and no frozen-pane dividers. Formulas reference only the worksheet's quantity/unit-price inputs and carry cached results matching PDF amounts. Long text continues within the same worksheet; printing may span pages. Every archived quotation source file has its own clickable link row. Excel edits do not update application records or saved versions.
-- Each report freezes project, MRF, bid, PO inputs and selected alternatives. New reports set comparisonRevision 2; additive metadata keeps snapshot schema 11 compatible. Reports without this revision retain the original eleven-slot layout, actual-offered/effective pricing, supporting worksheets and legacy retry behavior. Metadata and frozen inputs persist in the snapshot; XLSX and PDF bytes stay in IndexedDB, each with its own SHA-256 identity and generation/archive status. Existing saved and pending versions remain unchanged; obtain corrections through a new report version.
+- Each report freezes project, MRF, bid, PO inputs and selected alternatives. New reports set comparisonRevision 3 and omit quotation-coverage rows/appendices; unquoted materials remain as blank prices in the comparison grid. Genuine content overflow still continues. Revision 2 retains its saved layout, and reports without a comparison revision retain the original eleven-slot layout, actual-offered/effective pricing, supporting worksheets and legacy retry behavior. Additive metadata keeps snapshot schema 11 compatible. Metadata and frozen inputs persist in the snapshot; XLSX and PDF bytes stay in IndexedDB, each with its own SHA-256 identity and generation/archive status. Existing saved and pending versions remain unchanged; obtain corrections through a new report version.
 - Generation makes both downloads available and independently attempts their Drive archives beneath `<project>/<MRF number>/Bid Comparisons`. Dedicated encrypted tickets bind the artifact type; 3 MiB chunks support files up to 50 MB. A failure leaves the other artifact available and exposes a Procurement retry; retries reuse the report identity. All MRF viewers may download saved reports and open their Drive links, including after later corrections or Finance returns.
+- Workbook acknowledgements accept verified Google Drive or Google Sheets HTTPS links whose file ID matches the uploaded artifact. Archive jobs show global preparation, acknowledged upload progress, completion and persistent errors; retries reuse saved files and active jobs are deduplicated. Pending records after refresh offer retry without a running spinner.
 - Missing local caches restore the exact archived bytes through a protected route validating project ancestry, artifact type and report tags. A hash mismatch is reported. Browser workspace clearing removes report records and cached bytes, while Drive copies remain.
 
 ### Budget
@@ -122,6 +125,7 @@ The domain command layer in `src/domain/commands.ts` is the authority for permis
 - Logistics can schedule expected quantities only within the unscheduled PO balance.
 - Batch states: `expected`, `confirmed`, `posted`.
 - Site Personnel confirms actual accepted quantities. A shortage or damaged/rejected amount requires an issue note.
+- After confirmation or posting, Site Personnel may attach optional payment receipts, invoices, delivery receipts or other Accounting evidence. PDF/JPG/PNG/WebP uploads are limited to 20 MB each, 45 MB and 12 files per batch. File signatures and SHA-256 hashes are checked; metadata links every file to its batch and PO. Uploading evidence does not post stock or record payment.
 - Accepted quantity cannot exceed the expected batch quantity or open PO balance.
 - Posting uses accepted quantity, creates site-specific receipt movements, and is allowed once per batch.
 - Editing accepted quantities at posting time requires a reason.
@@ -135,6 +139,9 @@ The domain command layer in `src/domain/commands.ts` is the authority for permis
 - Payment status is derived independently as Unpaid, Partly Paid, or Paid.
 - Payments must be positive and cannot exceed the unpaid PO amount.
 - Accounting actions are available only for approved or served POs.
+- The queue groups all related POs by MRF, including drafts, returned and rejected records. Search and project filtering retain those groups; unapproved POs are visible with review/payment actions unavailable.
+- Accounting records have an optional `documents` array compatible with schema 11. Evidence is available on both delivery and Accounting details, with local previews, protected Drive restoration, archive status and retries. New evidence changes a Complete review to Under Review without changing financial entries. Site Personnel, Accounting and Administrator may retry archives.
+- Evidence archives use `<project>/<MRF>/Accounting Documents/<PO>/<batch>`, with file identity, hash and relationship tags. Encrypted upload tickets bind batch/PO/document IDs and file limits. Downloads validate project ancestry and relationship tags; a missing local cache restores only bytes matching the saved hash.
 
 ## Architecture and sources of truth
 
@@ -191,6 +198,7 @@ Any incompatible snapshot change requires a schema-version decision and a migrat
 | `/api/drive/validate`, `/api/drive/archive`, `/api/drive/archive/chunk`, `/api/drive/files` | Protected project folder validation, resumable PDF archive, and project folder browsing/search. |
 | `/api/documents/preview` | Generates the same MRF/PO PDFs used for archival for browser preview, download and printing. |
 | `/api/bid-comparisons`, `/api/drive/bid-comparisons`, `/api/drive/bid-comparisons/chunk` | Server XLSX/PDF generation, protected report archival/download, and dedicated resumable uploads bound to artifact type. |
+| `/api/drive/accounting-documents`, `/api/drive/accounting-documents/chunk` | Protected receipt/evidence archival, resumable upload/status, and verified downloads. |
 
 All workspace routes are wrapped by `app/(workspace)/layout.tsx`, which applies the data gate and application shell.
 
@@ -212,7 +220,7 @@ npx tsc --noEmit
 npm run build
 ```
 
-With the development server running, use `node scripts/browser-smoke.mjs` for the broader linked workflow, persistence, legacy-link, and responsive-width checks. Use `node scripts/quotation-smoke.mjs http://localhost:3100` with a production server on port 3100 for grouped quotation review, saved awards, split POs, Finance approval, and print status.
+With the development server running, use `node scripts/browser-smoke.mjs` for the broader linked workflow, persistence, legacy links, and UI checks at 320–1440 px in light and dark themes. UI regressions cover short-screen sign-in scrolling, long request references, role-dialog focus containment and restoration, text/focus contrast, mobile control sizes, and document-preview bounds. Use `node scripts/quotation-smoke.mjs http://localhost:3100` with a production server on port 3100 for grouped quotation review, saved awards, split POs, Finance approval, and print status.
 
 The domain test suite currently protects these high-value behaviors:
 
