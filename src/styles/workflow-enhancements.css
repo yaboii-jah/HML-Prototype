@@ -82,3 +82,27 @@
 .admin-project-details p { margin-bottom: 6px; overflow-wrap: anywhere; }
 .admin-add-project .form-grid { grid-template-columns: repeat(3,minmax(0,1fr)); }
 @media (max-width:780px) { .admin-add-project .form-grid { grid-template-columns: 1fr; } }
+
+.mrf-ai-import .panel-heading { margin-bottom: var(--space-sm); }
+.mrf-ai-import h2 { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-sm); }
+.mrf-ai-optional { font-size: 11px; font-weight: 500; color: var(--muted); }
+.mrf-ai-sources { list-style: none; margin: var(--space-md) 0 0; padding: 0; }
+.mrf-ai-sources li { display: flex; justify-content: space-between; align-items: center; gap: var(--space-md); padding-block: var(--space-sm); border-top: 1px solid var(--line); }
+.mrf-ai-sources li > div:first-child { flex: 1; min-width: 0; }
+.mrf-ai-sources strong, .mrf-ai-sources small { display: block; overflow-wrap: anywhere; }
+.mrf-ai-sources small { color: var(--muted); margin-top: var(--space-xs); }
+.mrf-ai-sources .button-row { margin: 0; flex: none; }
+.mrf-ai-result { margin-top: var(--space-md); border-top: 1px solid var(--line); padding-top: var(--space-md); overflow-wrap: anywhere; }
+.mrf-ai-result details { margin-block: var(--space-sm); }
+.mrf-ai-result summary { cursor: pointer; padding-block: var(--space-sm); }
+.mrf-ai-result ul { max-height: 220px; overflow: auto; padding-left: 22px; }
+.mrf-ai-result li { margin-bottom: var(--space-xs); }
+.mrf-ai-review h2 { margin-bottom: var(--space-sm); }
+.mrf-ai-review .quote-check { align-items: flex-start; min-height: 44px; cursor: pointer; }
+.mrf-ai-review .quote-check input { width: 18px; height: 18px; min-height: 0; flex: none; }
+.mrf-ai-review .quote-check span { min-width: 0; }
+@media (max-width:650px) {
+  .mrf-ai-sources li { flex-direction: column; align-items: stretch; }
+  .mrf-ai-sources .button-row { flex-wrap: wrap; gap: var(--space-sm); }
+  .mrf-ai-import .button-row .button { white-space: normal; }
+}

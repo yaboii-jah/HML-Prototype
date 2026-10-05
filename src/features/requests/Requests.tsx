@@ -18,6 +18,8 @@ import { DocumentPreview } from "@/src/components/DocumentPreview";
 import { deleteLocalFile, saveRequestFile } from "./quote-files";
 import { procurementReady } from "@/src/domain/request-archive";
 import { syncApprovedRequest } from "./archive-request";
+import { MrfAiImport } from "./MrfAiImport";
+import { mrfImportedItems, type MrfExtractionResult } from "@/src/domain/mrf-extraction";
 
 const MATERIAL_COPY_FIELDS = [
   { key: "unit", label: "Unit" },
@@ -77,6 +79,13 @@ export function RequestForm({ id }: { id?: string }) {
   const [attachmentError, setAttachmentError] = useState("");
   const [savingPdf, setSavingPdf] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [importedWithAI, setImportedWithAI] = useState(false);
+  const aiAssisted = original?.aiAssisted === true || importedWithAI;
+  const [aiReviewed, setAiReviewed] = useState(false);
+  const [aiReviewError, setAiReviewError] = useState("");
+  const aiReviewRef = useRef<HTMLInputElement>(null);
+  const manuallyEdited = useRef(false);
+  const markEdited = () => { manuallyEdited.current = true; setAiReviewed(false); setAiReviewError(""); };
   const saveInProgress = useRef(false);
   const pdfInProgress = useRef(false);
   const [dragActive, setDragActive] = useState(false);
@@ -89,6 +98,7 @@ export function RequestForm({ id }: { id?: string }) {
   const addDialogRef = useRef<HTMLDialogElement>(null);
   const copySourceRef = useRef<HTMLSelectElement>(null);
   const addItem = () => {
+    markEdited();
     const previous = items[items.length - 1];
     const source = items.find(item => item.id === selectedCopySourceId) || previous;
     const today = new Date().toISOString().slice(0, 10);
@@ -117,6 +127,7 @@ export function RequestForm({ id }: { id?: string }) {
   };
   const removeItem = (itemId: string) => {
     if (items.length <= 1) return;
+    markEdited();
     const index = items.findIndex(item => item.id === itemId);
     const remaining = items.filter(item => item.id !== itemId);
     setItems(remaining);
@@ -134,6 +145,7 @@ export function RequestForm({ id }: { id?: string }) {
     });
   };
   const updateItem = (itemId: string, patch: Partial<Item>) => {
+    markEdited();
     const currentItem = items.find(item => item.id === itemId);
     const updatedItem = currentItem ? { ...currentItem, ...patch } : null;
     setItems(current => current.map(item => item.id === itemId ? { ...item, ...patch } : item));
@@ -176,8 +188,20 @@ export function RequestForm({ id }: { id?: string }) {
     setStep(nextStep);
   };
   const updateDetails = (field: keyof RequestDetails, value: string) => {
+    markEdited();
     setDetails(current => ({ ...current, [field]: value }));
     if (formFieldError?.field === field) setFormFieldError(null);
+  };
+  const applyImport = async ({ extraction }: MrfExtractionResult) => {
+    if (manuallyEdited.current && !await confirm("Replace entered details and materials?", "The extracted values will replace this form's request details and material list. The supporting PDF stays separate.", "Apply extracted values")) return false;
+    const found = extraction.details;
+    setDetails({ siteId: "", ref: found.ref, requestDate: found.requestDate, requestedBy: found.requestedBy, approvedBy: found.approvedBy, purchaser: found.purchaser, financeOfficer: found.financeOfficer, specialInstructions: found.specialInstructions });
+    const imported = mrfImportedItems(extraction, () => newId("item"));
+    setItems(imported); setExpandedItemId(imported[0].id); setMaterialSearch(""); setInvalidItemId(null);
+    setImportedWithAI(true); setAiReviewed(false); setAiReviewError(""); setFormFieldError(null); setError(""); setStep(1);
+    manuallyEdited.current = false;
+    window.requestAnimationFrame(() => revealField(document.getElementById("siteId")));
+    return true;
   };
   const detailError = (field: keyof RequestDetails, message: string) => {
     setFormFieldError({ field, message });
@@ -221,12 +245,13 @@ export function RequestForm({ id }: { id?: string }) {
     if (intent === "submit") {
       if (!documentsOnly && (!validateDetails() || !validateMaterials())) return;
       if (!activeSupportingPdf?.fileId) { setAttachmentError("Attach one combined supporting PDF before submitting."); revealField(choosePdfRef.current); return; }
+      if (aiAssisted && !aiReviewed) { setAiReviewError("Confirm you reviewed the extracted request details and materials."); revealField(aiReviewRef.current); return; }
     }
     saveInProgress.current = true;
     setSaving(true);
     try {
       if (intent === "submit" && !await confirm(original ? "Resubmit this MRF?" : "Submit this MRF?", "Procurement will receive this request for a decision.", original ? "Resubmit MRF" : "Submit MRF")) return;
-      const result = await run({ type: "saveRequest", id, intent, ...details, signatoryTitles: original?.signatoryTitles, scopeDocument, items, documents });
+      const result = await run({ type: "saveRequest", id, intent, ...details, aiAssisted, aiReviewed, signatoryTitles: original?.signatoryTitles, scopeDocument, items, documents });
       if (result.ok) {
         const keptIds = new Set([scopeDocument?.fileId, ...documents.map(document => document.fileId)].filter((value): value is string => !!value));
         for (const fileId of pendingFileIds.current) if (keptIds.has(fileId)) pendingFileIds.current.delete(fileId);
@@ -240,6 +265,7 @@ export function RequestForm({ id }: { id?: string }) {
         if (result.field === "siteId") detailError("siteId", result.message);
         if (result.field === "items") validateMaterials();
         if (result.field === "documents") { setStep(3); setAttachmentError(result.message); }
+        if (result.field === "aiReview") { setStep(3); setAiReviewError(result.message); window.requestAnimationFrame(() => revealField(aiReviewRef.current)); }
       }
     } catch { setError("The request could not be saved. Please try again."); }
     finally { saveInProgress.current = false; setSaving(false); }
@@ -262,11 +288,12 @@ export function RequestForm({ id }: { id?: string }) {
       {original?.correction && <div className="callout warn"><strong>Procurement requested a correction</strong><p>{original.correction.reason}</p><p>{documentsOnly ? "Only the supporting PDF can be replaced because purchasing has started." : "Update the request and supporting PDF, then resubmit."}</p></div>}
       <nav aria-label="Request steps"><ol className="request-steps">{REQUEST_STEPS.map((label, index) => <li key={label}><button type="button" aria-current={step === index + 1 ? "step" : undefined} disabled={documentsOnly || index + 1 >= step || saving || savingPdf} onClick={() => changeStep((index + 1) as RequestStep)}><span className="request-step-number" aria-hidden="true">{index + 1}</span><span>{label}</span></button></li>)}</ol></nav>
       <div className="request-step-heading"><span className="eyebrow">STEP {step} OF 3</span><h2 ref={stepHeadingRef} tabIndex={-1}>{REQUEST_STEPS[step - 1]}</h2><p>{step === 1 ? "Choose the project and enter the names shown on the MRF." : step === 2 ? "List the materials the site needs. Purpose and remarks are optional." : "Attach the supporting PDF and check your request before sending it to Procurement."}</p></div>
+      {!id && state.role === "Site Personnel" && <div hidden={step !== 1}><MrfAiImport disabled={saving || savingPdf} onApply={applyImport}/></div>}
       <fieldset className="request-edit-fields" disabled={documentsOnly}>
       <section className="panel" hidden={step !== 1}>
         <CollapsibleSection title="General information">
         <div className="form-grid">
-          <Field label="Project / site" error={formFieldError?.field === "siteId" ? formFieldError.message : undefined}><select id="siteId" name="site" value={details.siteId} aria-invalid={formFieldError?.field === "siteId"} onChange={event => updateDetails("siteId", event.target.value)}>{state.sites.map(site => <option key={site.id} value={site.id}>{site.name}</option>)}</select></Field>
+          <Field label="Project / site" error={formFieldError?.field === "siteId" ? formFieldError.message : undefined}><select id="siteId" name="site" value={details.siteId} aria-invalid={formFieldError?.field === "siteId"} onChange={event => updateDetails("siteId", event.target.value)}><option value="">Choose a project</option>{state.sites.map(site => <option key={site.id} value={site.id}>{site.name}</option>)}</select></Field>
           <Field label="M.R.F No." error={formFieldError?.field === "ref" ? formFieldError.message : undefined}><input id="ref" name="ref" value={details.ref} placeholder="Enter the company reference" autoComplete="off" aria-invalid={formFieldError?.field === "ref"} onChange={event => updateDetails("ref", event.target.value)}/></Field>
           <Field label="Request Date" error={formFieldError?.field === "requestDate" ? formFieldError.message : undefined}><input id="requestDate" name="requestDate" type="date" value={details.requestDate} aria-invalid={formFieldError?.field === "requestDate"} onChange={event => updateDetails("requestDate", event.target.value)}/></Field>
           {REQUEST_DETAIL_FIELDS.map(field => <Field key={field.name} label={field.label} error={formFieldError?.field === field.name ? formFieldError.message : undefined}><input id={field.name} name={field.name} value={details[field.name]} aria-invalid={formFieldError?.field === field.name} onChange={event => updateDetails(field.name, event.target.value)}/></Field>)}
@@ -306,7 +333,7 @@ export function RequestForm({ id }: { id?: string }) {
                 <div className="material-card-grid">
                   <Field label="Material" error={invalidItemId === item.id && !item.name.trim() ? "Enter the material name." : undefined}><input id={'material-' + item.id} name={'material-' + item.id} value={item.name} onChange={event => updateItem(item.id, { name: event.target.value })}/></Field>
                   <Field label="Unit" error={invalidItemId === item.id && !item.unit.trim() ? "Enter the unit." : undefined}><input id={'unit-' + item.id} name={'unit-' + item.id} value={item.unit} onChange={event => updateItem(item.id, { unit: event.target.value })}/></Field>
-                  <Field label="Quantity" error={invalidItemId === item.id && (!Number.isFinite(item.quantity) || item.quantity <= 0) ? "Enter a quantity greater than zero." : undefined}><input id={'quantity-' + item.id} name={'quantity-' + item.id} type="number" step="any" value={item.quantity} onChange={event => updateItem(item.id, { quantity: Number(event.target.value) })}/></Field>
+                  <Field label="Quantity" error={invalidItemId === item.id && (!Number.isFinite(item.quantity) || item.quantity <= 0) ? "Enter a quantity greater than zero." : undefined}><input id={'quantity-' + item.id} name={'quantity-' + item.id} type="number" step="any" value={item.quantity || ""} onChange={event => updateItem(item.id, { quantity: Number(event.target.value) })}/></Field>
                   <Field label="Date needed" error={invalidItemId === item.id && !item.neededDate.trim() ? "Choose a date needed." : undefined}><input id={'needed-' + item.id} name={'needed-' + item.id} type="date" value={item.neededDate} onChange={event => updateItem(item.id, { neededDate: event.target.value })}/></Field>
                   <Field label="Purpose (optional)"><input id={'purpose-' + item.id} name={'purpose-' + item.id} value={item.purpose} onChange={event => updateItem(item.id, { purpose: event.target.value })}/></Field>
                   <Field label="Delivery location" error={invalidItemId === item.id && !item.location.trim() ? "Enter the delivery location." : undefined}><input id={'location-' + item.id} name={'location-' + item.id} value={item.location} onChange={event => updateItem(item.id, { location: event.target.value })}/></Field>
@@ -341,6 +368,7 @@ export function RequestForm({ id }: { id?: string }) {
         <div className="panel-heading"><h3>Materials · {items.length}</h3>{!documentsOnly && <button type="button" className="text-link" onClick={() => changeStep(2)}>Edit materials</button>}</div>
         <ul className="request-review-materials">{items.map(item => <li key={item.id}><strong>{item.name || "Unnamed material"}</strong><span>{item.quantity} {item.unit} · Needed {dateText(item.neededDate)}</span><span>Deliver to: {item.location || "—"}</span>{item.purpose && <span>Purpose: {item.purpose}</span>}{item.remarks && <span>Remarks: {item.remarks}</span>}</li>)}</ul>
       </section>}
+      {step === 3 && aiAssisted && <section className="panel mrf-ai-review"><h2>Confirm your review</h2><p>Check the request details and each material against the hardcopy. AI can misread names, dates and quantities.</p><label className="quote-check"><input ref={aiReviewRef} type="checkbox" name="aiReviewed" checked={aiReviewed} aria-invalid={!!aiReviewError} aria-describedby={aiReviewError ? "mrf-ai-review-error" : undefined} onChange={event => { setAiReviewed(event.target.checked); setAiReviewError(""); }}/><span>I reviewed the extracted request details and materials.</span></label>{aiReviewError && <p id="mrf-ai-review-error" className="field-error" role="alert">{aiReviewError}</p>}</section>}
       <InlineError message={invalidItemId ? "" : error}/>
       <div className="form-actions request-wizard-actions"><div><Link className="button secondary" href={original ? `/requests/${original.id}` : "/requests"}>Cancel</Link><button className="button secondary" type="submit" value="draft" disabled={saving || savingPdf}>Save draft</button></div><div>{step > 1 && !documentsOnly && <button className="button secondary" type="button" disabled={saving || savingPdf} onClick={() => changeStep((step - 1) as RequestStep)}>Back</button>}{step < 3 ? <button className="button primary" type="button" onClick={nextStep}>Next</button> : <button className="button primary" type="submit" value="submit" disabled={saving || savingPdf}>{saving ? "Please wait…" : original ? "Resubmit MRF" : "Submit MRF"}</button>}</div></div>
     </form>

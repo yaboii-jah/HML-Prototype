@@ -21,6 +21,9 @@ Seven roles are available. Project setup requires no manager assignment; the MRF
 
 ## Returns and key checks
 
+- [ ] **Optional AI MRF entry:** In Step 1, import one PDF or up to 12 ordered page photos (4 MB total). Preview, extract, then apply. Choose the project manually; correct missing values and check all materials.
+- [ ] AI import requires a separate supporting PDF and review checkbox before submission. Editing details/materials or reopening a saved AI draft requires review again. Import failures preserve manual entries; source scans disappear on reload and never become attachments.
+
 - [ ] Procurement returns MRF → Site revises; Accounting returns PO → Procurement revises; Finance returns payment request → Accounting revises. References stay linked.
 - [ ] Holds/rejections require reasons. A PO exceeding available budget cannot be approved under either payment arrangement.
 - [ ] One open payment request per PO; partial requests are allowed. Rejected/disbursed requests stay in history. Duplicate disbursements and excess amounts are blocked.

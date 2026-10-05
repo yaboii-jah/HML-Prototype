@@ -21,7 +21,7 @@ HML ConstructSync is a browser-local construction operations prototype, also dep
 - Drive credentials, the company root folder ID, and the upload-token key stay on the server. Administrator maps each project folder within that root. Vercel Drive routes require explicit enablement and Vercel Authentication for All Deployments, including production; simulated app roles do not secure them.
 - Credential and project-folder setup is described in `docs/GOOGLE_DRIVE_SETUP.md`. The standard local dev and start scripts bind to loopback.
 - The Gemini API key stays in the local Next.js server environment. Simulated roles do not secure the parsing endpoint; this integration is intended for local use only.
-- For local parsing, copy `.env.example` to `.env.local`, set `GEMINI_API_KEY`, and restart `next dev`. Quotation review's manual fallback works without a key.
+- For local parsing, copy `.env.example` to `.env.local`, set `GEMINI_API_KEY`, and restart `next dev`. MRF entry and quotation review both support manual entry without a key.
 - External actions such as releasing a PO and recording payment are demonstrations only.
 - The primary experience is desktop, while delivery receiving and inventory actions are intended to remain usable on mobile widths.
 
@@ -61,6 +61,8 @@ The domain command layer in `src/domain/commands.ts` is the authority for permis
 - States: `draft`, `submitted`, `returned`, `approved`, `rejected`.
 - New MRFs, draft edits, returns, and full corrections use three steps: Request details, Materials, and Review & submit. Next validates the current step; Back and review Edit links retain entered values and files. The final step accepts the supporting PDF and shows a request summary before submission confirmation. Save draft permits incomplete information from every step and opens the saved record. Step progress is temporary; refresh restores explicitly saved work. PDF-only corrections open on the final step with request details read-only.
 - Only Site Personnel can create/edit drafts, returned requests, or Procurement-reopened corrections. A reopened request with linked quotations or POs permits only a support-PDF change; an earlier reopened request permits full editing.
+- New requests offer optional AI import in Step 1 through `POST /api/requests/extract`, using the server's existing `GEMINI_API_KEY` and `GEMINI_MODEL`. Import accepts one multipage PDF or up to 12 ordered JPG/PNG/WebP page photos of one MRF, up to 4 MiB total. Users preview/reorder sources, explicitly extract and apply results, and confirm replacement of edited form values. The project remains a manual selection; unreadable fields remain blank with warnings. Multiple MRFs and unrelated documents are rejected. Cancellation, timeout and errors preserve the entered form and allow manual entry.
+- AI source bytes and Blob previews stay temporary in browser memory and are sent to Gemini only for extraction. They are never cached as attachments or archived to Drive. The combined supporting PDF remains a separate required upload in Step 3. AI-filled forms stay editable and require a fresh review checkbox before submission; detail/material edits clear confirmation. Drafts retain optional `aiAssisted` metadata but no review acknowledgement. Submission records `aiReviewedAt` and `aiReviewedBy`; the command layer enforces review for resumed AI drafts too. Existing MRFs remain manual and schema 12 stays compatible. This acknowledgement does not replace Procurement approval.
 - Submission requires request details, at least one valid item, and one combined supporting PDF. The browser validates PDF type, signature, and 50 MB limit before storing it locally.
 - General request information includes a manually entered, globally unique M.R.F No. and editable Request Date, plus Requested by, Approved by, Purchaser/Procurement Officer, and Finance Officer names. All six fields are required for submission but may be blank in a draft. Request Date is document metadata and may be in the future; system timestamps still drive activity and report filters.
 - Each material carries its own date needed, purpose, delivery location, and remarks. Submission requires a name, unit, positive quantity, date, and location; purpose and remarks may be blank. Register and project summaries show the earliest material date.
@@ -222,6 +224,7 @@ The domain test suite currently protects these high-value behaviors:
 - Seeded purchasing, delivery, inventory, and budget consistency.
 - MRF permission/review rules and ID preservation after return/resubmission.
 - The browser walkthrough covers MRF step validation, navigation and file retention, incomplete draft saving/reopening, final confirmation, returned-request resubmission, PDF-only corrections, and responsive step layouts.
+- MRF AI tests cover source limits/signatures, same-origin requests, ordered page uploads, malformed/unrelated/multiple-request results, provider failures, blank unreadable values and mandatory review metadata. The browser uses mocked extraction responses to verify preview, cancellation, retry, explicit replacement, manual editing, separate attachments and fresh review after draft reopening. Live OCR accuracy remains dependent on the configured model and document quality.
 - Single stock posting, outstanding quantities, site isolation, and nonnegative inventory.
 - Payment movement from commitment to spent without double-reducing available budget.
 - Prior workflow reset guard, explicit clearing, current payment/release persistence and malformed-data recovery. Historical migration helper tests remain separate from active loading.
@@ -263,6 +266,7 @@ When updating it:
 
 | Date | Context change |
 | --- | --- |
+| 2026-10-05 | Added optional temporary MRF PDF/photo extraction with editable results, manual project selection, separate supporting attachments and mandatory human review on AI-assisted submission. |
 | 2026-10-05 | Removed Project Manager access and project assignments; retained generic MRF signatures and compatibility with saved v12 selections and historical actors. |
 | 2026-10-05 | Adopted Procurement MRF review, Accounting PO/budget approval and release, separate Finance payment requests/disbursement, upfront and credit paths, comparison before PO, and schema 12 with explicit old-workspace reset. |
 | 2026-10-02 | Added a three-step MRF creation and revision flow with per-step validation, review summary, incomplete draft saves, and a direct final-step path for PDF-only corrections; integrated with main's company document templates and snapshot version 11. |

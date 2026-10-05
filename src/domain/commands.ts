@@ -26,7 +26,7 @@ export type Command =
   | { type: "failBidArchive"; format?: "xlsx" | "pdf"; id: string; error: string }
   | { type: "setRole"; role: Role }
   | { type: "setSiteFilter"; siteId: string }
-  | { type: "saveRequest"; specialInstructions?: string; signatoryTitles?: string[]; id?: string; intent: "draft" | "submit"; siteId: string; ref: string; requestDate: string; scopeDocument?: DocumentRef; requestedBy: string; approvedBy: string; purchaser: string; financeOfficer: string; items: Item[]; documents: DocumentRef[] }
+  | { type: "saveRequest"; aiAssisted?: boolean; aiReviewed?: boolean; specialInstructions?: string; signatoryTitles?: string[]; id?: string; intent: "draft" | "submit"; siteId: string; ref: string; requestDate: string; scopeDocument?: DocumentRef; requestedBy: string; approvedBy: string; purchaser: string; financeOfficer: string; items: Item[]; documents: DocumentRef[] }
   | { type: "reviewRequest"; id: string; decision: "approve" | "return" | "reject"; reason?: string }
   | { type: "reopenApprovedRequest"; id: string; reason: string }
   | { type: "completeRequestArchive"; id: string; formFileId: string; supportFileId: string; formUrl: string; supportUrl: string }
@@ -165,6 +165,7 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       if (command.id && !original) return fail("MRF not found.");
       const correcting = original?.status === "approved" && original.correction?.status === "requested";
       if (original && !["draft", "returned"].includes(original.status) && !correcting) return fail("Only draft, returned, or reopened MRFs can be edited.");
+      const aiAssisted = original?.aiAssisted === true || command.aiAssisted === true;
       const ref = (command.ref || "").trim();
       const requestDate = (command.requestDate || "").trim();
       if (command.intent === "submit") {
@@ -174,7 +175,9 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
         if (![command.requestedBy, command.approvedBy, command.purchaser, command.financeOfficer].every(x => x.trim())) return fail("Complete the request's general information before submitting.");
         if (!command.items.length || command.items.some(i => !i.name.trim() || !i.unit.trim() || !positive(i.quantity) || !i.neededDate.trim() || !i.location.trim())) return fail("Each material needs a name, unit, positive quantity, date needed, and delivery location.", "items");
         if (command.documents.filter(document => document.type === "Supporting PDF" && !!document.fileId).length !== 1) return fail("Attach one combined supporting PDF before submitting.", "documents");
+        if (aiAssisted && command.aiReviewed !== true) return fail("Review the extracted request details and materials before submitting.", "aiReview");
       }
+      const aiReview = aiAssisted ? { aiAssisted: true, aiReviewedAt: command.intent === "submit" ? at : undefined, aiReviewedBy: command.intent === "submit" ? actor : undefined } : {};
       const items = command.items.map(i => ({ ...i, name: i.name.trim(), unit: i.unit.trim(), id: i.id || id("item"), neededDate: i.neededDate.trim(), purpose: i.purpose.trim(), location: i.location.trim(), remarks: i.remarks.trim() }));
       const fields = { specialInstructions: command.specialInstructions?.trim() || "", signatoryTitles: command.signatoryTitles?.slice(0, 4).map(value => value.trim()) || [], ref, requestDate, siteId: command.siteId, category: original?.category || "", scope: original?.scope || "", scopeDocument: command.scopeDocument, requestedBy: command.requestedBy.trim(), approvedBy: command.approvedBy.trim(), purchaser: command.purchaser.trim(), financeOfficer: command.financeOfficer.trim(), items, documents: command.documents.filter(d => d.name.trim()), status: command.intent === "submit" ? "submitted" as const : "draft" as const, reason: undefined, updatedAt: at };
       if (original) {
@@ -185,11 +188,12 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
           if (command.intent === "submit") original.correction = { ...original.correction!, status: "submitted" };
           original.updatedAt = at;
         } else Object.assign(original, fields);
+        Object.assign(original, aiReview);
         log(original.id, command.intent === "submit" ? "MRF revised and resubmitted" : "MRF draft saved");
         return done(command.intent === "submit" ? "MRF submitted to Procurement." : "MRF draft saved.", original.id);
       }
       const requestId = id("mrf");
-      state.requests.push({ id: requestId, createdAt: at, ...fields });
+      state.requests.push({ id: requestId, createdAt: at, ...fields, ...aiReview });
       log(requestId, command.intent === "submit" ? "MRF submitted" : "MRF draft saved");
       return done(command.intent === "submit" ? "MRF submitted to Procurement." : "MRF draft saved.", requestId);
     }
