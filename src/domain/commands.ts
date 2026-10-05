@@ -1,3 +1,4 @@
+import { openPaymentRequest, releaseBlocker } from "./workflow.ts";
 import { validAccountingDocument, MAX_ACCOUNTING_BATCH } from "./accounting-documents.ts";
 import type { AccountingDocument } from "./types.ts";
 import { validDriveFileLink } from "./drive-links.ts";
@@ -47,15 +48,17 @@ export type Command =
   | { type: "reviewPO"; id: string; decision: "approve" | "hold" | "return" | "reject"; reason?: string }
   | { type: "completePOArchive"; id: string; fileId: string; url: string }
   | { type: "failPOArchive"; id: string; error: string }
-  | { type: "servePO"; id: string }
+  | { type: "releasePO"; id: string }
+  | { type: "saveAccountingPO"; id: string; paymentMode: PO["paymentMode"]; financial: PO["financial"]; tax?: number; freight?: number; discount?: number; adjustments?: POAdjustment[] }
+  | { type: "savePaymentRequest"; poId: string; id?: string; amount: number; note: string; submit: boolean }
+  | { type: "reviewPaymentRequest"; id: string; decision: "approve" | "hold" | "return" | "reject"; reason?: string }
   | { type: "createBatch"; poId: string; scheduledDate: string; evidence: string; delayReason: string; expected: Record<string, number> }
   | { type: "confirmBatch"; id: string; lines: Record<string, { accepted: number; issue: string }> }
   | { type: "postBatch"; id: string; accepted: Record<string, number>; reason: string }
   | { type: "recordMovement"; siteId: string; itemName: string; unit: string; kind: "usage" | "adjustment"; quantity: number; reason: string }
   | { type: "saveDocuments"; poId: string; invoiceRef: string; receiptRef: string; review: DocumentStatus; note: string }
-  | { type: "recordPayment"; poId: string; amount: number; method: "Cash" | "Bank" | "Check" | "Other"; reference: string; date: string }
-  | { type: "updateAssignment"; siteId: string; manager: string }
-  | { type: "addSite"; name: string; location: string; budget: number; manager: string }
+  | { type: "recordPayment"; paymentRequestId: string; method: "Cash" | "Bank" | "Check" | "Other"; reference: string; date: string }
+  | { type: "addSite"; name: string; location: string; budget: number }
   | { type: "addSupplierFromQuote"; name: string };
 
 export type CommandContext = { now: () => string; id: (prefix: string) => string };
@@ -183,17 +186,17 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
           original.updatedAt = at;
         } else Object.assign(original, fields);
         log(original.id, command.intent === "submit" ? "MRF revised and resubmitted" : "MRF draft saved");
-        return done(command.intent === "submit" ? "MRF submitted to the Project Manager." : "MRF draft saved.", original.id);
+        return done(command.intent === "submit" ? "MRF submitted to Procurement." : "MRF draft saved.", original.id);
       }
       const requestId = id("mrf");
       state.requests.push({ id: requestId, createdAt: at, ...fields });
       log(requestId, command.intent === "submit" ? "MRF submitted" : "MRF draft saved");
-      return done(command.intent === "submit" ? "MRF submitted to the Project Manager." : "MRF draft saved.", requestId);
+      return done(command.intent === "submit" ? "MRF submitted to Procurement." : "MRF draft saved.", requestId);
     }
     case "reviewRequest": {
-      if (!permit("Project Manager")) return fail("Switch to Project Manager to review an MRF.");
+      if (!permit("Procurement")) return fail("Switch to Procurement to review an MRF.");
       const request = state.requests.find(r => r.id === command.id);
-      if (!request || request.status !== "submitted" && !(request.status === "approved" && request.correction?.status === "submitted")) return fail("This MRF is no longer awaiting PM review.");
+      if (!request || request.status !== "submitted" && !(request.status === "approved" && request.correction?.status === "submitted")) return fail("This MRF is no longer awaiting Procurement review.");
       if (command.decision !== "approve" && !reasonOK(command.reason)) return fail("Enter a reason of at least five characters.", "reason");
       if (command.decision === "approve" && !state.sites.find(site => site.id === request.siteId)?.driveFolderId) return fail("Map this project's Google Drive folder before approval.");
       if (command.decision === "approve" && !supportingPdf(request)) return fail("A combined supporting PDF is required before approval.");
@@ -213,7 +216,7 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       return done(command.decision === "approve" ? "MRF approved. Google Drive archiving is next." : `MRF ${request.status}.`);
     }
     case "reopenApprovedRequest": {
-      if (!permit("Project Manager")) return fail("Switch to Project Manager to reopen an MRF.");
+      if (!permit("Procurement")) return fail("Switch to Procurement to reopen an MRF.");
       const request = state.requests.find(value => value.id === command.id);
       if (!request || request.status !== "approved" || request.correction || request.archive?.status !== "complete") return fail("Only an archived approved MRF can be reopened.");
       if (!reasonOK(command.reason)) return fail("Explain the correction in at least five characters.");
@@ -224,7 +227,7 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       return done("Site Personnel can revise this MRF.");
     }
     case "completeRequestArchive": {
-      if (!permit("Project Manager", "Administrator")) return fail("Switch to Project Manager or Administrator to complete an MRF archive.");
+      if (!permit("Procurement", "Administrator")) return fail("Switch to Procurement or Administrator to complete an MRF archive.");
       const request = state.requests.find(value => value.id === command.id);
       if (!request || request.status !== "approved" || request.archive?.status !== "pending" || request.correction) return fail("This MRF is not awaiting a Drive archive.");
       if (![command.formFileId, command.supportFileId, command.formUrl, command.supportUrl].every(Boolean)) return fail("The Drive archive is incomplete.");
@@ -236,7 +239,7 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       return done("MRF archived to Google Drive. Procurement can continue.");
     }
     case "failRequestArchive": {
-      if (!permit("Project Manager", "Administrator")) return fail("Switch to Project Manager or Administrator to update an MRF archive.");
+      if (!permit("Procurement", "Administrator")) return fail("Switch to Procurement or Administrator to update an MRF archive.");
       const request = state.requests.find(value => value.id === command.id);
       if (!request || request.archive?.status !== "pending") return fail("This MRF is not awaiting a Drive archive.");
       request.archive.error = command.error.slice(0, 300);
@@ -446,46 +449,96 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       if (po.financial) {
         if (command.document) po.document = command.document;
         if (command.financial) po.financial = command.financial;
-        const financialError = poFinancialError(po, command.finalize);
+        const financialError = poFinancialError(po, false);
         if (financialError) return fail(financialError);
       }
       if (command.finalize) {
-        if (po.lines?.some(line => line.discountType === "fixed" && line.fixedDiscountConfirmed !== true)) return fail("Confirm each fixed line discount before Finance review.");
-        if (po.adjustments?.some(value => !value.confirmed)) return fail("Confirm or exclude every PO adjustment before Finance review.");
+        if (po.lines?.some(line => line.discountType === "fixed" && line.fixedDiscountConfirmed !== true)) return fail("Confirm each fixed line discount before Accounting review.");
+        if (po.adjustments?.some(value => !value.confirmed)) return fail("Confirm or exclude every PO adjustment before Accounting review.");
         if (hasFinalizedSuccessor(state, quote.id) && !reasonOK(command.supersededReason)) return fail("A newer quotation exists. Switch to it or explain why this PO keeps the older revision.");
         if (poTotal(state, po) <= 0) return fail("PO total must be positive.");
       }
       po.supersededReason = hasFinalizedSuccessor(state, quote.id) ? command.supersededReason?.trim() : undefined;
       po.quoteId = command.quoteId; po.notes = command.notes.trim(); po.updatedAt = at;
-      if (command.finalize) { po.status = "finalized"; po.reviewReason = undefined; log(po.id, "PO finalized for Finance", po.supersededReason); return done("PO finalized. Finance is next."); }
+      if (command.finalize) { po.status = "submitted"; po.reviewReason = undefined; log(po.id, "PO submitted to Accounting", po.supersededReason); return done("PO submitted. Accounting review is next."); }
       log(po.id, "PO draft updated"); return done("PO draft saved.");
     }
+    case "saveAccountingPO": {
+      if (!permit("Accounting / Auditing")) return fail("Switch to Accounting to review PO finances.");
+      const po = state.pos.find(value => value.id === command.id);
+      if (!po || !["submitted", "hold"].includes(po.status)) return fail("This PO is locked for financial review.");
+      const request = requestForPO(state, po), quote = state.quotes.find(value => value.id === po.quoteId);
+      if (!request || !quote) return fail("The linked purchasing records are missing.");
+      if (!po.document || !po.financial) {
+        const document = po.document, financial = po.financial;
+        initializePo(po, request, quote);
+        if (document) po.document = document;
+        if (financial) po.financial = financial;
+      }
+      if (!["upfront", "credit"].includes(command.paymentMode || "")) return fail("Select upfront payment or credit terms.");
+      if (!command.financial) return fail("Review VAT and withholding.");
+      if (command.adjustments && command.adjustments.some(value => !value.label.trim() || !nonnegative(value.value) || value.calculation === "percentage" && value.value > 100)) return fail("Review each PO adjustment amount.");
+      po.financial = command.financial; po.paymentMode = command.paymentMode;
+      if (command.adjustments) po.adjustments = command.adjustments;
+      for (const key of ["tax", "freight", "discount"] as const) if (command[key] !== undefined) { if (!nonnegative(command[key]!)) return fail("PO charges must be nonnegative."); po[key] = command[key]; }
+      const error = poFinancialError(po);
+      if (error || poTotal(state, po) <= 0) return fail(error || "PO total must be positive.");
+      po.updatedAt = at; log(po.id, "Accounting financial review saved"); return done("PO financial review saved.");
+    }
     case "setPriority": {
-      if (!permit("Finance")) return fail("Switch to Finance to set priority.");
-      const po = state.pos.find(p => p.id === command.id);
-      if (!po || !["finalized", "hold"].includes(po.status)) return fail("This PO is not in Finance review.");
-      po.priority = command.priority; po.updatedAt = at; log(po.id, `Priority set to ${po.priority}`);
-      return done("Priority updated.");
+      if (!permit("Finance")) return fail("Switch to Finance to set payment priority.");
+      const payment = state.paymentRequests.find(value => value.id === command.id);
+      if (!payment || !["submitted", "hold", "approved"].includes(payment.status)) return fail("This payment request is not in Finance review.");
+      payment.priority = command.priority; payment.updatedAt = at; return done("Payment priority updated.");
     }
     case "reviewPO": {
-      if (!permit("Finance")) return fail("Switch to Finance to review a PO.");
-      const po = state.pos.find(p => p.id === command.id);
-      if (!po || !["finalized", "hold"].includes(po.status)) return fail("This PO is not awaiting Finance review.");
+      if (!permit("Accounting / Auditing")) return fail("Switch to Accounting to review a PO.");
+      const po = state.pos.find(value => value.id === command.id);
+      if (!po || !["submitted", "hold"].includes(po.status)) return fail("This PO is not awaiting Accounting review.");
       if (command.decision === "approve") {
         const request = requestForPO(state, po);
-        if (!request) return fail("The linked MRF is missing.");
-        if (poTotal(state, po) > budgetFor(state, request.siteId).available) return fail("This PO exceeds the available project budget.");
-        po.status = "approved"; po.reviewReason = undefined; po.updatedAt = at; log(po.id, "Budget approved");
-        po.archive = { status: "pending" };
-        return done("Budget approved. Archive the PO before serving it.");
+        if (!request || !procurementReady(request)) return fail("The linked MRF archive must be ready.");
+        if (!["upfront", "credit"].includes(po.paymentMode || "")) return fail("Confirm upfront payment or credit terms before approval.");
+        const error = poFinancialError(po, true);
+        if (error) return fail(error);
+        if (!po.financial || !po.document) return fail("Complete the PO financial and document review.");
+        if (po.adjustments?.some(value => !value.confirmed)) return fail("Confirm or exclude every PO adjustment.");
+        if (poTotal(state, po) <= 0 || poTotal(state, po) > budgetFor(state, request.siteId).available) return fail("This PO exceeds the available project budget or has an invalid total.");
+        po.status = "approved"; po.reviewReason = undefined; po.updatedAt = at; po.reviewedAt = at; po.reviewedBy = actor; po.archive = { status: "pending" };
+        log(po.id, "PO approved by Accounting; budget committed"); return done("PO approved. Archive its PDF before release to Logistics.");
       }
       if (!reasonOK(command.reason)) return fail("Enter a reason of at least five characters.", "reason");
       po.status = command.decision === "hold" ? "hold" : command.decision === "return" ? "returned" : "rejected";
-      po.reviewReason = command.reason?.trim(); po.updatedAt = at; log(po.id, `Finance ${po.status}`, po.reviewReason);
-      return done(`PO ${po.status}.`);
+      po.reviewReason = command.reason!.trim(); po.updatedAt = at;
+      log(po.id, `Accounting ${po.status}`, po.reviewReason); return done(`PO ${po.status}.`);
+    }
+    case "savePaymentRequest": {
+      if (!permit("Accounting / Auditing")) return fail("Switch to Accounting to prepare a payment request.");
+      const po = state.pos.find(value => value.id === command.poId && ["approved", "released"].includes(value.status));
+      if (!po) return fail("Accounting must approve the PO before requesting payment.");
+      const existing = command.id ? state.paymentRequests.find(value => value.id === command.id && value.poId === po.id) : undefined;
+      if ((command.id && !existing) || (existing && !["draft", "returned"].includes(existing.status))) return fail("This payment request is locked for editing.");
+      const open = openPaymentRequest(state, po.id);
+      if (open && open.id !== existing?.id) return fail("Complete the open payment request before creating another.");
+      if (!positive(command.amount) || !close(command.amount, Math.round(command.amount * 100) / 100) || command.amount > poTotal(state, po) - paidTotal(state, po.id) + 0.000001) return fail("Request a positive amount within the unpaid PO balance.", "amount");
+      const payment = existing || { id: id("payment-request"), ref: nextRef("PAY-2026", state.paymentRequests), poId: po.id, amount: command.amount, note: "", status: "draft" as const, priority: po.priority, createdAt: at, updatedAt: at, createdBy: actor };
+      Object.assign(payment, { amount: command.amount, note: command.note.trim(), status: command.submit ? "submitted" : "draft", reason: undefined, updatedAt: at, reviewedAt: undefined, reviewedBy: undefined });
+      if (!existing) state.paymentRequests.push(payment);
+      log(po.id, command.submit ? "Payment request submitted to Finance" : "Payment request draft saved", payment.ref); return done(command.submit ? "Payment request sent to Finance." : "Payment request draft saved.", payment.id);
+    }
+    case "reviewPaymentRequest": {
+      if (!permit("Finance")) return fail("Switch to Finance to review payment requests.");
+      const payment = state.paymentRequests.find(value => value.id === command.id && ["submitted", "hold"].includes(value.status));
+      if (!payment) return fail("This payment request is not awaiting Finance review.");
+      const po = state.pos.find(value => value.id === payment.poId && ["approved", "released"].includes(value.status));
+      if (!po || payment.amount > poTotal(state, po) - paidTotal(state, po.id) + 0.000001) return fail("This payment request exceeds the current unpaid balance.");
+      if (command.decision !== "approve" && !reasonOK(command.reason)) return fail("Enter a reason of at least five characters.", "reason");
+      payment.status = command.decision === "approve" ? "approved" : command.decision === "return" ? "returned" : command.decision === "hold" ? "hold" : "rejected";
+      payment.reason = command.decision === "approve" ? undefined : command.reason!.trim(); payment.updatedAt = at; payment.reviewedAt = at; payment.reviewedBy = actor;
+      log(po.id, `Finance payment request ${payment.status}`, payment.reason); return done(`Payment request ${payment.status}.`);
     }
     case "completePOArchive": {
-      if (!permit("Finance", "Procurement", "Administrator")) return fail("Switch to Finance, Procurement, or Administrator to archive a PO.");
+      if (!permit("Accounting / Auditing", "Administrator")) return fail("Switch to Accounting or Administrator to archive a PO.");
       const po = state.pos.find(value => value.id === command.id);
       if (!po || po.status !== "approved" || po.archive?.status !== "pending" || !command.fileId || !command.url) return fail("This PO is not awaiting a Drive archive.");
       po.archive = { status: "complete", fileId: command.fileId, url: command.url };
@@ -493,25 +546,25 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       return done("Purchase order archived to Google Drive.");
     }
     case "failPOArchive": {
-      if (!permit("Finance", "Procurement", "Administrator")) return fail("Switch to Finance, Procurement, or Administrator to update a PO archive.");
+      if (!permit("Accounting / Auditing", "Administrator")) return fail("Switch to Accounting or Administrator to update a PO archive.");
       const po = state.pos.find(value => value.id === command.id);
       if (!po || po.archive?.status !== "pending") return fail("This PO is not awaiting a Drive archive.");
       po.archive.error = command.error.slice(0, 300);
       return done("PO archive pending. Retry the upload.");
     }
-    case "servePO": {
-      if (!permit("Procurement")) return fail("Switch to Procurement to serve a PO.");
-      const po = state.pos.find(p => p.id === command.id);
-      if (!po || po.status !== "approved") return fail("Finance approval is required before serving.");
-      if (po.archive && po.archive.status !== "complete") return fail("Archive the approved PO to Google Drive before serving it.");
-      if (!procurementReady(state.requests.find(value => value.id === po.mrfId))) return fail("Procurement is paused until the MRF archive is ready.");
-      po.status = "served"; po.updatedAt = at; log(po.id, "PO served");
-      return done("PO served. Logistics is next.");
+    case "releasePO": {
+      if (!permit("Accounting / Auditing")) return fail("Switch to Accounting to release a PO.");
+      const po = state.pos.find(value => value.id === command.id);
+      if (!po) return fail("Purchase order not found.");
+      const error = releaseBlocker(state, po);
+      if (error) return fail(error);
+      po.status = "released"; po.updatedAt = at; po.releasedAt = at; po.releasedBy = actor;
+      log(po.id, "PO released to Logistics"); return done("PO released. Logistics can schedule delivery.");
     }
     case "createBatch": {
       if (!permit("Logistics")) return fail("Switch to Logistics to schedule a delivery.");
       const po = state.pos.find(p => p.id === command.poId);
-      if (!po || po.status !== "served") return fail("Only a served PO can receive a delivery batch.");
+      if (!po || po.status !== "released") return fail("Only a released PO can receive a delivery batch.");
       const request = requestForPO(state, po);
       if (!request || !command.scheduledDate || !command.evidence.trim()) return fail("Enter a schedule and evidence reference.");
       const lines = poItems(state, po).map(item => ({ itemId: item.id, expected: command.expected[item.id] ?? 0, accepted: 0, issue: "" }));
@@ -525,7 +578,7 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       if (!permit("Site Personnel")) return fail("Switch to Site Personnel to confirm receiving.");
       const batch = state.batches.find(b => b.id === command.id);
       const po = state.pos.find(p => p.id === batch?.poId);
-      if (!batch || batch.status !== "expected" || !po || po.status !== "served") return fail("This batch is not awaiting site confirmation.");
+      if (!batch || batch.status !== "expected" || !po || po.status !== "released") return fail("This batch is not awaiting site confirmation.");
       for (const line of batch.lines) {
         const input = command.lines[line.itemId];
         if (!input || !nonnegative(input.accepted) || input.accepted > line.expected || input.accepted > outstandingFor(state, po, line.itemId)) return fail("Accepted quantity exceeds this batch or the open PO balance.");
@@ -574,7 +627,7 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
     case "attachAccountingDocuments": {
       if (!permit("Site Personnel")) return fail("Switch to Site Personnel to upload delivery documents.");
       const batch = state.batches.find(value => value.id === command.batchId && value.poId === command.poId && ["confirmed", "posted"].includes(value.status));
-      const po = state.pos.find(value => value.id === command.poId && value.status === "served");
+      const po = state.pos.find(value => value.id === command.poId && value.status === "released");
       if (!batch || !po) return fail("Confirm this delivered batch before uploading accounting documents.");
       let record = state.accounting.find(value => value.poId === command.poId);
       const existing = (record?.documents || []).filter(value => value.batchId === batch.id);
@@ -604,7 +657,7 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
     }
     case "saveDocuments": {
       if (!permit("Accounting / Auditing")) return fail("Switch to Accounting to review documents.");
-      if (!state.pos.some(p => p.id === command.poId && ["approved", "served"].includes(p.status))) return fail("This PO is not ready for accounting review.");
+      if (!state.pos.some(p => p.id === command.poId && ["approved", "released"].includes(p.status))) return fail("This PO is not ready for accounting review.");
       if (command.review === "Complete" && (!command.invoiceRef.trim() || !command.receiptRef.trim())) return fail("Invoice and receipt references are required to complete review.");
       if (command.review === "Discrepancy" && !reasonOK(command.note)) return fail("Describe the discrepancy.", "note");
       let record = state.accounting.find(a => a.poId === command.poId);
@@ -614,22 +667,16 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       return done("Document review saved.");
     }
     case "recordPayment": {
-      if (!permit("Accounting / Auditing")) return fail("Switch to Accounting to record a payment reference.");
-      const po = state.pos.find(p => p.id === command.poId && ["approved", "served"].includes(p.status));
-      if (!po) return fail("This PO is not ready for payment tracking.");
-      if (!positive(command.amount) || command.amount > poTotal(state, po) - paidTotal(state, po.id)) return fail("Payment must be positive and within the unpaid PO amount.", "amount");
-      if (!command.reference.trim() || !command.date) return fail("Enter a payment reference and date.");
+      if (!permit("Finance")) return fail("Switch to Finance to record disbursement.");
+      const payment = state.paymentRequests.find(value => value.id === command.paymentRequestId && value.status === "approved");
+      if (!payment || state.payments.some(value => value.paymentRequestId === payment.id)) return fail("An approved, undisbursed payment request is required.");
+      const po = state.pos.find(value => value.id === payment.poId && ["approved", "released"].includes(value.status));
+      if (!po || !positive(payment.amount) || payment.amount > poTotal(state, po) - paidTotal(state, po.id) + 0.000001) return fail("Disbursement exceeds the unpaid PO balance.");
+      if (!["Bank", "Cash", "Check", "Other"].includes(command.method) || !command.reference.trim() || !validRequestDate(command.date)) return fail("Enter a valid payment method, reference and date.");
       const paymentId = id("payment");
-      state.payments.push({ id: paymentId, poId: po.id, amount: command.amount, method: command.method, reference: command.reference.trim(), date: command.date, actor });
-      log(po.id, `Payment reference recorded · ${command.amount}`);
-      return done("Payment reference recorded.", paymentId);
-    }
-    case "updateAssignment": {
-      if (!permit("Administrator")) return fail("Switch to Administrator to edit assignments.");
-      const site = state.sites.find(s => s.id === command.siteId);
-      if (!site || !command.manager.trim()) return fail("Enter the Project Manager's name.");
-      site.manager = command.manager.trim(); log(site.id, "Project Manager updated");
-      return done("Project Manager saved.");
+      state.payments.push({ id: paymentId, poId: po.id, paymentRequestId: payment.id, amount: payment.amount, method: command.method, reference: command.reference.trim(), date: command.date, actor });
+      payment.status = "disbursed"; payment.disbursedAt = at; payment.updatedAt = at;
+      log(po.id, `Finance disbursement recorded: ${payment.amount}`, command.reference); return done("Disbursement recorded. Accounting can review release eligibility.", paymentId);
     }
     case "setProjectDriveFolder": {
       if (!permit("Administrator")) return fail("Switch to Administrator to map a project folder.");
@@ -642,11 +689,11 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
     case "addSite": {
       if (!permit("Administrator")) return fail("Switch to Administrator to add a project.");
       const name = command.name.trim();
-      if (!name || !command.location.trim() || !command.manager.trim()) return fail("Complete the project and Project Manager fields.");
+      if (!name || !command.location.trim()) return fail("Complete the project name and location.");
       if (!nonnegative(command.budget)) return fail("Enter a valid budget of zero or more.", "budget");
       if (state.sites.some(site => site.name.toLowerCase() === name.toLowerCase())) return fail("Enter a unique project name.", "name");
       const siteId = id("site");
-      state.sites.push({ id: siteId, name, location: command.location.trim(), budget: command.budget, manager: command.manager.trim(), personnel: "" });
+      state.sites.push({ id: siteId, name, location: command.location.trim(), budget: command.budget, personnel: "" });
       log(siteId, "Project added");
       return done("Project added. Site Personnel can now create an MRF.", siteId);
     }
@@ -659,5 +706,6 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       log(supplierId, "Supplier added from quotation");
       return done("Supplier added from quotation.", supplierId);
     }
+    default: return fail("Unknown command.");
   }
 }

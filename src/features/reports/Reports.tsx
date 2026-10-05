@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { poStatusLabel } from "@/src/domain/workflow";
 import { useState } from "react";
 import { useDemo } from "@/src/app-state/DemoProvider";
 import { Badge, Empty, PageHeader } from "@/src/components/ui/Primitives";
@@ -28,9 +29,10 @@ export function Reports() {
     return request && included(request.siteId, batch.createdAt);
   });
   const budgetSites = state.sites.filter(site => selectedSite === "all" || site.id === selectedSite);
-  const pending = requests.filter(request => request.status === "submitted").length + pos.filter(po => ["finalized", "hold"].includes(po.status)).length;
-  const exceptions = pos.filter(po => ["hold", "returned", "rejected"].includes(po.status) || state.accounting.find(record => record.poId === po.id)?.review === "Discrepancy" || po.status === "served" && deliveryStatus(state, po) !== "Fully accepted");
-  const documentGaps = pos.filter(po => ["approved", "served"].includes(po.status) && state.accounting.find(record => record.poId === po.id)?.review !== "Complete");
+  const paymentRequests = state.paymentRequests.filter(value => pos.some(po => po.id === value.poId));
+  const pending = paymentRequests.filter(value => ["submitted", "hold"].includes(value.status)).length + requests.filter(request => request.status === "submitted").length + pos.filter(po => ["submitted", "hold"].includes(po.status)).length;
+  const exceptions = pos.filter(po => ["hold", "returned", "rejected"].includes(po.status) || state.accounting.find(record => record.poId === po.id)?.review === "Discrepancy" || po.status === "released" && deliveryStatus(state, po) !== "Fully accepted" || paymentRequests.some(value => value.poId === po.id && ["hold", "returned", "rejected"].includes(value.status)));
+  const documentGaps = pos.filter(po => ["approved", "released"].includes(po.status) && state.accounting.find(record => record.poId === po.id)?.review !== "Complete");
   const stockRows = budgetSites.flatMap(site => inventoryFor(state, site.id).map(item => ({ ...item, siteId: site.id })));
   const hasActivity = requests.length > 0 || pos.length > 0 || batches.length > 0 || stockRows.length > 0;
   const hasDateError = Boolean(from && to && from > to);
@@ -69,7 +71,7 @@ export function Reports() {
           <div className="data-rows">
             {["draft", "submitted", "returned", "approved", "rejected"].map(status => <div key={status}><span>{status}</span><strong>{requests.filter(request => request.status === status).length} MRFs</strong></div>)}
             <div><span>PO value in view</span><strong>{money(pos.reduce((sum, po) => sum + poTotal(state, po), 0))}</strong></div>
-            <div><span>Payments in view</span><strong>{money(pos.reduce((sum, po) => sum + paidTotal(state, po.id), 0))}</strong></div>
+            <div><span>Payment requests awaiting Finance</span><strong>{paymentRequests.filter(value => ["submitted", "hold", "approved"].includes(value.status)).length}</strong></div><div><span>Disbursements in view</span><strong>{money(pos.reduce((sum, po) => sum + paidTotal(state, po.id), 0))}</strong></div>
           </div>
         </section>
       </div>
@@ -91,7 +93,7 @@ export function Reports() {
         </div>
         <section className="panel">
           <div className="panel-heading"><h2>Exceptions and open deliveries</h2><Badge>{exceptions.length} records</Badge></div>
-          {exceptions.length ? <div className="table-frame embedded"><table><thead><tr><th>PO</th><th>Project</th><th>Status</th><th>Delivery</th><th>Amount</th><th>Created</th></tr></thead><tbody>{exceptions.map(po => <tr key={po.id}><td><Link className="table-primary" href={`/purchase-orders/${po.id}`}>{po.ref}</Link></td><td>{siteName(state, requestForPO(state, po)?.siteId || "")}</td><td><Badge value={po.status} /></td><td><Badge value={deliveryStatus(state, po)} /></td><td>{money(poTotal(state, po))}</td><td>{dateText(po.createdAt)}</td></tr>)}</tbody></table></div> : <Empty title="No open exceptions" detail="Held orders, discrepancies, and open deliveries will appear here." />}
+          {exceptions.length ? <div className="table-frame embedded"><table><thead><tr><th>PO</th><th>Project</th><th>Status</th><th>Delivery</th><th>Amount</th><th>Created</th></tr></thead><tbody>{exceptions.map(po => <tr key={po.id}><td><Link className="table-primary" href={`/purchase-orders/${po.id}`}>{po.ref}</Link></td><td>{siteName(state, requestForPO(state, po)?.siteId || "")}</td><td><Badge value={po.status}>{poStatusLabel(po.status)}</Badge></td><td><Badge value={deliveryStatus(state, po)} /></td><td>{money(poTotal(state, po))}</td><td>{dateText(po.createdAt)}</td></tr>)}</tbody></table></div> : <Empty title="No open exceptions" detail="Held orders, discrepancies, and open deliveries will appear here." />}
         </section>
       </>}
       <p className="helper-note">Figures reflect current project records and selected filters.</p>

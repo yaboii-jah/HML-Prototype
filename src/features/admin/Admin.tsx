@@ -4,7 +4,7 @@ import { useState, type FormEvent } from "react";
 import { useDemo } from "@/src/app-state/DemoProvider";
 import { Field, InlineError, PageHeader } from "@/src/components/ui/Primitives";
 import { useConfirmation } from "@/src/components/ui/ConfirmDialog";
-import { dateText } from "@/src/domain/format";
+import { dateText, money } from "@/src/domain/format";
 
 export function Admin() {
   const { confirm, confirmation } = useConfirmation();
@@ -16,15 +16,8 @@ export function Admin() {
     event.preventDefault();
     const formElement = event.currentTarget;
     const form = new FormData(formElement);
-    const result = await run({ type: "addSite", name: String(form.get("name")), location: String(form.get("location")), budget: Number(form.get("budget")), manager: String(form.get("manager")) });
+    const result = await run({ type: "addSite", name: String(form.get("name")), location: String(form.get("location")), budget: Number(form.get("budget")) });
     if (result.ok) { setError(""); formElement.reset(); } else setError(result.message);
-  };
-
-  const saveManager = async (event: FormEvent<HTMLFormElement>, siteId: string) => {
-    event.preventDefault();
-    const form = new FormData(event.currentTarget);
-    const result = await run({ type: "updateAssignment", siteId, manager: String(form.get("manager")) });
-    setError(result.ok ? "" : result.message);
   };
 
   const saveDriveFolder = async (event: FormEvent<HTMLFormElement>, siteId: string) => {
@@ -42,20 +35,18 @@ export function Admin() {
   return <>
     <PageHeader eyebrow="WORKSPACE SETTINGS" title="Administration" description="Manage projects and review workspace activity."/>
     <section className="panel">
-      <h2 className="panel-title">Projects and Project Managers</h2>
+      <h2 className="panel-title">Projects and Drive folders</h2>
       {!state.sites.length && <p className="helper-note">Add the first project below to make it available on material requests.</p>}
-      {state.sites.map(site => <div className="admin-row" key={site.id}><form onSubmit={event => void saveManager(event, site.id)}>
+      {state.sites.map(site => <div className="admin-row" key={site.id}><div className="admin-project-details">
         <h3>{site.name}</h3>
-        <div className="form-grid"><Field label="Project Manager"><input name="manager" defaultValue={site.manager}/></Field></div>
-        {state.role === "Administrator" && <button className="button secondary">Save Project Manager</button>}
-      </form><form className="drive-folder-form" onSubmit={event => void saveDriveFolder(event, site.id)}><Field label="Google Drive project folder"><input name="folder" type="text" defaultValue={site.driveFolderId ? `https://drive.google.com/drive/folders/${site.driveFolderId}` : ""} placeholder="Paste the project folder URL"/></Field>{state.role === "Administrator" && <button className="button secondary">Validate and save folder</button>}<small>Required before PM approval. The folder must be inside the configured company root.</small></form></div>)}
-      {state.role === "Administrator" && <form className="subform" onSubmit={event => void addProject(event)}>
+        <p>{site.location}</p><p>Allocated budget: <strong>{money(site.budget)}</strong></p>
+      </div><form className="drive-folder-form" onSubmit={event => void saveDriveFolder(event, site.id)}><Field label="Google Drive project folder"><input name="folder" type="text" defaultValue={site.driveFolderId ? `https://drive.google.com/drive/folders/${site.driveFolderId}` : ""} placeholder="Paste the project folder URL"/></Field>{state.role === "Administrator" && <button className="button secondary">Validate and save folder</button>}<small>Required before Procurement approval. The folder must be inside the configured company root.</small></form></div>)}
+      {state.role === "Administrator" && <form className="subform admin-add-project" onSubmit={event => void addProject(event)}>
         <h3>Add project / site</h3>
         <div className="form-grid">
           <Field label="Project name"><input name="name" required /></Field>
           <Field label="Location"><input name="location" required /></Field>
           <Field label="Allocated budget (PHP)"><input name="budget" type="number" min="0" step="0.01" required /></Field>
-          <Field label="Project Manager"><input name="manager" required /></Field>
         </div>
         <button className="button primary">Add project</button>
       </form>}

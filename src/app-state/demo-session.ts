@@ -3,7 +3,6 @@ import { ROLES, type Role } from "../domain/types.ts";
 export const DEMO_PASSWORD = "Demo123!";
 export const DEMO_ACCOUNTS: { role: Role; email: string }[] = [
   { role: "Site Personnel", email: "site@constructsync.example" },
-  { role: "Project Manager", email: "pm@constructsync.example" },
   { role: "Procurement", email: "procurement@constructsync.example" },
   { role: "Finance", email: "finance@constructsync.example" },
   { role: "Logistics", email: "logistics@constructsync.example" },
@@ -42,7 +41,9 @@ class LocalDemoSession {
     this.initialized = true;
     try {
       const saved = localStorage.getItem(SESSION_KEY);
-      this.view = { role: ROLES.find(role => role === saved) ?? null, status: "ready" };
+      const role = ROLES.find(role => role === saved) ?? null;
+      if (saved && !role) localStorage.removeItem(SESSION_KEY);
+      this.view = { role, status: "ready" };
     } catch {
       this.view = { role: null, status: "volatile" };
     }
@@ -52,6 +53,7 @@ class LocalDemoSession {
   subscribe(listener: () => void) { this.listeners.add(listener); return () => this.listeners.delete(listener); }
 
   select(role: Role) {
+    if (!ROLES.includes(role)) { this.clear(); return; }
     try {
       localStorage.setItem(SESSION_KEY, role);
       this.view = { role, status: "ready" };

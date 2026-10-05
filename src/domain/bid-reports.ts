@@ -12,10 +12,9 @@ export function bidReportReadiness(state: DemoSnapshot, requestId: string): stri
   const request = state.requests.find(value => value.id === requestId);
   if (!procurementReady(request)) return "The MRF must be approved, with no correction or pending archive.";
   if (!state.sites.some(site => site.id === request?.siteId && site.driveFolderId)) return "Map the project's Google Drive folder before generating a report.";
-  const pos = state.pos.filter(po => po.mrfId === requestId && po.status !== "rejected");
-  if (!pos.length) return "Generate and finalize at least one supplier PO first.";
-  if (pos.some(po => po.status === "draft" || po.status === "returned")) return "Finalize every draft or Finance-returned PO before generating a new report.";
-  if (pos.some(po => !state.quotes.some(quote => quote.id === po.quoteId && quote.mrfId === requestId && isFinalizedQuote(quote) && (!quote.currency || quote.currency === "PHP")))) return "A PO's finalized PHP source quotation is missing.";
+  const quotes = latestFinalizedQuotes(state, requestId).filter(quote => !quote.currency || quote.currency === "PHP");
+  if (!quotes.length) return "Finalize a PHP supplier quotation before generating a comparison.";
+  if (quotes.some(quote => quote.archive?.status === "pending")) return "Archive the finalized supplier quotations before generating a comparison.";
   return "";
 }
 
@@ -93,7 +92,7 @@ export function validBidReport(value: unknown): value is BidReport {
       strings(data.project.name, data.project.location, data.request.ref, data.request.requestDate, data.request.purchaser) &&
       data.request.id === report.requestId && data.project.id === data.request.siteId && typeof data.project.driveFolderId === "string" &&
       data.request.items.length > 0 && data.request.items.every(item => typeof item.name === "string" && typeof item.unit === "string" && strings(item.neededDate, item.location) && item.quantity > 0 && Number.isFinite(item.quantity)) &&
-      Array.isArray(data.excluded) && data.excluded.every(offer => strings(offer.supplierName, offer.ref, offer.currency)) && data.pos.length > 0 && data.pos.every(po => strings(po.ref, po.selectionReason, po.notes, po.supersededReason) && charges(po) && !poFinancialError(po) && po.mrfId === report.requestId && ["finalized", "hold", "approved", "served"].includes(po.status) && data.offers.some(offer => offer.quote.id === po.quoteId) && (!po.lines || po.lines.every(line => pricing(line) && data.request.items.some(item => item.id === line.itemId)))) &&
+      Array.isArray(data.excluded) && data.excluded.every(offer => strings(offer.supplierName, offer.ref, offer.currency)) && Array.isArray(data.pos) && data.pos.every(po => strings(po.ref, po.selectionReason, po.notes, po.supersededReason) && charges(po) && !poFinancialError(po) && po.mrfId === report.requestId && ["draft", "submitted", "hold", "returned", "approved", "released", "finalized", "served"].includes(po.status) && data.offers.some(offer => offer.quote.id === po.quoteId) && (!po.lines || po.lines.every(line => pricing(line) && data.request.items.some(item => item.id === line.itemId)))) &&
       data.offers.length > 0 && data.offers.length <= 4094 && data.offers.every(offer => typeof offer.supplierName === "string" && typeof offer.source === "string" && revision(offer.quote.version) && strings(offer.quote.ref, offer.quote.terms, offer.quote.available, offer.quote.validity, offer.quote.quoteDate, offer.quote.deliveryTerms, offer.quote.quoteNotes) && (!offer.quote.supplierDetails || Object.values(offer.quote.supplierDetails).every(text)) && charges(offer.quote) && offer.quote.mrfId === report.requestId && [undefined, "finalized"].includes(offer.quote.reviewStatus) && (!offer.quote.currency || offer.quote.currency === "PHP") && bidLines(data, offer.quote).every(line => typeof line.description === "string" && typeof line.unit === "string" && strings(line.brand, line.specification, line.varianceReason, line.notes, line.supplierItemCode) && pricing(line) && (!line.requestItemId || line.conversionFactor > 0 && finite(line.conversionFactor))) && finite(offer.quote.leadDays));
   } catch { return false; }
 }

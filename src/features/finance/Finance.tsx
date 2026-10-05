@@ -1,32 +1,75 @@
-"use client";
+﻿"use client";
 
-import { useArchive } from "@/src/app-state/ArchiveProvider";
 import Link from "next/link";
-import { syncApprovedPO } from "@/src/features/requests/archive-purchasing";
 import { useState, type FormEvent } from "react";
 import { useDemo } from "@/src/app-state/DemoProvider";
 import { Badge, Empty, Field, InlineError, PageHeader, RecordHeader, Timeline } from "@/src/components/ui/Primitives";
 import { useConfirmation } from "@/src/components/ui/ConfirmDialog";
 import { MissingRecord } from "@/src/components/ui/States";
-import { daysWaiting, money } from "@/src/domain/format";
-import { budgetFor, orderedFor, poItemTotal, poItems, poTotal, quoteForPO, requestForPO, siteName, supplierName } from "@/src/domain/selectors";
-import type { Priority } from "@/src/domain/types";
+import { dateText, daysWaiting, money, today } from "@/src/domain/format";
+import { paidTotal, poTotal, requestForPO, siteName, supplierName } from "@/src/domain/selectors";
+import { poStatusLabel } from "@/src/domain/workflow";
+import type { Payment, PaymentRequest, Priority } from "@/src/domain/types";
 
 export function FinanceQueue() {
-  const { snapshot: state }=useDemo();const [priority,setPriority]=useState("all"),[min,setMin]=useState(""),[sort,setSort]=useState("priority");if(!state)return null;
-  const priorityRank={Urgent:0,High:1,Normal:2};
-  const rows=state.pos.filter(p=>["finalized","hold"].includes(p.status)&&(state.siteFilter==="all"||requestForPO(state,p)?.siteId===state.siteFilter)&&(priority==="all"||p.priority===priority)&&(!min||poTotal(state,p)>=Number(min))).sort((a,b)=>sort==="amount"?poTotal(state,b)-poTotal(state,a):sort==="waiting"?a.updatedAt.localeCompare(b.updatedAt):priorityRank[a.priority]-priorityRank[b.priority]||a.updatedAt.localeCompare(b.updatedAt));
-  return <><PageHeader eyebrow="BUDGET CONTROL" title="Finance queue" description="Finalized and held POs awaiting a budget decision."/><div className="toolbar"><select aria-label="Priority" value={priority} onChange={e=>setPriority(e.target.value)}><option value="all">All priorities</option><option>Normal</option><option>High</option><option>Urgent</option></select><input aria-label="Minimum PO amount" type="number" min="0" placeholder="Minimum amount ₱" value={min} onChange={e=>setMin(e.target.value)}/><select aria-label="Sort Finance queue" value={sort} onChange={e=>setSort(e.target.value)}><option value="priority">Priority, then oldest</option><option value="waiting">Longest waiting</option><option value="amount">Highest amount</option></select></div><div className="table-frame"><table><thead><tr><th>PO</th><th>Project</th><th>Priority</th><th>Amount</th><th>Available</th><th>Waiting</th><th>Status</th></tr></thead><tbody>{rows.map(po=><tr key={po.id}><td><Link className="table-primary" href={`/finance/${po.id}`}>{po.ref}</Link><small>{supplierName(state,po)}</small></td><td>{siteName(state,requestForPO(state,po)?.siteId||"")}</td><td><Badge value={po.priority}/></td><td>{money(poTotal(state,po))}</td><td>{money(budgetFor(state,requestForPO(state,po)?.siteId||"").available)}</td><td>{daysWaiting(po.updatedAt)} days</td><td><Badge value={po.status}/></td></tr>)}</tbody></table>{!rows.length&&<Empty detail="No POs currently need a Finance decision."/>}</div></>;
+  const { snapshot: state } = useDemo();
+  const [priority, setPriority] = useState("all"), [min, setMin] = useState(""), [sort, setSort] = useState("priority");
+  if (!state) return null;
+  const rank = { Urgent: 0, High: 1, Normal: 2 };
+  const rows = state.paymentRequests.filter(value => {
+    const po = state.pos.find(po => po.id === value.poId);
+    return po && ["submitted", "hold", "approved"].includes(value.status) && (state.siteFilter === "all" || requestForPO(state, po)?.siteId === state.siteFilter) && (priority === "all" || value.priority === priority) && (!min || value.amount >= Number(min));
+  }).sort((a, b) => sort === "amount" ? b.amount - a.amount : sort === "waiting" ? a.updatedAt.localeCompare(b.updatedAt) : rank[a.priority] - rank[b.priority] || a.updatedAt.localeCompare(b.updatedAt));
+  return <><PageHeader eyebrow="PAYMENT APPROVAL AND DISBURSEMENT" title="Finance queue" description="Review payment requests from Accounting and record approved disbursements."/>
+    <div className="toolbar"><select aria-label="Priority" value={priority} onChange={event => setPriority(event.target.value)}><option value="all">All priorities</option><option>Normal</option><option>High</option><option>Urgent</option></select><input aria-label="Minimum payment amount" type="number" min="0" placeholder="Minimum amount ₱" value={min} onChange={event => setMin(event.target.value)}/><select aria-label="Sort Finance queue" value={sort} onChange={event => setSort(event.target.value)}><option value="priority">Priority, then oldest</option><option value="waiting">Longest waiting</option><option value="amount">Highest amount</option></select></div>
+    <div className="table-frame"><table><thead><tr><th>Payment request / PO</th><th>Project</th><th>Priority</th><th>Amount</th><th>Waiting</th><th>Status</th><th>Next action</th></tr></thead><tbody>{rows.map(value => { const po = state.pos.find(po => po.id === value.poId)!; return <tr key={value.id}><td><Link className="table-primary" href={`/finance/${po.id}`}>{value.ref}</Link><small>{po.ref} · {supplierName(state, po)}</small></td><td>{siteName(state, requestForPO(state, po)?.siteId || "")}</td><td><Badge value={value.priority}/></td><td>{money(value.amount)}</td><td>{daysWaiting(value.updatedAt)} days</td><td><Badge value={value.status}/></td><td>{value.status === "approved" ? "Record disbursement" : "Review payment"}</td></tr>; })}</tbody></table>{!rows.length && <Empty detail="No payment requests currently need Finance action."/>}</div>
+  </>;
 }
 
 export function FinanceReview({ id }: { id: string }) {
-  const { perform } = useArchive();
+  const { snapshot: state } = useDemo();
+  if (!state) return null;
+  const po = state.pos.find(value => value.id === id);
+  if (!po) return <MissingRecord name="Payment review" listHref="/finance"/>;
+  const request = requestForPO(state, po);
+  if (!request) return <MissingRecord name="Linked MRF" listHref="/finance"/>;
+  const requests = state.paymentRequests.filter(value => value.poId === id).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  return <><RecordHeader backHref="/finance" backLabel="Finance queue" eyebrow={`${siteName(state, request.siteId)} · ${po.ref}`} title="Payment review" badges={<Badge value={po.status}>{poStatusLabel(po.status)}</Badge>}/>
+    <div className="metric-strip"><div><small>PO TOTAL</small><strong>{money(poTotal(state, po))}</strong></div><div><small>DISBURSED</small><strong>{money(paidTotal(state, id))}</strong></div><div><small>UNPAID BALANCE</small><strong>{money(Math.max(0, poTotal(state, po) - paidTotal(state, id)))}</strong></div><div><small>ARRANGEMENT</small><strong>{po.paymentMode === "credit" ? "Credit / terms" : po.paymentMode === "upfront" ? "Upfront" : "Awaiting review"}</strong></div></div>
+    <section className="panel"><div className="data-rows"><div><span>Supplier</span><strong>{supplierName(state, po)}</strong></div><div><span>Purchase order</span><Link href={`/purchase-orders/${id}`}>{po.ref}</Link></div><div><span>Accounting</span><Link href={`/accounting/${id}`}>PO review and release</Link></div></div><p className="helper-note">Payment approval records a decision. Disbursement records the actual payment. Accounting owns release to Logistics.</p></section>
+    {requests.map(value => <PaymentReview key={value.id} paymentRequest={value}/>)}{!requests.length && <section className="panel"><Empty detail="Accounting has not prepared a payment request for this PO."/></section>}
+    <Timeline state={state} ids={[id, request.id]}/>
+  </>;
+}
+
+function PaymentReview({ paymentRequest: value }: { paymentRequest: PaymentRequest }) {
+  const { snapshot: state, run } = useDemo();
   const { confirm, confirmation } = useConfirmation();
-  const { snapshot: state, run }=useDemo(); const [decision,setDecision]=useState<"hold"|"return"|"reject"|null>(null),[error,setError]=useState(""); if(!state)return null;
-  const po=state.pos.find(p=>p.id===id);if(!po)return <MissingRecord name="PO review" listHref="/finance"/>;
-  const request=requestForPO(state,po),quote=quoteForPO(state,po);if(!request||!quote)return <MissingRecord name="Linked PO data" listHref="/finance"/>;
-  const budget=budgetFor(state,request.siteId),total=poTotal(state,po),active=["finalized","hold"].includes(po.status);
-  const decide=async(choice:"approve"|"hold"|"return"|"reject",reason?:string)=>{if(!await confirm(`${choice === "approve" ? "Approve" : choice === "hold" ? "Hold" : choice === "return" ? "Return" : "Reject"} ${po.ref}?`,choice === "approve" ? "The approved PO will be archived to Google Drive before Procurement serves it." : `The PO will be marked ${choice} and the reason will be recorded.`,`${choice === "approve" ? "Approve" : choice === "hold" ? "Hold" : choice === "return" ? "Return" : "Reject"} PO`,choice === "reject"))return;const result=await run({type:"reviewPO",id,decision:choice,reason});if(!result.ok)setError(result.message);else{setDecision(null);setError("");if(choice==="approve"){const approved=result.snapshot.pos.find(value=>value.id===id);if(approved){const archived=await perform(`po-${approved.id}`, `PO ${approved.ref}`, progress => syncApprovedPO(result.snapshot,approved,run,progress));if(!archived.ok)setError(archived.message);}}}};
-  return <><RecordHeader backHref="/finance" backLabel="Finance queue" eyebrow={`${siteName(state,request.siteId)} · ${po.ref}`} title="Budget review" badges={<><Badge value={po.status}/><Badge value={po.priority}/></>}/><div className="content-grid"><section className="panel"><h2 className="panel-title">Purchase under review</h2><div className="data-rows"><div><span>Supplier</span><strong>{supplierName(state,po)}</strong></div><div><span>MRF</span><Link href={`/requests/${request.id}`}>{request.ref}</Link></div><div><span>Terms</span><strong>{quote.terms}</strong></div><div><span>Waiting</span><strong>{daysWaiting(po.updatedAt)} days</strong></div></div><div className="table-frame embedded"><table><thead><tr><th>Material</th><th>Quantity</th><th>Value</th></tr></thead><tbody>{poItems(state,po).map(item=><tr key={item.id}><td>{item.name}</td><td>{orderedFor(state,po,item.id)} {item.unit}</td><td>{money(poItemTotal(state,po,item.id))}</td></tr>)}</tbody></table></div><div className="po-total"><span>PO total</span><strong>{money(total)}</strong></div><p className="muted">Selected because: {po.selectionReason}</p></section><section className="panel"><h2 className="panel-title">Project budget</h2><div className="data-rows"><div><span>Allocated</span><strong>{money(budget.allocated)}</strong></div><div><span>Outstanding approved commitment</span><strong>{money(budget.committed)}</strong></div><div><span>Paid / spent</span><strong>{money(budget.spent)}</strong></div><div><span>Available for this PO</span><strong>{money(budget.available)}</strong></div></div>{total>budget.available&&<div className="callout bad"><strong>Approval blocked</strong><p>This PO exceeds available budget by {money(total-budget.available)}.</p></div>}{po.reviewReason&&<div className="callout warn"><strong>Current hold or return reason</strong><p>{po.reviewReason}</p></div>}<p className="helper-note">Budget position includes approved commitments and recorded payments.</p></section></div>
-    {state.role==="Finance"&&active&&<section className="panel"><div className="panel-heading"><h2>Finance decision</h2><Field label="Priority"><select value={po.priority} onChange={e=>void run({type:"setPriority",id,priority:e.target.value as Priority})}><option>Normal</option><option>High</option><option>Urgent</option></select></Field></div><div className="button-row"><button className="button primary" disabled={total>budget.available} onClick={()=>void decide("approve")}>Approve budget</button><button className="button secondary" onClick={()=>setDecision("hold")}>Hold with reason</button><button className="button secondary" onClick={()=>setDecision("return")}>Return with reason</button><button className="button danger-outline" onClick={()=>setDecision("reject")}>Reject with reason</button></div>{decision&&<form className="decision-panel" onSubmit={(e:FormEvent<HTMLFormElement>)=>{e.preventDefault();void decide(decision,String(new FormData(e.currentTarget).get("reason")));}}><Field label={`${decision} reason`}><textarea name="reason" required minLength={5}/></Field><div className="button-row"><button type="button" className="button secondary" onClick={()=>setDecision(null)}>Cancel</button><button className="button primary">Continue to confirmation</button></div></form>}<InlineError message={error}/></section>}{confirmation}<Timeline state={state} ids={[id,request.id]}/></>;
+  const [decision, setDecision] = useState<"hold" | "return" | "reject" | null>(null), [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  if (!state) return null;
+  const editable = state.role === "Finance", active = ["submitted", "hold"].includes(value.status);
+  const payment = state.payments.find(payment => payment.paymentRequestId === value.id);
+  const decide = async (choice: "approve" | "hold" | "return" | "reject", reason?: string) => {
+    if (!await confirm(`${choice === "approve" ? "Approve payment" : choice === "return" ? "Return to Accounting" : choice === "hold" ? "Hold payment" : "Reject payment"}?`, choice === "approve" ? `${money(value.amount)} will be approved for disbursement. No payment is recorded yet.` : "The reason will be recorded on this payment request.", "Confirm decision", choice === "reject")) return;
+    const result = await run({ type: "reviewPaymentRequest", id: value.id, decision: choice, reason });
+    setError(result.ok ? "" : result.message);
+    if (result.ok) setDecision(null);
+  };
+  const disburse = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    if (!await confirm("Record actual disbursement?", `${money(value.amount)} will be recorded as paid against the PO. This payment request will close.`, "Record disbursement")) return;
+    setBusy(true);
+    const result = await run({ type: "recordPayment", paymentRequestId: value.id, method: String(form.get("method")) as Payment["method"], reference: String(form.get("reference") || ""), date: String(form.get("date")) });
+    setError(result.ok ? "" : result.message);
+    setBusy(false);
+  };
+  return <section className="panel finance-payment-review"><div className="panel-heading"><div><h2>{value.ref}</h2><p>{money(value.amount)} · {value.note || "Supplier payment"}</p></div><Badge value={value.status}/></div>
+    {value.reason && <div className="callout warn"><strong>Review reason</strong><p>{value.reason}</p></div>}
+    {editable && active && <><Field label="Priority"><select value={value.priority} onChange={event => void run({ type: "setPriority", id: value.id, priority: event.target.value as Priority })}><option>Normal</option><option>High</option><option>Urgent</option></select></Field><div className="button-row"><button className="button primary" onClick={() => void decide("approve")}>Approve payment</button><button className="button secondary" onClick={() => setDecision("hold")}>Hold with reason</button><button className="button secondary" onClick={() => setDecision("return")}>Return to Accounting</button><button className="button danger-outline" onClick={() => setDecision("reject")}>Reject with reason</button></div>{decision && <form className="decision-panel" onSubmit={event => { event.preventDefault(); void decide(decision, String(new FormData(event.currentTarget).get("reason"))); }}><Field label={`${decision} reason`}><textarea name="reason" required minLength={5}/></Field><div className="button-row"><button type="button" className="button secondary" onClick={() => setDecision(null)}>Cancel</button><button className="button primary">Continue to confirmation</button></div></form>}</>}
+    {editable && value.status === "approved" && <form className="form-stack subform finance-disbursement-form" onSubmit={disburse}><h3>Record disbursement</h3><p className="helper-note">Amount: {money(value.amount)}. Record the approved amount after the supplier is paid.</p><div className="form-grid"><Field label="Method"><select name="method"><option>Bank</option><option>Cash</option><option>Check</option><option>Other</option></select></Field><Field label="Payment reference"><input name="reference" required/></Field><Field label="Payment date"><input name="date" type="date" defaultValue={today()} required/></Field></div><button className="button primary" disabled={busy}>Record disbursement</button></form>}
+    {payment && <div className="data-rows"><div><span>Disbursement</span><strong>{money(payment.amount)} · {payment.method}</strong></div><div><span>Reference</span><strong>{payment.reference}</strong></div><div><span>Date</span><strong>{dateText(payment.date)}</strong></div></div>}
+    <InlineError message={error}/>{confirmation}
+  </section>;
 }

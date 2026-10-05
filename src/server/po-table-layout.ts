@@ -75,7 +75,7 @@ export function drawPoLayout(template: Awaited<ReturnType<typeof documentTemplat
       widths.forEach((cellWidth, index) => { box(sheet, x, top, cellWidth, 14, blue); write(sheet, [labels[index]], x, top + 3, cellWidth, "center", true, true); box(sheet, x, top + 14, cellWidth, height); write(sheet, content[index], x, top + 17, cellWidth, "center"); x += cellWidth; });
       top += 14 + height + 14;
     }
-    if (!["approved", "served"].includes(po.status)) sheet.drawText("PREVIEW — NOT FOR ISSUE", { x: 135, y: 85, font: bold, size: 20, opacity: .12 });
+    if (!["approved", "released"].includes(po.status)) sheet.drawText("PREVIEW — NOT FOR ISSUE", { x: 135, y: 85, font: bold, size: 20, opacity: .12 });
   };
   const widths = [59, 282, 29.5, 29.5, 70, 70];
   const heading = () => {

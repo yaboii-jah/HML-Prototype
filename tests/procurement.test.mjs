@@ -49,7 +49,7 @@ test("manual quotation needs a supplier file and completed Drive archive before 
   assert.equal(state.pendingAwards.length, 1);
 });
 
-test("Finance approval waits for PO PDF archive before serving", () => {
+test("Accounting approval waits for PO PDF archive before release", () => {
   let { state, request } = setup();
   const quote = draft(request.id, "Supplier A", 700, "po-archive");
   quote.lines[0].matchConfirmed = true;
@@ -60,14 +60,14 @@ test("Finance approval waits for PO PDF archive before serving", () => {
   state = execute(state, { type: "createAwardPO", requestId: request.id, quoteId: quote.id, lines: [{ itemId: request.items[0].id, quoteLineId: quote.lines[0].id, quantity: 2, unitPrice: 700 }], tax: 0, freight: 0, discount: 0, reason: "Supplier selected for price", notes: "" });
   const po = state.pos.at(-1);
   state = execute(state, { type: "savePO", id: po.id, quoteId: quote.id, lines: po.lines, tax: 0, freight: 0, discount: 0, notes: "", reason: po.selectionReason, finalize: true });
-  state = execute(state, { type: "setRole", role: "Finance" });
+  state = execute(state, { type: "setRole", role: "Accounting / Auditing" });
+  state = execute(state, { type: "saveAccountingPO", id: po.id, paymentMode: "credit", financial: { ...po.financial, reviewed: true }, adjustments: po.adjustments.map(value => ({ ...value, confirmed: true })) });
   state = execute(state, { type: "reviewPO", id: po.id, decision: "approve" });
   assert.equal(state.pos.at(-1).archive.status, "pending");
-  state = execute(state, { type: "setRole", role: "Procurement" });
-  assert.equal(applyCommand(state, { type: "servePO", id: po.id }, context).ok, false);
+  assert.equal(applyCommand(state, { type: "releasePO", id: po.id }, context).ok, false);
   state = execute(state, { type: "completePOArchive", id: po.id, fileId: "drive-po", url: "https://drive.google.com/file/d/drive-po/view" });
-  state = execute(state, { type: "servePO", id: po.id });
-  assert.equal(state.pos.at(-1).status, "served");
+  state = execute(state, { type: "releasePO", id: po.id });
+  assert.equal(state.pos.at(-1).status, "released");
 });
 
 test("quote drafts persist through commands and cannot finalize with unresolved match or printed total", () => {
@@ -136,7 +136,7 @@ test("a finalized quote revision blocks old draft PO finalization until Procurem
   const adjustments = po.adjustments.map(value => ({ ...value, confirmed: true }));
   assert.equal(applyCommand(state, { type: "savePO", id: po.id, quoteId: po.quoteId, lines, adjustments, notes: "", reason: po.selectionReason, finalize: true }, context).ok, false);
   state = execute(state, { type: "savePO", id: po.id, quoteId: po.quoteId, lines, adjustments, notes: "", reason: po.selectionReason, supersededReason: "Supplier confirmed original offer still applies", finalize: true });
-  assert.equal(state.pos.at(-1).status, "finalized");
+  assert.equal(state.pos.at(-1).status, "submitted");
   assert.equal(state.pos.at(-1).quoteId, quote.id);
 });
 

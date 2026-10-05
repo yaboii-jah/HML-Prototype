@@ -19,9 +19,11 @@ const baseUrl = (process.argv[2] || "http://localhost:3000").replace(/\/$/, "");
 const browser = spawn(edge, ["--headless=new", "--disable-gpu", "--no-first-run", `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`, baseUrl], { windowsHide: true, stdio: "ignore" });
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 let ws;
+process.on("SIGINT", () => { ws?.close(); browser.kill(); process.exit(130); });
 try {
   let target;
   for (let i = 0; i < 80; i++) { try { const pages = await fetch(`http://127.0.0.1:${port}/json`).then(r => r.json()); target = pages.find(p => p.type === "page" && p.url.startsWith(baseUrl)); if (target) break; } catch {} await sleep(250); }
+  console.log("Test browser debug port",port);
   if (!target) throw new Error("Edge debugging page did not start");
   ws = new WebSocket(target.webSocketDebuggerUrl);
   await new Promise((resolve, reject) => { ws.onopen = resolve; ws.onerror = reject; });
@@ -78,14 +80,14 @@ try {
     };
   })();` });
   const run = async code => { const result = await call("Runtime.evaluate", { expression: `(()=>{${code}})()`, returnByValue: true }); if (result.exceptionDetails) throw new Error(result.exceptionDetails.exception?.description || result.exceptionDetails.text); return result.result.value; };
-  const wait = async code => { for (let i = 0; i < 100; i++) { try { const value = await run(code); if (value) return value; } catch {} await sleep(120); } throw new Error(`Timed out: ${code}`); };
+  const wait = async code => { for (let i = 0; i < 100; i++) { try { const value = await run(code); if (value) return value; } catch (cause) { if (String(cause).includes("CDP timeout")) throw cause; } await sleep(120); } throw new Error(`Timed out: ${code}; ${JSON.stringify(await run("return {page:location.pathname,errors:[...document.querySelectorAll('.inline-error,.field-error')].map(el=>el.textContent)};"))}; exceptions: ${browserExceptions.join("; ")}`); };
   const navigate = async url => { await call("Page.navigate", { url: `${baseUrl}${url}` }); await wait(`return location.pathname === ${JSON.stringify(url.split("?")[0])} && !!document.querySelector('h1') && !document.querySelector('.state-screen');`); await sleep(150); };
   const acceptPending = async () => { await sleep(90); if (await run("return !!document.querySelector('.confirm-dialog[open]');")) await run("document.querySelector('.confirm-dialog[open] .confirm-actions button:last-child').click();return true;"); };
   const click = async (text, selector = "button") => { await wait(`return [...document.querySelectorAll(${JSON.stringify(selector)})].some(x=>x.textContent.trim().includes(${JSON.stringify(text)}));`); const result = await run(`const el=[...document.querySelectorAll(${JSON.stringify(selector)})].find(x=>x.textContent.trim().includes(${JSON.stringify(text)}));if(!el)throw Error(${JSON.stringify(`Missing ${selector}: ${text}`)});el.click();return true;`); await acceptPending(); return result; };
   const fill = async (selector, value) => { await wait(`return !!document.querySelector(${JSON.stringify(selector)});`); return run(`const el=document.querySelector(${JSON.stringify(selector)});if(!el)throw Error(${JSON.stringify(`Missing input: ${selector}`)});const kind=el.tagName==='TEXTAREA'?HTMLTextAreaElement:el.tagName==='SELECT'?HTMLSelectElement:HTMLInputElement;Object.getOwnPropertyDescriptor(kind.prototype,'value').set.call(el,${JSON.stringify(String(value))});el.dispatchEvent(new Event(el.tagName==='SELECT'?'change':'input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));return true;`); };
   const uploadFiles = async (selector, files) => { const { root } = await call("DOM.getDocument"); const { nodeId } = await call("DOM.querySelector", { nodeId: root.nodeId, selector }); if (!nodeId) throw new Error(`Missing file input: ${selector}`); await call("DOM.setFileInputFiles", { nodeId, files }); };
   const submit = async (selector, button) => { await wait(`return !!document.querySelector(${JSON.stringify(selector)});`); const result = await run(`const form=document.querySelector(${JSON.stringify(selector)});if(!form)throw Error('Missing form');const submitter=${button ? `form.querySelector(${JSON.stringify(button)})` : "undefined"};form.requestSubmit(submitter);return true;`); await acceptPending(); return result; };
-  const state = () => run("return JSON.parse(localStorage.getItem('hml-constructsync-demo-v11'));");
+  const state = () => run("return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12'));");
   const requestStep = () => run("return document.querySelector('.request-steps [aria-current=step]')?.textContent.trim();");
   const checkRequestWidths = async step => {
     for (const width of [1440, 1024, 768, 414, 375, 320]) {
@@ -105,7 +107,20 @@ try {
     }
     await call("Emulation.clearDeviceMetricsOverride");
   };
-  const installFixture = async () => { await run(`localStorage.setItem('hml-constructsync-demo-v11', ${JSON.stringify(JSON.stringify(seedDemo()))}); return true;`); await call("Page.reload", { ignoreCache: true }); };
+  const checkDepartmentLayout = async (selector, label) => {
+    for (const width of [1440,1024,768,414,375,320]) {
+      await call("Emulation.setDeviceMetricsOverride", { width, height: 900, deviceScaleFactor: 1, mobile: width < 800 });
+      await sleep(250);
+      await run(`document.querySelector(${JSON.stringify(selector)}).scrollIntoView({block:'start'});return true;`);
+      assert.equal(await run("return document.documentElement.scrollWidth<=innerWidth+1;"),true,`${label} must fit at ${width}px`);
+      assert.equal(await run(`return [...document.querySelector(${JSON.stringify(selector)}).querySelectorAll('.field input,.field select,.field textarea')].every(el=>{const r=el.getBoundingClientRect();return !r.width||r.right<=innerWidth+1});`),true,`${label} controls must fit`);
+      for (const theme of ["light","dark"]) { await run(`document.documentElement.dataset.theme=${JSON.stringify(theme)};return true;`); await checkContrast(); }
+      await run("document.documentElement.dataset.theme='light';return true;");
+      if(width===1440 || width===375) await writeFile(path.join(profile,`${label}-${width}.png`),Buffer.from((await call("Page.captureScreenshot",{format:"png"})).data,"base64"));
+    }
+    await call("Emulation.clearDeviceMetricsOverride");
+  };
+  const installFixture = async () => { await run(`localStorage.setItem('hml-constructsync-demo-v12', ${JSON.stringify(JSON.stringify(seedDemo()))}); return true;`); await call("Page.reload", { ignoreCache: true }); };
   const role = async name => { await wait("const button=document.querySelector('.masthead-role');if(!button)return false;button.click();return true;"); await wait("return !!document.querySelector('.role-modal[open] .role-options');"); await run(`const button=[...document.querySelectorAll('.role-options button')].find(x=>x.querySelector('strong')?.textContent===${JSON.stringify(name)});if(!button)throw Error('Role missing');button.click();return true;`); await wait(`return document.querySelector('.masthead-role')?.textContent.includes(${JSON.stringify(name)}) && !document.querySelector('.role-modal[open]') && location.pathname==='/dashboard';`); };
   const checkContrast = async (selector = "p,small,dt,th,.side-caption,.side-link,.field>span,.button,.text-link,.badge", collect = false) => {
     const failures = await run(`
@@ -169,6 +184,8 @@ try {
   assert.equal(await run("return document.querySelector('.signin-role-options') === null;"), true);
   await run("document.querySelector('.signin-role-trigger').click();return true;");
   await wait("return !!document.querySelector('.signin-role-options');");
+  assert.equal(await run("return document.querySelectorAll('.signin-role-options button').length;"), 7, "Sign-in offers exactly seven roles");
+  assert.equal(await run("return !!document.querySelector('[aria-label=\"Fill Project Manager demo credentials\"]');"), false);
   assert.equal(await run("return document.querySelector('.signin-role-options').getBoundingClientRect().bottom <= innerHeight;"), true, "Role picker must stay on screen");
   assert.equal(await run("return document.documentElement.scrollHeight <= innerHeight;"), true, "Opening roles must not scroll the page");
   await writeFile(path.join(profile, "sign-in-role-picker.png"), Buffer.from((await call("Page.captureScreenshot", { format: "png" })).data, "base64"));
@@ -184,6 +201,11 @@ try {
   await run("document.querySelector('.signin-error').scrollIntoView({block:'nearest'});return true;");
   assert.equal(await run("return document.querySelector('.signin-error').getBoundingClientRect().bottom <= innerHeight;"), true, "Sign-in error must be reachable on a short phone");
   await call("Emulation.clearDeviceMetricsOverride");
+  await fill("#demo-email", "pm@constructsync.example");
+  await fill("#demo-password", "Demo123!");
+  await click("Sign in", ".signin-form button");
+  await wait("return !!document.querySelector('.signin-error');");
+  assert.equal(await run("return location.pathname;"), "/sign-in", "Removed PM credentials cannot enter the workspace");
   await run("document.querySelector('.signin-role-trigger').click();return true;");
   await run("document.querySelector('[aria-label=\"Fill Site Personnel demo credentials\"]').click();return true;");
   await click("Sign in", ".signin-form button");
@@ -206,17 +228,18 @@ try {
   await fill('form:has(input[name="budget"]) input[name="name"]', "Smoke project");
   await fill('form:has(input[name="budget"]) input[name="location"]', "Test site");
   await fill('form:has(input[name="budget"]) input[name="budget"]', 100000);
-  await fill('form:has(input[name="budget"]) input[name="manager"]', "Test PM");
+  assert.equal(await run("return !!document.querySelector('input[name=manager]');"), false, "Project setup has no PM assignment");
   await submit('form:has(input[name="budget"])');
-  await wait("return JSON.parse(localStorage.getItem('hml-constructsync-demo-v11')).sites.length===1;");
+  await wait("return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).sites.length===1;");
   await role("Site Personnel");
   await navigate("/requests/new");
   assert.equal(await run("return !!document.querySelector('select[name=site]') && !document.querySelector('select[name=category]');"), true);
   await installFixture();
   await navigate("/dashboard");
-  await wait("return JSON.parse(localStorage.getItem('hml-constructsync-demo-v11')).sites.length === 2;");
+  await wait("return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).sites.length === 2;");
   const auditRoutes = ["/dashboard", "/projects", "/projects/site-a", "/requests", "/requests/new", "/requests/m1", "/requests/m7/edit", "/requests/m1/quotes", "/suppliers", "/purchase-orders", "/purchase-orders/po1", "/purchase-orders/po2/edit", "/finance", "/finance/po3", "/deliveries", "/deliveries/new?poId=po1", "/deliveries/b1", "/inventory", `/inventory/site-a/${materialId("Portland cement", "bag")}`, "/accounting", "/accounting/po1", "/reports", "/admin"];
   for (const route of auditRoutes) {
+    console.log("Checking layout",route);
     await navigate(route);
     for (const [width, height] of [[1440, 900], [768, 900], [414, 900], [375, 900], [320, 900]]) {
       await call("Emulation.setDeviceMetricsOverride", { width, height, deviceScaleFactor: 1, mobile: width < 800 });
@@ -247,6 +270,8 @@ try {
   }
   await run("document.documentElement.dataset.theme='light';document.querySelector('.masthead-role').focus();document.querySelector('.masthead-role').click();return true;");
   await wait("return !!document.querySelector('.role-modal[open]');");
+  assert.equal(await run("return document.querySelectorAll('.role-options button').length;"), 7, "Role switcher offers exactly seven roles");
+  assert.equal(await run("return document.querySelector('.role-options').innerText.includes('Project Manager');"), false);
   for (let index = 0; index < 14; index++) {
     await call("Input.dispatchKeyEvent", { type: "keyDown", key: "Tab", code: "Tab", windowsVirtualKeyCode: 9 });
     await call("Input.dispatchKeyEvent", { type: "keyUp", key: "Tab", code: "Tab", windowsVirtualKeyCode: 9 });
@@ -262,7 +287,7 @@ try {
   await wait("return !document.querySelector('.role-modal[open]');");
   assert.equal(await run("return document.activeElement === document.querySelector('.masthead-role');"), true, "Closing the role dialog restores focus");
   assert.equal(await run("return !document.querySelector('.toast');"), true, "Routine actions should not show success toasts");
-  await run("const saved=JSON.parse(localStorage.getItem('hml-constructsync-demo-v11'));saved.requests.find(r=>r.id==='m7').ref='MRFTRAUMAHML20260000000384';localStorage.setItem('hml-constructsync-demo-v11',JSON.stringify(saved));return true;");
+  await run("const saved=JSON.parse(localStorage.getItem('hml-constructsync-demo-v12'));saved.requests.find(r=>r.id==='m7').ref='MRFTRAUMAHML20260000000384';localStorage.setItem('hml-constructsync-demo-v12',JSON.stringify(saved));return true;");
   await navigate("/requests/m7/edit");
   await call("Emulation.setDeviceMetricsOverride", { width: 320, height: 900, deviceScaleFactor: 1, mobile: true });
   assert.equal(await run("return document.documentElement.scrollWidth <= 321;"), true, "A long unbroken reference must fit the configured 320px viewport");
@@ -275,7 +300,7 @@ try {
   await navigate(materialLink);
   assert.equal(await run("return document.querySelectorAll('.material-comparison.is-focused').length;"),1,'Material navigation highlights the relevant comparison');
   const pageContrastFailures = new Map();
-  for (const [page, pageRole] of [["/projects","Management"],["/projects/site-a","Administrator"],["/suppliers","Procurement"],["/requests/m1/quotes","Procurement"],["/purchase-orders/po2/edit","Procurement"],["/finance/po3","Finance"],["/deliveries","Logistics"],["/inventory","Site Personnel"],["/accounting/po1","Accounting / Auditing"],["/accounting","Accounting / Auditing"],["/reports","Management"],["/admin","Administrator"]]) {
+  for (const [page, pageRole] of [["/projects","Management"],["/projects/site-a","Administrator"],["/suppliers","Procurement"],["/requests/m1/quotes","Procurement"],["/purchase-orders/po2/edit","Procurement"],["/accounting/po3","Accounting / Auditing"],["/finance/po3","Finance"],["/deliveries","Logistics"],["/inventory","Site Personnel"],["/accounting/po1","Accounting / Auditing"],["/accounting","Accounting / Auditing"],["/reports","Management"],["/admin","Administrator"]]) {
     await role(pageRole);
     await navigate(page);
     for (const width of [1440,1024,768,414,375,320]) {
@@ -439,21 +464,21 @@ try {
   await call("Emulation.clearDeviceMetricsOverride");
   await click("Close", 'dialog[aria-label="MRF print preview"] button');
   console.log("Request submitted", request.id);
-  await role("Project Manager"); await navigate(`/requests/${request.id}`); await click("Return with reason");
+  await role("Procurement"); await navigate(`/requests/${request.id}`); await click("Return with reason");
   await fill('textarea[name="reason"]', "Clarify the slab work package"); await submit('form.decision-panel');
-  await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v11')).requests.find(x=>x.id===${JSON.stringify(request.id)}).status==='returned';`);
+  await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).requests.find(x=>x.id===${JSON.stringify(request.id)}).status==='returned';`);
   await role("Site Personnel"); await navigate(`/requests/${request.id}/edit`);
   assert.equal(await requestStep(), "1Request details");
   await click("Next", ".request-wizard-actions button");
   await click("Next", ".request-wizard-actions button");
   await wait("return document.querySelector('.reference-file-list')?.children.length === 1;"); await submit('form.form-stack', 'button[value="submit"]');
-  await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v11')).requests.find(x=>x.id===${JSON.stringify(request.id)}).status==='submitted';`);
+  await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).requests.find(x=>x.id===${JSON.stringify(request.id)}).status==='submitted';`);
   assert.equal((await state()).requests.find(x => x.id === request.id).specialInstructions, request.specialInstructions);
-  await run(`const saved=JSON.parse(localStorage.getItem('hml-constructsync-demo-v11'));saved.sites.find(site=>site.id===${JSON.stringify(request.siteId)}).driveFolderId='smoke-project-folder';localStorage.setItem('hml-constructsync-demo-v11',JSON.stringify(saved));return true;`);
+  await run(`const saved=JSON.parse(localStorage.getItem('hml-constructsync-demo-v12'));saved.sites.find(site=>site.id===${JSON.stringify(request.siteId)}).driveFolderId='smoke-project-folder';localStorage.setItem('hml-constructsync-demo-v12',JSON.stringify(saved));return true;`);
   await call("Page.reload", { ignoreCache: true });
   await wait("return !!document.querySelector('.masthead-role');");
-  await role("Project Manager"); await navigate(`/requests/${request.id}`); await click("Approve request");
-  await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v11')).requests.find(x=>x.id===${JSON.stringify(request.id)}).archive?.status==='complete';`);
+  await role("Procurement"); await navigate(`/requests/${request.id}`); await click("Approve request");
+  await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).requests.find(x=>x.id===${JSON.stringify(request.id)}).archive?.status==='complete';`);
   assert.equal(await run("return window.__driveSmokeChunks;"), 3, "A PDF over Vercel's 4.5 MB limit should upload in three chunks");
   assert.equal(await run("return window.__driveSmokeStatusChecks;"), 1, "A lost chunk response should trigger an upload-status check");
   await role("Procurement"); await navigate(`/requests/${request.id}/quotes`);
@@ -482,13 +507,13 @@ try {
   }
   await call("Emulation.clearDeviceMetricsOverride");
   await click("Finalize quotation");
-  await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v11')).quotes.some(q=>q.ref==='QT-SMOKE-001'&&q.archive?.status==='complete');`);
+  await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).quotes.some(q=>q.ref==='QT-SMOKE-001'&&q.archive?.status==='complete');`);
   assert.equal((await state()).quotes.find(q=>q.ref==='QT-SMOKE-001').archive.files.length, 2);
   await click("Allocate", ".procurement-steps button");
   await fill('.quote-award-line input[type=number]', 20);
   await fill('textarea', "Confirmed price and availability");
   await click("Generate supplier PO drafts");
-  await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v11')).pos.some(p=>p.mrfId===${JSON.stringify(request.id)});`);
+  await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).pos.some(p=>p.mrfId===${JSON.stringify(request.id)});`);
   snapshot = await state(); const po = snapshot.pos.at(-1); assert.equal(po.status, "draft");
   console.log("PO drafted", po.id);
   console.log("Opening PO edit"); await navigate(`/purchase-orders/${po.id}/edit`); await wait("return !!document.querySelector('form.form-stack');");
@@ -497,42 +522,63 @@ try {
   await submit('form.form-stack','button[value="finalize"]');
   await wait("return document.activeElement===document.querySelector('.po-edit-form :invalid');");
   await fill('.quote-award-line input[type=number]',20);await fill('input[name="ewtGoods"]',0);
-  await fill('input[name="poDocument.terms"]', '');
-  await run("document.querySelector('input[name=financialReviewed]').click();const section=[...document.querySelectorAll('details')].find(section=>section.querySelector('[name=\"poDocument.terms\"]'));section.open=false;return true;");
-  await submit('form.form-stack','button[value="finalize"]');
-  await wait("return document.activeElement.name==='poDocument.terms';");
-  assert.equal((await state()).pos.find(value=>value.id===po.id).status,'draft','Invalid document fields must block finalization');
-  console.log("Submitting PO edit"); await fill('input[name="poDocument.terms"]', '30 days after delivery'); await run("document.querySelector('input[name=financialReviewed]').click();return true;"); await submit('form.form-stack', 'button[value="finalize"]'); console.log("PO edit submitted");
-  await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v11')).pos.find(x=>x.id===${JSON.stringify(po.id)}).status==='finalized';`);
+  await fill('input[name="poDocument.terms"]', '30 days after delivery');
+  await submit('form.form-stack', 'button[value="finalize"]');
+  await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).pos.find(x=>x.id===${JSON.stringify(po.id)}).status==='submitted';`);
   await wait(`return location.pathname===${JSON.stringify(`/purchase-orders/${po.id}`)} && !!document.querySelector('.record-header');`);
-  await role("Finance"); await navigate(`/finance/${po.id}`); await click("Hold with reason"); await fill('textarea[name="reason"]', "Confirm revised delivery window"); await submit('form.decision-panel');
-  await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v11')).pos.find(x=>x.id===${JSON.stringify(po.id)}).status==='hold';`);
-  await click("Return with reason"); await fill('textarea[name="reason"]', "Add confirmed supplier schedule"); await submit('form.decision-panel');
-  await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v11')).pos.find(x=>x.id===${JSON.stringify(po.id)}).status==='returned';`);
-  await role("Procurement"); await navigate(`/purchase-orders/${po.id}/edit`); await fill('textarea[name="notes"]', "Supplier confirmed Tuesday delivery"); await run("document.querySelector('input[name=financialReviewed]').click();return true;"); await submit('form.form-stack', 'button[value="finalize"]');
-  await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v11')).pos.find(x=>x.id===${JSON.stringify(po.id)}).status==='finalized';`);
+  await role("Accounting / Auditing"); await navigate(`/accounting/${po.id}`);
+  await click("Hold with reason"); await fill('textarea[name="reason"]', "Confirm revised delivery window"); await submit('form.decision-panel');
+  await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).pos.find(x=>x.id===${JSON.stringify(po.id)}).status==='hold';`);
+  await click("Return to Procurement"); await fill('textarea[name="reason"]', "Add confirmed supplier schedule"); await submit('form.decision-panel');
+  await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).pos.find(x=>x.id===${JSON.stringify(po.id)}).status==='returned';`);
+  await role("Procurement"); await navigate(`/purchase-orders/${po.id}/edit`); await fill('textarea[name="notes"]', "Supplier confirmed Tuesday delivery"); await submit('form.form-stack', 'button[value="finalize"]');
+  await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).pos.find(x=>x.id===${JSON.stringify(po.id)}).status==='submitted';`);
   await wait(`return location.pathname===${JSON.stringify(`/purchase-orders/${po.id}`)} && !!document.querySelector('.record-header');`);
-  await role("Finance"); await navigate(`/finance/${po.id}`); await click("Approve budget");
-  await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v11')).pos.find(x=>x.id===${JSON.stringify(po.id)}).archive?.status==='complete';`);
-  await role("Procurement"); await navigate(`/purchase-orders/${po.id}`); await click("Mark PO served");
-  await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v11')).pos.find(x=>x.id===${JSON.stringify(po.id)}).status==='served';`);
+  await role("Accounting / Auditing"); await navigate(`/accounting/${po.id}`);
+  await fill('select[name="paymentMode"]','upfront');
+  await click('Add charge or deduction');
+  await fill('.accounting-po-form .po-adjustment-row .field input','Handling fee');
+  await fill('.accounting-po-form .po-adjustment-row input[type=number]',10);
+  await run("const row=document.querySelector('.accounting-po-form .po-adjustment-row');row.querySelectorAll('input[type=checkbox]')[2].click();return true;");
+  await checkDepartmentLayout('.accounting-po-form','accounting-financial-review');
+  await click('Approve PO');
+  await wait("return document.querySelector('.accounting-po-review .inline-error')?.textContent.includes('VAT basis');");
+  await run("document.querySelector('.accounting-po-form input[name=financialReviewed]').click();return true;");
+  await click('Approve PO');
+  await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).pos.find(x=>x.id===${JSON.stringify(po.id)}).archive?.status==='complete';`);
+  assert.equal(await run("return [...document.querySelectorAll('button')].find(button=>button.textContent==='Release to Logistics').disabled;"),true,'Upfront release waits for disbursement');
+  await click('Submit payment request');
+  await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).paymentRequests.some(value=>value.poId===${JSON.stringify(po.id)}&&value.status==='submitted');`);
+  await role('Finance'); await navigate(`/finance/${po.id}`);
+  await click('Return to Accounting'); await fill('textarea[name="reason"]','Clarify supplier payment note'); await submit('form.decision-panel');
+  await role('Accounting / Auditing'); await navigate(`/accounting/${po.id}`);
+  await fill('.payment-request-form textarea[name="note"]','Confirmed full supplier payment'); await click('Submit payment request');
+  await role('Finance'); await navigate(`/finance/${po.id}`); await click('Approve payment');
+  await wait("return !!document.querySelector('.finance-disbursement-form');");
+  await checkDepartmentLayout('.finance-payment-review','finance-disbursement');
+  assert.equal((await state()).payments.some(value=>value.poId===po.id),false,'Approval alone must not record payment');
+  await fill('.finance-disbursement-form input[name="reference"]','BANK-SMOKE-01'); await click('Record disbursement');
+  await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).paymentRequests.some(value=>value.poId===${JSON.stringify(po.id)}&&value.status==='disbursed');`);
+  const disbursementsBeforeEvidence = (await state()).payments.filter(value=>value.poId===po.id);
+  await role('Accounting / Auditing'); await navigate(`/accounting/${po.id}`); await click('Release to Logistics');
+  await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).pos.find(x=>x.id===${JSON.stringify(po.id)}).status==='released';`);
   await role("Logistics"); await navigate(`/deliveries/new?poId=${po.id}`); await fill('input[name="evidence"]', "DR-SMOKE-01"); await fill('input[name^="expected-"]', 12); await submit('form.form-stack');
   console.log("Delivery scheduled");
   await wait("return location.pathname.startsWith('/deliveries/') && !!document.querySelector('.record-header');");
   snapshot = await state(); const batch = snapshot.batches.at(-1); assert.equal(batch.status, "expected");
   await role("Site Personnel"); await navigate(`/deliveries/${batch.id}`); await fill('input[name^="accepted-"]', 12); await click("Confirm received quantities");
-  await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v11')).batches.find(x=>x.id===${JSON.stringify(batch.id)}).status==='confirmed';`);
+  await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).batches.find(x=>x.id===${JSON.stringify(batch.id)}).status==='confirmed';`);
   await uploadFiles('input[aria-label="Upload accounting documents"]', [unsupportedReference]);
   await wait("return document.querySelector('.accounting-evidence .inline-error')?.textContent.includes('Use up to');");
   assert.equal((await state()).accounting.find(value=>value.poId===po.id)?.documents?.length || 0, 0);
   await uploadFiles('input[aria-label="Upload accounting documents"]', [sampleReference]);
-  await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v11')).accounting.find(value=>value.poId===${JSON.stringify(po.id)})?.documents?.[0]?.archive.error;`);
+  await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).accounting.find(value=>value.poId===${JSON.stringify(po.id)})?.documents?.[0]?.archive.error;`);
   assert.equal(await run("return !!document.querySelector('.archive-job.has-error');"), true, 'Archive failure must remain visible');
   await click("Retry archive", ".accounting-evidence button");
-  await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v11')).accounting.find(value=>value.poId===${JSON.stringify(po.id)}).documents[0].archive.status==='complete';`);
+  await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).accounting.find(value=>value.poId===${JSON.stringify(po.id)}).documents[0].archive.status==='complete';`);
   const uploadedEvidence = (await state()).accounting.find(value=>value.poId===po.id).documents[0];
   assert.equal(uploadedEvidence.batchId,batch.id);
-  assert.equal((await state()).payments.some(value=>value.poId===po.id),false,'Evidence must not record a payment');
+  assert.deepEqual((await state()).payments.filter(value=>value.poId===po.id),disbursementsBeforeEvidence,'Evidence must not change payments');
   await click("View file", ".accounting-evidence button"); await wait("return !!document.querySelector('.evidence-preview iframe');");
   for (const width of [768,414,375,320]) {
     await call("Emulation.setDeviceMetricsOverride",{width,height:650,deviceScaleFactor:1,mobile:true});
@@ -541,7 +587,7 @@ try {
   }
   await call("Emulation.clearDeviceMetricsOverride");
   await click("Close", ".evidence-preview button");
-  await click("Post to site stock"); await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v11')).batches.find(x=>x.id===${JSON.stringify(batch.id)}).status==='posted';`);
+  await click("Post to site stock"); await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).batches.find(x=>x.id===${JSON.stringify(batch.id)}).status==='posted';`);
   snapshot = await state(); assert.equal(snapshot.movements.filter(m => m.batchId === batch.id && m.kind === "receipt").length, 1);
   await navigate("/inventory"); await click("Portland cement smoke lot", "a.table-primary"); await wait("return location.pathname.startsWith('/inventory/site-a/');");
   await fill('input[name="quantity"]', 5); await fill('textarea[name="reason"]', "Ground floor slab pour"); await click("Record movement");
@@ -555,8 +601,7 @@ try {
   assert.equal(await run("return !!document.querySelector('.evidence-preview a[download]');"),true,'Accounting can restore and download the archived evidence');
   await click("Close", ".evidence-preview button"); await fill('input[name="invoice"]', "INV-SMOKE-01"); await fill('input[name="receipt"]', "DR-SMOKE-01"); await fill('select[name="review"]', "Complete"); await click("Save document review");
   console.log("Accounting review");
-  await fill('input[name="amount"]', 1000); await fill('input[name="reference"]', "BANK-SMOKE-01"); await click("Record payment reference");
-  snapshot = await state(); assert.equal(snapshot.payments.find(p => p.poId === po.id)?.amount, 1000);
+  snapshot = await state(); assert.equal(snapshot.payments.find(p => p.poId === po.id)?.amount, 5710);
   await role("Management"); await navigate("/reports"); assert.equal(await run("return document.querySelector('h1')?.textContent;"), "Operations report");
   await call("Emulation.setDeviceMetricsOverride", { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false });
   await writeFile(path.join(profile, "desktop.png"), Buffer.from((await call("Page.captureScreenshot", { format: "png" })).data, "base64"));
@@ -565,12 +610,12 @@ try {
   await call("Emulation.clearDeviceMetricsOverride");
   await call("Page.reload", { ignoreCache: true }); await wait("return document.querySelector('h1')?.textContent==='Operations report';");
   snapshot = await state(); assert.equal(snapshot.requests.find(r => r.id === request.id)?.status, "approved");
-  await role("Project Manager");
+  await role("Procurement");
   await navigate(`/requests/${request.id}`);
   await click("Reopen for correction");
   await fill('textarea[name="reason"]', "Replace the supporting PDF after purchasing");
   await submit('form:has(textarea[name="reason"])');
-  await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v11')).requests.find(r=>r.id===${JSON.stringify(request.id)}).correction?.scope==='documents';`);
+  await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).requests.find(r=>r.id===${JSON.stringify(request.id)}).correction?.scope==='documents';`);
   await role("Site Personnel");
   await navigate(`/requests/${request.id}/edit`);
   assert.equal(await requestStep(), "3Review & submit");
@@ -580,41 +625,64 @@ try {
   await uploadFiles('input[type="file"]', [sampleScope]);
   await wait("return document.querySelector('.reference-file-detail strong')?.textContent==='Scope smoke.pdf';");
   await submit('form.form-stack', 'button[value="submit"]');
-  await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v11')).requests.find(r=>r.id===${JSON.stringify(request.id)}).correction?.status==='submitted';`);
+  await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).requests.find(r=>r.id===${JSON.stringify(request.id)}).correction?.status==='submitted';`);
   snapshot = await state();
   const corrected = snapshot.requests.find(r=>r.id===request.id);
   assert.deepEqual(corrected.items, request.items);
   assert.equal(corrected.ref, request.ref);
   assert.equal(corrected.requestDate, request.requestDate);
   assert.equal(corrected.requestedBy, request.requestedBy);
-  await role("Project Manager");
+  await role("Procurement");
   await navigate(`/requests/${request.id}`);
   await click("Approve request");
-  await wait(`return !JSON.parse(localStorage.getItem('hml-constructsync-demo-v11')).requests.find(r=>r.id===${JSON.stringify(request.id)}).correction;`);
+  await wait(`return !JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).requests.find(r=>r.id===${JSON.stringify(request.id)}).correction;`);
   await call("Page.navigate", { url: `${baseUrl}/?view=requests&kind=request&id=${request.id}` });
   await wait(`return location.pathname===${JSON.stringify(`/requests/${request.id}`)};`);
   await wait("return !!document.querySelector('.masthead-role');");
   await role("Administrator"); await navigate("/admin");
+  const priorToRetirement = await run("const saved=JSON.parse(localStorage.getItem('hml-constructsync-demo-v12'));saved.role='Project Manager';saved.sites[0].manager='Historical project manager';const raw=JSON.stringify(saved);localStorage.setItem('hml-constructsync-demo-v12',raw);localStorage.setItem('hml-constructsync-demo-session-v1','Project Manager');return raw;");
+  await call("Page.reload", { ignoreCache: true });
+  await wait("return location.pathname==='/sign-in' && !!document.querySelector('.signin-form');");
+  assert.equal(await run("return localStorage.getItem('hml-constructsync-demo-session-v1');"), null);
+  assert.equal(await run("return localStorage.getItem('hml-constructsync-demo-v12');"), priorToRetirement, "Retired PM session preserves all stored workspace records");
+  await run("document.querySelector('.signin-role-trigger').click();return true;");
+  await run("document.querySelector('[aria-label=\"Fill Procurement demo credentials\"]').click();return true;");
+  await click("Sign in", ".signin-form button");
+  await wait("return !!document.querySelector('.masthead-role');");
+  assert.deepEqual(await state(), { ...JSON.parse(priorToRetirement), role: 'Procurement' }, "Signing in changes only the active role");
+  await navigate('/projects');
+  assert.equal(await run("return document.querySelector('.site-grid').innerText.includes('Historical project manager');"), false);
+  await role("Administrator"); await navigate("/admin");
+  assert.equal(await run("return !!document.querySelector('input[name=manager]');"), false);
+  for (const width of [1440,375]) {
+    await call("Emulation.setDeviceMetricsOverride", { width, height: 900, deviceScaleFactor: 1, mobile: width < 800 });
+    await run("window.scrollTo(0,0);return true;");
+    await writeFile(path.join(profile, `admin-projects-${width}.png`), Buffer.from((await call("Page.captureScreenshot", { format: "png" })).data, "base64"));
+  }
+  await call("Emulation.clearDeviceMetricsOverride");
   assert.equal(await run("return [...document.querySelectorAll('button')].some(button => button.textContent.includes('Clear all workspace data'));"), true);
-  await run("localStorage.setItem('hml-constructsync-demo-v11', 'not-json'); return true;");
+  await run("localStorage.setItem('hml-constructsync-demo-v12', 'not-json'); return true;");
   await call("Page.reload", { ignoreCache: true });
   await wait("return document.querySelector('h1')?.textContent==='Saved data needs attention';");
-  await click("Restore workspace");
-  await wait("return JSON.parse(localStorage.getItem('hml-constructsync-demo-v11')).requests.length===0;");
-  await wait("return JSON.parse(localStorage.getItem('hml-constructsync-demo-v11')).role==='Administrator';");
+  await click("Clear workspace");
+  await wait("return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).requests.length===0;");
+  await wait("return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).role==='Administrator';");
   snapshot = await state(); assert.equal(snapshot.pos.length, 0); assert.equal(snapshot.role, "Administrator");
   await installFixture();
-  await wait("return JSON.parse(localStorage.getItem('hml-constructsync-demo-v11')).requests.length===9;");
-  await run("const saved=JSON.parse(localStorage.getItem('hml-constructsync-demo-v11'));saved.version=1;saved.requests=saved.requests.map(r=>{const {requestedBy,approvedBy,purchaser,financeOfficer,items,...rest}=r;const {neededDate,purpose,location,remarks}=items[0];return {...rest,neededDate,purpose,location,remarks,items:items.map(({id,name,unit,quantity})=>({id,name,unit,quantity}))}});saved.requests[0].scope='Migrated browser edit';localStorage.setItem('hml-buildsync-demo-v1',JSON.stringify(saved));localStorage.removeItem('hml-constructsync-demo-v11');return true;");
+  await wait("return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).requests.length===9;");
+  await run("const saved=JSON.parse(localStorage.getItem('hml-constructsync-demo-v12'));saved.version=1;saved.requests=saved.requests.map(r=>{const {requestedBy,approvedBy,purchaser,financeOfficer,items,...rest}=r;const {neededDate,purpose,location,remarks}=items[0];return {...rest,neededDate,purpose,location,remarks,items:items.map(({id,name,unit,quantity})=>({id,name,unit,quantity}))}});saved.requests[0].scope='Migrated browser edit';localStorage.setItem('hml-buildsync-demo-v1',JSON.stringify(saved));localStorage.removeItem('hml-constructsync-demo-v12');return true;");
   await call("Page.reload", { ignoreCache: true });
-  await wait("return !!localStorage.getItem('hml-constructsync-demo-v11');");
-  snapshot = await state(); assert.equal(snapshot.version, 11); assert.equal(snapshot.requests[0].scope, "Migrated browser edit"); assert.equal(snapshot.requests[0].id, "m1"); assert.equal(snapshot.requests[0].items[0].location, "Tower 1 staging area");
+  await wait("return document.querySelector('h1')?.textContent==='Saved data needs attention';");
+  assert.equal(await state(), null); assert.equal(await run("return !!localStorage.getItem('hml-buildsync-demo-v1');"), true);
+  await click('Clear workspace'); await wait("return !!localStorage.getItem('hml-constructsync-demo-v12');");
+  assert.equal((await state()).version,12); assert.equal((await state()).requests.length,0);
+  assert.equal(await run("return localStorage.getItem('hml-buildsync-demo-v1');"),null);
   await wait("return !!document.querySelector('.masthead-role');");
   await run("document.querySelector('.masthead-role').click();return true;");
   await click("Sign out");
   await wait("return location.pathname === '/sign-in' && !!document.querySelector('.signin-form');");
   assert.equal(await run("return localStorage.getItem('hml-constructsync-demo-session-v1');"), null);
-  assert.equal((await state()).requests[0].scope, "Migrated browser edit");
+  assert.equal((await state()).requests.length, 0);
   await run("localStorage.setItem('hml-constructsync-demo-session-v1', 'Unknown role');return true;");
   await call("Page.navigate", { url: `${baseUrl}/dashboard` });
   await wait("return location.pathname === '/sign-in' && !!document.querySelector('.signin-form');");
@@ -623,7 +691,8 @@ try {
   await run("document.querySelector('.signin-role-trigger').click();return true;");
   await run("document.querySelector('[aria-label=\"Fill Site Personnel demo credentials\"]').click();return true;");
   await click("Sign in", ".signin-form button");
-  await wait("return location.pathname === '/requests/new' && !!document.querySelector('form.form-stack');");
+  await wait("return location.pathname === '/requests/new' && document.querySelector('h1')?.textContent === 'Set up the workspace first';");
+  assert.equal((await state()).role, "Site Personnel");
   assert.deepEqual(browserExceptions, [], `Uncaught browser errors: ${browserExceptions.join("; ")}`);
   console.log(`Browser smoke passed. Screenshots: ${path.join(profile, "desktop.png")} and ${path.join(profile, "mobile.png")}`);
 } finally { try { ws?.close(); } catch {} browser.kill(); }

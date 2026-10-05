@@ -44,16 +44,15 @@ const NAV: { href: string; label: string; icon: IconName; group: string }[] = [
   { href: "/requests", label: "Material requests", icon: "request", group: "Plan and request" },
   { href: "/suppliers", label: "Suppliers", icon: "supplier", group: "Purchase" },
   { href: "/purchase-orders", label: "Purchase orders", icon: "purchase", group: "Purchase" },
+  { href: "/accounting", label: "Accounting", icon: "accounting", group: "Purchase" },
   { href: "/finance", label: "Finance", icon: "finance", group: "Purchase" },
   { href: "/deliveries", label: "Deliveries", icon: "delivery", group: "Receive and account" },
   { href: "/inventory", label: "Site inventory", icon: "inventory", group: "Receive and account" },
-  { href: "/accounting", label: "Accounting", icon: "accounting", group: "Receive and account" },
   { href: "/reports", label: "Reports", icon: "report", group: "Manage" },
   { href: "/admin", label: "Administration", icon: "admin", group: "Manage" },
 ];
 const primary: Record<Role, string[]> = {
   "Site Personnel": ["/dashboard", "/requests", "/deliveries", "/inventory", "/projects"],
-  "Project Manager": ["/dashboard", "/requests", "/projects", "/purchase-orders"],
   Procurement: ["/dashboard", "/requests", "/purchase-orders", "/suppliers"],
   Finance: ["/dashboard", "/finance", "/purchase-orders", "/projects"],
   Logistics: ["/dashboard", "/deliveries", "/purchase-orders", "/projects"],

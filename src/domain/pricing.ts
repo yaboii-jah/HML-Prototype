@@ -41,7 +41,7 @@ export function poFinancialError(po: PO, finalizing = false) {
   const settings = po.financial;
   if (!["VAT", "NON-VAT"].includes(settings.vatStatus) || !["inclusive", "exclusive"].includes(settings.priceBasis) || [settings.vatRate, settings.ewtGoods, settings.ewtServices].some(value => !Number.isFinite(value) || value < 0) || settings.vatRate > 100) return "Review the VAT basis, rate and nonnegative EWT amounts.";
   if (settings.ewtGoods + settings.ewtServices > poFinancialBreakdown(po).gross) return "EWT deductions cannot exceed the gross PO amount.";
-  if (finalizing && !settings.reviewed) return "Confirm the VAT basis and both EWT amounts before finalizing.";
+  if (finalizing && !settings.reviewed) return "Confirm the VAT basis and both EWT amounts before Accounting approval.";
   if (finalizing && (!po.document || ![po.document.date, po.document.vendorName, po.document.shipToName, po.document.shipToAddress, po.document.requisitioner, po.document.terms].every(value => typeof value === "string" && value.trim()) || !/^\d{4}-\d{2}-\d{2}$/.test(po.document.date) || Number.isNaN(Date.parse(po.document.date)) || new Date(po.document.date).toISOString().slice(0, 10) !== po.document.date)) return "Complete the PO date, vendor, ship-to name/address, requisitioner and payment terms.";
   return "";
 }

@@ -21,7 +21,7 @@ const oldSnapshot = version => ({ ...seedDemo(), version, requests: seedDemo().r
 
 test("v8 browser records migrate without forcing old quotations and POs into new archives", () => {
   const prior = seedDemo();
-  prior.version = 8;
+  prior.version = 8; delete prior.pos[0].archive;
   const migrated = migrateV8(prior);
   assert.equal(migrated.version, 11);
   assert.equal(migrated.quotes[0].archive, undefined);
@@ -32,12 +32,12 @@ test("v8 browser records migrate without forcing old quotations and POs into new
 test("a blank workspace can be configured before its first MRF", () => {
   let state = blankWorkspace();
   for (const key of ["sites", "suppliers", "categories", "requests", "quotes", "pendingAwards", "pos", "batches", "movements", "payments", "accounting", "activity"]) assert.equal(state[key].length, 0, key);
-  assert.equal(applyCommand(state, { type: "addSite", name: "My project", location: "Site", budget: 100000, manager: "PM", personnel: "Site" }, context).ok, false);
+  assert.equal(applyCommand(state, { type: "addSite", name: "My project", location: "Site", budget: 100000, personnel: "Site" }, context).ok, false);
   state = execute(state, { type: "setRole", role: "Administrator" });
-  state = execute(state, { type: "addSite", name: "My project", location: "Site", budget: 100000, manager: "PM", personnel: "Site" });
+  state = execute(state, { type: "addSite", name: "My project", location: "Site", budget: 100000, personnel: "Site" });
   assert.equal(state.sites.length, 1);
   state = execute(state, { type: "setRole", role: "Site Personnel" });
-  state = execute(state, { type: "saveRequest", intent: "submit", siteId: state.sites[0].id, ref: "HML-MRF-01", requestDate: "2026-10-01", requestedBy: "Site", approvedBy: "PM", purchaser: "Buyer", financeOfficer: "Finance", items: [{ id: "item-1", name: "Cement", unit: "bag", quantity: 100, neededDate: "2026-10-01", purpose: "", location: "Site", remarks: "" }], documents: [{ name: "Combined.pdf", type: "Supporting PDF", fileId: "mrf-1" }] });
+  state = execute(state, { type: "saveRequest", intent: "submit", siteId: state.sites[0].id, ref: "HML-MRF-01", requestDate: "2026-10-01", requestedBy: "Site", approvedBy: "Signatory", purchaser: "Buyer", financeOfficer: "Finance", items: [{ id: "item-1", name: "Cement", unit: "bag", quantity: 100, neededDate: "2026-10-01", purpose: "", location: "Site", remarks: "" }], documents: [{ name: "Combined.pdf", type: "Supporting PDF", fileId: "mrf-1" }] });
   assert.equal(state.requests[0].ref, "HML-MRF-01");
   assert.equal(state.requests[0].requestDate, "2026-10-01");
   assert.equal(state.requests[0].status, "submitted");
@@ -45,7 +45,7 @@ test("a blank workspace can be configured before its first MRF", () => {
 
 test("MRF numbers are manual, required on submission, and unique across projects", () => {
   let state = seedDemo();
-  const command = { type: "saveRequest", intent: "draft", siteId: "site-a", ref: "", requestDate: "", requestedBy: "Site", approvedBy: "PM", purchaser: "Buyer", financeOfficer: "Finance", items: [{ id: "manual-item", name: "Cement", unit: "bag", quantity: 1, neededDate: "2026-10-01", purpose: "", location: "Site", remarks: "" }], documents: [{ name: "Combined.pdf", type: "Supporting PDF", fileId: "mrf-manual" }] };
+  const command = { type: "saveRequest", intent: "draft", siteId: "site-a", ref: "", requestDate: "", requestedBy: "Site", approvedBy: "Signatory", purchaser: "Buyer", financeOfficer: "Finance", items: [{ id: "manual-item", name: "Cement", unit: "bag", quantity: 1, neededDate: "2026-10-01", purpose: "", location: "Site", remarks: "" }], documents: [{ name: "Combined.pdf", type: "Supporting PDF", fileId: "mrf-manual" }] };
   state = execute(state, command);
   const draft = state.requests.at(-1);
   assert.equal(draft.ref, "");
@@ -69,10 +69,10 @@ test("seeded cement transaction has consistent purchasing, delivery, stock, and 
   assert.equal(quoteTotal(state, state.quotes[1]), 27800);
 });
 
-test("PM review requires authority and a reason to return; revisions keep the original ID", () => {
+test("Procurement review requires authority and a reason to return; revisions keep the original ID", () => {
   let state = seedDemo();
   assert.equal(applyCommand(state, { type: "reviewRequest", id: "m6", decision: "approve" }, context).ok, false);
-  state = execute(state, { type: "setRole", role: "Project Manager" });
+  state = execute(state, { type: "setRole", role: "Procurement" });
   assert.equal(applyCommand(state, { type: "reviewRequest", id: "m6", decision: "return", reason: "No" }, context).ok, false);
   state = execute(state, { type: "reviewRequest", id: "m6", decision: "return", reason: "Clarify electrical scope" });
   assert.equal(state.requests.find(r => r.id === "m6").status, "returned");
@@ -99,7 +99,7 @@ test("multi-material requests keep separate details through draft, submission, a
   assert.deepEqual(state.requests.at(-1).items.map(item => item.id), ["first", "second"]);
   assert.deepEqual(state.requests.at(-1).items.map(item => item.location), ["Tower 1", "Tower 2"]);
   assert.deepEqual(state.requests.at(-1).items.map(item => item.remarks), ["Keep dry", ""]);
-  state = execute(state, { type: "setRole", role: "Project Manager" });
+  state = execute(state, { type: "setRole", role: "Procurement" });
   state = execute(state, { type: "reviewRequest", id: request.id, decision: "return", reason: "Clarify second delivery" });
   state = execute(state, { type: "setRole", role: "Site Personnel" });
   state = execute(state, { ...complete, items: [command.items[0], { ...command.items[1], location: "Tower 3" }] });
@@ -127,14 +127,18 @@ test("receiving posts only once and site usage cannot create negative stock", ()
 test("payment entries move committed value to spent without reducing available twice", () => {
   let state = execute(seedDemo(), { type: "setRole", role: "Accounting / Auditing" });
   const before = budgetFor(state, "site-a");
-  state = execute(state, { type: "recordPayment", poId: "po1", amount: 5000, method: "Bank", reference: "BANK-TEST-01", date: "2026-09-24" });
+  state = execute(state, { type: "savePaymentRequest", poId: "po1", amount: 5000, note: "Partial supplier payment", submit: true });
+  const paymentRequestId = state.paymentRequests.at(-1).id;
+  state = execute(state, { type: "setRole", role: "Finance" });
+  state = execute(state, { type: "reviewPaymentRequest", id: paymentRequestId, decision: "approve" });
+  state = execute(state, { type: "recordPayment", paymentRequestId, method: "Bank", reference: "BANK-TEST-01", date: "2026-09-24" });
   const after = budgetFor(state, "site-a");
   assert.equal(paidTotal(state, "po1"), 5000);
   assert.equal(after.committed, before.committed - 5000);
   assert.equal(after.spent, before.spent + 5000);
   assert.equal(after.available, before.available);
   assert.equal(paymentStatus(state, state.pos[0]), "Partly Paid");
-  assert.equal(applyCommand(state, { type: "recordPayment", poId: "po1", amount: 30000, method: "Bank", reference: "BANK-TEST-02", date: "2026-09-24" }, context).ok, false);
+  assert.equal(applyCommand(state, { type: "recordPayment", paymentRequestId, method: "Bank", reference: "BANK-TEST-02", date: "2026-09-24" }, context).ok, false);
 });
 
 test("v1 migration preserves edited records and rejects malformed saved data", () => {
@@ -183,23 +187,23 @@ test("v5 workspace migrates without losing legacy request or linked purchasing r
 test("MRF Drive archive gates Procurement and retains versions after a document correction", () => {
   let state = blankWorkspace();
   state = execute(state, { type: "setRole", role: "Administrator" });
-  state = execute(state, { type: "addSite", name: "Test project", location: "Site", budget: 100000, manager: "PM" });
+  state = execute(state, { type: "addSite", name: "Test project", location: "Site", budget: 100000 });
   const siteId = state.sites[0].id;
   state = execute(state, { type: "setRole", role: "Site Personnel" });
-  const command = { type: "saveRequest", intent: "submit", siteId, ref: "MRF-001", requestDate: "2026-09-29", requestedBy: "Site", approvedBy: "PM", purchaser: "Buyer", financeOfficer: "Finance", items: [{ id: "i1", name: "Cement", unit: "bag", quantity: 5, neededDate: "2026-10-01", purpose: "Work", location: "Site", remarks: "" }], documents: [{ name: "combined.pdf", type: "Supporting PDF", fileId: "local-1" }] };
+  const command = { type: "saveRequest", intent: "submit", siteId, ref: "MRF-001", requestDate: "2026-09-29", requestedBy: "Site", approvedBy: "Signatory", purchaser: "Buyer", financeOfficer: "Finance", items: [{ id: "i1", name: "Cement", unit: "bag", quantity: 5, neededDate: "2026-10-01", purpose: "Work", location: "Site", remarks: "" }], documents: [{ name: "combined.pdf", type: "Supporting PDF", fileId: "local-1" }] };
   assert.equal(applyCommand(state, { ...command, documents: [] }, context).ok, false);
   state = execute(state, command);
   const requestId = state.requests[0].id;
-  state = execute(state, { type: "setRole", role: "Project Manager" });
+  state = execute(state, { type: "setRole", role: "Procurement" });
   assert.match(applyCommand(state, { type: "reviewRequest", id: requestId, decision: "approve" }, context).message, /Map this project's/);
   state = execute(state, { type: "setRole", role: "Administrator" });
   state = execute(state, { type: "setProjectDriveFolder", siteId, folderId: "project-folder-123" });
-  state = execute(state, { type: "setRole", role: "Project Manager" });
+  state = execute(state, { type: "setRole", role: "Procurement" });
   state = execute(state, { type: "reviewRequest", id: requestId, decision: "approve" });
   assert.equal(state.requests[0].archive.status, "pending");
   state = execute(state, { type: "setRole", role: "Procurement" });
   assert.equal(applyCommand(state, { type: "addQuote", requestId, supplierId: "none", ref: "Q-1", available: "yes", leadDays: 1, terms: "cash", prices: {} }, context).ok, false);
-  state = execute(state, { type: "setRole", role: "Project Manager" });
+  state = execute(state, { type: "setRole", role: "Procurement" });
   state = execute(state, { type: "failRequestArchive", id: requestId, error: "Drive unavailable" });
   assert.equal(state.requests[0].archive.status, "pending");
   state = execute(state, { type: "completeRequestArchive", id: requestId, formFileId: "form-1", supportFileId: "support-1", formUrl: "https://drive.google.com/form-1", supportUrl: "https://drive.google.com/support-1" });
@@ -209,7 +213,7 @@ test("MRF Drive archive gates Procurement and retains versions after a document 
   state = execute(state, { type: "setRole", role: "Site Personnel" });
   state = execute(state, { ...command, id: requestId, documents: [{ name: "corrected.pdf", type: "Supporting PDF", fileId: "local-2" }] });
   assert.equal(state.requests[0].correction.status, "submitted");
-  state = execute(state, { type: "setRole", role: "Project Manager" });
+  state = execute(state, { type: "setRole", role: "Procurement" });
   state = execute(state, { type: "reviewRequest", id: requestId, decision: "approve" });
   assert.equal(state.requests[0].archive.status, "pending");
   assert.equal(state.requests[0].archive.versions.length, 1);
@@ -248,7 +252,7 @@ test("legacy query links still target their record routes", () => {
   assert.equal(legacyDestination(new URLSearchParams("view=dashboard")), "/dashboard");
 });
 
-test("previous BuildSync v2 records migrate to ConstructSync without changing user edits", () => {
+test("previous BuildSync records require an explicit reset and preserve user edits", () => {
   const priorStorage = globalThis.localStorage;
   const priorWindow = globalThis.window;
   const old = oldSnapshot(2);
@@ -260,16 +264,13 @@ test("previous BuildSync v2 records migrate to ConstructSync without changing us
   globalThis.window = { addEventListener() {} };
   try {
     const view = new LocalDemoRepository().getSnapshot();
-    assert.equal(view.status, "ready");
-    assert.equal(view.snapshot.suppliers[0].contact, "Lina Cruz · Sales");
-    assert.equal(view.snapshot.suppliers[1].contact, "Custom purchasing contact");
-    assert.equal(view.snapshot.activity[0].action, "PO served");
-    assert.equal(view.snapshot.requests[0].id, "m1");
-    assert.equal(JSON.parse(saved.get("hml-constructsync-demo-v11")).requests[0].id, "m1");
+    assert.equal(view.status, "recovery"); assert.equal(view.snapshot, null);
+    assert.deepEqual(JSON.parse(saved.get("hml-buildsync-demo-v2")), old);
+    assert.equal(saved.has("hml-constructsync-demo-v12"), false);
   } finally { globalThis.localStorage = priorStorage; globalThis.window = priorWindow; }
 });
 
-test("current ConstructSync v2 data copies request details to every material", () => {
+test("old ConstructSync material details remain untouched while reset is pending", () => {
   const old = oldSnapshot(2);
   old.requests[0].items.push({ id: "m1-i2", name: "Fine sand", unit: "cu.m", quantity: 3 });
   old.requests[0].purpose = "Edited purpose";
@@ -279,12 +280,9 @@ test("current ConstructSync v2 data copies request details to every material", (
   globalThis.window = { addEventListener() {} };
   try {
     const view = new LocalDemoRepository().getSnapshot();
-    assert.equal(view.status, "ready");
-    assert.equal(view.snapshot.version, 11);
-    assert.deepEqual(view.snapshot.requests[0].items.map(item => item.id), ["m1-i1", "m1-i2"]);
-    assert.deepEqual(view.snapshot.requests[0].items.map(item => item.purpose), ["Edited purpose", "Edited purpose"]);
-    assert.equal(view.snapshot.requests[0].requestedBy, "");
-    assert.equal(saved.has("hml-constructsync-demo-v2"), false);
+    assert.equal(view.status, "recovery"); assert.equal(view.snapshot, null);
+    assert.deepEqual(JSON.parse(saved.get("hml-constructsync-demo-v2")), old);
+    assert.equal(saved.has("hml-constructsync-demo-v12"), false);
   } finally { globalThis.localStorage = priorStorage; globalThis.window = priorWindow; }
 });
 
@@ -320,7 +318,7 @@ test("reviewed partial quotations can split one material across supplier POs", (
   const firstPO = state.pos.at(-2);
   state = execute(state, { type: "savePO", id: firstPO.id, quoteId: first.id, lines: [{ itemId: "split-item", quoteLineId: first.lines[0].id, quantity: 5, unitPrice: 700 }], tax: 0, freight: 0, discount: 0, reason: "Confirmed delivery and price", notes: "Reduced award", finalize: true });
   assert.equal(poTotal(state, state.pos.at(-2)), 3500);
-  assert.equal(state.pos.at(-2).status, "finalized");
+  assert.equal(state.pos.at(-2).status, "submitted");
 });
 
 test("quotation revisions preserve the version linked to an existing PO", () => {
@@ -342,7 +340,7 @@ test("quotation revisions preserve the version linked to an existing PO", () => 
   assert.equal(poTotal(state, state.pos.find(value => value.id === po.id)), 3500);
 });
 
-test("v3 browser records migrate to v11 without changing linked POs", () => {
+test("v3 browser records cannot silently enter the new workflow", () => {
   const previousStorage = globalThis.localStorage, previousWindow = globalThis.window;
   const old = { ...seedDemo(), version: 3 };
   const saved = new Map([["hml-constructsync-demo-v3", JSON.stringify(old)]]);
@@ -350,9 +348,8 @@ test("v3 browser records migrate to v11 without changing linked POs", () => {
   globalThis.window = { addEventListener() {} };
   try {
     const view = new LocalDemoRepository().getSnapshot();
-    assert.equal(view.snapshot.version, 11);
-    assert.equal(view.snapshot.pos[0].quoteId, old.pos[0].quoteId);
-    assert.equal(view.snapshot.quotes[0].ref, old.quotes[0].ref);
-    assert.equal(saved.has("hml-constructsync-demo-v3"), false);
+    assert.equal(view.status, "recovery"); assert.equal(view.snapshot, null);
+    assert.deepEqual(JSON.parse(saved.get("hml-constructsync-demo-v3")), old);
+    assert.equal(saved.has("hml-constructsync-demo-v12"), false);
   } finally { globalThis.localStorage = previousStorage; globalThis.window = previousWindow; }
 });

@@ -6,8 +6,8 @@ import { ROLES, type DemoSnapshot, type LegacySnapshot } from "../domain/types.t
 import { clearQuoteFiles } from "../features/requests/quote-files.ts";
 import { validBidReport } from "../domain/bid-reports.ts";
 
-const CURRENT_KEY = "hml-constructsync-demo-v11";
-const PREVIOUS_KEYS = ["hml-constructsync-demo-v10", "hml-constructsync-demo-v9", "hml-constructsync-demo-v8", "hml-constructsync-demo-v7", "hml-constructsync-demo-v6", "hml-constructsync-demo-v5", "hml-constructsync-demo-v4", "hml-constructsync-demo-v3", "hml-constructsync-demo-v2", "hml-buildsync-demo-v2", "hml-buildsync-demo-v1"] as const;
+const CURRENT_KEY = "hml-constructsync-demo-v12";
+const PREVIOUS_KEYS = ["hml-constructsync-demo-v11", "hml-constructsync-demo-v10", "hml-constructsync-demo-v9", "hml-constructsync-demo-v8", "hml-constructsync-demo-v7", "hml-constructsync-demo-v6", "hml-constructsync-demo-v5", "hml-constructsync-demo-v4", "hml-constructsync-demo-v3", "hml-constructsync-demo-v2", "hml-buildsync-demo-v2", "hml-buildsync-demo-v1"] as const;
 export type RepositoryView = { snapshot: DemoSnapshot | null; status: "loading" | "ready" | "volatile" | "recovery"; message?: string };
 export interface DemoRepository {
   load(): Promise<RepositoryView>;
@@ -64,8 +64,16 @@ export function migrateV10(value: unknown): DemoSnapshot | null {
   return normalizeKnownPlaceholders({ ...structuredClone(value), version: 11 } as unknown as DemoSnapshot);
 }
 const parseCurrent = (raw: string): DemoSnapshot | null => {
-  const parsed: unknown = JSON.parse(raw);
-  return isSnapshotShape(parsed) && parsed.version === 11 && Array.isArray(parsed.pendingAwards) && Array.isArray(parsed.bidReports) && parsed.bidReports.every(validBidReport) ? normalizeKnownPlaceholders(parsed as DemoSnapshot) : null;
+  const saved: unknown = JSON.parse(raw);
+  // Retiring a role must not make an otherwise current workspace require clearing.
+  const parsed = isRecord(saved) && saved.version === 12 && saved.role === "Project Manager"
+    ? { ...saved, role: "Site Personnel" } : saved;
+  if (!isSnapshotShape(parsed) || parsed.version !== 12 || !Array.isArray(parsed.paymentRequests) || !Array.isArray(parsed.pendingAwards) || !Array.isArray(parsed.bidReports)) return null;
+  const state = parsed as DemoSnapshot;
+  if (!state.pos.every(po => ["draft", "submitted", "hold", "returned", "rejected", "approved", "released"].includes(po.status))) return null;
+  if (!state.paymentRequests.every(value => ["draft", "submitted", "hold", "returned", "rejected", "approved", "disbursed"].includes(value.status) && Number.isFinite(value.amount) && value.amount > 0 && state.pos.some(po => po.id === value.poId))) return null;
+  if (!state.payments.every(value => state.paymentRequests.some(request => request.id === value.paymentRequestId && request.poId === value.poId && request.status === "disbursed" && request.amount === value.amount))) return null;
+  return state.bidReports.every(validBidReport) ? normalizeKnownPlaceholders(state) : null;
 };
 
 export class LocalDemoRepository implements DemoRepository {
@@ -114,10 +122,7 @@ export class LocalDemoRepository implements DemoRepository {
         return this.view;
       }
       if (previous) {
-        const source: unknown = JSON.parse(previous.raw);
-        const migrated = migrateV10(source) ?? migrateV9(source) ?? migrateV8(source) ?? migrateV7(source) ?? migrateV6(source) ?? migrateV5(source) ?? migrateV3OrV4(source) ?? migrateLegacy(source);
-        this.view = migrated ? this.write(migrated) : { snapshot: null, status: "recovery", message: "Saved workspace data could not be opened. Restore the workspace to continue." };
-        if (migrated && this.view.status === "ready") try { localStorage.removeItem(previous.key); } catch {}
+        this.view = { snapshot: null, status: "recovery", message: "This browser has records from the previous workflow. Clear the old workspace when you are ready to start the new process. Your saved records remain untouched until you confirm." };
         return this.view;
       }
       this.view = this.write(blankWorkspace());

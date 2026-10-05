@@ -69,3 +69,16 @@
 }
 @media(prefers-reduced-motion:reduce){.archive-spinner{animation:none}}
 @media print{.archive-activity,.po-edit-actions{display:none!important}.collapsible-body{display:block!important}}
+
+.dashboard-metrics { grid-template-columns: repeat(auto-fit,minmax(175px,1fr)); }
+.accounting-po-review .po-adjustment-row { grid-template-columns: repeat(4,minmax(0,1fr)); padding: 14px 0; border-top: 1px solid var(--line); }
+.accounting-po-review .po-adjustment-row .quote-check { margin: 0; }
+.accounting-po-review .button-row, .finance-payment-review .button-row { margin-top: 16px; }
+.accounting-po-review .panel-heading, .finance-payment-review .panel-heading { flex-wrap: wrap; }
+.accounting-po-review .text-link, .finance-payment-review p { overflow-wrap: anywhere; }
+@media (max-width:780px) { .accounting-po-review .po-adjustment-row { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+@media (max-width:480px) { .accounting-po-review .po-adjustment-row { grid-template-columns: 1fr; } }
+
+.admin-project-details p { margin-bottom: 6px; overflow-wrap: anywhere; }
+.admin-add-project .form-grid { grid-template-columns: repeat(3,minmax(0,1fr)); }
+@media (max-width:780px) { .admin-add-project .form-grid { grid-template-columns: 1fr; } }

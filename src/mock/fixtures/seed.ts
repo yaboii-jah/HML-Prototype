@@ -6,8 +6,8 @@ export function seedDemo(): DemoSnapshot {
   const day = (offset: number) => { const d = new Date(); d.setDate(d.getDate() + offset); return d.toISOString().slice(0, 10); };
   const at = (offset: number) => `${day(offset)}T08:00:00.000Z`;
   const sites: Site[] = [
-    { id: "site-a", name: "Harbor Residences · Site A", location: "Pasay City", budget: 750000, manager: "Mara Santos", personnel: "Joel Reyes" },
-    { id: "site-b", name: "Northline Warehouse · Site B", location: "Quezon City", budget: 520000, manager: "Paolo Cruz", personnel: "Ina Garcia" },
+    { id: "site-a", name: "Harbor Residences · Site A", location: "Pasay City", budget: 750000, personnel: "Joel Reyes" },
+    { id: "site-b", name: "Northline Warehouse · Site B", location: "Quezon City", budget: 520000, personnel: "Ina Garcia" },
   ];
   const suppliers: Supplier[] = [
     { id: "sup-1", name: "MetroBuild Materials", location: "Makati City", contact: "Lina Cruz · Sales", accreditation: "HML-ACC-014" },
@@ -27,11 +27,11 @@ export function seedDemo(): DemoSnapshot {
     { id:"q7", mrfId:"m5", supplierId:"sup-2", ref:"QT-PC-0790", prices:{"m5-i1":1450}, available:"In stock", leadDays:4, terms:"Cash on delivery", documents:[] },
   ];
   const pos: PO[] = [
-    { id:"po1", ref:"PO-2026-001", mrfId:"m1", quoteId:"q2", status:"served", priority:"High", notes:"Deliver in two batches as availability permits.", selectionReason:"Lower unit price and staged availability suit the work schedule.", createdAt:at(-18), updatedAt:at(-14) },
+    { id:"po1", ref:"PO-2026-001", mrfId:"m1", quoteId:"q2", status:"released", paymentMode:"credit", archive:{status:"complete",fileId:"seed-po1",url:"https://drive.google.com/file/d/seed-po1/view"}, priority:"High", notes:"Deliver in two batches as availability permits.", selectionReason:"Lower unit price and staged availability suit the work schedule.", createdAt:at(-18), updatedAt:at(-14) },
     { id:"po2", ref:"PO-2026-002", mrfId:"m2", quoteId:"q4", status:"draft", priority:"Normal", notes:"", selectionReason:"Lowest compliant quote.", createdAt:at(-7), updatedAt:at(-7) },
-    { id:"po3", ref:"PO-2026-003", mrfId:"m3", quoteId:"q5", status:"finalized", priority:"Normal", notes:"", selectionReason:"Available within required lead time.", createdAt:at(-6), updatedAt:at(-5) },
+    { id:"po3", ref:"PO-2026-003", mrfId:"m3", quoteId:"q5", status:"submitted", priority:"Normal", notes:"", selectionReason:"Available within required lead time.", createdAt:at(-6), updatedAt:at(-5) },
     { id:"po4", ref:"PO-2026-004", mrfId:"m4", quoteId:"q6", status:"hold", priority:"High", notes:"", selectionReason:"Meets block specification.", reviewReason:"Confirm revised delivery window with site.", createdAt:at(-6), updatedAt:at(-4) },
-    { id:"po5", ref:"PO-2026-005", mrfId:"m5", quoteId:"q7", status:"approved", priority:"Normal", notes:"", selectionReason:"Meets required grading and schedule.", createdAt:at(-4), updatedAt:at(-2) },
+    { id:"po5", ref:"PO-2026-005", mrfId:"m5", quoteId:"q7", status:"approved", paymentMode:"credit", archive:{status:"complete",fileId:"seed-po5",url:"https://drive.google.com/file/d/seed-po5/view"}, priority:"Normal", notes:"", selectionReason:"Meets required grading and schedule.", createdAt:at(-4), updatedAt:at(-2) },
   ];
   const batches: Batch[] = [
     { id:"b1", ref:"DEL-2026-001", poId:"po1", scheduledDate:day(-10), evidence:"Delivery receipt DR-4821", delayReason:"", lines:[{itemId:"m1-i1",expected:60,accepted:60,issue:""}], status:"posted", createdAt:at(-10), updatedAt:at(-9) },
@@ -42,7 +42,7 @@ export function seedDemo(): DemoSnapshot {
     { id:"mv2", siteId:"site-a", itemName:"Portland cement", unit:"bag", quantity:-30, kind:"usage", reason:"Tower 1 slab pour", actor:"Site Personnel", at:at(-7) },
     { id:"mv3", siteId:"site-b", itemName:"Safety net", unit:"roll", quantity:12, kind:"opening", reason:"Opening stock balance", actor:"Administrator", at:at(-20) },
   ];
-  const snapshot: DemoSnapshot = { version:11, bidReports:[],  role:"Site Personnel", siteFilter:"all", sites, suppliers, categories:["Structural","Formwork","Masonry","Electrical","Finishes","Temporary Works"], requests, quotes, pendingAwards:[], pos, batches, movements, payments:[], accounting:[{poId:"po1",invoiceRef:"",receiptRef:"DR-4821",review:"Incomplete",note:"Supplier invoice pending."}], activity:[{id:"a1",entity:"po1",at:at(-14),actor:"Procurement",action:"PO served"},{id:"a2",entity:"b1",at:at(-9),actor:"Site Personnel",action:"60 bags posted to site stock"},{id:"a3",entity:"m7",at:at(-5),actor:"Project Manager",action:"MRF returned",reason:requests[6].reason}] };
+  const snapshot: DemoSnapshot = { version:12, paymentRequests:[], bidReports:[],  role:"Site Personnel", siteFilter:"all", sites, suppliers, categories:["Structural","Formwork","Masonry","Electrical","Finishes","Temporary Works"], requests, quotes, pendingAwards:[], pos, batches, movements, payments:[], accounting:[{poId:"po1",invoiceRef:"",receiptRef:"DR-4821",review:"Incomplete",note:"Supplier invoice pending."}], activity:[{id:"a1",entity:"po1",at:at(-14),actor:"Accounting / Auditing",action:"PO released to Logistics"},{id:"a2",entity:"b1",at:at(-9),actor:"Site Personnel",action:"60 bags posted to site stock"},{id:"a3",entity:"m7",at:at(-5),actor:"Procurement",action:"MRF returned",reason:requests[6].reason}] };
   return upgradeLegacyQuotes(snapshot);
 }
 

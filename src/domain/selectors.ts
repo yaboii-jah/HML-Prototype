@@ -23,7 +23,7 @@ export const paidTotal = (state: DemoSnapshot, poId: string) => state.payments.f
 export const paymentStatus = (state: DemoSnapshot, po: PO) => { const paid = paidTotal(state, po.id); return paid <= 0 ? "Unpaid" : paid >= poTotal(state, po) ? "Paid" : "Partly Paid"; };
 export const budgetFor = (state: DemoSnapshot, siteId: string) => {
   const allocated = state.sites.find(s => s.id === siteId)?.budget ?? 0;
-  const approved = state.pos.filter(po => ["approved", "served"].includes(po.status) && requestForPO(state, po)?.siteId === siteId);
+  const approved = state.pos.filter(po => ["approved", "released"].includes(po.status) && requestForPO(state, po)?.siteId === siteId);
   const committed = approved.reduce((sum, po) => sum + Math.max(0, poTotal(state, po) - paidTotal(state, po.id)), 0);
   const spent = approved.reduce((sum, po) => sum + paidTotal(state, po.id), 0);
   return { allocated, committed, spent, available: allocated - committed - spent };
