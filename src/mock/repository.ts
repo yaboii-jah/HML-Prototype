@@ -122,7 +122,7 @@ export class LocalDemoRepository implements DemoRepository {
         return this.view;
       }
       if (previous) {
-        this.view = { snapshot: null, status: "recovery", message: "This browser has records from the previous workflow. Clear the old workspace when you are ready to start the new process. Your saved records remain untouched until you confirm." };
+        this.view = { snapshot: null, status: "recovery", message: "Saved records use an older workflow. Restore the workspace to start the current process. Existing records remain untouched until you confirm." };
         return this.view;
       }
       this.view = this.write(blankWorkspace());

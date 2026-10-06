@@ -154,7 +154,7 @@ test('department permissions reject crossed handoffs and Management has oversigh
     [disbursable, { type: 'recordPayment', paymentRequestId: requested.paymentRequests[0].id, method: 'Bank', reference: 'REF', date: '2026-10-05' }, 'Finance'],
     [approved, { type: 'releasePO', id: approved.pos[0].id }, 'Accounting / Auditing'],
   ];
-  for (const [state, command, owner] of checks) for (const role of ROLES) if (role !== owner) fail(as(state, role), command, /Switch/);
+  for (const [state, command, owner] of checks) for (const role of ROLES) if (role !== owner) fail(as(state, role), command, /Sign in/);
   assert.deepEqual(tasksFor(as(submitted, 'Management')), []);
 });
 

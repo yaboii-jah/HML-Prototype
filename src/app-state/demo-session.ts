@@ -1,79 +1,77 @@
-import { ROLES, type Role } from "../domain/types.ts";
+import type { Role } from "../domain/types.ts";
 
-export const DEMO_PASSWORD = "Demo123!";
-export const DEMO_ACCOUNTS: { role: Role; email: string }[] = [
-  { role: "Site Personnel", email: "site@constructsync.example" },
-  { role: "Procurement", email: "procurement@constructsync.example" },
-  { role: "Finance", email: "finance@constructsync.example" },
-  { role: "Logistics", email: "logistics@constructsync.example" },
-  { role: "Accounting / Auditing", email: "accounting@constructsync.example" },
-  { role: "Management", email: "management@constructsync.example" },
-  { role: "Administrator", email: "admin@constructsync.example" },
+// Fixed walkthrough credentials. Deployment protection remains the server access gate.
+export const ACCOUNT_FIXTURES: { role: Role; email: string; password: string }[] = [
+  { role: "Site Personnel", email: "hml.constructsync.site@gmail.com", password: "HML!SITE2026" },
+  { role: "Procurement", email: "hml.constructsync.procurement@gmail.com", password: "HML!PROC2026" },
+  { role: "Finance", email: "hml.constructsync.finance@gmail.com", password: "HML!FIN2026" },
+  { role: "Logistics", email: "hml.constructsync.logistics@gmail.com", password: "HML!LOG2026" },
+  { role: "Accounting / Auditing", email: "hml.constructsync.accounting@gmail.com", password: "HML!ACCT2026" },
+  { role: "Management", email: "hml.constructsync.management@gmail.com", password: "HML!MGMT2026" },
+  { role: "Administrator", email: "hml.constructsync.admin@gmail.com", password: "HML!ADMIN2026" },
 ];
-
-export function roleForDemoCredentials(email: string, password: string): Role | null {
-  if (password !== DEMO_PASSWORD) return null;
-  return DEMO_ACCOUNTS.find(account => account.email === email.trim().toLowerCase())?.role ?? null;
+export type AccountIdentity = { email: string; role: Role };
+export function accountForCredentials(email: string, password: string): AccountIdentity | null {
+  const account = ACCOUNT_FIXTURES.find(account => account.email === email.trim().toLowerCase() && account.password === password);
+  return account ? { email: account.email, role: account.role } : null;
 }
 
-const SESSION_KEY = "hml-constructsync-demo-session-v1";
-export type DemoSessionView = { role: Role | null; status: "loading" | "ready" | "volatile" };
-export const serverSessionView: DemoSessionView = { role: null, status: "loading" };
+export const SESSION_STORAGE_KEY = "hml-constructsync-session-v2";
+const LEGACY_SESSION_KEY = "hml-constructsync-demo-session-v1";
+export type DemoSessionView = { email: string | null; role: Role | null; status: "loading" | "ready" | "volatile" };
+export const serverSessionView: DemoSessionView = { email: null, role: null, status: "loading" };
+const storedIdentity = (value: unknown): AccountIdentity | null => {
+  if (!value || typeof value !== "object") return null;
+  const identity = value as Record<string, unknown>;
+  const account = ACCOUNT_FIXTURES.find(account => account.email === identity.email && account.role === identity.role);
+  return account ? { email: account.email, role: account.role } : null;
+};
 
-class LocalDemoSession {
+export class LocalDemoSession {
   private view: DemoSessionView = serverSessionView;
   private initialized = false;
   private listeners = new Set<() => void>();
-
   constructor() {
     if (typeof window !== "undefined") window.addEventListener("storage", event => {
-      if (event.key !== SESSION_KEY) return;
+      if (event.key !== null && event.key !== SESSION_STORAGE_KEY && event.key !== LEGACY_SESSION_KEY) return;
       this.initialized = false;
       this.read();
       this.notify();
     });
   }
-
   private notify() { this.listeners.forEach(listener => listener()); }
-
   read(): DemoSessionView {
     if (this.initialized || typeof window === "undefined") return this.view;
     this.initialized = true;
     try {
-      const saved = localStorage.getItem(SESSION_KEY);
-      const role = ROLES.find(role => role === saved) ?? null;
-      if (saved && !role) localStorage.removeItem(SESSION_KEY);
-      this.view = { role, status: "ready" };
-    } catch {
-      this.view = { role: null, status: "volatile" };
-    }
+      localStorage.removeItem(LEGACY_SESSION_KEY);
+      const saved = localStorage.getItem(SESSION_STORAGE_KEY);
+      let account: AccountIdentity | null = null;
+      if (saved) { try { account = storedIdentity(JSON.parse(saved)); } catch { /* Invalid sessions require sign-in. */ } }
+      if (saved && !account) localStorage.removeItem(SESSION_STORAGE_KEY);
+      this.view = { email: account?.email ?? null, role: account?.role ?? null, status: "ready" };
+    } catch { this.view = { email: null, role: null, status: "volatile" }; }
     return this.view;
   }
-
   subscribe(listener: () => void) { this.listeners.add(listener); return () => this.listeners.delete(listener); }
-
-  select(role: Role) {
-    if (!ROLES.includes(role)) { this.clear(); return; }
+  select(identity: AccountIdentity) {
+    const account = storedIdentity(identity);
+    if (!account) { this.clear(); return; }
     try {
-      localStorage.setItem(SESSION_KEY, role);
-      this.view = { role, status: "ready" };
-    } catch {
-      this.view = { role, status: "volatile" };
-    }
+      localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(account));
+      this.view = { ...account, status: "ready" };
+    } catch { this.view = { ...account, status: "volatile" }; }
     this.initialized = true;
     this.notify();
   }
-
   clear() {
     try {
-      localStorage.removeItem(SESSION_KEY);
-      this.view = { role: null, status: "ready" };
-    } catch {
-      this.view = { role: null, status: "volatile" };
-    }
+      localStorage.removeItem(SESSION_STORAGE_KEY);
+      localStorage.removeItem(LEGACY_SESSION_KEY);
+      this.view = { email: null, role: null, status: "ready" };
+    } catch { this.view = { email: null, role: null, status: "volatile" }; }
     this.initialized = true;
     this.notify();
   }
 }
-
 export const demoSession = new LocalDemoSession();

@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import { DemoSignIn } from "@/src/features/auth/DemoSignIn";
 
 export const metadata: Metadata = {
-  title: "Demo sign-in | HML ConstructSync",
-  description: "Choose a sample account to explore the ConstructSync prototype.",
+  title: "Sign in | HML ConstructSync",
+  description: "Sign in to manage requests, purchases, deliveries and site inventory.",
 };
 
 export default function SignInPage() {

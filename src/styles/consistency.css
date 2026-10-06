@@ -32,9 +32,9 @@ h1,h2,h3{min-width:0;overflow-wrap:anywhere;font-style:normal}
 .signin-panel{padding-block:var(--space-lg)}
 .signin-role-options{max-height:min(320px,30dvh)}
 
-.role-modal{margin:auto;border:1px solid var(--line);color:var(--ink);background:var(--surface);max-height:calc(100dvh - var(--space-lg));padding:var(--space-lg)}
-.role-modal::backdrop{background:var(--overlay)}
-.role-modal-actions{gap:var(--space-sm)}
+.account-modal{margin:auto;border:1px solid var(--line);color:var(--ink);background:var(--surface);max-height:calc(100dvh - var(--space-lg));padding:var(--space-lg)}
+.account-modal::backdrop{background:var(--overlay)}
+.account-modal-actions{gap:var(--space-sm)}
 
 .document-preview-dialog{width:min(calc(100% - var(--space-lg)),1200px);height:min(90dvh,900px);max-height:calc(100dvh - var(--space-lg));padding:var(--space-panel);border:1px solid var(--line);background:var(--surface);color:var(--ink);overflow:hidden}
 .document-preview-dialog[open]{display:flex;flex-direction:column;gap:var(--space-md)}
@@ -43,7 +43,7 @@ h1,h2,h3{min-width:0;overflow-wrap:anywhere;font-style:normal}
 .document-preview-dialog .button-row{margin:0;flex-shrink:0}
 .document-preview-dialog iframe{flex:1;min-height:0;height:auto;background:var(--paper)}
 
-:is(.side-caption,.side-foot,.top-context,.site-context,.role-label small,.masthead-role svg,.metric-strip small,.task-age,.stage-row,.purchase-pulse dt,.panel-total,.project-positions small,.site-code,.table-frame th){color:var(--muted)}
+:is(.side-caption,.side-foot,.top-context,.site-context,.account-label small,.masthead-account svg,.metric-strip small,.task-age,.stage-row,.purchase-pulse dt,.panel-total,.project-positions small,.site-code,.table-frame th){color:var(--muted)}
 .metric-icon.blue,.metric-icon.cyan{color:var(--brand)}
 .metric-icon.amber{color:var(--warn)}
 .metric-icon.teal{color:var(--good)}
@@ -76,8 +76,8 @@ html[data-theme="dark"] input:focus,html[data-theme="dark"] select:focus,html[da
 @media(max-width:900px){.signin-page{grid-template-rows:auto auto}.signin-panel{padding-block:var(--space-md)}}
 @media(max-height:500px){.signin-role-options{position:static;margin-top:var(--space-xs);max-height:40dvh}}
 @media(max-width:800px),(pointer:coarse){
-  .button,.icon-button,.masthead-role,.side-link,.role-options button,.text-link,.back-link,.reference-choose,.reference-remove,.signin-story-stages button,.signin-story-playback,.site-context select,input:not([type=checkbox]):not([type=radio]),select{min-height:44px}
-  .icon-button,.reference-remove,.masthead-role{min-width:44px}
+  .button,.icon-button,.masthead-account,.side-link,.role-options button,.text-link,.back-link,.reference-choose,.reference-remove,.signin-story-stages button,.signin-story-playback,.site-context select,input:not([type=checkbox]):not([type=radio]),select{min-height:44px}
+  .icon-button,.reference-remove,.masthead-account{min-width:44px}
   .reference-remove{flex-basis:44px}
   .text-link,.back-link,.reference-choose{display:inline-flex;align-items:center}
   .masthead-right{gap:var(--space-xs)}
@@ -89,8 +89,8 @@ html[data-theme="dark"] input:focus,html[data-theme="dark"] select:focus,html[da
   .panel-heading .button-row{margin:0}
   .request-detail-layout,.request-detail-overview{gap:var(--space-md)}
   .document-preview-dialog{height:calc(100dvh - var(--space-lg));padding:var(--space-md)}
-  .role-modal{padding:var(--space-md)}
+  .account-modal{padding:var(--space-md)}
   .masthead{padding-inline:var(--space-xs)}
   .site-context select{width:100px;max-width:100px}
 }
-@media print{.role-modal,.document-preview-dialog{display:none!important}}
+@media print{.account-modal,.document-preview-dialog{display:none!important}}

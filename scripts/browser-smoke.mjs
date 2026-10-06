@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import assert from "node:assert/strict";
 import { seedDemo } from "../src/mock/fixtures/seed.ts";
+import { ACCOUNT_FIXTURES, SESSION_STORAGE_KEY } from "../src/app-state/demo-session.ts";
 import { materialId } from "../src/domain/ids.ts";
 
 const edge = "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe";
@@ -114,7 +115,7 @@ try {
         await checkContrast();
         if (step < 3) await checkFocusContrast(step === 1 ? "#ref" : ".materials-toolbar input");
       }
-      if (width <= 768) assert.equal(await run("return [...document.querySelectorAll('.button,.icon-button,.masthead-role,.text-link,.reference-choose')].filter(el=>{const r=el.getBoundingClientRect();return r.width&&r.height&&!el.closest('[hidden]');}).every(el=>el.getBoundingClientRect().height>=44);"), true, "Mobile actions need 44px touch targets");
+      if (width <= 768) assert.equal(await run("return [...document.querySelectorAll('.button,.icon-button,.masthead-account,.text-link,.reference-choose')].filter(el=>{const r=el.getBoundingClientRect();return r.width&&r.height&&!el.closest('[hidden]');}).every(el=>el.getBoundingClientRect().height>=44);"), true, "Mobile actions need 44px touch targets");
       await run("document.documentElement.dataset.theme='light';return true;");
       if (width === 1440 || width === 375) await writeFile(path.join(profile, `request-step-${step}-${width}.png`), Buffer.from((await call("Page.captureScreenshot", { format: "png" })).data, "base64"));
     }
@@ -134,7 +135,23 @@ try {
     await call("Emulation.clearDeviceMetricsOverride");
   };
   const installFixture = async () => { await run(`localStorage.setItem('hml-constructsync-demo-v12', ${JSON.stringify(JSON.stringify(seedDemo()))}); return true;`); await call("Page.reload", { ignoreCache: true }); };
-  const role = async name => { await wait("const button=document.querySelector('.masthead-role');if(!button)return false;button.click();return true;"); await wait("return !!document.querySelector('.role-modal[open] .role-options');"); await run(`const button=[...document.querySelectorAll('.role-options button')].find(x=>x.querySelector('strong')?.textContent===${JSON.stringify(name)});if(!button)throw Error('Role missing');button.click();return true;`); await wait(`return document.querySelector('.masthead-role')?.textContent.includes(${JSON.stringify(name)}) && !document.querySelector('.role-modal[open]') && location.pathname==='/dashboard';`); };
+  const signInAs = async name => {
+    const account = ACCOUNT_FIXTURES.find(value => value.role === name);
+    assert.ok(account, 'Known department account');
+    await wait("return !!document.querySelector('.signin-form');");
+    await fill('#signin-email', account.email); await fill('#signin-password', account.password);
+    await click('Sign in', '.signin-form button');
+    await wait(`return !!document.querySelector('.masthead-account') && JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).role===${JSON.stringify(name)};`);
+  };
+  const role = async name => {
+    await wait("const button=document.querySelector('.masthead-account');if(!button)return false;button.click();return true;");
+    await wait("return !!document.querySelector('.account-modal[open]');"); await click('Sign out', '.account-modal button');
+    await wait("return location.pathname==='/sign-in' && !!document.querySelector('.signin-form');");
+    await signInAs(name); await wait("return location.pathname==='/dashboard';");
+  };
+  const checkProductCopy = async () => {
+    assert.equal(await run("return /\\b(prototype|demo|mock)\\b|sample account|sample data|switch role/i.test(document.body.innerText+' '+document.title+' '+[...document.querySelectorAll('[aria-label],[placeholder],meta[name=description]')].map(el=>el.getAttribute('aria-label')||el.getAttribute('placeholder')||el.getAttribute('content')).join(' '));"), false, 'Screens and metadata use product wording');
+  };
   const checkContrast = async (selector = "p,small,dt,th,.side-caption,.side-link,.field>span,.button,.text-link,.badge", collect = false) => {
     const failures = await run(`
       const canvas=document.createElement('canvas');canvas.width=canvas.height=1;
@@ -156,7 +173,7 @@ try {
     await run(`document.querySelector(${JSON.stringify(selector)}).focus();return true;`);
     assert.equal(await run(`const el=document.querySelector(${JSON.stringify(selector)}),style=getComputedStyle(el),canvas=document.createElement('canvas');canvas.width=canvas.height=1;const ctx=canvas.getContext('2d');const lum=color=>{ctx.fillStyle=color;ctx.fillRect(0,0,1,1);return [...ctx.getImageData(0,0,1,1).data].slice(0,3).map(v=>v/255).map(v=>v<=.04045?v/12.92:((v+.055)/1.055)**2.4).reduce((sum,v,i)=>sum+v*[.2126,.7152,.0722][i],0);};const ring=lum(style.outlineColor),surface=lum(style.backgroundColor);return parseFloat(style.outlineWidth)>=2&&(Math.max(ring,surface)+.05)/(Math.min(ring,surface)+.05)>=3;`), true, "Focused controls need a contrasting ring");
   };
-  console.log("Browser ready; checking demo sign-in");
+  console.log("Browser ready; checking department sign-in");
   await wait("return location.pathname === '/sign-in' && !!document.querySelector('.signin-form');");
   assert.equal(await run("return new URLSearchParams(location.search).get('next');"), "/dashboard");
   assert.equal(await run("return document.querySelector('.signin-intro h1')?.textContent;"), "Start with a clear request.");
@@ -190,40 +207,28 @@ try {
     await writeFile(path.join(profile, width === 375 ? "sign-in-mobile.png" : `sign-in-${width}.png`), Buffer.from((await call("Page.captureScreenshot", { format: "png" })).data, "base64"));
   }
   await call("Emulation.setDeviceMetricsOverride", { width: 375, height: 400, deviceScaleFactor: 1, mobile: true });
-  await run("document.querySelector('.signin-submit').scrollIntoView({block:'end'});return true;");
-  assert.equal(await run("return document.querySelector('.signin-submit').getBoundingClientRect().bottom <= innerHeight && window.scrollY > 0;"), true, "Short sign-in screens must scroll to the action");
+  await wait("return innerWidth===375 && innerHeight===400;");
+  await run("document.querySelector('.signin-submit').scrollIntoView({block:'end',behavior:'instant'});return true;");
+  await wait("const box=document.querySelector('.signin-submit').getBoundingClientRect();return box.bottom<=innerHeight+1 && box.top>=-1;");
+  await writeFile(path.join(profile,'sign-in-short-screen.png'),Buffer.from((await call('Page.captureScreenshot',{format:'png'})).data,'base64'));
   await call("Emulation.setDeviceMetricsOverride", { width: 320, height: 568, deviceScaleFactor: 1, mobile: true });
   await run("window.scrollTo(0,0);return true;");
-  assert.equal(await run("return document.querySelector('.signin-role-options') === null;"), true);
-  await run("document.querySelector('.signin-role-trigger').click();return true;");
-  await wait("return !!document.querySelector('.signin-role-options');");
-  assert.equal(await run("return document.querySelectorAll('.signin-role-options button').length;"), 7, "Sign-in offers exactly seven roles");
-  assert.equal(await run("return !!document.querySelector('[aria-label=\"Fill Project Manager demo credentials\"]');"), false);
-  assert.equal(await run("return document.querySelector('.signin-role-options').getBoundingClientRect().bottom <= innerHeight;"), true, "Role picker must stay on screen");
-  assert.equal(await run("return document.documentElement.scrollHeight <= innerHeight;"), true, "Opening roles must not scroll the page");
-  await writeFile(path.join(profile, "sign-in-role-picker.png"), Buffer.from((await call("Page.captureScreenshot", { format: "png" })).data, "base64"));
-  await run("document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));return true;");
-  await wait("return !document.querySelector('.signin-role-options');");
-  await run("document.querySelector('.signin-role-trigger').click();return true;");
-  await run("document.querySelector('[aria-label=\"Fill Site Personnel demo credentials\"]').click();return true;");
-  assert.equal(await run("return document.querySelector('#demo-email').value;"), "site@constructsync.example");
-  await fill("#demo-password", "incorrect");
-  await click("Sign in", ".signin-form button");
-  await wait("return !!document.querySelector('.signin-error');");
-  assert.equal(await run("return location.pathname;"), "/sign-in");
+  assert.equal(await run("return !!document.querySelector('.signin-role-picker,.signin-role-trigger,.signin-note');"), false, 'Sign-in exposes no accounts or credential hints');
+  assert.equal(await run("return document.querySelector('#signin-email').value+document.querySelector('#signin-password').value;"), '', 'Credentials start empty');
+  await checkProductCopy();
+  await fill('#signin-email', ACCOUNT_FIXTURES[0].email); await fill('#signin-password', 'incorrect');
+  await click('Sign in', '.signin-form button'); await wait("return !!document.querySelector('.signin-error');");
+  assert.equal(await run("return document.querySelector('.signin-error').textContent;"), 'Invalid email or password.');
+  assert.equal(await run("return location.pathname;"), '/sign-in');
   await run("document.querySelector('.signin-error').scrollIntoView({block:'nearest'});return true;");
-  assert.equal(await run("return document.querySelector('.signin-error').getBoundingClientRect().bottom <= innerHeight;"), true, "Sign-in error must be reachable on a short phone");
-  await call("Emulation.clearDeviceMetricsOverride");
-  await fill("#demo-email", "pm@constructsync.example");
-  await fill("#demo-password", "Demo123!");
-  await click("Sign in", ".signin-form button");
-  await wait("return !!document.querySelector('.signin-error');");
-  assert.equal(await run("return location.pathname;"), "/sign-in", "Removed PM credentials cannot enter the workspace");
-  await run("document.querySelector('.signin-role-trigger').click();return true;");
-  await run("document.querySelector('[aria-label=\"Fill Site Personnel demo credentials\"]').click();return true;");
-  await click("Sign in", ".signin-form button");
-  await wait("return location.pathname === '/dashboard' && !!document.querySelector('.metric-strip');");
-  assert.equal(await run("return localStorage.getItem('hml-constructsync-demo-session-v1');"), "Site Personnel");
+  assert.equal(await run("return document.querySelector('.signin-error').getBoundingClientRect().bottom<=innerHeight;"), true);
+  await call('Emulation.clearDeviceMetricsOverride');
+  await fill('#signin-email', 'pm@constructsync.example'); await fill('#signin-password', 'Demo123!');
+  await click('Sign in', '.signin-form button'); await wait("return !!document.querySelector('.signin-error');");
+  assert.equal(await run("return location.pathname;"), '/sign-in', 'Retired credentials are rejected');
+  await signInAs('Site Personnel');
+  const storedSession = await run(`return JSON.parse(localStorage.getItem(${JSON.stringify(SESSION_STORAGE_KEY)}));`);
+  assert.deepEqual(storedSession, { email: ACCOUNT_FIXTURES[0].email, role: 'Site Personnel' });
   assert.equal((await state()).sites.length, 0, "A fresh workspace starts without projects");
   assert.equal(await run("return document.body.innerText.includes('Build your workflow from an empty workspace');"), true);
   await navigate("/reports");
@@ -254,6 +259,7 @@ try {
   for (const route of auditRoutes) {
     console.log("Checking layout",route);
     await navigate(route);
+    await checkProductCopy();
     for (const [width, height] of [[1440, 900], [768, 900], [414, 900], [375, 900], [320, 900]]) {
       await call("Emulation.setDeviceMetricsOverride", { width, height, deviceScaleFactor: 1, mobile: width < 800 });
       for (const theme of ["light", "dark"]) {
@@ -266,9 +272,9 @@ try {
   await call("Emulation.clearDeviceMetricsOverride");
   await run("document.documentElement.dataset.theme='light';return true;");
   await navigate("/dashboard");
-  console.log("Demo sign-in passed; checking dashboard");
+  console.log("Department sign-in passed; checking dashboard");
   await wait("return location.pathname === '/dashboard' && !!document.querySelector('.metric-strip');");
-  assert.equal(await run("return document.querySelector('.masthead-role strong')?.textContent;"), (await state()).role);
+  assert.equal(await run("return document.querySelector('.masthead-account strong')?.textContent;"), (await state()).role);
   await wait("return document.querySelector('.brand-logo img')?.complete && document.querySelector('.brand-logo img')?.naturalWidth > 0;");
   await call("Emulation.setDeviceMetricsOverride", { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false });
   await writeFile(path.join(profile, "dashboard-desktop.png"), Buffer.from((await call("Page.captureScreenshot", { format: "png" })).data, "base64"));
@@ -281,24 +287,31 @@ try {
     await run(`document.documentElement.dataset.theme=${JSON.stringify(theme)};return true;`);
     await checkContrast();
   }
-  await run("document.documentElement.dataset.theme='light';document.querySelector('.masthead-role').focus();document.querySelector('.masthead-role').click();return true;");
-  await wait("return !!document.querySelector('.role-modal[open]');");
-  assert.equal(await run("return document.querySelectorAll('.role-options button').length;"), 7, "Role switcher offers exactly seven roles");
-  assert.equal(await run("return document.querySelector('.role-options').innerText.includes('Project Manager');"), false);
-  for (let index = 0; index < 14; index++) {
+  await run("document.documentElement.dataset.theme='light';document.querySelector('.masthead-account').focus();document.querySelector('.masthead-account').click();return true;");
+  await wait("return !!document.querySelector('.account-modal[open]');");
+  assert.equal(await run("return !!document.querySelector('.role-options');"), false, 'Account menu offers no role switching');
+  assert.equal(await run("return document.querySelector('.account-details span').textContent;"), ACCOUNT_FIXTURES[0].email);
+  await checkProductCopy();
+  for (const width of [1440,375,320]) {
+    await call('Emulation.setDeviceMetricsOverride', { width, height: 812, deviceScaleFactor: 1, mobile: width < 800 });
+    assert.equal(await run("return document.querySelector('.account-modal').getBoundingClientRect().right<=innerWidth;"), true);
+    await writeFile(path.join(profile, `account-menu-${width}.png`), Buffer.from((await call('Page.captureScreenshot',{format:'png'})).data,'base64'));
+  }
+  await call('Emulation.clearDeviceMetricsOverride');
+  for (let index = 0; index < 6; index++) {
     await call("Input.dispatchKeyEvent", { type: "keyDown", key: "Tab", code: "Tab", windowsVirtualKeyCode: 9 });
     await call("Input.dispatchKeyEvent", { type: "keyUp", key: "Tab", code: "Tab", windowsVirtualKeyCode: 9 });
-    assert.equal(await run("return !!document.activeElement.closest('.role-modal');"), true, "Role dialog must contain keyboard focus");
+    assert.equal(await run("return !!document.activeElement.closest('.account-modal');"), true, "Account dialog must contain keyboard focus");
   }
-  for (let index = 0; index < 14; index++) {
+  for (let index = 0; index < 6; index++) {
     await call("Input.dispatchKeyEvent", { type: "keyDown", key: "Tab", code: "Tab", windowsVirtualKeyCode: 9, modifiers: 8 });
     await call("Input.dispatchKeyEvent", { type: "keyUp", key: "Tab", code: "Tab", windowsVirtualKeyCode: 9, modifiers: 8 });
-    assert.equal(await run("return !!document.activeElement.closest('.role-modal');"), true, "Role dialog must contain reverse keyboard navigation");
+    assert.equal(await run("return !!document.activeElement.closest('.account-modal');"), true, "Account dialog must contain reverse keyboard navigation");
   }
   await call("Input.dispatchKeyEvent", { type: "keyDown", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 });
   await call("Input.dispatchKeyEvent", { type: "keyUp", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 });
-  await wait("return !document.querySelector('.role-modal[open]');");
-  assert.equal(await run("return document.activeElement === document.querySelector('.masthead-role');"), true, "Closing the role dialog restores focus");
+  await wait("return !document.querySelector('.account-modal[open]');");
+  assert.equal(await run("return document.activeElement === document.querySelector('.masthead-account');"), true, "Closing the account dialog restores focus");
   assert.equal(await run("return !document.querySelector('.toast');"), true, "Routine actions should not show success toasts");
   await run("const saved=JSON.parse(localStorage.getItem('hml-constructsync-demo-v12'));saved.requests.find(r=>r.id==='m7').ref='MRFTRAUMAHML20260000000384';localStorage.setItem('hml-constructsync-demo-v12',JSON.stringify(saved));return true;");
   await navigate("/requests/m7/edit");
@@ -548,7 +561,7 @@ try {
   await uploadFiles('input[aria-label="Choose combined supporting PDF"]', [sampleReference]);
   await wait("return document.querySelector('.reference-file-list')?.children.length === 1;");
   assert.equal(await run("return document.querySelector('.reference-count')?.textContent;"), "1 attached");
-  assert.equal(await run("return document.querySelector('.reference-note')?.textContent.includes('stays in this browser');"), true);
+  assert.equal(await run("return document.querySelector('.reference-note')?.textContent.includes('archived to Google Drive after Procurement approval');"), true);
   await click("Edit details", ".request-review button");
   assert.equal(await requestStep(), "1Request details");
   await click("Next", ".request-wizard-actions button");
@@ -599,7 +612,7 @@ try {
   assert.equal((await state()).requests.find(x => x.id === request.id).specialInstructions, request.specialInstructions);
   await run(`const saved=JSON.parse(localStorage.getItem('hml-constructsync-demo-v12'));saved.sites.find(site=>site.id===${JSON.stringify(request.siteId)}).driveFolderId='smoke-project-folder';localStorage.setItem('hml-constructsync-demo-v12',JSON.stringify(saved));return true;`);
   await call("Page.reload", { ignoreCache: true });
-  await wait("return !!document.querySelector('.masthead-role');");
+  await wait("return !!document.querySelector('.masthead-account');");
   await role("Procurement"); await navigate(`/requests/${request.id}`); await click("Approve request");
   await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).requests.find(x=>x.id===${JSON.stringify(request.id)}).archive?.status==='complete';`);
   assert.equal(await run("return window.__driveSmokeChunks;"), 3, "A PDF over Vercel's 4.5 MB limit should upload in three chunks");
@@ -761,17 +774,14 @@ try {
   await wait(`return !JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).requests.find(r=>r.id===${JSON.stringify(request.id)}).correction;`);
   await call("Page.navigate", { url: `${baseUrl}/?view=requests&kind=request&id=${request.id}` });
   await wait(`return location.pathname===${JSON.stringify(`/requests/${request.id}`)};`);
-  await wait("return !!document.querySelector('.masthead-role');");
+  await wait("return !!document.querySelector('.masthead-account');");
   await role("Administrator"); await navigate("/admin");
-  const priorToRetirement = await run("const saved=JSON.parse(localStorage.getItem('hml-constructsync-demo-v12'));saved.role='Project Manager';saved.sites[0].manager='Historical project manager';const raw=JSON.stringify(saved);localStorage.setItem('hml-constructsync-demo-v12',raw);localStorage.setItem('hml-constructsync-demo-session-v1','Project Manager');return raw;");
+  const priorToRetirement = await run("const saved=JSON.parse(localStorage.getItem('hml-constructsync-demo-v12'));saved.role='Project Manager';saved.sites[0].manager='Historical project manager';const raw=JSON.stringify(saved);localStorage.setItem('hml-constructsync-demo-v12',raw);localStorage.removeItem('hml-constructsync-session-v2');localStorage.setItem('hml-constructsync-demo-session-v1','Project Manager');return raw;");
   await call("Page.reload", { ignoreCache: true });
   await wait("return location.pathname==='/sign-in' && !!document.querySelector('.signin-form');");
   assert.equal(await run("return localStorage.getItem('hml-constructsync-demo-session-v1');"), null);
   assert.equal(await run("return localStorage.getItem('hml-constructsync-demo-v12');"), priorToRetirement, "Retired PM session preserves all stored workspace records");
-  await run("document.querySelector('.signin-role-trigger').click();return true;");
-  await run("document.querySelector('[aria-label=\"Fill Procurement demo credentials\"]').click();return true;");
-  await click("Sign in", ".signin-form button");
-  await wait("return !!document.querySelector('.masthead-role');");
+  await signInAs('Procurement');
   assert.deepEqual(await state(), { ...JSON.parse(priorToRetirement), role: 'Procurement' }, "Signing in changes only the active role");
   await navigate('/projects');
   assert.equal(await run("return document.querySelector('.site-grid').innerText.includes('Historical project manager');"), false);
@@ -783,7 +793,16 @@ try {
     await writeFile(path.join(profile, `admin-projects-${width}.png`), Buffer.from((await call("Page.captureScreenshot", { format: "png" })).data, "base64"));
   }
   await call("Emulation.clearDeviceMetricsOverride");
-  assert.equal(await run("return [...document.querySelectorAll('button')].some(button => button.textContent.includes('Clear all workspace data'));"), true);
+  assert.equal(await run("return [...document.querySelectorAll('button')].some(button => /Reset workspace|Clear all workspace/.test(button.textContent));"), false);
+  assert.equal(await run("return !!document.querySelector('a[href=\"/admin/maintenance\"]');"), false);
+  await role('Site Personnel'); await navigate('/admin/maintenance');
+  assert.equal(await run("return document.querySelector('h1').textContent;"), 'Access unavailable');
+  assert.equal(await run("return [...document.querySelectorAll('button')].some(button=>button.textContent==='Reset workspace');"), false);
+  await role('Administrator'); await navigate('/admin/maintenance');
+  await click('Reset workspace');
+  await wait("return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).requests.length===0;");
+  await wait("return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).role==='Administrator';");
+  await installFixture(); await navigate('/admin');
   await run("localStorage.setItem('hml-constructsync-demo-v12', 'not-json'); return true;");
   await call("Page.reload", { ignoreCache: true });
   await wait("return document.querySelector('h1')?.textContent==='Saved data needs attention';");
@@ -800,20 +819,18 @@ try {
   await click('Clear workspace'); await wait("return !!localStorage.getItem('hml-constructsync-demo-v12');");
   assert.equal((await state()).version,12); assert.equal((await state()).requests.length,0);
   assert.equal(await run("return localStorage.getItem('hml-buildsync-demo-v1');"),null);
-  await wait("return !!document.querySelector('.masthead-role');");
-  await run("document.querySelector('.masthead-role').click();return true;");
+  await wait("return !!document.querySelector('.masthead-account');");
+  await run("document.querySelector('.masthead-account').click();return true;");
   await click("Sign out");
   await wait("return location.pathname === '/sign-in' && !!document.querySelector('.signin-form');");
-  assert.equal(await run("return localStorage.getItem('hml-constructsync-demo-session-v1');"), null);
+  assert.equal(await run(`return localStorage.getItem(${JSON.stringify(SESSION_STORAGE_KEY)});`), null);
   assert.equal((await state()).requests.length, 0);
-  await run("localStorage.setItem('hml-constructsync-demo-session-v1', 'Unknown role');return true;");
+  await run("localStorage.setItem('hml-constructsync-session-v2', JSON.stringify({email:'unknown@gmail.com',role:'Unknown role'}));return true;");
   await call("Page.navigate", { url: `${baseUrl}/dashboard` });
   await wait("return location.pathname === '/sign-in' && !!document.querySelector('.signin-form');");
   await call("Page.navigate", { url: `${baseUrl}/requests/new` });
   await wait("return location.pathname === '/sign-in' && new URLSearchParams(location.search).get('next') === '/requests/new';");
-  await run("document.querySelector('.signin-role-trigger').click();return true;");
-  await run("document.querySelector('[aria-label=\"Fill Site Personnel demo credentials\"]').click();return true;");
-  await click("Sign in", ".signin-form button");
+  await signInAs('Site Personnel');
   await wait("return location.pathname === '/requests/new' && document.querySelector('h1')?.textContent === 'Set up the workspace first';");
   assert.equal((await state()).role, "Site Personnel");
   assert.deepEqual(browserExceptions, [], `Uncaught browser errors: ${browserExceptions.join("; ")}`);

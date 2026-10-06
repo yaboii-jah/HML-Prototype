@@ -54,7 +54,7 @@ export function Reports() {
 
     {!budgetSites.length ? <section className="panel report-empty">
       <h2>No projects to report yet</h2>
-      <p>Switch to Administrator to add a project. Reports will fill as the MRF workflow progresses.</p>
+      <p>An Administrator adds projects. Reports fill as requests and purchasing progress.</p>
       <Link className="button secondary" href="/admin">Open administration</Link>
     </section> : <>
       <div className="content-grid report-summary-grid">

@@ -1,6 +1,6 @@
 ﻿# Workflow testing reference
 
-Use the role switcher and a disposable test workspace. Configure a project, budget and Drive folder as Administrator. Prepare one MRF supporting PDF and supplier quotation files.
+Use the [department accounts](PRESENTER_ACCESS.md) and a disposable test workspace. Sign out from Account and sign in with the next department. Configure a project, budget and Drive folder as Administrator. Prepare one MRF supporting PDF and supplier quotation files.
 
 Seven roles are available. Project setup requires no manager assignment; the MRF keeps its generic Approved by signature.
 
@@ -20,6 +20,9 @@ Seven roles are available. Project setup requires no manager assignment; the MRF
 | **Credit / terms** | Accounting releases the approved, archived PO immediately. Finance payment may happen separately before or after delivery. No payment request is required for release. |
 
 ## Returns and key checks
+
+- [ ] Sign-in has no credential hints or role picker; each account needs its own password. Account menu has Sign out only. Refresh keeps the account; sign-out keeps records/files; old role-only sessions require new sign-in.
+- [ ] Screens and page titles have no prototype/demo/mock labels. Normal Administration has no reset action; `/admin/maintenance` allows Administrator reset only, with confirmation.
 
 - [ ] **Optional AI MRF entry:** In Step 1, import one PDF or up to 12 ordered page photos (4 MB total). Preview, extract, then apply. Choose the project manually; correct missing values and check all materials.
 - [ ] AI import requires a separate supporting PDF and review checkbox before submission. Editing details/materials or reopening a saved AI draft requires review again. Import failures preserve manual entries; source scans disappear on reload and never become attachments.

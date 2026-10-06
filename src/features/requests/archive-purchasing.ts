@@ -49,7 +49,7 @@ export async function syncFinalizedQuote(state: DemoSnapshot, quote: Quote, run:
       const reused = previous?.archive?.status === "complete" ? previous.archive.files.find(value => value.localFileId === document.fileId) : undefined;
       if (reused) { files.push(reused); continue; }
       const blob = await readQuoteFile(document.fileId);
-      if (!blob) throw new Error(`The original quotation file ${document.name} is missing from this browser. Create a revision and attach it again.`);
+      if (!blob) throw new Error(`The original quotation file ${document.name} is unavailable. Create a revision and attach it again.`);
       const start = await responseJson(await fetch("/api/drive/quotes", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ quote, mrf, projectFolderId: site.driveFolderId, index, size: blob.size }) }));
       const result = start.driveFileId && start.url ? start : start.ticket && Number.isInteger(start.offset) ? await uploadDocument(blob, start.ticket, start.offset!, "/api/drive/quotes/chunk", value => progress?.({ ...value, fileIndex: index + 1, fileCount: quote.documents.length })) : undefined;
       if (!result?.driveFileId || !result.url) throw new Error("Drive did not confirm the quotation file.");

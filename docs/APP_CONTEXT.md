@@ -2,18 +2,18 @@
 
 > **Living document:** This is the canonical, implementation-aligned context for the application. Update this file in the same change whenever a major implementation changes the product scope, business workflow, domain model, permissions, routes, persistence, seeded walkthrough, architecture, or verification strategy. Do not record small visual polish, copy edits, or isolated bug fixes unless they change one of those areas.
 
-**Last verified:** 2026-10-05
+**Last verified:** 2026-10-06
 **Application version:** Prototype (`package.json` 0.1.0)
 **State schema:** `DemoSnapshot` version 12
 
 ## Product in one paragraph
 
-HML ConstructSync is a browser-local construction operations prototype, also deployed on Vercel for one-presenter company demonstrations. It demonstrates the linked journey from a Material Request Form (MRF) through Procurement review, supplier quotations and comparisons, Purchase Order (PO) preparation, Accounting approval and release, Finance payment approval/disbursement, Logistics delivery, and site receiving/usage. A fresh workspace starts empty. It uses simulated roles, browser `localStorage` for records, and IndexedDB for uploaded MRF, supplier quotation and optional Accounting evidence files. On Procurement approval, server routes archive a generated MRF PDF and its supporting PDF to a mapped Google Drive project folder. Finalized supplier quotations and Accounting-approved POs also archive to Drive. The server can parse quotations with Gemini when configured. It has no app-level authentication, shared record database, supplier portal, or payment integration.
+HML ConstructSync is a browser-local construction operations prototype, also deployed on Vercel for one-presenter company demonstrations. It demonstrates the linked journey from a Material Request Form (MRF) through Procurement review, supplier quotations and comparisons, Purchase Order (PO) preparation, Accounting approval and release, Finance payment approval/disbursement, Logistics delivery, and site receiving/usage. A fresh workspace starts empty. It uses simulated roles, browser `localStorage` for records, and IndexedDB for uploaded MRF, supplier quotation and optional Accounting evidence files. On Procurement approval, server routes archive a generated MRF PDF and its supporting PDF to a mapped Google Drive project folder. Finalized supplier quotations and Accounting-approved POs also archive to Drive. The server can parse quotations with Gemini when configured. Department email/password sign-in simulates access in the presenter browser; it has no server-enforced account authentication, shared record database, supplier portal or payment integration.
 
 ## Current product boundary
 
 - Seven simulated roles share one workspace: Site Personnel, Procurement, Finance, Logistics, Accounting / Auditing, Management, and Administrator.
-- Role switching changes permitted actions and dashboard tasks. It is a presentation of authorization rules, not security.
+- Seven fixed department accounts use distinct passwords and Gmail-format identifiers without mailbox ownership or email delivery. Sign-in shows no account list, autofill or credential hints. The account menu displays the current email/department and Sign out; department changes require a new sign-in. Sessions remain until sign-out, while all accounts share the same browser-local records. These client-side checks simulate authorization rather than securing server APIs; Vercel deployment protection remains required.
 - Project Manager is retired from app access and project assignments. The generic MRF Approved by signature remains document metadata; Procurement owns the app review.
 - Site filtering changes dashboard and queue context without creating separate tenant data.
 - All operational changes pass through typed domain commands and update one linked snapshot.
@@ -50,7 +50,7 @@ For upfront purchases, Accounting releases only after full actual disbursement. 
 | Logistics | Schedule delivery batches against the unscheduled balance of a released PO. |
 | Accounting / Auditing | Review PO finances and payment arrangement, approve within budget or return to Procurement, archive approved POs, prepare payment requests and release eligible POs to Logistics. Review delivery evidence separately; make justified stock adjustments. |
 | Management | Read cross-project reports and inspect exceptions; no operational approval commands. |
-| Administrator | Add projects/sites, map and validate their Drive folders, inspect activity, retry archives, and clear browser workspace data. |
+| Administrator | Add projects/sites, map and validate their Drive folders, inspect activity, retry archives, and reset browser workspace data through the unlinked maintenance page. |
 
 The domain command layer in `src/domain/commands.ts` is the authority for permissions and transition validation. Hiding an action in the UI is not sufficient authorization.
 
@@ -146,8 +146,8 @@ The domain command layer in `src/domain/commands.ts` is the authority for permis
 | Framework | Next.js 16.3.6 App Router, React 19.2.8, TypeScript 5. |
 | Route layer | `app/`; route files are thin adapters that render feature components. Dynamic route `params` and `searchParams` are awaited. |
 | Feature screens | `src/features/` grouped by requests, purchasing, Finance, deliveries, inventory, Accounting, projects, suppliers, reports, dashboard, and admin. |
-| Shared shell/UI | `src/components/`; `AppShell` owns navigation, role/site controls, prototype messaging, and shared workspace chrome. |
-| State access | `DemoProvider` in `src/app-state/` exposes repository state, command execution, reset, and transient notices. |
+| Shared shell/UI | `src/components/`; `AppShell` owns navigation, account/site controls, theme, notifications and shared workspace chrome. Visible screens, metadata and feedback use production-style wording; the underlying prototype boundary remains documented here. |
+| State access | `DemoProvider` in `src/app-state/` exposes repository state, signed-in command execution, account sessions, sign-in/sign-out, reset and transient notices. Normal UI cannot execute the setRole command directly. |
 | Domain model | `src/domain/types.ts` defines records and statuses. |
 | Mutations | `src/domain/commands.ts` is the single transition, permission, and validation boundary. |
 | Derived data | `src/domain/pricing.ts` calculates quotation and PO totals; `src/domain/procurement.ts` validates quote review and revisions; `src/domain/selectors.ts` calculates budgets, delivery balances, payment state, and inventory. `src/domain/queues.ts` derives role tasks and dashboard metrics. |
@@ -162,7 +162,7 @@ Keep business rules out of page components where practical. New state transition
 
 - Current storage key: `hml-constructsync-demo-v12`.
 - On first load, the repository creates an empty workspace if no saved state exists.
-- Retired Project Manager sessions require sign-in. A current v12 workspace saved with that selection loads as Site Personnel in memory without rewriting storage; the next valid sign-in saves the chosen role. Obsolete assignment fields and historical actor labels remain readable without granting access.
+- Account session key: `hml-constructsync-session-v2`, storing only email and derived role. The former `hml-constructsync-demo-session-v1` is discarded without touching workspace records, requiring one new sign-in. Malformed or unknown account identities require sign-in. Retired Project Manager sessions require sign-in. A current v12 workspace saved with that selection loads as Site Personnel in memory without rewriting storage; the next valid sign-in saves the chosen role. Obsolete assignment fields and historical actor labels remain readable without granting access.
 - Previous workflow records (v11 and earlier) require an explicit manual workspace clear. The app shows recovery and preserves saved records/keys until confirmation; it does not migrate old transactions into the new department flow. Pure legacy conversion helpers remain for historical regression tests and are not used by the active loader.
 - MRF and quotation originals remain browser-local. Successful MRF archival also creates numbered Drive copies; clearing browser data removes local records/files but does not delete Drive files. The Gemini Files API is not used as permanent document storage.
 - Malformed saved data enters an explicit recovery state instead of being silently overwritten.
@@ -191,7 +191,9 @@ Any incompatible snapshot change requires a schema-version decision and a migrat
 | `/inventory`, `/inventory/[siteId]/[materialId]` | Site inventory and material movement history. |
 | `/accounting`, `/accounting/[poId]` | All POs grouped by MRF; PO/budget review, payment preparation, Logistics release and supporting documents. |
 | `/reports` | Management cross-project reporting. |
-| `/admin` | Project creation, Drive folder mapping, activity, and a confirmed clear-workspace action. |
+| `/sign-in` | Email/password department access with no predefined account hints. |
+| `/admin` | Project creation, Drive folder mapping and activity; no workspace reset control. |
+| `/admin/maintenance` | Administrator-only confirmed workspace reset, reached directly without a navigation link. |
 | `/api/drive/validate`, `/api/drive/archive`, `/api/drive/archive/chunk`, `/api/drive/files` | Protected project folder validation, resumable PDF archive, and project folder browsing/search. |
 | `/api/documents/preview` | Generates the same MRF/PO PDFs used for archival for browser preview, download and printing. |
 | `/api/bid-comparisons`, `/api/drive/bid-comparisons`, `/api/drive/bid-comparisons/chunk` | Server XLSX/PDF generation, protected report archival/download, and dedicated resumable uploads bound to artifact type. |
@@ -206,6 +208,8 @@ All workspace routes are wrapped by `app/(workspace)/layout.tsx`, which applies 
 - Suppliers enter the directory when Procurement finalizes a quotation.
 - The historical cement transaction remains in `src/mock/fixtures/seed.ts` for automated test fixtures only. It is never loaded for a new or cleared workspace.
 
+Department account credentials and reset instructions: [PRESENTER_ACCESS.md](PRESENTER_ACCESS.md). Architecture decision: [protected department walkthrough](adr/0001-protected-department-walkthrough.md).
+
 ## Verification baseline
 
 Run the following after changes that affect behavior or architecture:
@@ -217,12 +221,13 @@ npx tsc --noEmit
 npm run build
 ```
 
-With the development server running, use `node scripts/browser-smoke.mjs` for the broader linked workflow, persistence, legacy links, and UI checks at 320–1440 px in light and dark themes. UI regressions cover short-screen sign-in scrolling, long request references, role-dialog focus containment and restoration, text/focus contrast, mobile control sizes, and document-preview bounds. Use `node scripts/quotation-smoke.mjs http://localhost:3100` with a production server on port 3100 for grouped quotation review, saved awards, split POs, Accounting approval and credit release, and print status.
+With the development server running, use `node scripts/browser-smoke.mjs` for the broader linked workflow, persistence, legacy links, and UI checks at 320–1440 px in light and dark themes. UI regressions cover short-screen sign-in scrolling, long request references, account-dialog focus containment and restoration, text/focus contrast, mobile control sizes, and document-preview bounds. Use `node scripts/quotation-smoke.mjs http://localhost:3100` with a production server on port 3100 for grouped quotation review, saved awards, split POs, Accounting approval and credit release, and print status.
 
 The domain test suite currently protects these high-value behaviors:
 
 - Seeded purchasing, delivery, inventory, and budget consistency.
 - MRF permission/review rules and ID preservation after return/resubmission.
+- Seven unique account passwords, normalized emails, invalid credential/session rejection, remembered sessions, password-free session storage and legacy session invalidation without record loss. Browser handoffs sign out and back in, verify product copy/metadata, and check maintenance visibility and access.
 - The browser walkthrough covers MRF step validation, navigation and file retention, incomplete draft saving/reopening, final confirmation, returned-request resubmission, PDF-only corrections, and responsive step layouts.
 - MRF AI tests cover source limits/signatures, same-origin requests, ordered page uploads, malformed/unrelated/multiple-request results, provider failures, blank unreadable values and mandatory review metadata. The browser uses mocked extraction responses to verify preview, cancellation, retry, explicit replacement, manual editing, separate attachments and fresh review after draft reopening. Live OCR accuracy remains dependent on the configured model and document quality.
 - Single stock posting, outstanding quantities, site isolation, and nonnegative inventory.
@@ -266,6 +271,7 @@ When updating it:
 
 | Date | Context change |
 | --- | --- |
+| 2026-10-06 | Added fixed department email/password accounts, removed sign-in hints and role switching, introduced v2 remembered account sessions, hid reset behind an Administrator maintenance route and removed visible prototype/storage labels. |
 | 2026-10-05 | Added optional temporary MRF PDF/photo extraction with editable results, manual project selection, separate supporting attachments and mandatory human review on AI-assisted submission. |
 | 2026-10-05 | Removed Project Manager access and project assignments; retained generic MRF signatures and compatibility with saved v12 selections and historical actors. |
 | 2026-10-05 | Adopted Procurement MRF review, Accounting PO/budget approval and release, separate Finance payment requests/disbursement, upfront and credit paths, comparison before PO, and schema 12 with explicit old-workspace reset. |

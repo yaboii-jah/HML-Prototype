@@ -6,7 +6,7 @@ This brief follows the client-approved department flow. Use [APP_CONTEXT.md](APP
 
 The app demonstrates construction purchasing and delivery in one browser-local workspace. A fresh workspace starts empty; records persist in localStorage and uploaded files in IndexedDB. Drive archiving and Gemini quotation extraction use server integrations when configured. Role access and payment records are demonstrations, not production authentication or actual bank transfers.
 
-Seven roles are available: Site Personnel, Procurement, Accounting / Auditing, Finance, Logistics, Management and Administrator. Keep the role switcher and project context visible.
+Seven roles are available: Site Personnel, Procurement, Accounting / Auditing, Finance, Logistics, Management and Administrator. Sign in with the department credentials in [PRESENTER_ACCESS.md](PRESENTER_ACCESS.md). Change departments through sign-out and sign-in; keep project context visible. The client-facing UI uses production-style wording and shows no account hints or prototype labels.
 
 ## Department flow
 
@@ -25,7 +25,7 @@ Returns go from Procurement to Site for an MRF, Accounting to Procurement for a 
 
 ## Oversight and setup
 
-Management reviews cross-project reports and exceptions. Administrator creates projects using name, location and allocated budget, maps Drive folders, reviews activity and can explicitly clear browser workspace data. Project setup has no manager assignment.
+Management reviews cross-project reports and exceptions. Administrator creates projects using name, location and allocated budget, maps Drive folders, reviews activity and can explicitly reset browser workspace data at the unlinked `/admin/maintenance` route. Project setup has no manager assignment.
 
 Keep request, PO review, payment approval, disbursement, release, delivery, document review and stock posting states separate. Enforce budget limits, outstanding quantities, one open payment request per PO, duplicate-payment protection and nonnegative stock.
 

@@ -5,10 +5,10 @@ import { useDemo } from "@/src/app-state/DemoProvider";
 import { Field, InlineError, PageHeader } from "@/src/components/ui/Primitives";
 import { useConfirmation } from "@/src/components/ui/ConfirmDialog";
 import { dateText, money } from "@/src/domain/format";
+import Link from "next/link";
 
 export function Admin() {
-  const { confirm, confirmation } = useConfirmation();
-  const { snapshot: state, run, reset } = useDemo();
+  const { snapshot: state, run } = useDemo();
   const [error, setError] = useState("");
   if (!state) return null;
 
@@ -59,11 +59,22 @@ export function Admin() {
         <strong>{activity.action}</strong><span>{activity.actor} / {dateText(activity.at)}</span>{activity.reason && <small>{activity.reason}</small>}
       </div>)}</div>
     </section>
-    {state.role === "Administrator" && <section className="panel">
-      <h2 className="panel-title">Clear workspace</h2>
-      <p>Remove all projects, requests, quotations, purchase orders, deliveries, stock movements, payments, documents, and activity from this browser.</p>
-      <button type="button" className="button danger-outline" onClick={() => void (async () => { if (await confirm("Clear all workspace data?", "All projects, requests, quotations, purchase orders, and locally stored files in this browser will be removed.", "Clear workspace", true)) await reset(); })()}>Clear all workspace data</button>
-    </section>}
+  </>;
+}
+
+export function WorkspaceMaintenance() {
+  const { snapshot: state, reset } = useDemo();
+  const { confirm, confirmation } = useConfirmation();
+  const [busy, setBusy] = useState(false);
+  if (!state) return null;
+  if (state.role !== "Administrator") return <><PageHeader title="Access unavailable" description="Workspace maintenance requires an Administrator account."/><Link href="/dashboard" className="button secondary">Back to dashboard</Link></>;
+  return <>
+    <PageHeader eyebrow="ADMINISTRATION" title="Workspace maintenance" description="Manage saved workspace records."/>
+    <section className="panel"><h2 className="panel-title">Reset workspace</h2><p>Remove saved projects, workflow records and uploaded files. Archived Google Drive files remain available.</p><button type="button" className="button danger-outline" disabled={busy} onClick={() => void (async () => {
+      if (!await confirm("Reset all workspace data?", "All saved projects, requests, quotations, purchase orders, deliveries, payments and uploaded files will be removed.", "Reset workspace", true)) return;
+      setBusy(true);
+      try { await reset(); } finally { setBusy(false); }
+    })()}>{busy ? "Resetting…" : "Reset workspace"}</button></section>
     {confirmation}
   </>;
 }

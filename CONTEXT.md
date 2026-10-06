@@ -2,6 +2,13 @@
 
 ## Language
 
+**Department account:** A predefined sign-in identity linked to one of the seven department roles.
+_Avoid_: Demo role, role picker
+
+**Department session:** The active department account, retained until sign-out. A different account begins a new session.
+
+**Workspace:** The linked projects, requests, purchasing, delivery and stock records shared by department accounts during a walkthrough.
+
 **MRF review:** Procurement's decision to accept, return or reject a material request from Site Personnel.
 
 **PO review:** Accounting's review of a purchase order, including its taxes, charges, payment mode and project budget.

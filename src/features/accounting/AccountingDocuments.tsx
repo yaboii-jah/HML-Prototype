@@ -26,7 +26,7 @@ export function AccountingDocuments({ poId, batchId }: { poId: string; batchId?:
       const saved = await attachAccountingFiles(snapshot, poId, batchId, files, kind, run);
       const results = await Promise.allSettled(saved.documents.map(document => archive(document, saved.snapshot)));
       const failed = results.filter(result => result.status === "rejected").length;
-      if (failed) setError(`${failed} file archive${failed === 1 ? " needs" : "s need"} retry. The evidence remains saved in this browser.`);
+      if (failed) setError(`${failed} file archive${failed === 1 ? " needs" : "s need"} retry. The evidence remains available for retry.`);
     } catch (cause) { setError(cause instanceof Error ? cause.message : "The evidence could not be saved."); }
     finally { inProgress.current = false; setBusy(false); }
   };

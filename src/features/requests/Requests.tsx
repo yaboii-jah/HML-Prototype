@@ -174,7 +174,7 @@ export function RequestForm({ id }: { id?: string }) {
       pendingFileIds.current.add(saved.fileId!);
       updateDocuments(() => [saved]);
       setAttachmentError("");
-    } catch { setAttachmentError("The PDF could not be saved in this browser."); }
+    } catch { setAttachmentError("The PDF could not be saved. Please try again."); }
     finally { pdfInProgress.current = false; setSavingPdf(false); }
   };
 
@@ -274,7 +274,7 @@ export function RequestForm({ id }: { id?: string }) {
   if (!state) return null;
   if (!state.sites.length) return <>
     <PageHeader eyebrow="NEW MATERIAL REQUEST" title="Set up the workspace first" description="A project is needed before you can create an MRF." />
-    <section className="panel"><p>Switch to Administrator and add a project. Then return here as Site Personnel.</p><Link className="button primary" href="/admin">Open administration</Link></section>
+    <section className="panel"><p>Ask an Administrator to add a project, then create the material request.</p><Link className="button primary" href="/admin">Open administration</Link></section>
   </>;
 
   return <>
@@ -349,7 +349,7 @@ export function RequestForm({ id }: { id?: string }) {
       </fieldset>
       <section className="panel" hidden={step !== 3}>
         <CollapsibleSection title="Combined supporting PDF" summary={<span className="reference-count">{activeSupportingPdf ? "1 attached" : "Required to submit"}</span>}>
-        <p className="reference-note">Attach one PDF containing the hardcopy MRF, key plan, and work scope. It stays in this browser during Procurement review and is archived to Drive after approval.</p>
+        <p className="reference-note">Attach one PDF containing the hardcopy MRF, key plan, and work scope. The supporting PDF is archived to Google Drive after Procurement approval.</p>
         <div className={`reference-dropzone${dragActive ? " is-active" : ""}`} onDragEnter={event => { event.preventDefault(); setDragActive(true); }} onDragOver={event => { event.preventDefault(); setDragActive(true); }} onDragLeave={event => { event.preventDefault(); setDragActive(false); }} onDrop={(event: DragEvent<HTMLDivElement>) => { event.preventDefault(); setDragActive(false); addFiles(event.dataTransfer.files); }}>
           <input ref={inputRef} className="reference-file-input" type="file" accept="application/pdf,.pdf" aria-label="Choose combined supporting PDF" disabled={savingPdf || saving} onChange={onPickFiles}/>
           <svg className="reference-upload-icon" viewBox="0 0 48 48" aria-hidden="true"><path d="M11 4h17l9 9v18H11z"/><path d="M28 4v9h9"/><circle cx="33" cy="35" r="10"/><path d="M33 39v-9m-4 4 4-4 4 4"/></svg>
@@ -358,7 +358,7 @@ export function RequestForm({ id }: { id?: string }) {
         </div>
         <InlineError message={attachmentError}/>
         {savingPdf && <p role="status">Saving PDF…</p>}
-        {activeSupportingPdf && <div className="reference-file-list" aria-label="Attached supporting PDF"><div className="reference-file"><span className="reference-file-icon" aria-hidden="true">PDF</span><div className="reference-file-detail"><strong title={activeSupportingPdf.name}>{activeSupportingPdf.name}</strong><small>Stored in this browser until and after Drive archiving</small></div><button type="button" className="reference-remove" disabled={savingPdf || saving} aria-label={`Remove ${activeSupportingPdf.name}`} onClick={() => { updateDocuments(() => []); setAttachmentError(""); }}>×</button></div></div>}
+        {activeSupportingPdf && <div className="reference-file-list" aria-label="Attached supporting PDF"><div className="reference-file"><span className="reference-file-icon" aria-hidden="true">PDF</span><div className="reference-file-detail"><strong title={activeSupportingPdf.name}>{activeSupportingPdf.name}</strong><small>Attached supporting document</small></div><button type="button" className="reference-remove" disabled={savingPdf || saving} aria-label={`Remove ${activeSupportingPdf.name}`} onClick={() => { updateDocuments(() => []); setAttachmentError(""); }}>×</button></div></div>}
         </CollapsibleSection>
       </section>
       {step === 3 && <section className="panel request-review" aria-label="Request summary">

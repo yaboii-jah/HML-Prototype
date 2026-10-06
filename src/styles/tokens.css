@@ -63,9 +63,9 @@
   --color-icon-button-ink-2:oklch(51.073% 0.05198 254.70);
   --color-icon-button-rule:oklch(83.096% 0.04578 258.76);
   --color-icon-button-surface:oklch(97.811% 0.01027 261.79);
-  --color-role-avatar-surface:oklch(94.864% 0.02461 257.65);
-  --color-role-label-ink:oklch(65.484% 0.03138 254.75);
-  --color-masthead-role-ink:oklch(67.057% 0.02868 251.77);
+  --color-account-avatar-surface:oklch(94.864% 0.02461 257.65);
+  --color-account-label-ink:oklch(65.484% 0.03138 254.75);
+  --color-masthead-account-ink:oklch(67.057% 0.02868 251.77);
   --color-notification-popover-shadow:oklch(31.893% 0.07890 258.19 / 0.1216);
   --color-notification-popover-surface:oklch(98.501% 0.00697 268.55);
   --color-storage-warning-surface:oklch(97.217% 0.03078 86.46);
@@ -171,8 +171,8 @@
   --color-dark-side-link-surface-4:oklch(39.691% 0.07724 258.50);
   --color-dark-demo-dot-shadow:oklch(32.584% 0.05059 237.19);
   --color-dark-site-context-surface:oklch(21.990% 0.03128 256.89);
-  --color-dark-role-avatar-surface:oklch(34.959% 0.05922 257.33);
-  --color-dark-role-avatar-ink:oklch(80.899% 0.08887 257.01);
+  --color-dark-account-avatar-surface:oklch(34.959% 0.05922 257.33);
+  --color-dark-account-avatar-ink:oklch(80.899% 0.08887 257.01);
   --color-dark-role-options-rule:oklch(57.680% 0.10061 255.87);
   --color-dark-role-options-surface:oklch(32.240% 0.05655 256.95);
   --color-dark-mobile-demo-surface:oklch(23.652% 0.03541 255.89);
@@ -261,14 +261,14 @@ html[data-theme="dark"] ::selection{background:var(--color-dark-selection-surfac
 html[data-theme="dark"] :focus-visible{outline-color:var(--color-dark-focus-visible-surface)}
 
 html[data-theme="dark"] :is(.side-nav,.masthead,.icon-button,.notification-popover,.state-card,.empty-page,.modal,.role-options button,.panel,.site-tile,.quote-panel,.metric-strip>div,.toolbar,.table-frame,input,select,textarea,.button.secondary,.button.danger-outline){background:var(--surface)}
-html[data-theme="dark"] :is(.side-caption,.side-link,.side-link svg,.side-foot,.top-context,.site-context,.role-label small,.masthead-role svg,.metric-strip small,.toolbar label,.field>span,.table-frame th,.task-age,.stage-row,.purchase-pulse dt){color:var(--muted)}
-html[data-theme="dark"] :is(.side-link:hover,.masthead-role:hover,.icon-button:hover,.notification-popover>a:hover,.data-link:hover,.compact-list>a:hover,.task-list>a:hover,.table-frame tbody tr:hover){background:var(--color-dark-side-link-surface)}
+html[data-theme="dark"] :is(.side-caption,.side-link,.side-link svg,.side-foot,.top-context,.site-context,.account-label small,.masthead-account svg,.metric-strip small,.toolbar label,.field>span,.table-frame th,.task-age,.stage-row,.purchase-pulse dt){color:var(--muted)}
+html[data-theme="dark"] :is(.side-link:hover,.masthead-account:hover,.icon-button:hover,.notification-popover>a:hover,.data-link:hover,.compact-list>a:hover,.task-list>a:hover,.table-frame tbody tr:hover){background:var(--color-dark-side-link-surface)}
 html[data-theme="dark"] .side-link.active,html[data-theme="dark"] .side-link.active:hover{background:var(--color-dark-side-link-surface-2);color:var(--color-dark-side-link-ink)}
 html[data-theme="dark"] .side-link i{background:var(--color-dark-side-link-surface-3);color:var(--color-dark-side-link-ink-2)}
 html[data-theme="dark"] .side-link.active i{background:var(--color-dark-side-link-surface-4)}
 html[data-theme="dark"] .demo-dot{box-shadow:0 0 0 3px var(--color-dark-demo-dot-shadow)}
 html[data-theme="dark"] .site-context select{background:var(--color-dark-site-context-surface)}
-html[data-theme="dark"] .role-avatar,html[data-theme="dark"] .role-options button span{background:var(--color-dark-role-avatar-surface);color:var(--color-dark-role-avatar-ink)}
+html[data-theme="dark"] .account-avatar,html[data-theme="dark"] .role-options button span{background:var(--color-dark-account-avatar-surface);color:var(--color-dark-account-avatar-ink)}
 html[data-theme="dark"] .role-options button:hover,html[data-theme="dark"] .role-options button.selected{border-color:var(--color-dark-role-options-rule);background:var(--color-dark-role-options-surface)}
 html[data-theme="dark"] .mobile-demo{background:var(--color-dark-mobile-demo-surface);color:var(--muted)}
 

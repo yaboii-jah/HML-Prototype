@@ -2,14 +2,13 @@
 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useDemo } from "@/src/app-state/DemoProvider";
-import { DEMO_ACCOUNTS, DEMO_PASSWORD } from "@/src/app-state/demo-session";
 import { useConfirmation } from "@/src/components/ui/ConfirmDialog";
 
 const WORKFLOW_STAGES = [
   { name: "Request", title: "Start with a clear request.", description: "Capture the materials a site needs and keep the handoff visible to everyone involved.", card: "Material request", detail: "Ready for review" },
-  { name: "Review", title: "Keep decisions moving.", description: "Project managers can review what is needed before purchasing begins.", card: "Manager review", detail: "Decision in one place" },
+  { name: "Review", title: "Keep decisions moving.", description: "Procurement reviews material requests and keeps each purchasing decision linked to the site.", card: "Procurement review", detail: "Decision in one place" },
   { name: "Procure", title: "Turn approval into action.", description: "Compare quotations and prepare purchase orders without losing the request trail.", card: "Procurement", detail: "From quote to order" },
   { name: "Receive", title: "Close the loop on site.", description: "Record deliveries, confirm quantities, and make received materials visible in site stock.", card: "Site receiving", detail: "Stock stays in sync" },
 ] as const;
@@ -34,9 +33,6 @@ export function DemoSignIn() {
   const [hovered, setHovered] = useState(false);
   const [focused, setFocused] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
-  const [rolePickerOpen, setRolePickerOpen] = useState(false);
-  const rolePickerRef = useRef<HTMLDivElement>(null);
-  const roleTriggerRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     if (session.role && snapshot?.role === session.role) router.replace(destinationAfterSignIn());
@@ -56,42 +52,24 @@ export function DemoSignIn() {
     return () => window.clearInterval(timer);
   }, [manualPaused, playRequested, hovered, focused, reducedMotion]);
 
-  useEffect(() => {
-    if (!rolePickerOpen) return;
-    const closeOnOutsideClick = (event: PointerEvent) => {
-      if (!rolePickerRef.current?.contains(event.target as Node)) setRolePickerOpen(false);
-    };
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setRolePickerOpen(false);
-        roleTriggerRef.current?.focus();
-      }
-    };
-    document.addEventListener("pointerdown", closeOnOutsideClick);
-    document.addEventListener("keydown", closeOnEscape);
-    return () => {
-      document.removeEventListener("pointerdown", closeOnOutsideClick);
-      document.removeEventListener("keydown", closeOnEscape);
-    };
-  }, [rolePickerOpen]);
-
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (busy) return;
     setBusy(true);
     setError("");
-    const result = await signIn(email, password);
-    if (result.ok) router.replace(destinationAfterSignIn());
-    else setError(result.message);
-    setBusy(false);
+    try {
+      const result = await signIn(email, password);
+      if (result.ok) router.replace(destinationAfterSignIn());
+      else setError(result.message);
+    } catch { setError("Sign-in could not finish. Please try again."); }
+    finally { setBusy(false); }
   };
 
-  if (status === "loading" || session.status === "loading") return <div className="state-screen"><div className="state-card"><span className="eyebrow">HML ConstructSync</span><h1>Opening demo sign-in</h1><p>Preparing sample accounts…</p></div></div>;
-  if (status === "recovery" || !snapshot) return <><div className="state-screen"><div className="state-card"><span className="eyebrow">WORKSPACE RECOVERY</span><h1>Saved data needs attention</h1><p>{message}</p><button className="button primary" onClick={() => void (async () => { if (await confirm("Restore this workspace?", "The saved records in this browser will be replaced with an empty workspace.", "Restore workspace", true)) await reset(); })()}>Restore workspace</button></div></div>{confirmation}</>;
+  if (status === "loading" || session.status === "loading") return <div className="state-screen"><div className="state-card"><span className="eyebrow">HML ConstructSync</span><h1>Opening sign-in</h1><p>Preparing your workspace…</p></div></div>;
+  if (status === "recovery" || !snapshot) return <><div className="state-screen"><div className="state-card"><span className="eyebrow">WORKSPACE RECOVERY</span><h1>Saved data needs attention</h1><p>{message}</p><button className="button primary" onClick={() => void (async () => { if (await confirm("Restore this workspace?", "Saved records and uploaded files will be removed and replaced with an empty workspace.", "Restore workspace", true)) await reset(); })()}>Restore workspace</button></div></div>{confirmation}</>;
 
   const stage = WORKFLOW_STAGES[stageIndex];
   const playbackPaused = manualPaused || reducedMotion;
-  const selectedAccount = DEMO_ACCOUNTS.find(account => account.email === email);
   const togglePlayback = () => {
     if (manualPaused) {
       setManualPaused(false);
@@ -128,31 +106,21 @@ export function DemoSignIn() {
           <button className="signin-story-playback" type="button" aria-label={playbackPaused ? "Play workflow stories" : "Pause workflow stories"} onClick={togglePlayback} disabled={reducedMotion} title={reducedMotion ? "Automatic motion is off in reduced-motion mode" : undefined}>{playbackPaused ? "Play" : "Pause"}</button>
         </div>
       </div>
-      <p className="signin-intro-foot">A guided look at the project flow <span>·</span> Prototype data stays in this browser</p>
+      <p className="signin-intro-foot">From material request to site delivery</p>
     </section>
 
     <section className="signin-panel" aria-labelledby="signin-title">
       <div className="signin-card">
         <div className="signin-card-head"><span className="signin-card-symbol" aria-hidden="true">H</span><span>HML ConstructSync</span></div>
-        <h2 id="signin-title">Sign in to explore</h2>
-        <p>Choose a sample account, then open its work queue and role-specific actions.</p>
-        <div className="signin-role-picker" ref={rolePickerRef} onBlurCapture={event => { if (!event.currentTarget.contains(event.relatedTarget)) setRolePickerOpen(false); }}>
-          <span className="signin-role-label">Demo role</span>
-          <button ref={roleTriggerRef} className="signin-role-trigger" type="button" aria-expanded={rolePickerOpen} aria-controls="signin-role-options" onClick={() => setRolePickerOpen(open => !open)}>
-            <span><strong>{selectedAccount?.role ?? "Choose a demo role"}</strong>{selectedAccount && <small>{selectedAccount.email}</small>}</span>
-            <span className="signin-role-chevron" aria-hidden="true">⌄</span>
-          </button>
-          {rolePickerOpen && <div id="signin-role-options" className="signin-role-options" role="group" aria-label="Choose a demo role">
-            {DEMO_ACCOUNTS.map(account => <button key={account.role} type="button" className={email === account.email ? "selected" : ""} onClick={() => { setEmail(account.email); setPassword(DEMO_PASSWORD); setError(""); setRolePickerOpen(false); roleTriggerRef.current?.focus(); }} aria-label={`Fill ${account.role} demo credentials`}><span>{account.role}</span><small>{account.email}</small></button>)}
-          </div>}
-        </div>
+        <h2 id="signin-title">Sign in to your workspace</h2>
+        <p>Manage requests, purchases and deliveries.</p>
         <form className="signin-form" onSubmit={event => void submit(event)}>
-          <div className="signin-field"><label htmlFor="demo-email">Sample email</label><input id="demo-email" name="email" type="email" autoComplete="username" required value={email} onChange={event => { setEmail(event.target.value); setError(""); }} placeholder="site@constructsync.example" aria-invalid={Boolean(error)} aria-describedby={error ? "signin-error" : undefined} /></div>
-          <div className="signin-field"><label htmlFor="demo-password">Demo password</label><input id="demo-password" name="password" type="password" autoComplete="current-password" required value={password} onChange={event => { setPassword(event.target.value); setError(""); }} placeholder="Enter the demo password" aria-invalid={Boolean(error)} aria-describedby={error ? "signin-error" : undefined} /></div>
+          <div className="signin-field"><label htmlFor="signin-email">Email</label><input id="signin-email" name="email" type="email" autoComplete="username" required value={email} onChange={event => { setEmail(event.target.value); setError(""); }} placeholder="Enter your email" aria-invalid={Boolean(error)} aria-describedby={error ? "signin-error" : undefined} /></div>
+          <div className="signin-field"><label htmlFor="signin-password">Password</label><input id="signin-password" name="password" type="password" autoComplete="current-password" required value={password} onChange={event => { setPassword(event.target.value); setError(""); }} placeholder="Enter your password" aria-invalid={Boolean(error)} aria-describedby={error ? "signin-error" : undefined} /></div>
           <button className="button primary signin-submit" disabled={busy}>{busy ? "Opening workspace…" : "Sign in"}</button>
         </form>
-        {error ? <p id="signin-error" className="signin-error" role="alert">{error}</p> : <p className="signin-note">Shared demo password: <code>{DEMO_PASSWORD}</code>. Accounts and permissions are simulated in this browser.</p>}
-        {status === "volatile" && <p className="signin-warning" role="status">{message} Your demo role will be lost on refresh.</p>}
+        {error && <p id="signin-error" className="signin-error" role="alert">{error}</p>}
+        {(status === "volatile" || session.status === "volatile") && <p className="signin-warning" role="status">Your session could not be saved. Sign in again after refreshing.</p>}
       </div>
     </section>
   </main>;

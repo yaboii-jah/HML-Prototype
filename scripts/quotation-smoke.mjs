@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import assert from "node:assert/strict";
 import ExcelJS from "exceljs";
+import { ACCOUNT_FIXTURES } from "../src/app-state/demo-session.ts";
 import { seedDemo } from "../src/mock/fixtures/seed.ts";
 
 const edge = "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe";
@@ -32,7 +33,7 @@ try {
   await call("Page.addScriptToEvaluateOnNewDocument", { source: `(() => { const original = window.fetch.bind(window); window.__bidDownloads = []; window.__bidArchives = new Map(); window.__bidFailOnce = true; const anchorClick = HTMLAnchorElement.prototype.click; HTMLAnchorElement.prototype.click = function() { if (this.download.endsWith('.xlsx') || this.download.endsWith('.pdf')) { const filename=this.download; original(this.href).then(response=>response.arrayBuffer()).then(bytes=>window.__bidDownloads.push({filename,base64:btoa(Array.from({length:Math.ceil(bytes.byteLength/8192)},(_,n)=>String.fromCharCode(...new Uint8Array(bytes).slice(n*8192,(n+1)*8192))).join(''))})); return; } return anchorClick.call(this); }; window.fetch = (input, init) => { const url = typeof input === 'string' ? input : input.url; const reply = data => Promise.resolve(new Response(JSON.stringify(data), { status: 200, headers: { 'Content-Type': 'application/json' } })); if (url === '/api/drive/quotes') return reply({ ticket: 'quote-smoke-ticket', offset: 0 }); if (url === '/api/drive/quotes/chunk') return reply({ driveFileId: 'quote-smoke-file', url: 'https://drive.google.com/file/d/quote-smoke-file/view' }); if (url === '/api/drive/purchase-orders') return reply({ fileId: 'po-smoke-file', url: 'https://drive.google.com/file/d/po-smoke-file/view' }); if (url === '/api/drive/bid-comparisons') { if(window.__bidFailOnce){window.__bidFailOnce=false;return Promise.resolve(new Response(JSON.stringify({error:'Simulated Drive outage'}),{status:503,headers:{'Content-Type':'application/json'}}));} const body=JSON.parse(init.body); return reply({ticket:body.report.id+'-'+body.format,offset:0}); } if(url==='/api/drive/bid-comparisons/chunk') { window.__bidArchives.set(init.headers['x-drive-upload-ticket'],init.body);return reply({driveFileId:init.headers['x-drive-upload-ticket'],url:init.headers['x-drive-upload-ticket'].endsWith('-xlsx')?'https://docs.google.com/spreadsheets/d/'+init.headers['x-drive-upload-ticket']+'/edit':'https://drive.google.com/file/d/'+init.headers['x-drive-upload-ticket']+'/view'}); } if(url.startsWith('/api/drive/bid-comparisons?')) {const query=new URL(url,location.origin).searchParams;const format=query.get('format')||'xlsx';const id=query.get('reportId')+'-'+format;return Promise.resolve(new Response(window.__bidArchives.get(id),{headers:{'Content-Type':format==='pdf'?'application/pdf':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}}));} return original(input, init); }; })();` });
   const run = async code => { const result = await call("Runtime.evaluate", { expression: `(()=>{${code}})()`, returnByValue: true }); if (result.exceptionDetails) throw new Error(result.exceptionDetails.exception?.description || result.exceptionDetails.text); return result.result.value; };
   const runAsync = async expression => { const result = await call("Runtime.evaluate", { expression, returnByValue: true, awaitPromise: true }); if(result.exceptionDetails) throw new Error(result.exceptionDetails.exception?.description || result.exceptionDetails.text); return result.result.value; };
-  const wait = async code => { for (let attempt = 0; attempt < 120; attempt++) { try { if (await run(code)) return; } catch {} await sleep(125); } throw new Error(`Timed out: ${code}; report context: ${JSON.stringify(await run("return {downloads:window.__bidDownloads?.length,rows:document.querySelectorAll('.bid-report-row').length,errors:[...document.querySelectorAll('.field-error,.inline-error')].map(el=>el.textContent)};"))}`); };
+  const wait = async code => { for (let attempt = 0; attempt < 120; attempt++) { try { if (await run(code)) return; } catch {} await sleep(125); } throw new Error(`Timed out: ${code}; report context: ${JSON.stringify(await run("return {page:location.pathname+location.search,session:localStorage.getItem('hml-constructsync-session-v2'),signInError:document.querySelector('.signin-error')?.textContent,downloads:window.__bidDownloads?.length,rows:document.querySelectorAll('.bid-report-row').length,errors:[...document.querySelectorAll('.field-error,.inline-error')].map(el=>el.textContent)};"))}`); };
   const navigate = async route => { await call("Page.navigate", { url: `${baseUrl}${route}` }); await wait(`return location.pathname === ${JSON.stringify(route)} && !!document.querySelector('h1');`); await sleep(150); };
   const fill = async (selector, value) => { await wait(`return !!document.querySelector(${JSON.stringify(selector)});`); await run(`const el=document.querySelector(${JSON.stringify(selector)});const kind=el.tagName==='TEXTAREA'?HTMLTextAreaElement:el.tagName==='SELECT'?HTMLSelectElement:HTMLInputElement;Object.getOwnPropertyDescriptor(kind.prototype,'value').set.call(el,${JSON.stringify(String(value))});el.dispatchEvent(new Event(el.tagName==='SELECT'?'change':'input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));return true;`); };
   const acceptPending = async () => { await sleep(90); if (await run("return !!document.querySelector('.confirm-dialog[open]');")) await run("document.querySelector('.confirm-dialog[open] .confirm-actions button:last-child').click();return true;"); };
@@ -41,11 +42,17 @@ try {
   const fillLabel = async (label, value) => { await wait(`return [...document.querySelectorAll('.quote-review label.field')].some(x=>x.querySelector('span')?.textContent===${JSON.stringify(label)});`); await run(`const field=[...document.querySelectorAll('.quote-review label.field')].find(x=>x.querySelector('span')?.textContent===${JSON.stringify(label)});const el=field.querySelector('input,select,textarea');const kind=el.tagName==='TEXTAREA'?HTMLTextAreaElement:el.tagName==='SELECT'?HTMLSelectElement:HTMLInputElement;Object.getOwnPropertyDescriptor(kind.prototype,'value').set.call(el,${JSON.stringify(String(value))});el.dispatchEvent(new Event(el.tagName==='SELECT'?'change':'input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));return true;`); };
   const snapshot = () => run("return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12'));");
 
-  await wait("return location.pathname==='/sign-in' && !!document.querySelector('.signin-form');");
-  await fill("#demo-email", "procurement@constructsync.example");
-  await fill("#demo-password", "Demo123!");
-  await click("Sign in");
-  await wait("return location.pathname==='/dashboard';");
+  const signInAs = async name => {
+    const account = ACCOUNT_FIXTURES.find(value=>value.role===name); assert.ok(account);
+    await wait("return location.pathname==='/sign-in' && !!document.querySelector('.signin-form');");
+    await fill('#signin-email', account.email); await fill('#signin-password', account.password); await click('Sign in');
+    await wait(`return location.pathname==='/dashboard' && JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).role===${JSON.stringify(name)};`);
+  };
+  const role = async name => {
+    await run("document.querySelector('.masthead-account').click();return true;");
+    await wait("return !!document.querySelector('.account-modal[open]');"); await click('Sign out'); await signInAs(name);
+  };
+  await signInAs('Procurement');
   await run(`localStorage.setItem('hml-constructsync-demo-v12', ${JSON.stringify(JSON.stringify({ ...seedDemo(), role: "Procurement" }))}); return true;`);
   await call("Page.reload", { ignoreCache: true });
   await wait("return location.pathname==='/dashboard' && JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).sites.length===2;");
@@ -159,16 +166,11 @@ try {
   assert.deepEqual((await snapshot()).bidReports[0].data,frozenReport.data);
   await call('Page.reload',{ignoreCache:true}); await sleep(300); await wait("return !!document.querySelector('h1');"); await click('Compare');
   assert.equal(await run("return document.querySelectorAll('.bid-report-row').length;"),2);
-  await run("document.querySelector('.masthead-role').click();return true;");
-  await wait("return !!document.querySelector('.role-options');");
-  await run("[...document.querySelectorAll('.role-options button')].find(value=>value.querySelector('strong')?.textContent==='Finance').click();return true;");
-  await wait("return location.pathname==='/dashboard'&&JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).role==='Finance';");
+  await role('Finance');
   await navigate('/requests/quote-smoke/quotes'); await click('Compare');
   await wait("return ![...document.querySelectorAll('button')].some(button=>button.textContent==='Generate new version');");
   const downloadsBefore=await run("return window.__bidDownloads.length;"); await click('Download Excel'); await wait(`return window.__bidDownloads.length>${downloadsBefore};`);
-  await run("document.querySelector('.masthead-role').click();return true;"); await wait("return !!document.querySelector('.role-options');");
-  await run("[...document.querySelectorAll('.role-options button')].find(value=>value.querySelector('strong')?.textContent==='Accounting / Auditing').click();return true;");
-  await wait("return location.pathname==='/dashboard'&&JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).role==='Accounting / Auditing';");
+  await role('Accounting / Auditing');
   await navigate(`/accounting/${firstPo.id}`); await fill('select[name="paymentMode"]','credit');
   await run("document.querySelector('.accounting-po-form input[name=financialReviewed]').click();return true;");
   await click('Approve PO');
