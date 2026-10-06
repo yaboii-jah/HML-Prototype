@@ -20,8 +20,9 @@ function submittedPO() {
   state = run(state, { type: 'addSite', name: 'Client project', location: 'Pasig', budget: 10000 });
   const siteId = state.sites[0].id;
   state = run(state, { type: 'setProjectDriveFolder', siteId, folderId: 'project-folder' });
+  state = run(state, { type: 'saveProjectScope', siteId, name: 'Structural', budget: 10000 });
   state = as(state, 'Site Personnel');
-  state = run(state, { type: 'saveRequest', intent: 'submit', siteId, ref: 'MRF-CLIENT-001', requestDate: '2026-10-05', requestedBy: 'Site user', approvedBy: 'Signatory', purchaser: 'Buyer', financeOfficer: 'Finance', documents: [{ name: 'Supporting.pdf', type: 'Supporting PDF', fileId: 'support' }], items: [{ id: 'cement', name: 'Cement', unit: 'bag', quantity: 10, neededDate: '2026-10-06', purpose: '', location: 'Pasig', remarks: '' }] });
+  state = run(state, { type: 'saveRequest', intent: 'submit', siteId, scopeId: state.scopes[0].id, ref: 'MRF-CLIENT-001', requestDate: '2026-10-05', requestedBy: 'Site user', approvedBy: 'Signatory', purchaser: 'Buyer', financeOfficer: 'Finance', documents: [{ name: 'Supporting.pdf', type: 'Supporting PDF', fileId: 'support' }], items: [{ id: 'cement', name: 'Cement', unit: 'bag', quantity: 10, neededDate: '2026-10-06', purpose: '', location: 'Pasig', remarks: '' }] });
   const request = state.requests[0];
   fail(as(state, 'Management'), { type: 'reviewRequest', id: request.id, decision: 'approve' }, /Procurement/);
   state = as(state, 'Procurement');
@@ -70,6 +71,7 @@ test('upfront flow waits for full actual disbursement, then delivers, posts and 
   state = run(as(state, 'Accounting / Auditing'), { type: 'releasePO', id });
   state = run(as(state, 'Logistics'), { type: 'createBatch', poId: id, scheduledDate: '2026-10-06', evidence: 'DR-1', delayReason: '', expected: { cement: 6 } });
   const batchId = state.batches[0].id;
+  state = run(state, { type: 'dispatchBatch', id: batchId });
   state = run(as(state, 'Site Personnel'), { type: 'confirmBatch', id: batchId, lines: { cement: { accepted: 5, issue: 'One damaged bag' } } });
   assert.equal(stockFor(state, siteId, 'Cement', 'bag'), 0);
   state = run(state, { type: 'postBatch', id: batchId, accepted: { cement: 5 }, reason: '' });

@@ -83,10 +83,37 @@
 .admin-add-project .form-grid { grid-template-columns: repeat(3,minmax(0,1fr)); }
 @media (max-width:780px) { .admin-add-project .form-grid { grid-template-columns: 1fr; } }
 
-.account-modal { width: min(420px,calc(100vw - 32px)); }
+.account-modal { width: min(560px,calc(100vw - 32px)); }
 .account-details { display: grid; gap: 6px; padding-block: 12px; }
-.account-details span { color: var(--muted); overflow-wrap: anywhere; }
+.account-details span, .account-details small { color: var(--muted); overflow-wrap: anywhere; }
+.account-label small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.account-departments { border-top: 1px solid var(--line); padding-top: 16px; }
+.account-departments h3 { font-size: 14px; }
+.account-departments .role-options { margin-top: 12px; }
+.account-departments .role-options button { min-width: 0; }
+.account-departments .role-options button > span { flex: none; }
+.account-departments .role-options button > div { display: grid; gap: 4px; min-width: 0; }
+.account-departments .role-options small { color: var(--muted); font-size: 11px; }
 .account-modal-actions { justify-content: flex-end; }
+
+.request-lifecycle { margin-bottom: var(--space-lg); }
+.request-lifecycle .panel-heading p { margin-bottom: 0; }
+.lifecycle-summary table { min-width: 760px; }
+.lifecycle-summary tbody th { text-transform: none; letter-spacing: normal; font-size: 13px; white-space: normal; }
+.lifecycle-record-links { display: flex; flex-wrap: wrap; gap: var(--space-xs) var(--space-sm); }
+.lifecycle-record-links a { overflow-wrap: anywhere; }
+.audit-history table { min-width: 1000px; }
+.audit-history td { vertical-align: top; max-width: 320px; overflow-wrap: anywhere; }
+.audit-history td:first-child { min-width: 175px; }
+.audit-history td:nth-child(2) { min-width: 230px; }
+.audit-history td:nth-child(3) { min-width: 130px; }
+.audit-history-footer { display: flex; justify-content: space-between; gap: var(--space-sm); align-items: center; flex-wrap: wrap; margin-top: var(--space-md); }
+.audit-history-footer small { color: var(--muted); }
+.audit-save-group summary { cursor: pointer; font-weight: 600; }
+.audit-save-group ol { padding-left: 20px; max-height: 360px; overflow: auto; margin-top: var(--space-sm); }
+.audit-save-group li { margin-bottom: var(--space-sm); }
+.audit-save-group time, .audit-save-group strong, .audit-save-group span { display: block; }
+.audit-save-group time { color: var(--muted); font-size: 12px; }
 
 .mrf-ai-import .panel-heading { margin-bottom: var(--space-sm); }
 .mrf-ai-import h2 { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-sm); }
@@ -111,3 +138,44 @@
   .mrf-ai-sources .button-row { flex-wrap: wrap; gap: var(--space-sm); }
   .mrf-ai-import .button-row .button { white-space: normal; }
 }
+
+/* Scope allocations and expense classification */
+.scope-budgets { min-width: 0; }
+.scope-budgets .table-frame { margin-block: var(--space-md); }
+.scope-budgets table { min-width: 650px; }
+.scope-budget-form { margin-top: var(--space-md); }
+.scope-budget-form h4 { margin-bottom: var(--space-sm); }
+.scope-budget-form .button-row { flex-wrap: wrap; }
+.expense-classification { display: block; color: var(--muted); font-size: 12px; margin-top: var(--space-xs); }
+
+.delivery-overview-table { min-width: 1080px; }
+.delivery-overview-table td { max-width: 260px; overflow-wrap: anywhere; }
+
+/* MRF monitoring: independent milestone columns and expandable records. */
+.monitoring-table { min-width: 1060px; }
+.monitoring-table > tbody > tr > td { max-width: 230px; min-width: 120px; overflow-wrap: anywhere; }
+.monitoring-table > tbody > tr > td:first-child { min-width: 190px; }
+.monitoring-progress strong { display: block; font-size: 12px; }
+.monitoring-progress strong span { display: inline-block; min-width: 12px; }
+.monitoring-progress.is-complete strong span { color: var(--good); }
+.monitoring-progress.is-blocked strong span { color: var(--bad); }
+.monitoring-progress small { display: block; margin-top: var(--space-xs); color: var(--muted); }
+.monitoring-related { padding: var(--space-md); min-width: 0; background: var(--surface); }
+.monitoring-related h4 { margin-block: var(--space-md) var(--space-sm); }
+.monitoring-related .table-frame { margin-bottom: var(--space-md); }
+.monitoring-related table { min-width: 900px; }
+.monitoring-detail-row > td { padding: 0; }
+.request-monitoring .monitoring-legend { margin-bottom: var(--space-md); }
+
+.quotation-summary-table { min-width: 1000px; }
+.quotation-summary-table .quote-source { display: table-row; overflow: visible; }
+.quotation-summary-table .quote-source-main { display: inline-flex; width: auto; padding: 8px 12px; border: 1px solid var(--line); background: var(--surface); }
+.quotation-summary-table .quote-source-actions { justify-content: flex-start; padding: 8px 0 0; }
+.quote-coverage-table table { min-width: 680px; }
+
+.monitoring-expand { margin-top: var(--space-sm); min-height: 36px; }
+.monitoring-related .panel-heading small { color: var(--muted); }
+
+.monitoring-table > tbody > tr.monitoring-detail-row > td { max-width: none; padding: 0; }
+
+.quote-source-list.table-frame { display: block; }

@@ -4,7 +4,9 @@ import { useState, type FormEvent } from "react";
 import { useDemo } from "@/src/app-state/DemoProvider";
 import { Field, InlineError, PageHeader } from "@/src/components/ui/Primitives";
 import { useConfirmation } from "@/src/components/ui/ConfirmDialog";
-import { dateText, money } from "@/src/domain/format";
+import { actorText, auditTime } from "@/src/domain/audit";
+import { ScopeBudgets } from "@/src/features/projects/ScopeBudgets";
+import { money } from "@/src/domain/format";
 import Link from "next/link";
 
 export function Admin() {
@@ -40,7 +42,7 @@ export function Admin() {
       {state.sites.map(site => <div className="admin-row" key={site.id}><div className="admin-project-details">
         <h3>{site.name}</h3>
         <p>{site.location}</p><p>Allocated budget: <strong>{money(site.budget)}</strong></p>
-      </div><form className="drive-folder-form" onSubmit={event => void saveDriveFolder(event, site.id)}><Field label="Google Drive project folder"><input name="folder" type="text" defaultValue={site.driveFolderId ? `https://drive.google.com/drive/folders/${site.driveFolderId}` : ""} placeholder="Paste the project folder URL"/></Field>{state.role === "Administrator" && <button className="button secondary">Validate and save folder</button>}<small>Required before Procurement approval. The folder must be inside the configured company root.</small></form></div>)}
+      </div><form className="drive-folder-form" onSubmit={event => void saveDriveFolder(event, site.id)}><Field label="Google Drive project folder"><input name="folder" type="text" defaultValue={site.driveFolderId ? `https://drive.google.com/drive/folders/${site.driveFolderId}` : ""} placeholder="Paste the project folder URL"/></Field>{state.role === "Administrator" && <button className="button secondary">Validate and save folder</button>}<small>Required before Procurement approval. The folder must be inside the configured company root.</small></form><ScopeBudgets siteId={site.id} editable/></div>)}
       {state.role === "Administrator" && <form className="subform admin-add-project" onSubmit={event => void addProject(event)}>
         <h3>Add project / site</h3>
         <div className="form-grid">
@@ -56,7 +58,7 @@ export function Admin() {
       <h2 className="panel-title">Recent activity</h2>
       {!state.activity.length && <p className="helper-note">Project setup and workflow decisions will appear here.</p>}
       <div className="activity-list">{state.activity.slice(0, 18).map(activity => <div key={activity.id}>
-        <strong>{activity.action}</strong><span>{activity.actor} / {dateText(activity.at)}</span>{activity.reason && <small>{activity.reason}</small>}
+        <strong>{activity.action}</strong><span>{actorText(activity.actor, activity.actorIdentity)} / {auditTime(activity.at)}</span>{activity.reason && <small>{activity.reason}</small>}
       </div>)}</div>
     </section>
   </>;

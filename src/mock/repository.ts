@@ -1,10 +1,12 @@
 import { applyCommand, type Command, type CommandResult } from "../domain/commands.ts";
+import { newId } from "../domain/ids.ts";
 import { blankWorkspace } from "./fixtures/blank.ts";
 import { normalizeKnownPlaceholders } from "./normalize.ts";
 import { upgradeLegacyQuotes } from "../domain/procurement.ts";
-import { ROLES, type DemoSnapshot, type LegacySnapshot } from "../domain/types.ts";
+import { ROLES, type AuditIdentity, type DemoSnapshot, type LegacySnapshot } from "../domain/types.ts";
 import { clearQuoteFiles } from "../features/requests/quote-files.ts";
 import { validBidReport } from "../domain/bid-reports.ts";
+import { validDeliveryReceipt } from "../domain/delivery-document.ts";
 
 const CURRENT_KEY = "hml-constructsync-demo-v12";
 const PREVIOUS_KEYS = ["hml-constructsync-demo-v11", "hml-constructsync-demo-v10", "hml-constructsync-demo-v9", "hml-constructsync-demo-v8", "hml-constructsync-demo-v7", "hml-constructsync-demo-v6", "hml-constructsync-demo-v5", "hml-constructsync-demo-v4", "hml-constructsync-demo-v3", "hml-constructsync-demo-v2", "hml-buildsync-demo-v2", "hml-buildsync-demo-v1"] as const;
@@ -13,7 +15,7 @@ export interface DemoRepository {
   load(): Promise<RepositoryView>;
   getSnapshot(): RepositoryView;
   subscribe(listener: () => void): () => void;
-  execute(command: Command): Promise<CommandResult>;
+  execute(command: Command, actor?: AuditIdentity): Promise<CommandResult>;
   reset(): Promise<RepositoryView>;
 }
 
@@ -73,7 +75,14 @@ const parseCurrent = (raw: string): DemoSnapshot | null => {
   if (!state.pos.every(po => ["draft", "submitted", "hold", "returned", "rejected", "approved", "released"].includes(po.status))) return null;
   if (!state.paymentRequests.every(value => ["draft", "submitted", "hold", "returned", "rejected", "approved", "disbursed"].includes(value.status) && Number.isFinite(value.amount) && value.amount > 0 && state.pos.some(po => po.id === value.poId))) return null;
   if (!state.payments.every(value => state.paymentRequests.some(request => request.id === value.paymentRequestId && request.poId === value.poId && request.status === "disbursed" && request.amount === value.amount))) return null;
-  return state.bidReports.every(validBidReport) ? normalizeKnownPlaceholders(state) : null;
+  if (state.scopes !== undefined && (!Array.isArray(state.scopes) || state.scopes.some(scope => !scope || typeof scope.id !== "string" || !scope.id || typeof scope.name !== "string" || !scope.name.trim() || !Number.isFinite(scope.budget) || scope.budget < 0 || !state.sites.some(site => site.id === scope.siteId)) || new Set(state.scopes.map(scope => scope.id)).size !== state.scopes.length)) return null;
+  if (state.batches.some(batch => {
+    if (!batch || !["expected", "dispatched", "confirmed", "posted"].includes(batch.status)) return true;
+    if (batch.leg === undefined) return !!batch.parentBatchId;
+    const po = state.pos.find(value => value.id === batch.poId), request = state.requests.find(value => value.id === po?.mrfId), project = state.sites.find(value => value.id === request?.siteId);
+    return !validDeliveryReceipt({ kind: "delivery", batch, po, request, project, parentBatch: state.batches.find(value => value.id === batch.parentBatchId) });
+  })) return null;
+  return state.bidReports.every(validBidReport) ? normalizeKnownPlaceholders({ ...state, scopes: state.scopes || [] }) : null;
 };
 
 export class LocalDemoRepository implements DemoRepository {
@@ -135,10 +144,10 @@ export class LocalDemoRepository implements DemoRepository {
   async load() { return this.read(); }
   getSnapshot() { return this.read(); }
   subscribe(listener: () => void) { this.listeners.add(listener); return () => this.listeners.delete(listener); }
-  async execute(command: Command): Promise<CommandResult> {
+  async execute(command: Command, actor?: AuditIdentity): Promise<CommandResult> {
     const current = this.read().snapshot;
     if (!current) return { ok: false, message: "Restore the workspace before making changes." };
-    const result = applyCommand(current, command);
+    const result = applyCommand(current, command, actor ? { actor, now: () => new Date().toISOString(), id: newId } : undefined);
     if (result.ok) { this.view = this.write(result.snapshot); this.notify(); }
     return result;
   }

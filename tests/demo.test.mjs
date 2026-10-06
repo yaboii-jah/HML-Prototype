@@ -36,8 +36,9 @@ test("a blank workspace can be configured before its first MRF", () => {
   state = execute(state, { type: "setRole", role: "Administrator" });
   state = execute(state, { type: "addSite", name: "My project", location: "Site", budget: 100000, personnel: "Site" });
   assert.equal(state.sites.length, 1);
+  state = execute(state, { type: "saveProjectScope", siteId: state.sites[0].id, name: "Structural", budget: 100000 });
   state = execute(state, { type: "setRole", role: "Site Personnel" });
-  state = execute(state, { type: "saveRequest", intent: "submit", siteId: state.sites[0].id, ref: "HML-MRF-01", requestDate: "2026-10-01", requestedBy: "Site", approvedBy: "Signatory", purchaser: "Buyer", financeOfficer: "Finance", items: [{ id: "item-1", name: "Cement", unit: "bag", quantity: 100, neededDate: "2026-10-01", purpose: "", location: "Site", remarks: "" }], documents: [{ name: "Combined.pdf", type: "Supporting PDF", fileId: "mrf-1" }] });
+  state = execute(state, { type: "saveRequest", intent: "submit", siteId: state.sites[0].id, scopeId: state.scopes[0].id, ref: "HML-MRF-01", requestDate: "2026-10-01", requestedBy: "Site", approvedBy: "Signatory", purchaser: "Buyer", financeOfficer: "Finance", items: [{ id: "item-1", name: "Cement", unit: "bag", quantity: 100, neededDate: "2026-10-01", purpose: "", location: "Site", remarks: "" }], documents: [{ name: "Combined.pdf", type: "Supporting PDF", fileId: "mrf-1" }] });
   assert.equal(state.requests[0].ref, "HML-MRF-01");
   assert.equal(state.requests[0].requestDate, "2026-10-01");
   assert.equal(state.requests[0].status, "submitted");
@@ -45,7 +46,7 @@ test("a blank workspace can be configured before its first MRF", () => {
 
 test("MRF numbers are manual, required on submission, and unique across projects", () => {
   let state = seedDemo();
-  const command = { type: "saveRequest", intent: "draft", siteId: "site-a", ref: "", requestDate: "", requestedBy: "Site", approvedBy: "Signatory", purchaser: "Buyer", financeOfficer: "Finance", items: [{ id: "manual-item", name: "Cement", unit: "bag", quantity: 1, neededDate: "2026-10-01", purpose: "", location: "Site", remarks: "" }], documents: [{ name: "Combined.pdf", type: "Supporting PDF", fileId: "mrf-manual" }] };
+  const command = { type: "saveRequest", intent: "draft", siteId: "site-a", scopeId: "site-a-scope", ref: "", requestDate: "", requestedBy: "Site", approvedBy: "Signatory", purchaser: "Buyer", financeOfficer: "Finance", items: [{ id: "manual-item", name: "Cement", unit: "bag", quantity: 1, neededDate: "2026-10-01", purpose: "", location: "Site", remarks: "" }], documents: [{ name: "Combined.pdf", type: "Supporting PDF", fileId: "mrf-manual" }] };
   state = execute(state, command);
   const draft = state.requests.at(-1);
   assert.equal(draft.ref, "");
@@ -54,7 +55,7 @@ test("MRF numbers are manual, required on submission, and unique across projects
   state = execute(state, { ...command, id: draft.id, intent: "submit", ref: " HML-01 ", requestDate: "2030-01-02" });
   assert.equal(state.requests.at(-1).ref, "HML-01");
   assert.equal(state.requests.at(-1).requestDate, "2030-01-02");
-  assert.equal(applyCommand(state, { ...command, siteId: "site-b", intent: "submit", ref: " hml-01 ", requestDate: "2026-09-28" }, context).field, "ref");
+  assert.equal(applyCommand(state, { ...command, siteId: "site-b", scopeId: "site-b-scope", intent: "submit", ref: " hml-01 ", requestDate: "2026-09-28" }, context).field, "ref");
 });
 
 test("seeded cement transaction has consistent purchasing, delivery, stock, and budget values", () => {
@@ -78,14 +79,14 @@ test("Procurement review requires authority and a reason to return; revisions ke
   assert.equal(state.requests.find(r => r.id === "m6").status, "returned");
   state = execute(state, { type: "setRole", role: "Site Personnel" });
   const original = state.requests.find(r => r.id === "m6");
-  state = execute(state, { type: "saveRequest", id: "m6", intent: "submit", siteId: original.siteId, ref: original.ref, requestDate: original.requestDate, scopeDocument: { name: "Electrical scope.pdf", type: "Scope", fileId: "scope-2" }, requestedBy: original.requestedBy, approvedBy: original.approvedBy, purchaser: original.purchaser, financeOfficer: original.financeOfficer, items: original.items, documents: [{ name: "Signed MRF.pdf", type: "Supporting PDF", fileId: "mrf-2" }] });
+  state = execute(state, { type: "saveRequest", id: "m6", intent: "submit", siteId: original.siteId, scopeId: original.scopeId, ref: original.ref, requestDate: original.requestDate, scopeDocument: { name: "Electrical scope.pdf", type: "Scope", fileId: "scope-2" }, requestedBy: original.requestedBy, approvedBy: original.approvedBy, purchaser: original.purchaser, financeOfficer: original.financeOfficer, items: original.items, documents: [{ name: "Signed MRF.pdf", type: "Supporting PDF", fileId: "mrf-2" }] });
   assert.equal(state.requests.find(r => r.id === "m6").status, "submitted");
   assert.equal(state.requests.filter(r => r.id === "m6").length, 1);
 });
 
 test("multi-material requests keep separate details through draft, submission, and revision", () => {
   let state = seedDemo();
-  const command = { type: "saveRequest", intent: "draft", siteId: "site-a", ref: "MRF-2026-010", requestDate: "2026-10-02", scopeDocument: { name: "Scope.pdf", type: "Scope", fileId: "scope-3" }, requestedBy: "", approvedBy: "", purchaser: "", financeOfficer: "", documents: [{ name: "Signed request.pdf", type: "Supporting PDF", fileId: "mrf-3" }], items: [
+  const command = { type: "saveRequest", intent: "draft", siteId: "site-a", scopeId: "site-a-scope", ref: "MRF-2026-010", requestDate: "2026-10-02", scopeDocument: { name: "Scope.pdf", type: "Scope", fileId: "scope-3" }, requestedBy: "", approvedBy: "", purchaser: "", financeOfficer: "", documents: [{ name: "Signed request.pdf", type: "Supporting PDF", fileId: "mrf-3" }], items: [
     { id: "first", name: "Cement", unit: "bag", quantity: 10, neededDate: "2026-10-20", purpose: "Slab pour", location: "Tower 1", remarks: "Keep dry" },
     { id: "second", name: "Sand", unit: "cu.m", quantity: 4, neededDate: "2026-10-05", purpose: "Mixing", location: "Tower 2", remarks: "" },
   ] };
@@ -189,8 +190,9 @@ test("MRF Drive archive gates Procurement and retains versions after a document 
   state = execute(state, { type: "setRole", role: "Administrator" });
   state = execute(state, { type: "addSite", name: "Test project", location: "Site", budget: 100000 });
   const siteId = state.sites[0].id;
+  state = execute(state, { type: "saveProjectScope", siteId, name: "Structural", budget: 100000 });
   state = execute(state, { type: "setRole", role: "Site Personnel" });
-  const command = { type: "saveRequest", intent: "submit", siteId, ref: "MRF-001", requestDate: "2026-09-29", requestedBy: "Site", approvedBy: "Signatory", purchaser: "Buyer", financeOfficer: "Finance", items: [{ id: "i1", name: "Cement", unit: "bag", quantity: 5, neededDate: "2026-10-01", purpose: "Work", location: "Site", remarks: "" }], documents: [{ name: "combined.pdf", type: "Supporting PDF", fileId: "local-1" }] };
+  const command = { type: "saveRequest", intent: "submit", siteId, scopeId: state.scopes[0].id, ref: "MRF-001", requestDate: "2026-09-29", requestedBy: "Site", approvedBy: "Signatory", purchaser: "Buyer", financeOfficer: "Finance", items: [{ id: "i1", name: "Cement", unit: "bag", quantity: 5, neededDate: "2026-10-01", purpose: "Work", location: "Site", remarks: "" }], documents: [{ name: "combined.pdf", type: "Supporting PDF", fileId: "local-1" }] };
   assert.equal(applyCommand(state, { ...command, documents: [] }, context).ok, false);
   state = execute(state, command);
   const requestId = state.requests[0].id;

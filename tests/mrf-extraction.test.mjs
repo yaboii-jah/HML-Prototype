@@ -10,7 +10,7 @@ export const extractedMrf = () => ({
   items: [{ name: " Cement ", quantity: 12.5, unit: " bag ", neededDate: "2026-10-08", purpose: null, location: "Site", remarks: "Check packaging" }], warnings: [],
 });
 const context = { now: () => "2026-10-05T12:00:00.000Z", id: prefix => `${prefix}-ai-test` };
-const command = () => ({ type: "saveRequest", intent: "submit", siteId: "site-a", ...parseMrfExtraction(extractedMrf()).extraction.details, items: mrfImportedItems(parseMrfExtraction(extractedMrf()).extraction, () => "item-ai"), documents: [{ name: "Supporting.pdf", type: "Supporting PDF", fileId: "support-ai" }] });
+const command = () => ({ type: "saveRequest", intent: "submit", siteId: "site-a", scopeId: "site-a-scope", ...parseMrfExtraction(extractedMrf()).extraction.details, items: mrfImportedItems(parseMrfExtraction(extractedMrf()).extraction, () => "item-ai"), documents: [{ name: "Supporting.pdf", type: "Supporting PDF", fileId: "support-ai" }] });
 const execute = (state, value) => { const result = applyCommand(state, value, context); assert.equal(result.ok, true, result.message); return result.snapshot; };
 
 test("MRF source policy accepts one PDF or ordered photos within the total limit", () => {

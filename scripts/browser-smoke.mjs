@@ -6,6 +6,8 @@ import assert from "node:assert/strict";
 import { seedDemo } from "../src/mock/fixtures/seed.ts";
 import { ACCOUNT_FIXTURES, SESSION_STORAGE_KEY } from "../src/app-state/demo-session.ts";
 import { materialId } from "../src/domain/ids.ts";
+import { PDFDocument } from "pdf-lib";
+import { pageText } from "../tests/helpers/pdf-text.mjs";
 
 const edge = "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe";
 const profile = await mkdtemp(path.join(os.tmpdir(), "constructsync-smoke-"));
@@ -54,7 +56,7 @@ try {
     };
     let accountingFailOnce = true;
     window.fetch = (input, init) => {
-      const url = typeof input === 'string' ? input : input.url;
+      const url = input instanceof Request ? input.url : String(input);
       if (url === '/api/requests/extract') {
         window.__mrfSmokeSources = init.body.getAll('files').map(file=>file.name);
         const data = { extraction: { details: { projectName: 'Printed project name', ref: 'MRF-AI-SMOKE', requestDate: '2026-10-05', requestedBy: 'AI site author', approvedBy: 'Printed signatory', purchaser: 'Buyer', financeOfficer: 'Finance', specialInstructions: 'Keep dry' }, items: [ { name: 'Cement', quantity: 12, unit: 'bag', neededDate: '2026-10-08', purpose: '', location: 'Site', remarks: '' }, { name: 'Sand', quantity: null, unit: 'cu.m', neededDate: '2026-10-09', purpose: '', location: 'Site', remarks: '' } ] }, warnings: ['Check material 2: missing quantity.'] };
@@ -69,6 +71,7 @@ try {
         const end = start + init.body.size;
         window.__driveSmokeChunks++;
         if (start === 0 && !firstResponseLost) { firstResponseLost = true; return Promise.reject(new Error('simulated lost response')); }
+        if (end >= 7340051 && window.__holdRequestArchive) return new Promise(resolve=>{window.__releaseRequestArchive=()=>resolve(new Response(JSON.stringify({formFileId:'smoke-form-id',supportFileId:'smoke-support-id',formUrl:'https://drive.google.com/file/d/smoke-form-id/view',supportUrl:'https://drive.google.com/file/d/smoke-support-id/view'}),{headers:{'Content-Type':'application/json'}}));});
         return reply(end < ${7 * 1024 * 1024 + 19} ? { offset: end } : { formFileId: 'smoke-form-id', supportFileId: 'smoke-support-id', formUrl: 'https://drive.google.com/file/d/smoke-form-id/view', supportUrl: 'https://drive.google.com/file/d/smoke-support-id/view' });
       }
       if (url === '/api/drive/quotes') { quoteUploadIndex = JSON.parse(init.body).index; return reply({ ticket: 'smoke-quote-ticket', offset: 0 }); }
@@ -134,7 +137,7 @@ try {
     }
     await call("Emulation.clearDeviceMetricsOverride");
   };
-  const installFixture = async () => { await run(`localStorage.setItem('hml-constructsync-demo-v12', ${JSON.stringify(JSON.stringify(seedDemo()))}); return true;`); await call("Page.reload", { ignoreCache: true }); };
+  const installFixture = async (fixture = seedDemo()) => { await run(`localStorage.setItem('hml-constructsync-demo-v12', ${JSON.stringify(JSON.stringify(fixture))}); return true;`); await call("Page.reload", { ignoreCache: true }); };
   const signInAs = async name => {
     const account = ACCOUNT_FIXTURES.find(value => value.role === name);
     assert.ok(account, 'Known department account');
@@ -213,7 +216,7 @@ try {
   await writeFile(path.join(profile,'sign-in-short-screen.png'),Buffer.from((await call('Page.captureScreenshot',{format:'png'})).data,'base64'));
   await call("Emulation.setDeviceMetricsOverride", { width: 320, height: 568, deviceScaleFactor: 1, mobile: true });
   await run("window.scrollTo(0,0);return true;");
-  assert.equal(await run("return !!document.querySelector('.signin-role-picker,.signin-role-trigger,.signin-note');"), false, 'Sign-in exposes no accounts or credential hints');
+  assert.equal(await run("return !!document.querySelector('.signin-role-picker,.signin-role-trigger,.signin-note,.role-options,.masthead-account');"), false, 'Sign-in exposes no switcher, accounts or credential hints');
   assert.equal(await run("return document.querySelector('#signin-email').value+document.querySelector('#signin-password').value;"), '', 'Credentials start empty');
   await checkProductCopy();
   await fill('#signin-email', ACCOUNT_FIXTURES[0].email); await fill('#signin-password', 'incorrect');
@@ -249,7 +252,22 @@ try {
   assert.equal(await run("return !!document.querySelector('input[name=manager]');"), false, "Project setup has no PM assignment");
   await submit('form:has(input[name="budget"])');
   await wait("return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).sites.length===1;");
+  await fill('.scope-budget-form input[name="scopeName"]', 'Structural');
+  await fill('.scope-budget-form input[name="scopeBudget"]', 100001);
+  await submit('.scope-budget-form');
+  await wait("return document.querySelector('.scope-budget-form .inline-error')?.textContent.includes('project budget');");
+  await fill('.scope-budget-form input[name="scopeBudget"]', 60000);
+  await submit('.scope-budget-form');
+  await wait("return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).scopes.length===1;");
+  assert.equal((await state()).activity[0].actorIdentity.name, 'Daniel Garcia');
+  await fill('.scope-budget-form input[name="scopeName"]', 'Civil');
+  await fill('.scope-budget-form input[name="scopeBudget"]', 40000);
+  await submit('.scope-budget-form');
+  await wait("return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).scopes.length===2;");
+  await checkDepartmentLayout('.scope-budgets', 'scope-budgets');
   await role("Site Personnel");
+  await navigate('/projects/' + (await state()).sites[0].id);
+  assert.equal(await run("return !document.querySelector('.scope-budget-form') && document.querySelector('.scope-budgets').textContent.includes('Structural');"), true, 'Site Personnel reads allocations without editing');
   await navigate("/requests/new");
   assert.equal(await run("return !!document.querySelector('select[name=site]') && !document.querySelector('select[name=category]');"), true);
   await installFixture();
@@ -274,7 +292,8 @@ try {
   await navigate("/dashboard");
   console.log("Department sign-in passed; checking dashboard");
   await wait("return location.pathname === '/dashboard' && !!document.querySelector('.metric-strip');");
-  assert.equal(await run("return document.querySelector('.masthead-account strong')?.textContent;"), (await state()).role);
+  const headerRole = (await state()).role;
+  assert.equal(await run("return document.querySelector('.masthead-account strong')?.textContent;"), ACCOUNT_FIXTURES.find(account => account.role === headerRole).name);
   await wait("return document.querySelector('.brand-logo img')?.complete && document.querySelector('.brand-logo img')?.naturalWidth > 0;");
   await call("Emulation.setDeviceMetricsOverride", { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false });
   await writeFile(path.join(profile, "dashboard-desktop.png"), Buffer.from((await call("Page.captureScreenshot", { format: "png" })).data, "base64"));
@@ -283,18 +302,45 @@ try {
   await writeFile(path.join(profile, "dashboard-mobile.png"), Buffer.from((await call("Page.captureScreenshot", { format: "png" })).data, "base64"));
   await call("Emulation.clearDeviceMetricsOverride");
   console.log("Dashboard ready; creating request");
+  const monitoringFixture = seedDemo();
+  const monitoringSource = monitoringFixture.requests.find(request => request.id === 'm1');
+  for(let index=0;index<55;index++) monitoringFixture.requests.push({...structuredClone(monitoringSource),id:'monitoring-'+index,ref:'MRF-MONITOR-'+index,createdAt:'2026-10-07T00:00:00Z'});
+  await installFixture(monitoringFixture); await navigate('/dashboard');
+  assert.equal(await run("return document.querySelectorAll('.monitoring-table > tbody > tr[data-monitoring-request]').length;"),50);
+  await click('Load more MRFs');
+  assert.equal(await run("return document.querySelectorAll('.monitoring-table > tbody > tr[data-monitoring-request]').length;"),64);
+  const beforeMonitoring = await state();
+  await click('Show records','[data-monitoring-request=m1] button');
+  assert.equal(await run("return document.querySelector('.monitoring-related').textContent.includes('PO-2026-001');"),true);
+  assert.equal(await run("return !!document.querySelector('.monitoring-related a[href=\"/deliveries/b1\"]');"),true);
+  assert.deepEqual(await state(),beforeMonitoring,'Inspecting progress does not change workflow records');
+  await checkDepartmentLayout('.request-monitoring', 'mrf-monitoring');
+  await fill('input[aria-label="Search MRF lifecycle"]','MRF-2026-001');
+  assert.equal(await run("return document.querySelectorAll('.monitoring-table > tbody > tr[data-monitoring-request]').length;"),1);
+  assert.equal(await run("return document.querySelector('[data-monitoring-request=m1] > td:nth-child(3)').textContent.includes('Served');"),true);
+  assert.equal(await run("return document.querySelector('[data-monitoring-request=m1] > td:nth-child(6)').textContent.includes('Partly delivered');"),true);
+  await fill('input[aria-label="Search MRF lifecycle"]','');
+  await fill('select[aria-label="Site context"]','site-b');
+  await wait("return document.querySelectorAll('.monitoring-table > tbody > tr[data-monitoring-request]').length===5;");
+  await navigate('/projects/site-a');
+  assert.equal(await run("return [...document.querySelectorAll('.monitoring-table > tbody > tr[data-monitoring-request] > td:first-child')].every(cell=>cell.textContent.includes('Site A'));"),true,'The project page keeps its route project even when the global filter differs');
+  await installFixture(); await navigate('/dashboard');
   for (const theme of ["light", "dark"]) {
     await run(`document.documentElement.dataset.theme=${JSON.stringify(theme)};return true;`);
     await checkContrast();
   }
   await run("document.documentElement.dataset.theme='light';document.querySelector('.masthead-account').focus();document.querySelector('.masthead-account').click();return true;");
   await wait("return !!document.querySelector('.account-modal[open]');");
-  assert.equal(await run("return !!document.querySelector('.role-options');"), false, 'Account menu offers no role switching');
+  assert.equal(await run("return document.querySelectorAll('.role-options button').length;"), ACCOUNT_FIXTURES.length, 'Workspace account menu offers all departments');
+  assert.equal(await run("return document.querySelector('.role-options button[aria-pressed=true]')?.textContent.includes('Site Personnel');"), true);
   assert.equal(await run("return document.querySelector('.account-details span').textContent;"), ACCOUNT_FIXTURES[0].email);
   await checkProductCopy();
   for (const width of [1440,375,320]) {
     await call('Emulation.setDeviceMetricsOverride', { width, height: 812, deviceScaleFactor: 1, mobile: width < 800 });
     assert.equal(await run("return document.querySelector('.account-modal').getBoundingClientRect().right<=innerWidth;"), true);
+    assert.equal(await run("return [...document.querySelectorAll('.role-options button')].every(button=>button.scrollWidth<=button.clientWidth+1&&button.getBoundingClientRect().height>=44);"), true, 'Department controls fit with usable touch targets');
+    for (const theme of ['light','dark']) { await run(`document.documentElement.dataset.theme=${JSON.stringify(theme)};return true;`); await checkContrast('small,.role-options strong'); }
+    await run("document.documentElement.dataset.theme='light';return true;");
     await writeFile(path.join(profile, `account-menu-${width}.png`), Buffer.from((await call('Page.captureScreenshot',{format:'png'})).data,'base64'));
   }
   await call('Emulation.clearDeviceMetricsOverride');
@@ -312,7 +358,43 @@ try {
   await call("Input.dispatchKeyEvent", { type: "keyUp", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 });
   await wait("return !document.querySelector('.account-modal[open]');");
   assert.equal(await run("return document.activeElement === document.querySelector('.masthead-account');"), true, "Closing the account dialog restores focus");
+  const beforeSwitching = await state();
+  const switchLocation = await run("return location.pathname+location.search+location.hash;");
+  for (const account of [...ACCOUNT_FIXTURES.slice(1), ACCOUNT_FIXTURES[0]]) {
+    await run("document.querySelector('.masthead-account').click();return true;");
+    await wait("return !!document.querySelector('.account-modal[open]');");
+    await click(account.role, '.role-options button');
+    await wait(`return !document.querySelector('.account-modal[open]')&&JSON.parse(localStorage.getItem(${JSON.stringify(SESSION_STORAGE_KEY)})).role===${JSON.stringify(account.role)}&&document.querySelector('.account-label strong')?.textContent===${JSON.stringify(account.name)};`);
+    assert.deepEqual(await run(`return JSON.parse(localStorage.getItem(${JSON.stringify(SESSION_STORAGE_KEY)}));`), { email: account.email, role: account.role });
+    assert.equal(await run("return location.pathname+location.search+location.hash;"), switchLocation, 'Switching keeps the current workspace page');
+    assert.deepEqual(await state(), { ...beforeSwitching, role: account.role }, 'Switching preserves all records, history and project context');
+    await wait("return document.activeElement === document.querySelector('.masthead-account');");
+  }
+  await call('Page.reload', { ignoreCache: true });
+  await wait("return document.querySelector('.account-label strong')?.textContent==='Miguel Santos';");
   assert.equal(await run("return !document.querySelector('.toast');"), true, "Routine actions should not show success toasts");
+  await run(`const saved=JSON.parse(localStorage.getItem('hml-constructsync-demo-v12'));const user=${JSON.stringify({name:'Andrea Reyes',email:'hml.constructsync.procurement@gmail.com',role:'Procurement'})};for(let i=0;i<55;i++)saved.activity.push({id:'history-'+i,entity:'m1',requestId:'m1',entityType:'request',entityRef:'MRF-2026-001',actor:'Procurement',actorIdentity:user,eventType:'request.saved',action:'Request details saved',changedFields:['Instructions'],at:new Date(Date.parse('2026-10-07T01:00:00Z')+i*1000).toISOString()});for(let i=0;i<3;i++)saved.activity.push({id:'group-'+i,entity:'removed-audit-draft',requestId:'m1',entityType:'quote',entityRef:'REMOVED-DRAFT',actor:'Procurement',actorIdentity:user,eventType:'quote.draft.updated',action:'Quotation draft updated',changedFields:['Line 1: Unit price'],at:new Date(Date.parse('2026-10-07T03:00:00Z')+i*20000).toISOString()});localStorage.setItem('hml-constructsync-demo-v12',JSON.stringify(saved));return true;`);
+  await navigate('/requests/m1');
+  assert.equal(await run("return document.querySelectorAll('.lifecycle-summary tbody tr').length;"),4);
+  assert.equal(await run("return document.querySelectorAll('.audit-history tbody tr').length;"),50);
+  await click('Load more history','.audit-history button');
+  assert.equal(await run("return document.querySelectorAll('.audit-history tbody tr').length>50;"),true);
+  await run("document.querySelector('.audit-save-group').open=true;return true;");
+  assert.equal(await run("return document.querySelectorAll('.audit-save-group li').length;"),3);
+  assert.equal(await run("return document.querySelector('.audit-history').textContent.includes('Andrea Reyes');"),true);
+  assert.equal(await run("return [...document.querySelectorAll('.audit-history td')].some(cell=>cell.textContent==='REMOVED-DRAFT' && !cell.querySelector('a'));"),true);
+  assert.equal(await run("return document.querySelector('.audit-history').textContent.includes('User not recorded');"),true);
+  for (const width of [1440,768,375,320]) {
+    await call('Emulation.setDeviceMetricsOverride',{width,height:900,deviceScaleFactor:1,mobile:width<800});
+    for(const theme of ['light','dark']) {
+      await run(`document.documentElement.dataset.theme=${JSON.stringify(theme)};document.querySelector('.request-lifecycle').scrollIntoView({block:'start',behavior:'instant'});return true;`);
+      assert.equal(await run("return document.documentElement.scrollWidth<=innerWidth+1;"),true,'Lifecycle tables stay within the viewport');
+      await checkContrast();
+      if(width===1440 || width===375) await writeFile(path.join(profile,`lifecycle-${theme}-${width}.png`),Buffer.from((await call('Page.captureScreenshot',{format:'png'})).data,'base64'));
+    }
+  }
+  await call('Emulation.clearDeviceMetricsOverride');
+  await installFixture(); await navigate('/dashboard');
   await run("const saved=JSON.parse(localStorage.getItem('hml-constructsync-demo-v12'));saved.requests.find(r=>r.id==='m7').ref='MRFTRAUMAHML20260000000384';localStorage.setItem('hml-constructsync-demo-v12',JSON.stringify(saved));return true;");
   await navigate("/requests/m7/edit");
   await call("Emulation.setDeviceMetricsOverride", { width: 320, height: 900, deviceScaleFactor: 1, mobile: true });
@@ -345,6 +427,58 @@ try {
   assert.deepEqual([...pageContrastFailures.values()], [], "App pages must have adequate contrast in both themes");
   await call("Emulation.clearDeviceMetricsOverride");
   await run("document.documentElement.dataset.theme='light';return true;");
+  console.log('Checking warehouse forwarding and receipts');
+  await role('Logistics');
+  const warehouseFixture = seedDemo(); warehouseFixture.role = 'Logistics'; warehouseFixture.batches = []; warehouseFixture.movements = [];
+  await installFixture(warehouseFixture); await navigate('/deliveries/new?poId=po1');
+  await fill('select[name=leg]', 'supplier-warehouse');
+  await fill('input[name=destinationAddress]', 'Marikina company depot');
+  await fill('input[name=evidence]', 'WH-DR-SMOKE'); await submit('form.form-stack');
+  await wait("return !!document.querySelector('.record-header');");
+  const warehouseParent = (await state()).batches.at(-1);
+  const saveReceiptPreview = async filename => {
+    await click('Print preview ↗');
+    await wait("return !!document.querySelector('dialog[aria-label=\"Delivery receipt print preview\"][open] iframe[src^=blob]');");
+    const result = await call('Runtime.evaluate', { expression: "(async()=>{const bytes=new Uint8Array(await fetch(document.querySelector('dialog[aria-label=\"Delivery receipt print preview\"] iframe').src).then(response=>response.arrayBuffer()));let value='';for(let offset=0;offset<bytes.length;offset+=8192)value+=String.fromCharCode(...bytes.slice(offset,offset+8192));return btoa(value);})()", awaitPromise: true, returnByValue: true });
+    assert.equal(result.exceptionDetails, undefined, 'The generated receipt bytes can be read');
+    const encoded = result.result.value;
+    const bytes = Buffer.from(encoded, 'base64'); await writeFile(path.join(profile, filename), bytes);
+    const pdf = await PDFDocument.load(bytes), text = pdf.getPages().flatMap(page => pageText(pdf,page)).map(value => value.text).join(' ');
+    await click('Close', '.document-preview-dialog button'); return text;
+  };
+  assert.match(await saveReceiptPreview('warehouse-pending.pdf'), /PENDING RECEIPT/);
+  assert.equal((await state()).batches.at(-1).status, 'expected', 'Printing does not advance a shipment');
+  await click('Dispatch delivery'); await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).batches.find(value=>value.id===${JSON.stringify(warehouseParent.id)}).status==='dispatched';`);
+  await role('Site Personnel'); await navigate(`/deliveries/${warehouseParent.id}`);
+  assert.equal(await run("return !document.querySelector('input[name^=accepted-]') && !document.querySelector('button[type=submit]');"), true, 'Site Personnel cannot confirm warehouse receipt');
+  await role('Procurement'); await navigate(`/deliveries/${warehouseParent.id}`); await click('Confirm warehouse receipt');
+  await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).batches.find(value=>value.id===${JSON.stringify(warehouseParent.id)}).status==='confirmed';`);
+  assert.equal((await state()).movements.length, 0, 'Warehouse receiving creates no site stock');
+  assert.match(await saveReceiptPreview('warehouse-received.pdf'), /Andrea Reyes/);
+  await role('Logistics'); await navigate(`/deliveries/${warehouseParent.id}`); await click('Schedule onward delivery', 'a');
+  await wait("return !!document.querySelector('input[name=evidence]');");
+  await fill('input[name=evidence]', 'SITE-DR-FIRST'); await fill('input[name^=expected-]', 60); await submit('form.form-stack');
+  await wait("return !!document.querySelector('.record-header');"); const onwardFirst = (await state()).batches.at(-1);
+  await click('Dispatch delivery'); await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).batches.find(value=>value.id===${JSON.stringify(onwardFirst.id)}).status==='dispatched';`);
+  await role('Site Personnel'); await navigate(`/deliveries/${onwardFirst.id}`);
+  await fill('input[name^=accepted-]', 50); await fill('input[name^=issue-]', '10 damaged in transit'); await click('Confirm received quantities');
+  await wait("return !!document.querySelector('input[name^=post-]');"); await click('Post to site stock');
+  await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).batches.find(value=>value.id===${JSON.stringify(onwardFirst.id)}).status==='posted';`);
+  assert.match(await saveReceiptPreview('site-received.pdf'), /Miguel Santos/);
+  await role('Logistics'); await navigate(`/deliveries/${warehouseParent.id}`); await click('Schedule onward delivery', 'a');
+  await wait("return !!document.querySelector('input[name=evidence]');");
+  assert.equal(await run("return document.querySelector('input[name^=expected-]').max;"), '40', 'A shortage does not restore warehouse availability');
+  await fill('input[name=evidence]', 'SITE-DR-SECOND'); await submit('form.form-stack');
+  await wait("return !!document.querySelector('.record-header');"); const onwardSecond = (await state()).batches.at(-1);
+  await click('Dispatch delivery'); await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).batches.find(value=>value.id===${JSON.stringify(onwardSecond.id)}).status==='dispatched';`);
+  await role('Site Personnel'); await navigate(`/deliveries/${onwardSecond.id}`); await click('Confirm received quantities');
+  await wait("return !!document.querySelector('input[name^=post-]');"); await click('Post to site stock');
+  await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).batches.find(value=>value.id===${JSON.stringify(onwardSecond.id)}).status==='posted';`);
+  assert.equal((await state()).movements.reduce((sum,movement)=>sum+movement.quantity,0),90);
+  await navigate('/deliveries');
+  assert.equal(await run("return !document.querySelector('.delivery-progress') && !document.querySelector('.delivery-overview-table').textContent.includes('Portland cement');"),true,'Delivery overview retains stage details without material lists');
+  await checkDepartmentLayout('.delivery-overview-table', 'delivery-overview');
+  await installFixture();
   await role("Site Personnel");
   await navigate("/requests");
   await call("Emulation.setDeviceMetricsOverride", { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false });
@@ -422,6 +556,8 @@ try {
   assert.equal(await run("return document.querySelector('#siteId').value;"), "", "Project must be chosen manually");
   assert.equal(await run("return document.querySelectorAll('.reference-file-list .reference-file').length;"), 0, "MRF sources cannot become supporting attachments");
   await fill('select[name="site"]', 'site-a');
+  assert.equal(await run("return document.querySelector('#scopeId').value;"), '', 'AI import requires manual scope selection');
+  await fill('#scopeId', 'site-a-scope');
   await click("Next", ".request-wizard-actions button");
   await run("document.querySelectorAll('.material-summary-trigger')[1].click();return true;");
   assert.equal(await run("return document.querySelectorAll('input[name^=quantity]')[1].value;"), "", "Unreadable quantity must be blank");
@@ -477,6 +613,13 @@ try {
   await run("document.querySelector('.request-wizard details').open=false;return true;");
   await click("Next", ".request-wizard-actions button");
   assert.equal(await requestStep(), "1Request details");
+  assert.equal(await run("return document.activeElement.id;"), "scopeId");
+  await fill('#scopeId', 'site-a-scope');
+  await fill('#siteId', 'site-b');
+  assert.equal(await run("return document.querySelector('#scopeId').value;"), '', 'Changing projects clears the scope');
+  await fill('#siteId', 'site-a');
+  await fill('#scopeId', 'site-a-scope');
+  await click("Next", ".request-wizard-actions button");
   assert.equal(await run("return document.activeElement.id;"), "ref");
   assert.equal(await run("return !!document.querySelector('button[value=submit]');"), false, "Submit is only available on the final step");
   await call("Emulation.setDeviceMetricsOverride", { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false });
@@ -613,10 +756,17 @@ try {
   await run(`const saved=JSON.parse(localStorage.getItem('hml-constructsync-demo-v12'));saved.sites.find(site=>site.id===${JSON.stringify(request.siteId)}).driveFolderId='smoke-project-folder';localStorage.setItem('hml-constructsync-demo-v12',JSON.stringify(saved));return true;`);
   await call("Page.reload", { ignoreCache: true });
   await wait("return !!document.querySelector('.masthead-account');");
-  await role("Procurement"); await navigate(`/requests/${request.id}`); await click("Approve request");
+  await role("Procurement"); await navigate(`/requests/${request.id}`);
+  await run("window.__holdRequestArchive=true;return true;"); await click("Approve request");
+  await wait("return typeof window.__releaseRequestArchive==='function';");
+  await role('Finance');
+  await run("window.__holdRequestArchive=false;window.__releaseRequestArchive();return true;");
   await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).requests.find(x=>x.id===${JSON.stringify(request.id)}).archive?.status==='complete';`);
   assert.equal(await run("return window.__driveSmokeChunks;"), 3, "A PDF over Vercel's 4.5 MB limit should upload in three chunks");
   assert.equal(await run("return window.__driveSmokeStatusChecks;"), 1, "A lost chunk response should trigger an upload-status check");
+  const completion=(await state()).activity.find(event=>event.requestId===request.id&&event.eventType==='archive.completed');
+  assert.equal(completion.actorIdentity.name,'Andrea Reyes','Upload completion retains its initiating account');
+  assert.equal((await state()).role,'Finance','Upload completion preserves the currently signed-in account');
   await role("Procurement"); await navigate(`/requests/${request.id}/quotes`);
   console.log("Request approved; reviewing a quotation");
   await click("Enter manually");
@@ -702,6 +852,8 @@ try {
   console.log("Delivery scheduled");
   await wait("return location.pathname.startsWith('/deliveries/') && !!document.querySelector('.record-header');");
   snapshot = await state(); const batch = snapshot.batches.at(-1); assert.equal(batch.status, "expected");
+  await click('Dispatch delivery');
+  await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).batches.find(value=>value.id===${JSON.stringify(batch.id)}).status==='dispatched';`);
   await role("Site Personnel"); await navigate(`/deliveries/${batch.id}`); await fill('input[name^="accepted-"]', 12); await click("Confirm received quantities");
   await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).batches.find(x=>x.id===${JSON.stringify(batch.id)}).status==='confirmed';`);
   await uploadFiles('input[aria-label="Upload accounting documents"]', [unsupportedReference]);
@@ -738,6 +890,11 @@ try {
   await click("Close", ".evidence-preview button"); await fill('input[name="invoice"]', "INV-SMOKE-01"); await fill('input[name="receipt"]', "DR-SMOKE-01"); await fill('select[name="review"]', "Complete"); await click("Save document review");
   console.log("Accounting review");
   snapshot = await state(); assert.equal(snapshot.payments.find(p => p.poId === po.id)?.amount, 5710);
+  await navigate(`/requests/${request.id}`);
+  const events=(await state()).activity.filter(event=>event.requestId===request.id);
+  assert.equal(events.every(event=>!!event.actorIdentity?.name),true,'Every new process event retains a user name');
+  for(const kind of ['quote.finalized','payment.recorded','batch.received','batch.posted']) assert.equal(events.some(event=>event.eventType===kind),true,`Lifecycle includes ${kind}`);
+  assert.equal(await run("return document.querySelector('.request-lifecycle').textContent.includes('Miguel Santos');"),true);
   await role("Management"); await navigate("/reports"); assert.equal(await run("return document.querySelector('h1')?.textContent;"), "Operations report");
   await call("Emulation.setDeviceMetricsOverride", { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false });
   await writeFile(path.join(profile, "desktop.png"), Buffer.from((await call("Page.captureScreenshot", { format: "png" })).data, "base64"));

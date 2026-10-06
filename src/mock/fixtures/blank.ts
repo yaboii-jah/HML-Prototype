@@ -8,6 +8,7 @@ export function blankWorkspace(): DemoSnapshot {
     role: "Site Personnel",
     siteFilter: "all",
     sites: [],
+    scopes: [],
     suppliers: [],
     categories: [],
     requests: [],

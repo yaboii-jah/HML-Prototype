@@ -1,15 +1,18 @@
 import type { Role } from "../domain/types.ts";
 
 // Fixed walkthrough credentials. Deployment protection remains the server access gate.
-export const ACCOUNT_FIXTURES: { role: Role; email: string; password: string }[] = [
-  { role: "Site Personnel", email: "hml.constructsync.site@gmail.com", password: "HML!SITE2026" },
-  { role: "Procurement", email: "hml.constructsync.procurement@gmail.com", password: "HML!PROC2026" },
-  { role: "Finance", email: "hml.constructsync.finance@gmail.com", password: "HML!FIN2026" },
-  { role: "Logistics", email: "hml.constructsync.logistics@gmail.com", password: "HML!LOG2026" },
-  { role: "Accounting / Auditing", email: "hml.constructsync.accounting@gmail.com", password: "HML!ACCT2026" },
-  { role: "Management", email: "hml.constructsync.management@gmail.com", password: "HML!MGMT2026" },
-  { role: "Administrator", email: "hml.constructsync.admin@gmail.com", password: "HML!ADMIN2026" },
+export const ACCOUNT_FIXTURES: { name: string; role: Role; email: string; password: string }[] = [
+  { name: "Miguel Santos", role: "Site Personnel", email: "hml.constructsync.site@gmail.com", password: "HML!SITE2026" },
+  { name: "Andrea Reyes", role: "Procurement", email: "hml.constructsync.procurement@gmail.com", password: "HML!PROC2026" },
+  { name: "Paolo Mendoza", role: "Finance", email: "hml.constructsync.finance@gmail.com", password: "HML!FIN2026" },
+  { name: "Carlo Villanueva", role: "Logistics", email: "hml.constructsync.logistics@gmail.com", password: "HML!LOG2026" },
+  { name: "Isabel Cruz", role: "Accounting / Auditing", email: "hml.constructsync.accounting@gmail.com", password: "HML!ACCT2026" },
+  { name: "Rafael Navarro", role: "Management", email: "hml.constructsync.management@gmail.com", password: "HML!MGMT2026" },
+  { name: "Daniel Garcia", role: "Administrator", email: "hml.constructsync.admin@gmail.com", password: "HML!ADMIN2026" },
 ];
+export function accountDisplayName(email: string | null): string {
+  return ACCOUNT_FIXTURES.find(account => account.email === email)?.name ?? "";
+}
 export type AccountIdentity = { email: string; role: Role };
 export function accountForCredentials(email: string, password: string): AccountIdentity | null {
   const account = ACCOUNT_FIXTURES.find(account => account.email === email.trim().toLowerCase() && account.password === password);
@@ -63,6 +66,13 @@ export class LocalDemoSession {
     } catch { this.view = { ...account, status: "volatile" }; }
     this.initialized = true;
     this.notify();
+  }
+  switchRole(role: Role): boolean {
+    if (!this.read().role) return false;
+    const account = ACCOUNT_FIXTURES.find(value => value.role === role);
+    if (!account) return false;
+    this.select(account);
+    return true;
   }
   clear() {
     try {

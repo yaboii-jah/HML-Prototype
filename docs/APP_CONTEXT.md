@@ -2,7 +2,7 @@
 
 > **Living document:** This is the canonical, implementation-aligned context for the application. Update this file in the same change whenever a major implementation changes the product scope, business workflow, domain model, permissions, routes, persistence, seeded walkthrough, architecture, or verification strategy. Do not record small visual polish, copy edits, or isolated bug fixes unless they change one of those areas.
 
-**Last verified:** 2026-10-06
+**Last verified:** 2026-10-07
 **Application version:** Prototype (`package.json` 0.1.0)
 **State schema:** `DemoSnapshot` version 12
 
@@ -13,10 +13,10 @@ HML ConstructSync is a browser-local construction operations prototype, also dep
 ## Current product boundary
 
 - Seven simulated roles share one workspace: Site Personnel, Procurement, Finance, Logistics, Accounting / Auditing, Management, and Administrator.
-- Seven fixed department accounts use distinct passwords and Gmail-format identifiers without mailbox ownership or email delivery. Sign-in shows no account list, autofill or credential hints. The account menu displays the current email/department and Sign out; department changes require a new sign-in. Sessions remain until sign-out, while all accounts share the same browser-local records. These client-side checks simulate authorization rather than securing server APIs; Vercel deployment protection remains required.
+- Seven fixed department accounts use distinct passwords and Gmail-format identifiers without mailbox ownership or email delivery. Each account has a fictional display name, shown with department and personal initials in the header and account menu. Sign-in shows no account list, autofill or credential hints and requires valid credentials. On workspace routes, the account menu displays the current email/department, **Switch department** and Sign out. Switching selects the complete predefined account without another password, changes permissions and new audit attribution together, and preserves the current route, project context and saved records. Auth routes have no switcher. Historical actors remain unchanged; started operations retain their initiating identity. Sessions remain until sign-out, while all accounts share the same browser-local records. These client-side checks simulate authorization rather than securing server APIs; Vercel deployment protection remains required.
 - Project Manager is retired from app access and project assignments. The generic MRF Approved by signature remains document metadata; Procurement owns the app review.
 - Site filtering changes dashboard and queue context without creating separate tenant data.
-- All operational changes pass through typed domain commands and update one linked snapshot.
+- All operational changes pass through typed domain commands and update one linked snapshot. The active account supplies an immutable audit identity; started file pipelines retain their initiating identity and a scoped, version-bound acknowledgement runner after account changes. Current workspace role selection remains independent of that captured authority.
 - The combined MRF support file is one required PDF of at most 50 MB, kept in the uploading browser's IndexedDB. It contains the hardcopy MRF, key plan, and work scope. Supplier quotation PDFs/images remain browser-local and receive Drive copies after finalization. Older MRF attachment references remain metadata for migration only.
 - Drive credentials, the company root folder ID, and the upload-token key stay on the server. Administrator maps each project folder within that root. Vercel Drive routes require explicit enablement and Vercel Authentication for All Deployments, including production; simulated app roles do not secure them.
 - Credential and project-folder setup is described in `docs/GOOGLE_DRIVE_SETUP.md`. The standard local dev and start scripts bind to loopback.
@@ -34,8 +34,12 @@ flowchart LR
   Accounting --> Payment[Finance: approve payment request and disburse]
   Payment --> Release[Accounting: release approved and archived PO]
   Accounting -->|Credit / terms: payment independent| Release
-  Release --> Logistics[Logistics: delivery]
-  Logistics --> Warehouse[Site / Warehouse: receive, post stock, record usage]
+  Release --> Logistics[Logistics: schedule and dispatch]
+  Logistics -->|Direct| SiteReceive[Site Personnel: receive and post stock]
+  Logistics -->|Via company warehouse| CompanyWarehouse[Procurement: confirm warehouse receipt]
+  CompanyWarehouse --> Forward[Logistics: schedule and dispatch onward batches]
+  Forward --> SiteReceive
+  SiteReceive --> Usage[Site Personnel: record usage]
 ```
 
 For upfront purchases, Accounting releases only after full actual disbursement. Credit purchases may proceed without a payment request or Finance decision. Approval, payment approval, disbursement, release, receiving, stock posting and document review have separate states.
@@ -45,12 +49,12 @@ For upfront purchases, Accounting releases only after full actual disbursement. 
 | Role | Main implemented responsibilities |
 | --- | --- |
 | Site Personnel | Create/save/submit MRFs with one support PDF; revise returned or reopened requests; confirm receiving; post accepted stock; record usage and stock adjustments. |
-| Procurement | Review/return/reject MRFs and corrections, archive approved MRFs, review and archive supplier quotations, generate comparisons before POs, allocate awards and submit supplier-specific POs to Accounting. |
+| Procurement | Review/return/reject MRFs and corrections, archive approved MRFs, review/archive quotations, generate comparisons and submit POs; confirm company warehouse receipt. |
 | Finance | Prioritize and approve/hold/return/reject payment requests; separately record actual disbursements for approved requests. Returns go to Accounting. |
-| Logistics | Schedule delivery batches against the unscheduled balance of a released PO. |
+| Logistics | Schedule and dispatch supplier/site or supplier/warehouse batches; forward confirmed warehouse quantities in multiple batches to their original PO/site. |
 | Accounting / Auditing | Review PO finances and payment arrangement, approve within budget or return to Procurement, archive approved POs, prepare payment requests and release eligible POs to Logistics. Review delivery evidence separately; make justified stock adjustments. |
 | Management | Read cross-project reports and inspect exceptions; no operational approval commands. |
-| Administrator | Add projects/sites, map and validate their Drive folders, inspect activity, retry archives, and reset browser workspace data through the unlinked maintenance page. |
+| Administrator | Add projects/sites, maintain their scope allocations, map and validate Drive folders, inspect activity, retry archives, and reset browser workspace data through the unlinked maintenance page. |
 
 The domain command layer in `src/domain/commands.ts` is the authority for permissions and transition validation. Hiding an action in the UI is not sufficient authorization.
 
@@ -64,6 +68,7 @@ The domain command layer in `src/domain/commands.ts` is the authority for permis
 - New requests offer optional AI import in Step 1 through `POST /api/requests/extract`, using the server's existing `GEMINI_API_KEY` and `GEMINI_MODEL`. Import accepts one multipage PDF or up to 12 ordered JPG/PNG/WebP page photos of one MRF, up to 4 MiB total. Users preview/reorder sources, explicitly extract and apply results, and confirm replacement of edited form values. The project remains a manual selection; unreadable fields remain blank with warnings. Multiple MRFs and unrelated documents are rejected. Cancellation, timeout and errors preserve the entered form and allow manual entry.
 - AI source bytes and Blob previews stay temporary in browser memory and are sent to Gemini only for extraction. They are never cached as attachments or archived to Drive. The combined supporting PDF remains a separate required upload in Step 3. AI-filled forms stay editable and require a fresh review checkbox before submission; detail/material edits clear confirmation. Drafts retain optional `aiAssisted` metadata but no review acknowledgement. Submission records `aiReviewedAt` and `aiReviewedBy`; the command layer enforces review for resumed AI drafts too. Existing MRFs remain manual and schema 12 stays compatible. This acknowledgement does not replace Procurement approval.
 - Submission requires request details, at least one valid item, and one combined supporting PDF. The browser validates PDF type, signature, and 50 MB limit before storing it locally.
+- Step 1 requires a manually chosen scope of work belonging to the selected project. Changing projects or applying an AI import clears the scope selection. Drafts may remain unassigned. Submission and initial/full-correction Procurement approval require positive remaining scope funds; requests do not reserve money. Document-only corrections retain their scope and can proceed after existing POs consume the allocation.
 - General request information includes a manually entered, globally unique M.R.F No. and editable Request Date, plus Requested by, Approved by, Purchaser/Procurement Officer, and Finance Officer names. All six fields are required for submission but may be blank in a draft. Request Date is document metadata and may be in the future; system timestamps still drive activity and report filters.
 - Each material carries its own date needed, purpose, delivery location, and remarks. Submission requires a name, unit, positive quantity, date, and location; purpose and remarks may be blank. Register and project summaries show the earliest material date.
 - A submitted MRF or submitted correction can be reviewed by Procurement. Procurement approval requires a mapped project Drive folder. An insufficient PDF is returned to Site Personnel for replacement.
@@ -73,6 +78,12 @@ The domain command layer in `src/domain/commands.ts` is the authority for permis
 - Procurement approval records an `archive.pending` state and attempts Drive upload. The generated MRF PDF and supporting PDF are stored in separate subfolders under `<project>/<MRF number>/`. Supporting PDFs are uploaded in 3 MiB resumable chunks to fit Vercel's request limit. A failed upload leaves the MRF approved but Procurement paused; Procurement or Administrator retries manually. Completed archives retain numbered file pairs across reapprovals.
 - New MRF PDFs and print previews retain the supplied NUMMER ETT branding and Letter landscape grid, including sixteen material slots, instructions, a blue supporting-file link and four signatory blocks. Generated values are centered and uppercase; request-date styling and attachment filename/link formatting are preserved. Formatting does not change stored input. Optional job-title inputs and printed titles are removed; existing title metadata is retained for compatibility. Extra rows or long cells continue on additional pages. Drive reserves the supporting file ID before generating the form, then fills that same file through resumable upload.
 - Procurement may reopen an archived approved MRF. New Procurement actions pause during correction and archive pending states. Earlier quotations/POs stay linked. Procurement continues only after archive completion.
+- The MRF detail page prominently shows independent request/purchasing/payment/delivery progress and a combined activity table. It follows explicit quote, comparison, allocation, PO, payment and batch/evidence relationships; new events retain MRF ownership and saved references even when drafts/allocations are removed. It does not infer unrelated stock usage or introduce an overall completion state.
+- Dashboard and project details share an automatic, readonly MRF lifecycle checklist with Review, Served, Finance, Logistics, Delivered and Stock posting columns. Served requires released coverage of every requested material; Delivered requires accepted site quantities across related active POs. Posting uses posted site batches, independently of current inventory usage. Warehouse receipt and rejected POs contribute no site fulfilment. Unawarded quantities remain partial even when every existing PO is received.
+- Finance completion requires full approved material coverage and full actual payment of those POs. Finance work follows active submitted/held/approved payment requests; draft/returned requests stay with Accounting. Upfront payments may finish before release and credit delivery may finish before payment. Holds/returns remain attributed to the affected records without changing the MRF review status.
+- Checklist rows expand into linked PO, delivery-leg and per-material coverage tables. Latest activity uses explicitly linked audit events, with unknown names/times shown as unrecorded. Search/progress filters and 50-row Load more keep large views manageable. Dashboard project filtering follows the global context; project detail always uses its route project. Expansion/filtering changes no workflow records.
+- The dashboard retains role queues, key metrics and budget positions; its former status bars and single-PO teaser are replaced by the checklist. Project details retain budget scopes, stock and Drive documents while consolidating their separate record lists into the checklist.
+- Audit events retain optional name/email/role snapshots, typed event kinds and changed-field labels. Quotation drafts, allocations, priorities and archive outcomes are logged alongside existing milestones. Unchanged automatic saves add no event. Historical roles and timestamps remain intact without invented names or completion times. Recorded timestamps display seconds in Philippine time. History is newest first, initially 50 rows/groups; consecutive same-actor quotation saves with gaps up to 60 seconds expand to the original events.
 - Workflow handoffs and consequential decisions use a confirmation dialog; draft saves and routine edits do not. Successful actions use a brief global toast, while action failures remain visible in page banners and field corrections remain beside their inputs.
 
 ### Quotations and purchase orders
@@ -81,6 +92,7 @@ The domain command layer in `src/domain/commands.ts` is the authority for permis
 - The quotation queue has one group per supplier; each group accepts up to 12 ordered PDF/JPG/PNG/WebP files, 20 MB per file and 45 MB combined. A single Extract with AI action processes ready groups separately with a visible per-group processing state. The general Enter manually action can attach a queued group's files, including after an extraction failure, or start a file-free draft that must receive supplier files before finalization. Draft review cards open on click; source documents open in a multi-file preview dialog.
 - Gemini proposes extracted data and MRF matches only. Procurement checks the original, corrects pricing and supplier details, confirms each match and unit conversion, and explains any remaining discrepancy before finalization. Manual entry needs no API key, but newly finalized quotations require supplier PDF/image originals and a completed Drive archive before award. Unfinalized drafts can be deleted; finalized quotations remain immutable.
 - Finalized quotations can be compared without a fixed quote count. Procurement may record a supplier selection reason; awards are staged and persist until PO generation. Only PHP quotations are awardable.
+- Saved quotation summaries and MRF award coverage use tables for scanning and comparison. File grouping, AI extraction, quote editing, matched-offer comparison and allocation controls retain their existing behavior.
 - Each PO stores its awarded MRF quantities and source quotation revision. Multiple POs may share one MRF; a material may be split across suppliers. Active PO and staged allocations cannot exceed requested MRF quantities or the supplier's quoted quantity; rejected POs release their allocation.
 - Award generation creates one draft PO per supplier from the staged quantities. Procurement confirms each PO's line discounts and other charges. Draft and Accounting-returned POs may be edited; a draft using an older quote revision needs an explicit reason before finalizing. Submitted POs await Accounting; approved purchasing details are locked.
 - Generated PO PDFs and print previews retain the supplied HML artwork and company header on Letter portrait pages. Vendor/bank/ship-to, reference and terms cells wrap and expand before material pagination; the complete linked MRF reference stays in its header field. The material grid keeps eleven rows when space permits, with measured row heights, VAT boxes and EWT/net totals. Ordinary shipping terms no longer generate a separate description-only form. Genuine long information or material overflow uses continuation pages. Editing screens retain their existing layout.
@@ -109,6 +121,10 @@ The domain command layer in `src/domain/commands.ts` is the authority for permis
 
 ### Budget
 
+- Administrator creates and edits named scopes in Administration. Names are unique within a project; scope IDs and project ownership remain stable. Combined scope allocations cannot exceed the project allocation, and an allocation cannot fall below its committed plus spent amount. Every meaningful change records a named audit event.
+- Project pages show scope allocations, commitments, spending and available amounts, plus the unallocated project portion. All departments can read these figures; Administrator alone can edit them.
+- Accounting PO approval checks both project and selected-scope availability using the existing net supplier payable, including Services. The domain command rechecks current balances at approval. Competing unpriced requests can proceed; subsequent POs are limited by the remaining scope funds.
+- Materials and offered-material sections are Goods. Shipping and other non-material fees are Services; taxes and discounts remain financial adjustments. Classification labels do not change VAT/EWT calculations, comparisons, document templates, stock or receiving.
 - The displayed provisional rule is `available = allocated - committed - spent`.
 - Approved and released unpaid PO value is committed.
 - A recorded payment moves that amount from commitment to spent, leaving available budget unchanged by the move itself.
@@ -118,9 +134,13 @@ The domain command layer in `src/domain/commands.ts` is the authority for permis
 ### Delivery and inventory
 
 - Only released POs can have delivery batches.
-- Logistics can schedule expected quantities only within the unscheduled PO balance.
-- Batch states: `expected`, `confirmed`, `posted`.
-- Site Personnel confirms actual accepted quantities. A shortage or damaged/rejected amount requires an issue note.
+- Delivery legs are Supplier → Site, Supplier → Company Warehouse, and Company Warehouse → Site. Logistics captures destination name/address at scheduling and separately records dispatch. The schedule defaults to the current Philippine calendar date. Onward legs inherit the parent warehouse origin and retain their PO/site relationship.
+- Batch states: `expected` (scheduled), `dispatched` (in transit), `confirmed` (received), `posted` (site stock posted). Procurement confirms warehouse receipt; Site Personnel confirms direct/onward site receipt. New batches must be dispatched before receiving. Legacy batches without leg metadata keep their prior direct-site receiving flow.
+- Supplier batches share the PO allowance. Warehouse receipt resolves the accepted supplier quantity; direct-site batches retain their expected reservation through stock review. Warehouse children reserve their parent receipt's accepted quantities at scheduling and consume them at dispatch. A forwarded shortage remains a discrepancy and does not restore warehouse allocation or create a supplier replacement allowance.
+- Warehouse receiving increases no site stock. Warehouse-held quantities and quantities available to schedule are distinct; scheduled onward allocations remain physically held until dispatch. Site receipt alone drives PO site-delivery progress; posting creates inventory movements once. Fractional quantity balances remove arithmetic remnants without changing stored inputs.
+- A shortage or damaged/rejected amount requires an issue note. Stock-posting corrections require a reason and stay within batch/source/PO limits; receipts show the correction reason.
+- `/deliveries` uses a compact batch/leg table with source references, project/supplier, schedule, route, destination, stage and readonly payment arrangement plus actual Finance-recorded methods. Materials remain on detail/scheduling pages. Released POs with supplier capacity offer scheduling; warehouse details offer onward scheduling.
+- Delivery receipts reuse the supplied PO company artwork/header, Arial fonts and blue grid. Preview/print/download is available before and after confirmation. Pending receipts identify unconfirmed actual quantities; received receipts show recorded receiver/time, accepted quantities and issues, with signature spaces and long-content continuation. Generation is readonly, uncached and independent of workflow completion; generated receipts are not automatically archived to Drive.
 - After confirmation or posting, Site Personnel may attach optional payment receipts, invoices, delivery receipts or other Accounting evidence. PDF/JPG/PNG/WebP uploads are limited to 20 MB each, 45 MB and 12 files per batch. File signatures and SHA-256 hashes are checked; metadata links every file to its batch and PO. Uploading evidence does not post stock or record payment.
 - Accepted quantity cannot exceed the expected batch quantity or open PO balance.
 - Posting uses accepted quantity, creates site-specific receipt movements, and is allowed once per batch.
@@ -147,7 +167,7 @@ The domain command layer in `src/domain/commands.ts` is the authority for permis
 | Route layer | `app/`; route files are thin adapters that render feature components. Dynamic route `params` and `searchParams` are awaited. |
 | Feature screens | `src/features/` grouped by requests, purchasing, Finance, deliveries, inventory, Accounting, projects, suppliers, reports, dashboard, and admin. |
 | Shared shell/UI | `src/components/`; `AppShell` owns navigation, account/site controls, theme, notifications and shared workspace chrome. Visible screens, metadata and feedback use production-style wording; the underlying prototype boundary remains documented here. |
-| State access | `DemoProvider` in `src/app-state/` exposes repository state, signed-in command execution, account sessions, sign-in/sign-out, reset and transient notices. Normal UI cannot execute the setRole command directly. |
+| State access | `DemoProvider` in `src/app-state/` exposes repository state, signed-in command execution, account sessions, sign-in/sign-out, signed-in department switching, reset and transient notices. Department switching selects a complete fixture identity; normal UI cannot execute the setRole command directly. |
 | Domain model | `src/domain/types.ts` defines records and statuses. |
 | Mutations | `src/domain/commands.ts` is the single transition, permission, and validation boundary. |
 | Derived data | `src/domain/pricing.ts` calculates quotation and PO totals; `src/domain/procurement.ts` validates quote review and revisions; `src/domain/selectors.ts` calculates budgets, delivery balances, payment state, and inventory. `src/domain/queues.ts` derives role tasks and dashboard metrics. |
@@ -166,6 +186,9 @@ Keep business rules out of page components where practical. New state transition
 - Previous workflow records (v11 and earlier) require an explicit manual workspace clear. The app shows recovery and preserves saved records/keys until confirmation; it does not migrate old transactions into the new department flow. Pure legacy conversion helpers remain for historical regression tests and are not used by the active loader.
 - MRF and quotation originals remain browser-local. Successful MRF archival also creates numbered Drive copies; clearing browser data removes local records/files but does not delete Drive files. The Gemini Files API is not used as permanent document storage.
 - Malformed saved data enters an explicit recovery state instead of being silently overwritten.
+- Additive audit and reviewer/uploader/payment/stock identities preserve schema 12. Session storage still contains only email and role. Scoped operations restrict target IDs, document versions and acknowledgement types; stale ordinary UI callbacks are rejected after account changes.
+- Scope budgets add a `scopes` collection and optional MRF `scopeId` within schema 12. Saved v12 records without scopes load with an empty collection without storage writes, guessed assignments or historical changes. Unassigned records display explicitly; new submissions and PO approvals require a valid scope. Existing approved/released workflows remain operational. The presenter will manually clear the prior walkthrough before fresh scope setup.
+- Optional batch routing, parent links, location snapshots and immutable scheduling/dispatch/receiving/posting identity metadata extend schema 12. Missing legacy routing means the existing direct-site flow; missing operation timestamps/names remain explicitly unrecorded. New routing metadata is validated on reload. Generated receipt PDFs use the linked preview endpoint without modifying stored records.
 - If storage is unavailable, the app continues with volatile in-tab state and displays a warning.
 - Clear workspace restores the empty baseline, removes recognized legacy keys, and clears browser-local MRF and quotation files. Existing saved work remains until explicitly cleared.
 - Old query-string links using `?view=&kind=&id=` redirect to current routes through `src/domain/legacy-links.ts`.
@@ -204,7 +227,7 @@ All workspace routes are wrapped by `app/(workspace)/layout.tsx`, which applies 
 ## Empty workspace baseline
 
 - A fresh browser starts with no projects, suppliers, MRFs, quotations, POs, deliveries, stock movements, payments, accounting records, or activity.
-- Administrator adds a project with its name, location and allocated budget. Site Personnel can then create the first MRF.
+- Administrator adds a project with its name, location and allocated budget, then creates funded scope allocations. Site Personnel can select a scope and submit the first MRF.
 - Suppliers enter the directory when Procurement finalizes a quotation.
 - The historical cement transaction remains in `src/mock/fixtures/seed.ts` for automated test fixtures only. It is never loaded for a new or cleared workspace.
 
@@ -227,7 +250,7 @@ The domain test suite currently protects these high-value behaviors:
 
 - Seeded purchasing, delivery, inventory, and budget consistency.
 - MRF permission/review rules and ID preservation after return/resubmission.
-- Seven unique account passwords, normalized emails, invalid credential/session rejection, remembered sessions, password-free session storage and legacy session invalidation without record loss. Browser handoffs sign out and back in, verify product copy/metadata, and check maintenance visibility and access.
+- Seven unique account passwords, normalized emails, invalid credential/session rejection, remembered sessions, password-free session storage and legacy session invalidation without record loss. Department switching requires an active session, updates the complete identity, preserves workspace records and historical attribution, and rejects stale commands from the previous account. Browser checks cover workspace switching, auth-page exclusion, remembered selection, sign-out/sign-in handoffs, product copy/metadata, and maintenance visibility/access.
 - The browser walkthrough covers MRF step validation, navigation and file retention, incomplete draft saving/reopening, final confirmation, returned-request resubmission, PDF-only corrections, and responsive step layouts.
 - MRF AI tests cover source limits/signatures, same-origin requests, ordered page uploads, malformed/unrelated/multiple-request results, provider failures, blank unreadable values and mandatory review metadata. The browser uses mocked extraction responses to verify preview, cancellation, retry, explicit replacement, manual editing, separate attachments and fresh review after draft reopening. Live OCR accuracy remains dependent on the configured model and document quality.
 - Single stock posting, outstanding quantities, site isolation, and nonnegative inventory.
@@ -244,6 +267,7 @@ The domain test suite currently protects these high-value behaviors:
 - Actual supplier transfers remain simulated references entered by Finance.
 - The budget commitment calculation is a display rule pending client validation.
 - Formal purchase closure is not modeled.
+- Process bypassing is deferred at the user's request. Current approval, archive, payment and quantity controls remain mandatory. Project monitoring derives the confirmed Served/Delivered definitions from current records and does not depend on a bypass feature. A single overall MRF closure rule remains outside the checklist.
 - Formal tax/VAT/EWT accounting, accruals, bank balances, detailed ledgers, real notifications, shared record storage, email, and Drive quotation import are out of scope.
 - The year embedded in generated PO references is currently fixed to `2026`.
 - The repository is deliberately local-first and single-browser; concurrent multi-user behavior is not modeled.
@@ -271,6 +295,12 @@ When updating it:
 
 | Date | Context change |
 | --- | --- |
+| 2026-10-07 | Restored department switching in the workspace Account menu, using complete named identities and remembered sessions while keeping auth pages free of switching controls. |
+| 2026-10-07 | Added shared readonly MRF progress monitoring, defined Served/Delivered by complete material coverage, linked expandable record tables, filters/pagination and tabular quotation summaries/award coverage. |
+| 2026-10-07 | Deferred process bypassing and made project monitoring/tables the next planned batch; existing workflow controls remain unchanged. |
+| 2026-10-07 | Added separate dispatch, Procurement warehouse receiving, parent-linked split forwarding, source quantity reservations, site-only fulfilment/stock, a tabular delivery overview and company-branded readonly receipt PDFs. |
+| 2026-10-07 | Added Administrator-owned scope allocations within project caps, MRF scope selection and funds checks, scoped PO approval/commitments, Goods/Services labels and compatible unassigned v12 loading. |
+| 2026-10-07 | Added named immutable audit attribution, scoped started-operation acknowledgements, typed business-change events and a combined MRF lifecycle with independent progress and grouped full history. |
 | 2026-10-06 | Added fixed department email/password accounts, removed sign-in hints and role switching, introduced v2 remembered account sessions, hid reset behind an Administrator maintenance route and removed visible prototype/storage labels. |
 | 2026-10-05 | Added optional temporary MRF PDF/photo extraction with editable results, manual project selection, separate supporting attachments and mandatory human review on AI-assisted submission. |
 | 2026-10-05 | Removed Project Manager access and project assignments; retained generic MRF signatures and compatibility with saved v12 selections and historical actors. |

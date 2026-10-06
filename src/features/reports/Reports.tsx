@@ -7,6 +7,7 @@ import { useDemo } from "@/src/app-state/DemoProvider";
 import { Badge, Empty, PageHeader } from "@/src/components/ui/Primitives";
 import { dateText, money } from "@/src/domain/format";
 import { budgetFor, deliveryStatus, inventoryFor, paidTotal, poTotal, requestForPO, siteName } from "@/src/domain/selectors";
+import { warehouseHeldFor } from "@/src/domain/delivery-flow";
 
 export function Reports() {
   const { snapshot: state } = useDemo();
@@ -71,6 +72,8 @@ export function Reports() {
           <div className="data-rows">
             {["draft", "submitted", "returned", "approved", "rejected"].map(status => <div key={status}><span>{status}</span><strong>{requests.filter(request => request.status === status).length} MRFs</strong></div>)}
             <div><span>PO value in view</span><strong>{money(pos.reduce((sum, po) => sum + poTotal(state, po), 0))}</strong></div>
+            <div><span>Deliveries in transit</span><strong>{batches.filter(batch => batch.status === "dispatched").length}</strong></div>
+            <div><span>Warehouse receipts holding goods</span><strong>{batches.filter(batch => batch.lines.some(line => warehouseHeldFor(state, batch.id, line.itemId) > 0)).length}</strong></div>
             <div><span>Payment requests awaiting Finance</span><strong>{paymentRequests.filter(value => ["submitted", "hold", "approved"].includes(value.status)).length}</strong></div><div><span>Disbursements in view</span><strong>{money(pos.reduce((sum, po) => sum + paidTotal(state, po.id), 0))}</strong></div>
           </div>
         </section>
