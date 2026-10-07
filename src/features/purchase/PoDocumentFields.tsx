@@ -13,12 +13,17 @@ export function readPoFinancial(form: FormData): POFinancial {
   return { vatStatus: form.get("vatStatus") === "NON-VAT" ? "NON-VAT" : "VAT", priceBasis: form.get("priceBasis") === "exclusive" ? "exclusive" : "inclusive", vatRate: Number(form.get("vatRate")), ewtGoods: Number(form.get("ewtGoods")), ewtServices: Number(form.get("ewtServices")), reviewed: form.get("financialReviewed") === "on" };
 }
 export function PoDocumentFields({ document, financial, reviewed, onReview }: { document: PODocument; financial: POFinancial; reviewed: boolean; onReview: (value: boolean) => void }) {
-  const [vatStatus, setVatStatus] = useState(financial.vatStatus);
   return <section className="panel"><CollapsibleSection title="Purchase order document">
     <div className="form-grid">{fields.filter(([key]) => !key.startsWith("bank")).map(([key, label]) => <Field key={key} label={label}><input name={`poDocument.${key}`} type={key === "date" ? "date" : "text"} defaultValue={document[key]} /></Field>)}</div>
     <CollapsibleSection title="Bank details" defaultOpen={false}><div className="form-grid">{fields.filter(([key]) => key.startsWith("bank")).map(([key, label]) => <Field key={key} label={label}><input name={`poDocument.${key}`} defaultValue={document[key]}/></Field>)}</div></CollapsibleSection></CollapsibleSection>
-    <CollapsibleSection title="VAT and withholding">
-    <p className="helper-note">Review the supplier&apos;s price basis. This VAT setting replaces inherited quotation line taxes and tax adjustments. Enter both EWT deductions, including zero where applicable. Finance and payments use the net total after EWT.</p>
+    <PoFinancialFields financial={financial} reviewed={reviewed} onReview={onReview}/>
+  </section>;
+}
+
+export function PoFinancialFields({ financial, reviewed, onReview }: { financial: POFinancial; reviewed: boolean; onReview: (value: boolean) => void }) {
+  const [vatStatus, setVatStatus] = useState(financial.vatStatus);
+  return <CollapsibleSection title="VAT and withholding">
+    <p className="helper-note">Accounting confirms the price basis and deductions before approval. This VAT setting replaces source line taxes and tax adjustments. Payments use the net total after EWT.</p>
     <div className="form-grid">
       <Field label="VAT status"><select name="vatStatus" value={vatStatus} onChange={event => setVatStatus(event.target.value as POFinancial["vatStatus"])}><option>VAT</option><option>NON-VAT</option></select></Field>
       <Field label="Quoted price basis"><select name="priceBasis" defaultValue={financial.priceBasis}><option value="inclusive">VAT-inclusive</option><option value="exclusive">VAT-exclusive</option></select></Field>
@@ -27,6 +32,5 @@ export function PoDocumentFields({ document, financial, reviewed, onReview }: { 
       <Field label="EWT (services)"><input name="ewtServices" type="number" min="0" step="0.01" defaultValue={financial.ewtServices}/></Field>
     </div>
     <label className="quote-check"><input name="financialReviewed" type="checkbox" checked={reviewed} onChange={event => onReview(event.target.checked)}/> I reviewed the VAT basis, source taxes and both EWT amounts.</label>
-    </CollapsibleSection>
-  </section>;
+    </CollapsibleSection>;
 }

@@ -9,7 +9,7 @@ const document = { name: 'Receipt.pdf', kind: 'Payment receipt', mime: 'applicat
 function fixture() {
   const state = seedDemo(); state.role = 'Site Personnel';
   const batch = state.batches.find(value => value.status !== 'expected');
-  assert.ok(batch); state.pos.find(value => value.id === batch.poId).status = 'served';
+  assert.ok(batch); state.pos.find(value => value.id === batch.poId).status = 'released';
   return { state, batch, command: { type: 'attachAccountingDocuments', poId: batch.poId, batchId: batch.id, documents: [document] } };
 }
 test('received evidence belongs to its batch/PO and reopens a completed review without recording payment', () => {

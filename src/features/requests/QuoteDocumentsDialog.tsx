@@ -24,11 +24,11 @@ export function QuoteDocumentsDialog({ quote, onClose }: { quote: Quote; onClose
     if (!document?.fileId) return;
     readQuoteFile(document.fileId).then(blob => {
       if (!active) return;
-      if (!blob) { setError("The original file is no longer available in this browser."); setPreview(null); return; }
+      if (!blob) { setError("The original file is unavailable. Attach it again."); setPreview(null); return; }
       url = URL.createObjectURL(blob);
       setPreview({ url, type: document.type || blob.type });
       setError("");
-    }).catch(() => { if (active) { setError("The original file could not be opened in this browser."); setPreview(null); } });
+    }).catch(() => { if (active) { setError("The original file could not be opened. Please try again."); setPreview(null); } });
     return () => { active = false; if (url) URL.revokeObjectURL(url); };
   }, [document?.fileId, document?.type]);
 
@@ -40,7 +40,7 @@ export function QuoteDocumentsDialog({ quote, onClose }: { quote: Quote; onClose
     <div className="quote-documents-heading"><div><span className="eyebrow">QUOTATION SOURCE</span><h2 id="quote-documents-title">View documents</h2></div><button type="button" className="icon-button" aria-label="Close document preview" onClick={onClose}>×</button></div>
     <div className="quote-documents-layout">
       <nav className="quote-documents-list" aria-label="Quotation documents">{quote.documents.map((item, index) => <button type="button" key={`${item.fileId || item.name}-${index}`} className={selectedIndex === index ? "active" : ""} aria-current={selectedIndex === index ? "true" : undefined} onClick={() => select(index)}><span>{index + 1}</span><strong>{item.name}</strong></button>)}</nav>
-      <div className="quote-document-preview" aria-live="polite">{error ? <p role="alert">{error}</p> : !document?.fileId ? <p>This older document reference has no file stored in this browser.</p> : !preview ? <p>Loading preview…</p> : isPdf ? <iframe title={document.name} src={preview.url}/> : isImage ? <img src={preview.url} alt={`Preview of ${document.name}`}/> : <p>Preview is unavailable for this file type.</p>}</div>
+      <div className="quote-document-preview" aria-live="polite">{error ? <p role="alert">{error}</p> : !document?.fileId ? <p>This older document reference has no available source file.</p> : !preview ? <p>Loading preview…</p> : isPdf ? <iframe title={document.name} src={preview.url}/> : isImage ? <img src={preview.url} alt={`Preview of ${document.name}`}/> : <p>Preview is unavailable for this file type.</p>}</div>
     </div>
   </dialog>;
 }

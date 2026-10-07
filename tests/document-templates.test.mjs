@@ -38,15 +38,21 @@ test('VAT replaces inherited taxes once, EWT reduces all payable and budget figu
   po.financial.priceBasis='inclusive'; assert.equal(poTotal(state,po),970);
   po.financial.vatStatus='NON-VAT';po.financial.priceBasis='exclusive';assert.equal(poTotal(state,po),970);
 });
-test('new PO finalization requires reviewed finances and essential fields; failed commands preserve data', () => {
-  const { state, po } = fixture();state.role='Procurement';po.status='draft';po.financial.reviewed=false;
-  const command={type:'savePO',id:po.id,quoteId:po.quoteId,notes:'',finalize:true};
-  const reviewFailure=applyCommand(state,command,context);assert.equal(reviewFailure.ok,false);assert.match(reviewFailure.message,/VAT basis/);
-  const reviewed=applyCommand(state,{...command,financial:{...po.financial,reviewed:true}},context);assert.equal(reviewed.ok,true,reviewed.message);
-  const invalid = {...po.financial,reviewed:true,ewtGoods:1000000};
-  assert.equal(applyCommand(state,{...command,financial:invalid},context).ok,false);assert.equal(po.financial.ewtGoods,0);
-  po.financial.reviewed=true;po.document.terms='';assert.equal(applyCommand(state,command,context).ok,false);
+test('Accounting approval requires reviewed finances and essential fields; failed commands preserve data', () => {
+  const { state, po } = fixture(); state.role='Procurement'; po.status='draft'; po.financial.reviewed=false;
+  const submitted = applyCommand(state,{type:'savePO',id:po.id,quoteId:po.quoteId,notes:'',finalize:true},context);
+  assert.equal(submitted.ok,true,submitted.message); assert.equal(submitted.snapshot.pos[0].status,'submitted');
+  const review = submitted.snapshot; review.role='Accounting / Auditing'; const purchase = review.pos[0]; purchase.paymentMode='credit';
+  const command = {type:'reviewPO',id:po.id,decision:'approve'};
+  const failure=applyCommand(review,command,context); assert.equal(failure.ok,false); assert.match(failure.message,/VAT basis/);
+  purchase.financial.reviewed=true;
+  assert.equal(applyCommand(review,command,context).ok,true);
+  purchase.financial.ewtGoods=1000000;
+  assert.equal(applyCommand(review,command,context).ok,false);
+  purchase.financial.ewtGoods=0; purchase.document.terms='';
+  assert.equal(applyCommand(review,command,context).ok,false); assert.equal(purchase.status,'submitted');
 });
+
 test('v10 migration preserves old PO financial behavior and original bid artifacts', () => {
   const old=seedDemo();old.version=10;const migrated=migrateV10(old);
   assert.equal(migrated.version,11);assert.deepEqual(migrated.pos,old.pos);assert.equal(migrated.pos.some(po=>po.financial),false);assert.equal(poTotal(migrated,migrated.pos[0]),poTotal(old,old.pos[0]));

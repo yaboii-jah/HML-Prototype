@@ -24,15 +24,11 @@ function fixture() {
   return state;
 }
 
-test("bid report readiness handles Finance states, partial coverage, rejected POs and corrections", () => {
+test("comparison is available before POs and is independent of PO decisions", () => {
   const state = fixture();
-  for (const status of ["finalized", "hold", "approved", "served"]) { state.pos[0].status = status; assert.equal(bidReportReadiness(state, "m1"), ""); }
-  for (const status of ["draft", "returned"]) { state.pos[0].status = status; assert.match(bidReportReadiness(state, "m1"), /Finalize every/); }
-  state.pos[0].status = "rejected"; assert.match(bidReportReadiness(state, "m1"), /at least one/);
-  state.pos[0].status = "finalized";
-  state.pos.push({ ...structuredClone(state.pos[0]), id: "draft-other", status: "draft" });
-  assert.match(bidReportReadiness(state, "m1"), /Finalize every/);
-  state.pos.at(-1).status = "rejected"; assert.equal(bidReportReadiness(state, "m1"), "");
+  for (const status of ["draft", "submitted", "hold", "returned", "approved", "released", "rejected"]) { state.pos[0].status = status; assert.equal(bidReportReadiness(state, "m1"), ""); }
+  state.pos = []; assert.equal(bidReportReadiness(state, "m1"), "");
+  const captured = captureBidReport(state, "m1", true); assert.deepEqual(captured.pos, []);
   state.requests[0].correction = { status: "requested", scope: "documents", reason: "Replace supporting PDF" };
   assert.match(bidReportReadiness(state, "m1"), /correction/);
 });
@@ -115,7 +111,7 @@ test("XLSX contains correct formulas, cached results, converted bids, unmatched 
   assert.equal(validBidReport(injected), false);
 });
 
-test("v9 saved work migrates to v11 and report history survives repository reload", async () => {
+test("current report history survives reload while old workflow records require manual reset", async () => {
   const old = fixture(); old.version = 9; delete old.bidReports;
   old.requests[0].scope = "Keep this browser edit";
   const migrated = migrateV9(old);
@@ -126,6 +122,11 @@ test("v9 saved work migrates to v11 and report history survives repository reloa
   globalThis.window = { addEventListener() {} };
   globalThis.localStorage = { getItem: key => saved.get(key) || null, setItem: (key, value) => saved.set(key, value), removeItem: key => saved.delete(key) };
   try {
+    const blocked = new LocalDemoRepository(); assert.equal((await blocked.load()).status, "recovery");
+    assert.equal(saved.has("hml-constructsync-demo-v9"), true);
+    assert.equal((await blocked.execute({ type: "createBidReport", requestId: "m1" })).ok, false);
+    await blocked.reset(); assert.equal(saved.has("hml-constructsync-demo-v9"), false);
+    saved.set("hml-constructsync-demo-v12", JSON.stringify(fixture()));
     const repository = new LocalDemoRepository(); await repository.load();
     const result = await repository.execute({ type: "createBidReport", requestId: "m1" });
     assert.equal(result.ok, true);

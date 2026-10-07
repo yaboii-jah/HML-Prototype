@@ -32,7 +32,7 @@ export async function getBidWorkbook(report: BidReport, run?: RunBidCommand, for
     if (artifact.localFileId) try { await saveGeneratedFile(artifact.localFileId, blob); } catch { /* Download remains available if browser storage is full or disabled. */ }
     return { blob, report };
   }
-  if (artifact.sha256) throw new Error("The saved workbook is missing from this browser and has no completed Drive archive. Generate a new report version.");
+  if (artifact.sha256) throw new Error("The saved workbook is unavailable and has no completed Drive archive. Generate a new report version.");
   if (!run) throw new Error("Procurement must finish generating this workbook first.");
   try {
     const blob = await (await checked(await fetch(`/api/bid-comparisons?format=${format}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(report) }))).blob();

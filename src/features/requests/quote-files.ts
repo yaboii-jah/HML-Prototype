@@ -83,7 +83,7 @@ export async function readQuoteFile(fileId: string): Promise<Blob | undefined> {
 
 export async function openQuoteFile(fileId: string) {
   const file = await readQuoteFile(fileId);
-  if (!file) throw new Error("The original file is no longer available in this browser.");
+  if (!file) throw new Error("The original file is unavailable. Attach it again.");
   const url = URL.createObjectURL(file);
   window.open(url, "_blank", "noopener,noreferrer");
   setTimeout(() => URL.revokeObjectURL(url), 60_000);

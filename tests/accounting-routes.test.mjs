@@ -18,7 +18,7 @@ const routes = await import('../app/api/drive/accounting-documents/route.ts');
 const chunks = await import('../app/api/drive/accounting-documents/chunk/route.ts');
 const body = () => ({
   document:{id:'document',batchId:'batch',name:'Receipt.pdf',kind:'Payment receipt',mime:'application/pdf',size:12,localFileId:'local',sha256:'a'.repeat(64),archive:{status:'pending'}},
-  po:{id:'po',ref:'PO-1',mrfId:'mrf',status:'served'},
+  po:{id:'po',ref:'PO-1',mrfId:'mrf',status:'released'},
   batch:{id:'batch',ref:'DEL-1',poId:'po',status:'confirmed'},
   mrf:{id:'mrf',ref:'MRF-1'},projectFolderId:'project-folder'
 });

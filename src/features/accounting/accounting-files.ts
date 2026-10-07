@@ -34,7 +34,7 @@ export async function archiveAccountingDocument(state: DemoSnapshot, poId: strin
     const po = state.pos.find(value => value.id === poId), batch = state.batches.find(value => value.id === document.batchId), mrf = state.requests.find(value => value.id === po?.mrfId), site = state.sites.find(value => value.id === mrf?.siteId);
     if (!po || !batch || !mrf || !site?.driveFolderId) throw new Error("Map this project's Google Drive folder before archiving the evidence.");
     const blob = await readQuoteFile(document.localFileId);
-    if (!blob || await workbookDigest(blob) !== document.sha256) throw new Error("The original evidence file is missing or changed in this browser. Attach it again as new evidence.");
+    if (!blob || await workbookDigest(blob) !== document.sha256) throw new Error("The original evidence file is unavailable or changed. Attach it again as new evidence.");
     const start = await responseJson(await fetch("/api/drive/accounting-documents", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ document, po, batch, mrf, projectFolderId: site.driveFolderId }) }));
     const finish = start.driveFileId && start.url ? start : start.ticket && Number.isInteger(start.offset) ? await uploadDocument(blob, start.ticket, start.offset!, "/api/drive/accounting-documents/chunk", progress) : undefined;
     if (!finish?.driveFileId || !finish.url) throw new Error("Drive did not confirm the evidence upload.");
@@ -51,7 +51,7 @@ export async function readAccountingDocument(state: DemoSnapshot, poId: string, 
   try { blob = await readQuoteFile(document.localFileId); } catch {}
   if (blob && await workbookDigest(blob) === document.sha256) return blob;
   const po = state.pos.find(value => value.id === poId), mrf = state.requests.find(value => value.id === po?.mrfId), site = state.sites.find(value => value.id === mrf?.siteId);
-  if (document.archive.status !== "complete" || !document.archive.fileId || !mrf || !site?.driveFolderId) throw new Error("The file is missing from this browser and has no completed Drive copy.");
+  if (document.archive.status !== "complete" || !document.archive.fileId || !mrf || !site?.driveFolderId) throw new Error("The file is unavailable and has no completed Drive copy.");
   const query = new URLSearchParams({ projectFolderId: site.driveFolderId, requestId: mrf.id, poId, batchId: document.batchId, documentId: document.id, fileId: document.archive.fileId });
   const response = await fetch(`/api/drive/accounting-documents?${query}`);
   if (!response.ok) { const result = await response.json(); throw new Error(result.error || "The evidence could not be restored."); }

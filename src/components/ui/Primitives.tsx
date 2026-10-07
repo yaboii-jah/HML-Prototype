@@ -1,14 +1,16 @@
 "use client";
 
 import Link from "next/link";
+import { AuditHistory } from "./AuditHistory";
+import { auditRecords } from "@/src/domain/audit";
 import { activityFor } from "@/src/domain/selectors";
-import { dateText, statusLabel } from "@/src/domain/format";
+import { statusLabel } from "@/src/domain/format";
 import type { DemoSnapshot, DocumentRef } from "@/src/domain/types";
 import { openQuoteFile } from "@/src/features/requests/quote-files";
 import { useState } from "react";
 import type { ReactNode } from "react";
 
-const tone = (s: string) => /rejected|discrepancy|overdue/i.test(s) ? "bad" : /returned|hold|partly|review|incomplete|unpaid|low stock|pending/i.test(s) ? "warn" : /approved|served|^posted$|^complete$|^paid$|fully accepted|stock posted|in stock|active/i.test(s) ? "good" : "neutral";
+const tone = (s: string) => /rejected|discrepancy|overdue/i.test(s) ? "bad" : /returned|hold|partly|review|incomplete|unpaid|low stock|pending/i.test(s) ? "warn" : /approved|released|disbursed|^posted$|^complete$|^paid$|fully accepted|stock posted|in stock|active/i.test(s) ? "good" : "neutral";
 export function Badge({ value, children }: { value?: string; children?: ReactNode }) { const text = value || String(children); return <span className={`badge ${tone(text)}`}>{children || statusLabel(text)}</span>; }
 export function PageHeader({ eyebrow, title, description, actions }: { eyebrow?: string; title: string; description?: string; actions?: ReactNode }) { return <header className="page-header"><div>{eyebrow && <span className="eyebrow">{eyebrow}</span>}<h1>{title}</h1>{description && <p>{description}</p>}</div>{actions && <div className="header-actions">{actions}</div>}</header>; }
 export function RecordHeader({ backHref, backLabel, eyebrow, title, badges }: { backHref: string; backLabel: string; eyebrow: string; title: string; badges: ReactNode }) { return <><Link className="back-link" href={backHref}>← {backLabel}</Link><header className="record-header"><div><span className="eyebrow">{eyebrow}</span><h1>{title}</h1><div className="badge-row">{badges}</div></div></header></>; }
@@ -18,5 +20,5 @@ export function Documents({ docs, showType = true }: { docs: DocumentRef[]; show
   const [error, setError] = useState("");
   return <div className="documents">{docs.length ? docs.map((doc, index) => <div className="document" key={`${doc.name}-${index}`}><span>▤</span><div><strong>{doc.name}</strong>{showType && <small>{doc.type}</small>}</div>{doc.fileId && <button type="button" className="text-link" onClick={() => void openQuoteFile(doc.fileId!).catch(cause => setError(cause instanceof Error ? cause.message : "File unavailable."))}>Open file ↗</button>}</div>) : <p className="muted">No document references recorded.</p>}{error && <p className="inline-error" role="alert">{error}</p>}</div>;
 }
-export function Timeline({ state, ids }: { state: DemoSnapshot; ids: string[] }) { const entries = activityFor(state, ids); return <section className="panel"><h2 className="panel-title">Activity timeline</h2>{entries.length ? <ol className="timeline">{entries.map(a => <li key={a.id}><strong>{a.action}</strong><small>{a.actor} · {dateText(a.at)}</small>{a.reason && <p>{a.reason}</p>}</li>)}</ol> : <p className="muted">No activity recorded yet.</p>}</section>; }
+export function Timeline({ state, ids }: { state: DemoSnapshot; ids: string[] }) { const entries = activityFor(state, ids); return <section className="panel"><h2 className="panel-title">Activity timeline</h2><AuditHistory entries={entries} records={auditRecords(state)}/></section>; }
 export function InlineError({ message }: { message?: string }) { return message ? <p className="inline-error" role="alert">{message}</p> : null; }

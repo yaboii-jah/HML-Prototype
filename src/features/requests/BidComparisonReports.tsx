@@ -14,7 +14,7 @@ import { archiveBidWorkbook, downloadBidWorkbook, getBidWorkbook } from "./bid-r
 
 export function BidComparisonReports({ requestId }: { requestId: string }) {
   const { perform } = useArchive();
-  const { snapshot, run } = useDemo();
+  const { snapshot, run, beginOperation } = useDemo();
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
   const [selections, setSelections] = useState<ComparisonSelections>({});
@@ -31,15 +31,17 @@ export function BidComparisonReports({ requestId }: { requestId: string }) {
   const process = async (report: BidReport, action: "download" | "generate" | "archive", selectedFormat: "xlsx" | "pdf" = "xlsx") => {
     setBusy(report.id); setError("");
     try {
+      const needsWrite = action !== "download" || !(selectedFormat === "pdf" ? report.pdf : report)?.sha256;
+      const pipeline = needsWrite ? await beginOperation({kind:"report",id:report.id,...(action === "download" ? {format:selectedFormat} : {})}) : undefined;
       const errors: string[] = [];
       for (const format of action === "download" ? [selectedFormat] : report.pdf ? ["xlsx", "pdf"] as const : ["xlsx"] as const) {
         try {
           const artifact = format === "pdf" ? report.pdf! : report;
           const operation = async (progress?: ArchiveProgressListener) => {
             progress?.({ phase: "preparing" });
-            const workbook = await getBidWorkbook(report, procurement ? run : undefined, format);
+            const workbook = await getBidWorkbook(report, procurement ? pipeline : undefined, format);
             if (action === "download") downloadBidWorkbook(workbook.blob, artifact.fileName);
-            else await archiveBidWorkbook(workbook.report, workbook.blob, run, format, progress);
+            else await archiveBidWorkbook(workbook.report, workbook.blob, pipeline!, format, progress);
           };
           if (action === "download") await operation();
           else await perform(`bid-${report.id}-${format}`, `Bid comparison v${report.version} ${format.toUpperCase()}`, operation);
