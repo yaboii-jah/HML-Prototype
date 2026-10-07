@@ -9,3 +9,7 @@
 @import "../src/styles/consistency.css";
 
 @import "../src/styles/workflow-enhancements.css";
+@import "../src/styles/registers.css";
+@import "../src/styles/document-gallery.css";
+@import "../src/styles/supplier-upload.css";
+@import "../src/styles/quotation-editor.css";

@@ -283,7 +283,7 @@ html[data-theme="dark"] .badge.good{background:var(--color-dark-badge-surface-2)
 html[data-theme="dark"] .badge.warn{background:var(--color-dark-badge-surface-3);border-color:var(--color-dark-badge-rule-3);color:var(--color-dark-badge-ink-3)}
 html[data-theme="dark"] .badge.bad{background:var(--color-dark-callout-surface-3);border-color:var(--color-dark-badge-rule-4);color:var(--color-dark-badge-ink-4)}
 
-html[data-theme="dark"] :is(.table-frame th,.purchase-figures div){background:var(--color-dark-table-frame-surface)}
+html[data-theme="dark"] :is(.table-frame thead th,.purchase-figures div){background:var(--color-dark-table-frame-surface)}
 html[data-theme="dark"] .table-frame td{border-color:var(--line)}
 html[data-theme="dark"] :is(.budget-track,.stage-track){background:var(--color-dark-reference-upload-icon-ink)}
 html[data-theme="dark"] .metric-icon.blue{background:var(--color-dark-metric-icon-surface);color:var(--color-dark-metric-icon-ink)}

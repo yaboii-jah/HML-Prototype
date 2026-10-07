@@ -1,6 +1,8 @@
 "use client";
 
 import { ArchiveStatus } from "@/src/components/ui/ArchiveStatus";
+import { StickyHeadings } from "@/src/components/ui/StickyHeadings";
+import { CompactNavigation } from "./CompactNavigation";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -70,6 +72,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const accountDialogRef = useRef<HTMLDialogElement>(null);
   const accountTriggerRef = useRef<HTMLButtonElement>(null);
+  const frameRef = useRef<HTMLDivElement>(null);
   const theme = useSyncExternalStore(subscribeTheme, getTheme, getServerTheme);
   const pathname = usePathname();
   const router = useRouter();
@@ -87,16 +90,13 @@ export function AppShell({ children }: { children: ReactNode }) {
   const initials = accountName.split(" ").map(part => part[0]).slice(0, 2).join("");
   const tasks = tasksFor(snapshot);
   const section = NAV.find(item => pathname === item.href || pathname.startsWith(`${item.href}/`))?.label || "Workspace";
-  const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
-  const primaryItems = primary[snapshot.role].map(href => NAV.find(item => item.href === href)!);
-  const secondaryItems = NAV.filter(item => !primary[snapshot.role].includes(item.href));
-  const navLink = (item: typeof NAV[number]) => <Link key={item.href} href={item.href} onClick={() => setMenuOpen(false)} aria-current={isActive(item.href) ? "page" : undefined} className={`side-link ${isActive(item.href) ? "active" : ""}`}><Icon name={item.icon}/><span>{item.label}</span>{tasks.some(task => task.href.startsWith(item.href)) && <i>{tasks.filter(task => task.href.startsWith(item.href)).length}</i>}</Link>;
-  return <div className="app-frame">
+  return <div ref={frameRef} className="app-frame">
+    <StickyHeadings scopeRef={frameRef}/>
     {menuOpen && <button className="mobile-scrim" aria-label="Close navigation" onClick={() => setMenuOpen(false)}/>}
     <aside className={`side-nav ${menuOpen ? "is-open" : ""}`}>
       <div className="side-brand"><Link className="brand-logo" href="/dashboard" onClick={() => setMenuOpen(false)} aria-label="HML ConstructSync dashboard"><Image src="/company%20-%20logo.webp" alt="HML Technologies and Services Inc." width={190} height={45} priority/></Link><button className="mobile-close icon-button" aria-label="Close navigation" onClick={() => setMenuOpen(false)}><Icon name="close"/></button></div>
-      <div className="side-product"><strong>ConstructSync</strong><span>Project operations</span></div>
-      <nav aria-label="Main navigation"><div className="nav-group"><span className="side-caption">Your workspace</span>{primaryItems.map(navLink)}</div>{["Plan and request", "Purchase", "Receive and account", "Manage"].map(group => { const items = secondaryItems.filter(item => item.group === group); return items.length ? <div className="nav-group" key={group}><span className="side-caption">{group}</span>{items.map(navLink)}</div> : null; })}</nav>
+      <div className="side-product"><strong>ConstructSync</strong></div>
+      <CompactNavigation items={NAV.map(item => ({ ...item, icon: <Icon name={item.icon}/>, count: tasks.filter(task => task.href.startsWith(item.href)).length }))} primary={primary[snapshot.role]} pathname={pathname} onNavigate={() => setMenuOpen(false)}/>
     </aside>
     <div className="workspace">
       <header className="masthead">

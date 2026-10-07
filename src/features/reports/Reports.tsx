@@ -1,4 +1,5 @@
 "use client";
+import { Register } from "@/src/components/ui/Register";
 
 import Link from "next/link";
 import { poStatusLabel } from "@/src/domain/workflow";
@@ -62,10 +63,10 @@ export function Reports() {
         <section className="panel">
           <h2 className="panel-title">Project budget position</h2>
           <p className="helper-note">Budget position is current; the date filter applies to record counts and the exception list.</p>
-          <div className="table-frame embedded"><table><thead><tr><th>Project</th><th>Allocated</th><th>Committed</th><th>Paid</th><th>Available</th></tr></thead><tbody>{budgetSites.map(site => {
+          <Register embedded rows={budgetSites} resetKey={selectedSite+from+to} headers={<><th>Project</th><th className="numeric">Allocated</th><th className="numeric">Committed</th><th className="numeric">Paid</th><th className="numeric">Available</th></>} renderRow={site => {
             const budget = budgetFor(state, site.id);
-            return <tr key={site.id}><td><Link className="table-primary" href={`/projects/${site.id}`}>{site.name}</Link></td><td>{money(budget.allocated)}</td><td>{money(budget.committed)}</td><td>{money(budget.spent)}</td><td>{money(budget.available)}</td></tr>;
-          })}</tbody></table></div>
+            return <tr key={site.id}><td><Link className="table-primary" href={`/projects/${site.id}`}>{site.name}</Link></td><td className="numeric">{money(budget.allocated)}</td><td className="numeric">{money(budget.committed)}</td><td className="numeric">{money(budget.spent)}</td><td className="numeric">{money(budget.available)}</td></tr>;
+          }}/>
         </section>
         <section className="panel">
           <h2 className="panel-title">Workflow mix</h2>
@@ -96,7 +97,7 @@ export function Reports() {
         </div>
         <section className="panel">
           <div className="panel-heading"><h2>Exceptions and open deliveries</h2><Badge>{exceptions.length} records</Badge></div>
-          {exceptions.length ? <div className="table-frame embedded"><table><thead><tr><th>PO</th><th>Project</th><th>Status</th><th>Delivery</th><th>Amount</th><th>Created</th></tr></thead><tbody>{exceptions.map(po => <tr key={po.id}><td><Link className="table-primary" href={`/purchase-orders/${po.id}`}>{po.ref}</Link></td><td>{siteName(state, requestForPO(state, po)?.siteId || "")}</td><td><Badge value={po.status}>{poStatusLabel(po.status)}</Badge></td><td><Badge value={deliveryStatus(state, po)} /></td><td>{money(poTotal(state, po))}</td><td>{dateText(po.createdAt)}</td></tr>)}</tbody></table></div> : <Empty title="No open exceptions" detail="Held orders, discrepancies, and open deliveries will appear here." />}
+          {exceptions.length ? <Register embedded rows={exceptions} resetKey={selectedSite+from+to} headers={<><th>PO</th><th>Project</th><th>Status</th><th>Delivery</th><th className="numeric">Amount</th><th>Created</th></>} renderRow={po => <tr key={po.id}><td><Link className="table-primary" href={`/purchase-orders/${po.id}`}>{po.ref}</Link></td><td>{siteName(state, requestForPO(state, po)?.siteId || "")}</td><td><Badge value={po.status}>{poStatusLabel(po.status)}</Badge></td><td><Badge value={deliveryStatus(state, po)} /></td><td className="numeric">{money(poTotal(state, po))}</td><td>{dateText(po.createdAt)}</td></tr>}/> : <Empty title="No open exceptions" detail="Held orders, discrepancies, and open deliveries will appear here." />}
         </section>
       </>}
       <p className="helper-note">Figures reflect current project records and selected filters.</p>

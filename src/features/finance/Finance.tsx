@@ -1,5 +1,7 @@
 ﻿"use client";
 
+import { Register } from "@/src/components/ui/Register";
+
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
 import { useDemo } from "@/src/app-state/DemoProvider";
@@ -13,17 +15,16 @@ import type { Payment, PaymentRequest, Priority } from "@/src/domain/types";
 
 export function FinanceQueue() {
   const { snapshot: state } = useDemo();
+  const [search, setSearch] = useState("");
   const [priority, setPriority] = useState("all"), [min, setMin] = useState(""), [sort, setSort] = useState("priority");
   if (!state) return null;
   const rank = { Urgent: 0, High: 1, Normal: 2 };
   const rows = state.paymentRequests.filter(value => {
     const po = state.pos.find(po => po.id === value.poId);
-    return po && ["submitted", "hold", "approved"].includes(value.status) && (state.siteFilter === "all" || requestForPO(state, po)?.siteId === state.siteFilter) && (priority === "all" || value.priority === priority) && (!min || value.amount >= Number(min));
+    return po && `${value.ref} ${po.ref} ${supplierName(state,po)}`.toLowerCase().includes(search.toLowerCase()) && ["submitted", "hold", "approved"].includes(value.status) && (state.siteFilter === "all" || requestForPO(state, po)?.siteId === state.siteFilter) && (priority === "all" || value.priority === priority) && (!min || value.amount >= Number(min));
   }).sort((a, b) => sort === "amount" ? b.amount - a.amount : sort === "waiting" ? a.updatedAt.localeCompare(b.updatedAt) : rank[a.priority] - rank[b.priority] || a.updatedAt.localeCompare(b.updatedAt));
   return <><PageHeader eyebrow="PAYMENT APPROVAL AND DISBURSEMENT" title="Finance queue" description="Review payment requests from Accounting and record approved disbursements."/>
-    <div className="toolbar"><select aria-label="Priority" value={priority} onChange={event => setPriority(event.target.value)}><option value="all">All priorities</option><option>Normal</option><option>High</option><option>Urgent</option></select><input aria-label="Minimum payment amount" type="number" min="0" placeholder="Minimum amount ₱" value={min} onChange={event => setMin(event.target.value)}/><select aria-label="Sort Finance queue" value={sort} onChange={event => setSort(event.target.value)}><option value="priority">Priority, then oldest</option><option value="waiting">Longest waiting</option><option value="amount">Highest amount</option></select></div>
-    <div className="table-frame"><table><thead><tr><th>Payment request / PO</th><th>Project</th><th>Priority</th><th>Amount</th><th>Waiting</th><th>Status</th><th>Next action</th></tr></thead><tbody>{rows.map(value => { const po = state.pos.find(po => po.id === value.poId)!; return <tr key={value.id}><td><Link className="table-primary" href={`/finance/${po.id}`}>{value.ref}</Link><small>{po.ref} · {supplierName(state, po)}</small></td><td>{siteName(state, requestForPO(state, po)?.siteId || "")}</td><td><Badge value={value.priority}/></td><td>{money(value.amount)}</td><td>{daysWaiting(value.updatedAt)} days</td><td><Badge value={value.status}/></td><td>{value.status === "approved" ? "Record disbursement" : "Review payment"}</td></tr>; })}</tbody></table>{!rows.length && <Empty detail="No payment requests currently need Finance action."/>}</div>
-  </>;
+    <Register rows={rows} resetKey={priority+min+sort+search+state.siteFilter} filters={<><input type="search" aria-label="Search Finance" placeholder="Search payment, PO or supplier" value={search} onChange={event=>setSearch(event.target.value)}/><select aria-label="Priority" value={priority} onChange={event => setPriority(event.target.value)}><option value="all">All priorities</option><option>Normal</option><option>High</option><option>Urgent</option></select><input aria-label="Minimum payment amount" type="number" min="0" placeholder="Minimum amount ₱" value={min} onChange={event => setMin(event.target.value)}/><select aria-label="Sort Finance queue" value={sort} onChange={event => setSort(event.target.value)}><option value="priority">Priority, then oldest</option><option value="waiting">Longest waiting</option><option value="amount">Highest amount</option></select></>} headers={<><th>Payment request / PO</th><th>Project</th><th>Priority</th><th className="numeric">Amount</th><th>Waiting</th><th>Status</th><th>Next action</th></>} empty={"No payment requests currently need Finance action."} renderRow={value => { const po = state.pos.find(po => po.id === value.poId)!; return <tr key={value.id}><td><Link className="table-primary" href={`/finance/${po.id}`}>{value.ref}</Link><small>{po.ref} · {supplierName(state, po)}</small></td><td>{siteName(state, requestForPO(state, po)?.siteId || "")}</td><td><Badge value={value.priority}/></td><td className="numeric">{money(value.amount)}</td><td>{daysWaiting(value.updatedAt)} days</td><td><Badge value={value.status}/></td><td>{value.status === "approved" ? "Record disbursement" : "Review payment"}</td></tr>; }}/></>;
 }
 
 export function FinanceReview({ id }: { id: string }) {

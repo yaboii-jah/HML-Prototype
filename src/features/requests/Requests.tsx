@@ -1,5 +1,7 @@
 "use client";
 
+import { Register } from "@/src/components/ui/Register";
+
 import { CollapsibleSection, revealField } from "@/src/components/ui/CollapsibleSection";
 import { useArchive } from "@/src/app-state/ArchiveProvider";
 import Link from "next/link";
@@ -7,7 +9,7 @@ import { poStatusLabel } from "@/src/domain/workflow";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type ChangeEvent, type DragEvent, type FormEvent } from "react";
 import { useDemo } from "@/src/app-state/DemoProvider";
-import { Badge, Documents, Empty, Field, InlineError, PageHeader, RecordHeader } from "@/src/components/ui/Primitives";
+import { Badge, Empty, Field, InlineError, PageHeader, RecordHeader } from "@/src/components/ui/Primitives";
 import { useConfirmation } from "@/src/components/ui/ConfirmDialog";
 import { MissingRecord } from "@/src/components/ui/States";
 import { dateText, money } from "@/src/domain/format";
@@ -19,6 +21,7 @@ import { DocumentPreview } from "@/src/components/DocumentPreview";
 import { deleteLocalFile, saveRequestFile } from "./quote-files";
 import { procurementReady } from "@/src/domain/request-archive";
 import { RequestLifecycle } from "./RequestLifecycle";
+import { RequestDocumentGallery } from "./RequestDocumentGallery";
 import { syncApprovedRequest } from "./archive-request";
 import { MrfAiImport } from "./MrfAiImport";
 import { mrfImportedItems, type MrfExtractionResult } from "@/src/domain/mrf-extraction";
@@ -47,7 +50,7 @@ export function Requests() {
   const [search,setSearch]=useState(""), [status,setStatus]=useState("all"), [neededBy,setNeededBy]=useState(""), [sort,setSort]=useState("recent");
   if(!state)return null;
   const rows=state.requests.filter(r=>(state.siteFilter==="all"||r.siteId===state.siteFilter)&&`${r.ref} ${r.items.map(i=>i.name).join(" ")}`.toLowerCase().includes(search.toLowerCase())&&(status==="all"||r.status===status)&&(!neededBy||r.items.some(item=>item.neededDate && item.neededDate<=neededBy))).sort((a,b)=>sort==="needed"?(earliestNeededDate(a)||"9999").localeCompare(earliestNeededDate(b)||"9999"):b.updatedAt.localeCompare(a.updatedAt));
-  return <><PageHeader eyebrow="MATERIAL REQUEST REGISTER" title="Material requests" description="Requirements, Procurement decisions, quotations, and linked purchases." actions={state.role==="Site Personnel"?<Link className="button primary" href="/requests/new">+ New MRF</Link>:undefined}/><div className="toolbar"><input aria-label="Search requests" placeholder="Search MRF or material" value={search} onChange={e=>setSearch(e.target.value)}/><select aria-label="Request status" value={status} onChange={e=>setStatus(e.target.value)}>{["all","draft","submitted","returned","approved","rejected"].map(s=><option key={s} value={s}>{s==="all"?"All statuses":s}</option>)}</select><input aria-label="Needed by date" type="date" value={neededBy} onChange={e=>setNeededBy(e.target.value)}/><select aria-label="Sort requests" value={sort} onChange={e=>setSort(e.target.value)}><option value="recent">Recently updated</option><option value="needed">Needed soonest</option></select></div><div className="table-frame"><table><thead><tr><th>MRF / material</th><th>Project</th><th>Earliest needed</th><th>Status</th><th>Updated</th></tr></thead><tbody>{rows.map(r=><tr key={r.id}><td><Link className="table-primary" href={`/requests/${r.id}`}>{r.ref || "Unnumbered draft"}</Link><small>{r.items.map(i=>`${i.quantity} ${i.unit} ${i.name}`).join(", ")}</small></td><td>{siteName(state,r.siteId)}</td><td>{earliestNeededDate(r)?dateText(earliestNeededDate(r)):"—"}</td><td><Badge value={r.status}/></td><td>{dateText(r.updatedAt)}</td></tr>)}</tbody></table>{!rows.length&&<Empty detail={state.requests.length ? "Try a different search, filter, or site." : "No material requests yet. Site Personnel can create the first MRF."}/>}</div></>;
+  return <><PageHeader eyebrow="MATERIAL REQUEST REGISTER" title="Material requests" description="Requirements, Procurement decisions, quotations, and linked purchases." actions={state.role==="Site Personnel"?<Link className="button primary" href="/requests/new">+ New MRF</Link>:undefined}/><Register rows={rows} resetKey={search+status+neededBy+sort+state.siteFilter} filters={<><input aria-label="Search requests" placeholder="Search MRF or material" value={search} onChange={e=>setSearch(e.target.value)}/><select aria-label="Request status" value={status} onChange={e=>setStatus(e.target.value)}>{["all","draft","submitted","returned","approved","rejected"].map(s=><option key={s} value={s}>{s==="all"?"All statuses":s}</option>)}</select><input aria-label="Needed by date" type="date" value={neededBy} onChange={e=>setNeededBy(e.target.value)}/><select aria-label="Sort requests" value={sort} onChange={e=>setSort(e.target.value)}><option value="recent">Recently updated</option><option value="needed">Needed soonest</option></select></>} headers={<><th>MRF / material</th><th>Project</th><th>Earliest needed</th><th>Status</th><th>Updated</th></>} empty={state.requests.length ? "Try a different search, filter, or site." : "No material requests yet. Site Personnel can create the first MRF."} renderRow={r=><tr key={r.id}><td><Link className="table-primary" href={`/requests/${r.id}`}>{r.ref || "Unnumbered draft"}</Link><small>{`${r.items.length} materials · ${r.items.slice(0,2).map(i=>i.name).join(", ")}`}</small></td><td>{siteName(state,r.siteId)}</td><td>{earliestNeededDate(r)?dateText(earliestNeededDate(r)):"—"}</td><td><Badge value={r.status}/></td><td>{dateText(r.updatedAt)}</td></tr>}/></>;
 }
 
 export function RequestForm({ id }: { id?: string }) {
@@ -95,10 +98,23 @@ export function RequestForm({ id }: { id?: string }) {
   const [copyFields, setCopyFields] = useState<Record<MaterialCopyField, boolean>>({ unit: false, neededDate: false, purpose: false, location: false, remarks: false });
   const [copySourceId, setCopySourceId] = useState("");
   const selectedCopySourceId = items.some(item => item.id === copySourceId) ? copySourceId : items[items.length - 1]?.id || "";
-  const [expandedItemId, setExpandedItemId] = useState<string | null>(() => original?.items[0]?.id || items[0]?.id || null);
+  const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [materialSearch, setMaterialSearch] = useState("");
   const [invalidItemId, setInvalidItemId] = useState<string | null>(null);
   const addDialogRef = useRef<HTMLDialogElement>(null);
+  const editDialogRef = useRef<HTMLDialogElement>(null);
+  const editNameRef = useRef<HTMLInputElement>(null);
+  const closeMaterialEditor = () => { editDialogRef.current?.close(); setEditingItemId(null); };
+  const openMaterialEditor = (itemId: string, focusField?: "material" | "quantity" | "needed" | "unit" | "location") => {
+    setEditingItemId(itemId);
+    window.requestAnimationFrame(() => {
+      const dialog = editDialogRef.current;
+      if (!dialog) return;
+      if (!dialog.open) dialog.showModal();
+      const target = focusField && focusField !== "material" ? document.getElementById(focusField + "-" + itemId) : focusField === "material" ? editNameRef.current : null;
+      target?.focus({ preventScroll: true });
+    });
+  };
   const copySourceRef = useRef<HTMLSelectElement>(null);
   const addItem = () => {
     markEdited();
@@ -115,14 +131,9 @@ export function RequestForm({ id }: { id?: string }) {
     setItems(current => [...current, added]);
     setInvalidItemId(null);
     setError("");
-    setExpandedItemId(added.id);
     setMaterialSearch("");
     addDialogRef.current?.close();
-    window.requestAnimationFrame(() => {
-      const card = document.getElementById("material-card-" + added.id);
-      card?.scrollIntoView({ behavior: "smooth", block: "center" });
-      document.getElementById("material-" + added.id)?.focus({ preventScroll: true });
-    });
+    window.requestAnimationFrame(() => openMaterialEditor(added.id, "material"));
   };
   const openAddItemDialog = () => {
     if (!addDialogRef.current?.open) addDialogRef.current?.showModal();
@@ -131,21 +142,16 @@ export function RequestForm({ id }: { id?: string }) {
   const removeItem = (itemId: string) => {
     if (items.length <= 1) return;
     markEdited();
-    const index = items.findIndex(item => item.id === itemId);
     const remaining = items.filter(item => item.id !== itemId);
     setItems(remaining);
-    if (expandedItemId === itemId) setExpandedItemId(remaining[Math.min(index, remaining.length - 1)]?.id || null);
+    if (editingItemId === itemId) closeMaterialEditor();
     if (invalidItemId === itemId) { setInvalidItemId(null); setError(""); }
   };
   const revealItem = (item: Item, fieldId: string) => {
     setStep(2);
     setMaterialSearch("");
-    setExpandedItemId(item.id);
-    window.requestAnimationFrame(() => {
-      const card = document.getElementById("material-card-" + item.id);
-      card?.scrollIntoView({ behavior: "smooth", block: "center" });
-      revealField(document.getElementById(fieldId));
-    });
+    const field = (fieldId.split("-")[0] || "material") as "material" | "quantity" | "needed" | "unit" | "location";
+    window.requestAnimationFrame(() => openMaterialEditor(item.id, field));
   };
   const updateItem = (itemId: string, patch: Partial<Item>) => {
     markEdited();
@@ -188,6 +194,7 @@ export function RequestForm({ id }: { id?: string }) {
 
   const changeStep = (nextStep: RequestStep) => {
     setError("");
+    setAttachmentError("");
     setStep(nextStep);
   };
   const updateDetails = (field: keyof RequestDetails, value: string) => {
@@ -200,7 +207,7 @@ export function RequestForm({ id }: { id?: string }) {
     const found = extraction.details;
     setDetails({ siteId: "", scopeId: "", ref: found.ref, requestDate: found.requestDate, requestedBy: found.requestedBy, approvedBy: found.approvedBy, purchaser: found.purchaser, financeOfficer: found.financeOfficer, specialInstructions: found.specialInstructions });
     const imported = mrfImportedItems(extraction, () => newId("item"));
-    setItems(imported); setExpandedItemId(imported[0].id); setMaterialSearch(""); setInvalidItemId(null);
+    setItems(imported); closeMaterialEditor(); setMaterialSearch(""); setInvalidItemId(null);
     setImportedWithAI(true); setAiReviewed(false); setAiReviewError(""); setFormFieldError(null); setError(""); setStep(1);
     manuallyEdited.current = false;
     window.requestAnimationFrame(() => revealField(document.getElementById("siteId")));
@@ -310,7 +317,7 @@ export function RequestForm({ id }: { id?: string }) {
       <section className="panel materials-panel" aria-label="Materials" hidden={step !== 2}><CollapsibleSection title="Requested materials · Goods">
         <div className="materials-toolbar">
           <span className="material-count" role="status">{normalizedMaterialSearch ? 'Showing ' + visibleItems.length + ' of ' + items.length : items.length + (items.length === 1 ? ' material' : ' materials')}</span>
-          <input type="search" aria-label="Search materials by name or details" placeholder="Search name, purpose, location, or remarks" value={materialSearch} onChange={event => { const value = event.target.value; const query = value.trim().toLowerCase(); setMaterialSearch(value); const active = items.find(item => item.id === expandedItemId); if (!active || !matchesMaterialSearch(active, query)) setExpandedItemId(items.find(item => matchesMaterialSearch(item, query))?.id || null); }} onKeyDown={event => { if (event.key === 'Enter') event.preventDefault(); }}/>
+          <input type="search" aria-label="Search materials by name or details" placeholder="Search name, purpose, location, or remarks" value={materialSearch} onChange={event => setMaterialSearch(event.target.value)} onKeyDown={event => { if (event.key === 'Enter') event.preventDefault(); }}/>
           <button type="button" className="button primary" onClick={openAddItemDialog}>+ Add material</button>
         </div>
         <dialog ref={addDialogRef} className="material-add-dialog" aria-labelledby="material-add-title">
@@ -323,33 +330,30 @@ export function RequestForm({ id }: { id?: string }) {
           </fieldset>
           <div className="material-add-actions"><button type="button" className="button secondary" onClick={() => addDialogRef.current?.close()}>Cancel</button><button type="button" className="button primary" onClick={addItem}>Add material</button></div>
         </dialog>
-        <div className="material-list">
-          {visibleItems.length ? visibleItems.map(({ item, index }) => {
-            const isExpanded = expandedItemId === item.id;
-            return <article className="material-card" id={'material-card-' + item.id} key={item.id}>
-              <div className="material-summary-row">
-                <h3 className="material-summary-heading"><button type="button" className="material-summary-trigger" aria-expanded={isExpanded} aria-controls={'material-fields-' + item.id} onClick={() => setExpandedItemId(current => current === item.id ? null : item.id)}>
-                  <span className="material-summary-index">Material {index + 1}</span>
-                  <span className="material-summary-copy"><strong>{item.name.trim() || 'Unnamed material'}</strong><span>{item.quantity} {item.unit} · Needed {item.neededDate ? dateText(item.neededDate) : 'date not set'}</span></span>
-                  <span className="material-summary-indicator" aria-hidden="true">{isExpanded ? '−' : '+'}</span>
-                </button></h3>
-                <button type="button" className="icon-button material-remove" aria-label={'Remove material ' + (index + 1)} disabled={items.length === 1} onClick={() => removeItem(item.id)}>×</button>
-              </div>
-              <div className="material-card-fields" id={'material-fields-' + item.id} hidden={!isExpanded}>
-                <div className="material-card-grid">
-                  <Field label="Material" error={invalidItemId === item.id && !item.name.trim() ? "Enter the material name." : undefined}><input id={'material-' + item.id} name={'material-' + item.id} value={item.name} onChange={event => updateItem(item.id, { name: event.target.value })}/></Field>
-                  <Field label="Unit" error={invalidItemId === item.id && !item.unit.trim() ? "Enter the unit." : undefined}><input id={'unit-' + item.id} name={'unit-' + item.id} value={item.unit} onChange={event => updateItem(item.id, { unit: event.target.value })}/></Field>
-                  <Field label="Quantity" error={invalidItemId === item.id && (!Number.isFinite(item.quantity) || item.quantity <= 0) ? "Enter a quantity greater than zero." : undefined}><input id={'quantity-' + item.id} name={'quantity-' + item.id} type="number" step="any" value={item.quantity || ""} onChange={event => updateItem(item.id, { quantity: Number(event.target.value) })}/></Field>
-                  <Field label="Date needed" error={invalidItemId === item.id && !item.neededDate.trim() ? "Choose a date needed." : undefined}><input id={'needed-' + item.id} name={'needed-' + item.id} type="date" value={item.neededDate} onChange={event => updateItem(item.id, { neededDate: event.target.value })}/></Field>
-                  <Field label="Purpose (optional)"><input id={'purpose-' + item.id} name={'purpose-' + item.id} value={item.purpose} onChange={event => updateItem(item.id, { purpose: event.target.value })}/></Field>
-                  <Field label="Delivery location" error={invalidItemId === item.id && !item.location.trim() ? "Enter the delivery location." : undefined}><input id={'location-' + item.id} name={'location-' + item.id} value={item.location} onChange={event => updateItem(item.id, { location: event.target.value })}/></Field>
-                  <div className="material-card-wide"><Field label="Remarks (optional)"><textarea id={'remarks-' + item.id} name={'remarks-' + item.id} value={item.remarks} onChange={event => updateItem(item.id, { remarks: event.target.value })}/></Field></div>
-                </div>
-                <InlineError message={invalidItemId === item.id ? error : ''}/>
-              </div>
-            </article>;
-          }) : <div className="material-search-empty"><strong>No materials match “{materialSearch}”.</strong><button type="button" className="text-link" onClick={() => setMaterialSearch("")}>Clear search</button></div>}
-        </div>
+        {visibleItems.length ? <div className="table-frame material-table"><table>
+          <thead><tr><th className="numeric">#</th><th>Material</th><th className="numeric">Quantity</th><th>Date needed</th><th>Delivery location</th><th aria-label="Actions" /></tr></thead>
+          <tbody>{visibleItems.map(({ item, index }) => {
+            const needsDetails = invalidItemId === item.id;
+            return <tr key={item.id} data-material-row={index} className={[!documentsOnly && "material-edit-row", needsDetails && "needs-details"].filter(Boolean).join(" ")} onClick={event => {
+              if (documentsOnly || !(event.target instanceof Element) || event.target.closest("button, a, input, select, textarea, .material-row-actions")) return;
+              openMaterialEditor(item.id);
+            }}>
+              <td className="numeric">{index + 1}</td>
+              <th scope="row" className="material-table-name">
+                <button type="button" className="material-name-trigger" onClick={() => openMaterialEditor(item.id)} aria-label={'Edit material ' + (index + 1) + ': ' + (item.name.trim() || 'Unnamed material')}>{item.name.trim() || 'Unnamed material'}</button>
+                {item.purpose && <small>{item.purpose}</small>}
+                {needsDetails && <span className="badge warn">Needs details</span>}
+              </th>
+              <td className="numeric">{item.quantity > 0 ? item.quantity + ' ' + (item.unit || '—') : '—'}</td>
+              <td>{item.neededDate ? dateText(item.neededDate) : <span className="material-table-empty">Not set</span>}</td>
+              <td>{item.location || <span className="material-table-empty">Not set</span>}</td>
+              <td className="material-actions-cell"><div className="material-row-actions">
+                <button type="button" className="text-link" aria-label={'Edit material ' + (index + 1)} onClick={() => openMaterialEditor(item.id)}>Edit</button>
+                <button type="button" className="button secondary material-remove" aria-label={'Delete material ' + (index + 1)} disabled={items.length === 1} onClick={() => removeItem(item.id)}><span aria-hidden="true">×</span> Delete</button>
+              </div></td>
+            </tr>;
+          })}</tbody>
+        </table></div> : <div className="material-search-empty"><strong>No materials match “{materialSearch}”.</strong><button type="button" className="text-link" onClick={() => setMaterialSearch("")}>Clear search</button></div>}
         </CollapsibleSection>
       </section>
       </fieldset>
@@ -367,53 +371,113 @@ export function RequestForm({ id }: { id?: string }) {
         {activeSupportingPdf && <div className="reference-file-list" aria-label="Attached supporting PDF"><div className="reference-file"><span className="reference-file-icon" aria-hidden="true">PDF</span><div className="reference-file-detail"><strong title={activeSupportingPdf.name}>{activeSupportingPdf.name}</strong><small>Attached supporting document</small></div><button type="button" className="reference-remove" disabled={savingPdf || saving} aria-label={`Remove ${activeSupportingPdf.name}`} onClick={() => { updateDocuments(() => []); setAttachmentError(""); }}>×</button></div></div>}
         </CollapsibleSection>
       </section>
-      {step === 3 && <section className="panel request-review" aria-label="Request summary">
-        <div className="panel-heading"><h2>Request summary</h2>{!documentsOnly && <button type="button" className="text-link" onClick={() => changeStep(1)}>Edit details</button>}</div>
-        <dl className="request-review-details"><div><dt>Project / site</dt><dd>{siteName(state, details.siteId)}</dd></div><div><dt>Scope of work</dt><dd>{scopeName(state,details.scopeId)}</dd></div><div><dt>M.R.F No.</dt><dd>{details.ref || "—"}</dd></div><div><dt>Request Date</dt><dd>{dateText(details.requestDate)}</dd></div>{REQUEST_DETAIL_FIELDS.map(field => <div key={field.name}><dt>{field.label}</dt><dd>{details[field.name] || "—"}</dd></div>)}</dl>
-        {details.specialInstructions && <p className="request-review-instructions"><strong>Comments / special instructions:</strong> {details.specialInstructions}</p>}
-        <div className="panel-heading"><h3>Goods · {items.length} materials</h3>{!documentsOnly && <button type="button" className="text-link" onClick={() => changeStep(2)}>Edit materials</button>}</div>
-        <ul className="request-review-materials">{items.map(item => <li key={item.id}><strong>{item.name || "Unnamed material"}</strong><span>{item.quantity} {item.unit} · Needed {dateText(item.neededDate)}</span><span>Deliver to: {item.location || "—"}</span>{item.purpose && <span>Purpose: {item.purpose}</span>}{item.remarks && <span>Remarks: {item.remarks}</span>}</li>)}</ul>
-      </section>}
+      {step === 3 && <>
+        <section className="panel request-review" aria-label="Request summary">
+          <div className="panel-heading"><h2>Request summary</h2>{!documentsOnly && <button type="button" className="text-link" disabled={saving || savingPdf} onClick={() => changeStep(1)}>Edit details</button>}</div>
+          <div className="request-review-group"><h3>Request information</h3><dl className="request-review-details"><div><dt>Project / site</dt><dd>{siteName(state, details.siteId)}</dd></div><div><dt>Scope of work</dt><dd>{scopeName(state, details.scopeId)}</dd></div><div><dt>M.R.F No.</dt><dd>{details.ref || "—"}</dd></div><div><dt>Request date</dt><dd>{details.requestDate ? dateText(details.requestDate) : "—"}</dd></div></dl></div>
+          <div className="request-review-group"><h3>Signatories</h3><dl className="request-review-details">{REQUEST_DETAIL_FIELDS.map(field => <div key={field.name}><dt>{field.label}</dt><dd>{details[field.name] || "—"}</dd></div>)}</dl></div>
+          {details.specialInstructions && <div className="request-review-group"><h3>Comments / special instructions</h3><p className="request-review-instructions">{details.specialInstructions}</p></div>}
+        </section>
+        <section className="panel request-review" aria-label="Materials review">
+          <div className="panel-heading"><h2>Materials · {items.length}</h2>{!documentsOnly && <button type="button" className="text-link" disabled={saving || savingPdf} onClick={() => changeStep(2)}>Edit materials</button>}</div>
+          <div className="table-frame material-table request-review-table" tabIndex={0} role="region" aria-label="Requested materials"><table>
+            <thead><tr><th className="numeric">#</th><th>Material</th><th className="numeric">Quantity</th><th>Date needed</th><th>Delivery location</th>{!documentsOnly && <th aria-label="Actions"/>}</tr></thead>
+            <tbody>{items.map((item, index) => <tr key={item.id} className={!documentsOnly && !saving && !savingPdf ? "material-edit-row" : undefined} onClick={event => {
+              if (documentsOnly || saving || savingPdf || !(event.target instanceof Element) || event.target.closest("button, a")) return;
+              openMaterialEditor(item.id);
+            }}>
+              <td className="numeric">{index + 1}</td>
+              <th scope="row" className="material-table-name">{documentsOnly ? <strong>{item.name || "Unnamed material"}</strong> : <button type="button" className="material-name-trigger" disabled={saving || savingPdf} aria-label={`Edit material ${index + 1}: ${item.name || "Unnamed material"}`} onClick={() => openMaterialEditor(item.id)}>{item.name || "Unnamed material"}</button>}{item.purpose && <small>Purpose: {item.purpose}</small>}{item.remarks && <small>Remarks: {item.remarks}</small>}</th>
+              <td className="numeric">{item.quantity} {item.unit}</td>
+              <td>{item.neededDate ? dateText(item.neededDate) : "—"}</td>
+              <td>{item.location || "—"}</td>
+              {!documentsOnly && <td className="material-actions-cell"><div className="material-row-actions"><button type="button" className="text-link" disabled={saving || savingPdf} aria-label={`Edit material ${index + 1}`} onClick={() => openMaterialEditor(item.id)}>Edit</button></div></td>}
+            </tr>)}</tbody>
+          </table></div>
+        </section>
+      </>}
       {step === 3 && aiAssisted && <section className="panel mrf-ai-review"><h2>Confirm your review</h2><p>Check the request details and each material against the hardcopy. AI can misread names, dates and quantities.</p><label className="quote-check"><input ref={aiReviewRef} type="checkbox" name="aiReviewed" checked={aiReviewed} aria-invalid={!!aiReviewError} aria-describedby={aiReviewError ? "mrf-ai-review-error" : undefined} onChange={event => { setAiReviewed(event.target.checked); setAiReviewError(""); }}/><span>I reviewed the extracted request details and materials.</span></label>{aiReviewError && <p id="mrf-ai-review-error" className="field-error" role="alert">{aiReviewError}</p>}</section>}
       <InlineError message={invalidItemId ? "" : error}/>
-      <div className="form-actions request-wizard-actions"><div><Link className="button secondary" href={original ? `/requests/${original.id}` : "/requests"}>Cancel</Link><button className="button secondary" type="submit" value="draft" disabled={saving || savingPdf}>Save draft</button></div><div>{step > 1 && !documentsOnly && <button className="button secondary" type="button" disabled={saving || savingPdf} onClick={() => changeStep((step - 1) as RequestStep)}>Back</button>}{step < 3 ? <button className="button primary" type="button" onClick={nextStep}>Next</button> : <button className="button primary" type="submit" value="submit" disabled={saving || savingPdf}>{saving ? "Please wait…" : original ? "Resubmit MRF" : "Submit MRF"}</button>}</div></div>
+      <div className="form-actions request-wizard-actions"><div><Link className="button secondary" href={original ? `/requests/${original.id}` : "/requests"}>Cancel</Link><button className="button secondary" type="submit" value="draft" disabled={saving || savingPdf}>Save draft</button></div><div>{step > 1 && !documentsOnly && <button className="button secondary" type="button" disabled={saving || savingPdf} onClick={() => changeStep((step - 1) as RequestStep)}>Back</button>}{step < 3 ? <button key="next-step" className="button primary" type="button" onClick={event => { event.preventDefault(); nextStep(); }}>Next</button> : <button key="submit-request" className="button primary" type="submit" value="submit" disabled={saving || savingPdf}>{saving ? "Please wait…" : original ? "Resubmit MRF" : "Submit MRF"}</button>}</div></div>
     </form>
+    <dialog ref={editDialogRef} className="material-edit-dialog" aria-labelledby="material-edit-title" onCancel={event => { event.preventDefault(); closeMaterialEditor(); }}>
+      {(() => { const item = items.find(value => value.id === editingItemId); const index = items.findIndex(value => value.id === editingItemId);
+        if (!item) return null;
+        return <>
+          <div className="material-dialog-heading"><div><span className="eyebrow">{'MATERIAL ' + (index + 1) + ' OF ' + items.length}</span><h2 id="material-edit-title">{item.name.trim() || 'Unnamed material'}</h2></div><button type="button" className="icon-button" aria-label="Close material details" onClick={closeMaterialEditor}>×</button></div>
+          <p className="material-dialog-note">These details appear on the MRF form and the generated PDF. Fields marked required must be complete before submitting.</p>
+          <div className="material-field-grid">
+            <Field label="Material" error={invalidItemId === item.id && !item.name.trim() ? "Enter the material name." : undefined}><input ref={editNameRef} id={'material-' + item.id} name={'material-' + item.id} value={item.name} onChange={event => updateItem(item.id, { name: event.target.value })}/></Field>
+            <Field label="Unit" error={invalidItemId === item.id && !item.unit.trim() ? "Enter the unit." : undefined}><input id={'unit-' + item.id} name={'unit-' + item.id} value={item.unit} onChange={event => updateItem(item.id, { unit: event.target.value })}/></Field>
+            <Field label="Quantity" error={invalidItemId === item.id && (!Number.isFinite(item.quantity) || item.quantity <= 0) ? "Enter a quantity greater than zero." : undefined}><input id={'quantity-' + item.id} name={'quantity-' + item.id} type="number" step="any" value={item.quantity || ""} onChange={event => updateItem(item.id, { quantity: Number(event.target.value) })}/></Field>
+            <Field label="Date needed" error={invalidItemId === item.id && !item.neededDate.trim() ? "Choose a date needed." : undefined}><input id={'needed-' + item.id} name={'needed-' + item.id} type="date" value={item.neededDate} onChange={event => updateItem(item.id, { neededDate: event.target.value })}/></Field>
+            <Field label="Purpose (optional)"><input id={'purpose-' + item.id} name={'purpose-' + item.id} value={item.purpose} onChange={event => updateItem(item.id, { purpose: event.target.value })}/></Field>
+            <Field label="Delivery location" error={invalidItemId === item.id && !item.location.trim() ? "Enter the delivery location." : undefined}><input id={'location-' + item.id} name={'location-' + item.id} value={item.location} onChange={event => updateItem(item.id, { location: event.target.value })}/></Field>
+            <div className="material-field-wide"><Field label="Remarks (optional)"><textarea id={'remarks-' + item.id} name={'remarks-' + item.id} value={item.remarks} onChange={event => updateItem(item.id, { remarks: event.target.value })}/></Field></div>
+          </div>
+          <InlineError message={invalidItemId === item.id ? error : ''}/>
+          <div className="material-add-actions"><button type="button" className="button danger-outline" disabled={items.length === 1} onClick={() => removeItem(item.id)}>Remove material</button><button type="button" className="button primary" onClick={closeMaterialEditor}>Done</button></div>
+        </>;
+      })()}
+    </dialog>
     {confirmation}
   </>;
 }
 
 function RequestMaterialList({ state, siteId, items, requestId }: { state: DemoSnapshot; siteId: string; items: Item[]; requestId: string }) {
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [viewingId, setViewingId] = useState<string | null>(null);
+  const viewDialogRef = useRef<HTMLDialogElement>(null);
+  const closeViewer = () => { viewDialogRef.current?.close(); setViewingId(null); };
+  const openViewer = (itemId: string) => {
+    setViewingId(itemId);
+    window.requestAnimationFrame(() => { if (viewDialogRef.current && !viewDialogRef.current.open) viewDialogRef.current.showModal(); });
+  };
+  const offersFor = (itemId: string) => state.quotes.some(quote => quote.mrfId === requestId && quote.reviewStatus !== "draft" && quote.lines?.some(line => line.requestItemId === itemId));
 
   return <section className="panel request-materials-panel" aria-label="Materials">
     <div className="request-materials-heading">
       <h2 className="panel-title">Goods · {items.length} {items.length === 1 ? "material" : "materials"}</h2>
     </div>
     {items.length === 0 ? <Empty detail="No materials have been added to this request." /> :
-      <div className="request-materials-list">{items.map((item, index) => {
-        const isExpanded = expandedId === item.id;
-        const detailsId = `request-material-details-${item.id}`;
-        return <article className="request-material" key={item.id}>
-          <h3 className="request-material-heading">
-            <button type="button" className="request-material-trigger" aria-expanded={isExpanded} aria-controls={detailsId} onClick={() => setExpandedId(current => current === item.id ? null : item.id)}>
-              <span className="request-material-index">Material {index + 1}</span>
-              <span className="request-material-name">{item.name || "Unnamed material"}<small className="request-material-summary">{item.quantity} {item.unit} · Needed {item.neededDate ? dateText(item.neededDate) : "—"}</small></span>
-              <span className="request-material-indicator" aria-hidden="true">{isExpanded ? "−" : "+"}</span>
-            </button>
-          </h3>
-          {state.quotes.some(quote => quote.mrfId === requestId && quote.reviewStatus !== "draft" && quote.lines?.some(line => line.requestItemId === item.id)) && <div className="request-material-match"><small>Supplier offers match this material</small><Link className="text-link" href={`/requests/${requestId}/quotes?materialId=${encodeURIComponent(item.id)}`}>View matching offers</Link></div>}
-          <div className="request-material-body" id={detailsId} hidden={!isExpanded}>
-            <div className="data-rows">
-              <div><span>Requested</span><strong>{item.quantity} {item.unit}</strong></div>
-              <div><span>Site stock</span><strong>{stockFor(state, siteId, item.name, item.unit)} {item.unit}</strong></div>
-              <div><span>Date needed</span><strong>{item.neededDate ? dateText(item.neededDate) : "—"}</strong></div>
-              <div><span>Purpose</span><strong>{item.purpose || "—"}</strong></div>
-              <div><span>Delivery location</span><strong>{item.location || "—"}</strong></div>
-              {item.remarks && <div><span>Remarks</span><strong>{item.remarks}</strong></div>}
-            </div>
+      <div className="table-frame material-table"><table>
+        <thead><tr><th className="numeric">#</th><th>Material</th><th className="numeric">Quantity</th><th>Date needed</th><th>Delivery location</th><th className="numeric">Site stock</th><th aria-label="Actions" /></tr></thead>
+        <tbody>{items.map((item, index) => {
+          const stock = stockFor(state, siteId, item.name, item.unit);
+          return <tr key={item.id} data-material-row={index}>
+            <td className="numeric">{index + 1}</td>
+            <th scope="row" className="material-table-name">
+              <button type="button" className="material-name-trigger" onClick={() => openViewer(item.id)} aria-label={'View material ' + (index + 1) + ': ' + (item.name || 'Unnamed material')}>{item.name || "Unnamed material"}</button>
+              {item.purpose && <small>{item.purpose}</small>}
+            </th>
+            <td className="numeric">{item.quantity > 0 ? item.quantity + ' ' + (item.unit || '—') : '—'}</td>
+            <td>{item.neededDate ? dateText(item.neededDate) : <span className="material-table-empty">Not set</span>}</td>
+            <td>{item.location || <span className="material-table-empty">Not set</span>}</td>
+            <td className={`numeric ${stock <= 0 ? "negative" : ""}`}>{stock} {item.unit}</td>
+            <td><div className="material-row-actions">
+              <button type="button" className="text-link" aria-label={'View material ' + (index + 1)} onClick={() => openViewer(item.id)}>View</button>
+              {offersFor(item.id) && <Link className="text-link" href={`/requests/${requestId}/quotes?materialId=${encodeURIComponent(item.id)}`}>Offers</Link>}
+            </div></td>
+          </tr>;
+        })}</tbody>
+      </table></div>}
+    <dialog ref={viewDialogRef} className="material-edit-dialog" aria-labelledby="material-view-title" onCancel={event => { event.preventDefault(); closeViewer(); }}>
+      {(() => { const item = items.find(value => value.id === viewingId); const index = items.findIndex(value => value.id === viewingId);
+        if (!item) return null;
+        return <>
+          <div className="material-dialog-heading"><div><span className="eyebrow">{'MATERIAL ' + (index + 1) + ' OF ' + items.length}</span><h2 id="material-view-title">{item.name || 'Unnamed material'}</h2></div><button type="button" className="icon-button" aria-label="Close material details" onClick={closeViewer}>×</button></div>
+          <div className="data-rows material-view-rows">
+            <div><span>Requested</span><strong>{item.quantity} {item.unit}</strong></div>
+            <div><span>Site stock</span><strong>{stockFor(state, siteId, item.name, item.unit)} {item.unit}</strong></div>
+            <div><span>Date needed</span><strong>{item.neededDate ? dateText(item.neededDate) : "—"}</strong></div>
+            <div><span>Purpose</span><strong>{item.purpose || "—"}</strong></div>
+            <div><span>Delivery location</span><strong>{item.location || "—"}</strong></div>
+            {item.remarks && <div><span>Remarks</span><strong>{item.remarks}</strong></div>}
           </div>
-        </article>;
-      })}</div>}
+          {offersFor(item.id) && <div className="request-material-match"><small>Supplier offers match this material</small><Link className="text-link" href={`/requests/${requestId}/quotes?materialId=${encodeURIComponent(item.id)}`}>View matching offers</Link></div>}
+          <div className="material-add-actions"><button type="button" className="button primary" onClick={closeViewer}>Close</button></div>
+        </>;
+      })()}
+    </dialog>
   </section>;
 }
 
@@ -429,8 +493,8 @@ export function RequestDetail({ id }: { id: string }) {
   const decide=async(choice:"approve"|"return"|"reject",reason?:string)=>{if(!await confirm(`${choice === "approve" ? "Approve" : choice === "return" ? "Return" : "Reject"} ${request.ref}?`,choice === "approve" ? "The approved MRF and supporting PDF will be archived to Google Drive before Procurement begins." : choice === "return" ? "Site Personnel will revise this request." : "This request will close.",`${choice === "approve" ? "Approve" : choice === "return" ? "Return" : "Reject"} request`,choice === "reject"))return;const result=await run({type:"reviewRequest",id,decision:choice,reason});if(!result.ok)setError(result.message);else{setDecision(null);setError("");if(choice==="approve")await archive(result.snapshot);}};
   return <><RecordHeader backHref="/requests" backLabel="Material requests" eyebrow={siteName(state,request.siteId)} title={request.ref || "Unnumbered draft"} badges={<><Badge value={request.status}/>{po&&<Badge value={po.status}>{poStatusLabel(po.status)}</Badge>}</>}/>
     <RequestLifecycle key={request.id} state={state} requestId={id}/>
-    <div className="request-detail-layout"><div className="request-detail-overview"><section className="panel"><h2 className="panel-title">General information</h2><DocumentPreview kind="mrf" request={request} project={state.sites.find(site => site.id === request.siteId)!}/><div className="data-rows"><div><span>Scope of work</span><strong>{scopeName(state, request.scopeId)}</strong></div><div><span>M.R.F No.</span><strong>{request.ref || "—"}</strong></div><div><span>Request Date</span><strong>{request.requestDate ? dateText(request.requestDate) : "—"}</strong></div><div><span>Requested by</span><strong>{request.requestedBy || "—"}</strong></div><div><span>Approved by</span><strong>{request.approvedBy || "—"}</strong></div><div><span>Purchaser/Procurement Officer</span><strong>{request.purchaser || "—"}</strong></div><div><span>Finance Officer</span><strong>{request.financeOfficer || "—"}</strong></div></div>{request.scope && !request.scopeDocument && <p className="helper-note">Legacy scope note: {request.scope}</p>}{request.reason&&<div className="callout warn"><strong>Review reason</strong><p>{request.reason}</p></div>}</section>
-    <section className="panel"><h2 className="panel-title">Documents and links</h2>{(request.scopeDocument || request.documents.length > 0) && <Documents docs={[...(request.scopeDocument ? [request.scopeDocument] : []), ...request.documents]} showType={false} />}{pos.map(linked => <Link className="data-link" href={`/purchase-orders/${linked.id}`} key={linked.id}><div><strong>{linked.ref}</strong><small>{supplierName(state,linked)} · {money(poTotal(state,linked))}</small></div><Badge value={linked.status}/></Link>)}{!request.scopeDocument && !request.documents.length && !pos.length && <p className="muted">No documents or links recorded.</p>}</section></div>
+    <div className="request-detail-layout"><div className="request-detail-overview"><section className="panel"><div className="panel-heading request-general-heading"><h2>General information</h2><DocumentPreview kind="mrf" request={request} project={state.sites.find(site => site.id === request.siteId)!}/></div><div className="data-rows"><div><span>Scope of work</span><strong>{scopeName(state, request.scopeId)}</strong></div><div><span>M.R.F No.</span><strong>{request.ref || "—"}</strong></div><div><span>Request Date</span><strong>{request.requestDate ? dateText(request.requestDate) : "—"}</strong></div><div><span>Requested by</span><strong>{request.requestedBy || "—"}</strong></div><div><span>Approved by</span><strong>{request.approvedBy || "—"}</strong></div><div><span>Purchaser/Procurement Officer</span><strong>{request.purchaser || "—"}</strong></div><div><span>Finance Officer</span><strong>{request.financeOfficer || "—"}</strong></div></div>{request.scope && !request.scopeDocument && <p className="helper-note">Legacy scope note: {request.scope}</p>}{request.reason&&<div className="callout warn"><strong>Review reason</strong><p>{request.reason}</p></div>}</section>
+    <section className="panel"><h2 className="panel-title">Documents and links</h2><RequestDocumentGallery key={request.id} request={request}/>{pos.length > 0 && <div className="request-document-links">{pos.map(linked => <Link className="data-link" href={`/purchase-orders/${linked.id}`} key={linked.id}><div><strong>{linked.ref}</strong><small>{supplierName(state,linked)} · {money(poTotal(state,linked))}</small></div><Badge value={linked.status}/></Link>)}</div>}</section></div>
     <RequestMaterialList key={request.id} requestId={request.id} state={state} siteId={request.siteId} items={request.items}/>
     {state.role==="Site Personnel"&&(["draft","returned"].includes(request.status)||request.correction?.status==="requested")&&<section className="action-bar"><div><strong>{request.correction?.status==="requested"||request.status==="returned"?"Revision requested":"Draft request"}</strong><p>{request.correction?.scope==="documents"?"Replace the supporting PDF and resubmit it to Procurement.":"Update the MRF before submitting it to Procurement."}</p></div><Link className="button primary" href={`/requests/${id}/edit`}>Edit MRF</Link></section>}
     {state.role==="Procurement"&&(request.status==="submitted"||request.correction?.status==="submitted")&&<section className="panel"><div className="panel-heading"><h2>Procurement decision</h2></div><p className="helper-note">Review current on-hand site stock for each requested material above. Quantities match the material name and unit; approval does not reserve stock.</p><div className="button-row"><button className="button primary" onClick={()=>void decide("approve")}>Approve request</button><button className="button secondary" onClick={()=>setDecision("return")}>Return with reason</button>{!request.correction&&<button className="button danger-outline" onClick={()=>setDecision("reject")}>Reject with reason</button>}</div>{decision&&<form className="decision-panel" onSubmit={e=>{e.preventDefault();void decide(decision,String(new FormData(e.currentTarget).get("reason")));}}><Field label={`${decision==="return"?"Return":"Rejection"} reason`}><textarea name="reason" required minLength={5}/></Field><InlineError message={error}/><div className="button-row"><button type="button" className="button secondary" onClick={()=>setDecision(null)}>Cancel</button><button className="button primary">Continue to confirmation</button></div></form>}</section>}

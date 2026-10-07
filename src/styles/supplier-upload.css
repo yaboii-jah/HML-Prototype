@@ -1,0 +1,54 @@
+/* Compact supplier queue and one shared upload panel; existing HML tokens. */
+.supplier-upload-section>.panel-heading{align-items:center;flex-wrap:wrap;gap:16px;margin-bottom:16px}
+.supplier-upload-section>.panel-heading .helper-note{margin:8px 0 0}
+.supplier-upload-section>.panel-heading .button-row{margin:0}
+.supplier-upload-workbench{display:grid;grid-template-columns:300px minmax(0,1fr);height:560px;max-height:65dvh;min-height:360px;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--surface)}
+.supplier-upload-queue{display:flex;flex-direction:column;min-height:0;border-right:1px solid var(--line)}
+.supplier-queue-tools{display:grid;grid-template-columns:minmax(0,1fr) 105px;gap:8px;padding:12px;border-bottom:1px solid var(--line);flex:none}
+.supplier-queue-tools input,.supplier-queue-tools select{width:100%;min-width:0;font-size:12px}
+.supplier-queue-list{list-style:none;padding:0;margin:0;overflow:auto;overscroll-behavior:contain;flex:1;min-height:0}
+.supplier-queue-row{display:flex;align-items:center;gap:8px;width:100%;min-height:48px;padding:8px 12px;border:0;border-bottom:1px solid var(--line);background:transparent;color:var(--ink);text-align:left}
+.supplier-queue-row:hover:not(:disabled){background:var(--control-hover)}
+.supplier-queue-row[aria-pressed="true"]{background:var(--nav-2);box-shadow:inset 3px 0 var(--brand)}
+.supplier-queue-number{font-size:11px;color:var(--muted);flex:none;min-width:16px}
+.supplier-queue-name{min-width:0;flex:1}
+.supplier-queue-name strong,.supplier-queue-name small{display:block;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.supplier-queue-name strong{font-size:12px;line-height:1.25}.supplier-queue-name small{font-size:11px;line-height:1.25;color:var(--muted);margin-top:2px}
+.supplier-queue-row .badge{flex:none;font-size:9px}
+.supplier-queue-empty{padding:24px 16px;color:var(--muted);font-size:13px}
+.supplier-queue-pagination{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px;border-top:1px solid var(--line);font-size:11px;flex:none}
+.supplier-queue-pagination label,.supplier-queue-pagination>div{display:flex;align-items:center;gap:4px}
+.supplier-queue-pagination select{min-height:32px;padding:3px;font-size:11px}
+.supplier-queue-pagination button,.supplier-file-move{display:inline-flex;align-items:center;justify-content:center;min-height:32px;min-width:32px;padding:4px;border:1px solid var(--line);border-radius:4px;background:var(--surface);color:var(--brand)}
+.supplier-upload-detail{display:flex;flex-direction:column;min-width:0;min-height:0}
+.supplier-upload-detail .quote-upload-group{display:flex;flex-direction:column;flex:1;min-height:0;margin:0;padding:16px;border:0;border-radius:0;box-shadow:none;background:var(--surface)}
+.supplier-upload-detail .quote-group-header{align-items:center;flex-wrap:wrap;gap:12px;flex:none}
+.supplier-upload-detail .quote-group-heading h3{font-size:15px;margin:0 0 4px}
+.supplier-upload-detail .quote-group-heading small{font-size:12px;color:var(--muted)}
+.supplier-upload-detail .quote-group-actions{margin-left:auto}
+.supplier-upload-detail .quote-group-drop{margin:16px 0 12px;padding:12px;min-height:80px;gap:12px;flex:none}
+.supplier-upload-detail .quote-group-drop>span{font-size:13px}
+.supplier-upload-detail .quote-group-drop small{display:block;font-size:11px;margin-top:4px;color:var(--muted)}
+.supplier-upload-detail .quote-group-drop .button{flex:none}
+.supplier-upload-detail .is-dragging .quote-group-drop{border-color:var(--brand);background:var(--nav-2)}
+.supplier-upload-files{overflow-y:auto;overflow-x:hidden;scrollbar-gutter:stable;overscroll-behavior:contain;flex:1;min-height:0;padding:0;margin:0;list-style:none}
+.supplier-upload-files li{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);min-height:48px}
+.supplier-upload-file-icon{display:grid;place-items:center;width:32px;height:32px;flex:none;border:1px solid var(--line);border-radius:4px;font-size:9px;color:var(--brand);background:var(--paper)}
+.supplier-upload-file-name{min-width:0;flex:1}
+.supplier-upload-file-name strong{display:block;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.supplier-upload-file-name small{display:block;font-size:11px;color:var(--muted);margin-top:2px}
+.supplier-upload-files .button-row{gap:6px;margin:0;flex:none;flex-wrap:nowrap}
+.supplier-upload-files .text-link{font-size:12px;margin-left:4px;border:0;background:transparent;padding:4px;color:var(--brand)}
+.supplier-upload-files[hidden]{display:none}
+.supplier-upload-file-empty{display:grid;place-items:center;flex:1;min-height:0;width:100%;margin:0;padding:16px;text-align:center}
+.supplier-upload-file-empty>.helper-note{margin:0;max-width:100%;overflow-wrap:anywhere}
+.supplier-upload-detail-actions{flex:none;padding-top:12px;margin-top:8px;border-top:1px solid var(--line)}
+.supplier-upload-detail-empty{display:grid;place-items:center;flex:1;padding:24px;color:var(--muted);font-size:13px;text-align:center}
+.supplier-upload-section .quote-queue-footer{margin-top:16px;padding-top:16px;gap:16px}
+.supplier-upload-section .quote-queue-footer small{display:block;font-size:11px;color:var(--muted);margin-top:4px}
+.supplier-upload-back{display:none}
+.supplier-upload-section .is-disabled{opacity:.5;cursor:default}
+@media(max-width:1000px){.supplier-upload-workbench{display:block;height:500px;max-height:65dvh}.supplier-upload-queue{height:100%;border-right:0}.supplier-upload-detail{display:none;height:100%}.supplier-upload-workbench.is-detail-open .supplier-upload-queue{display:none}.supplier-upload-workbench.is-detail-open .supplier-upload-detail{display:flex}.supplier-upload-back{display:block;align-self:flex-start;margin:12px 16px 0}.supplier-upload-section>.panel-heading .button-row{width:100%;flex-wrap:wrap}.supplier-upload-section .quote-queue-footer{align-items:stretch;flex-direction:column}}
+@media(max-width:400px){.supplier-upload-detail .quote-upload-group{padding:12px}.supplier-upload-files li{flex-wrap:wrap}.supplier-upload-files .button-row{margin-left:auto}.supplier-upload-detail .quote-group-drop{align-items:flex-start;flex-direction:column}.supplier-queue-tools{grid-template-columns:minmax(0,1fr) 100px}}
+@media(max-width:1000px){.supplier-queue-pagination{flex-wrap:wrap}.supplier-queue-pagination>div{margin-left:auto}.supplier-queue-pagination button,.supplier-file-move{min-height:44px;min-width:44px}}
+@media(max-width:400px){.supplier-upload-file-name{flex:1 1 calc(100% - 42px)}.supplier-upload-file-name strong{white-space:normal;overflow-wrap:anywhere;line-height:1.4}}

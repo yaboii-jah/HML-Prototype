@@ -1,4 +1,6 @@
 "use client";
+import { Register } from "@/src/components/ui/Register";
+import { Fragment } from "react";
 
 import { batchStage } from "@/src/domain/delivery-flow";
 
@@ -18,16 +20,14 @@ import { paidTotal, paymentStatus, poTotal, requestForPO, siteName, supplierName
 import type { DocumentStatus } from "@/src/domain/types";
 
 export function Accounting() {
-  const { snapshot: state } = useDemo();
-  const [search, setSearch] = useState("");
-  if (!state) return null;
-  const groups = accountingGroups(state, search);
-  return <><PageHeader eyebrow="PO REVIEW AND PAYMENT PREPARATION" title="Accounting queue" description="View purchase orders grouped by MRF. Review POs, prepare payment requests, and release approved orders to Logistics."/><div className="toolbar"><input aria-label="Search accounting" placeholder="Search MRF, PO or supplier" value={search} onChange={event => setSearch(event.target.value)}/></div><div className="accounting-groups">{groups.map(({ request, pos, totalCount }) => {
-    const eligible = pos.filter(po => ["approved", "released"].includes(po.status));
-    const balance = eligible.reduce((sum, po) => sum + poTotal(state, po) - paidTotal(state, po.id), 0);
-    return <section className="panel accounting-group" key={request.id}><header className="panel-heading"><div><Link className="table-primary" href={`/requests/${request.id}`}>{request.ref || "Unnumbered MRF"}</Link><h2>{siteName(state, request.siteId)}</h2><small>{pos.length === totalCount ? `${totalCount} purchase orders` : `${pos.length} of ${totalCount} purchase orders match`} / {eligible.length} approved</small></div><div><small>Approved outstanding balance</small><strong className="accounting-group-balance">{money(balance)}</strong></div></header><div className="table-frame"><table><thead><tr><th>PO</th><th>Supplier</th><th>PO status</th><th>Document review</th><th>Payment</th><th>Balance</th><th>Next action</th></tr></thead><tbody>{pos.map(po => { const ready = ["approved", "released"].includes(po.status); return <tr key={po.id}><td><Link className="table-primary" href={`/accounting/${po.id}`}>{po.ref}</Link></td><td>{supplierName(state, po)}</td><td><Badge value={po.status}>{poStatusLabel(po.status)}</Badge></td><td>{ready ? <Badge value={state.accounting.find(value => value.poId === po.id)?.review || "Incomplete"}/> : <span className="muted">{po.status === "rejected" ? "Closed" : "Awaiting approval"}</span>}</td><td>{ready ? <Badge value={paymentStatus(state, po)}/> : "--"}</td><td>{ready ? money(poTotal(state, po) - paidTotal(state, po.id)) : "--"}</td><td>{accountingNextAction(state, po)}</td></tr>; })}</tbody></table></div></section>;
-  })}</div>{!groups.length && <Empty detail={state.pos.length ? "No purchase orders match this view." : "No purchase orders are linked to an MRF yet."}/>}</>;
-
+  const { snapshot: state }=useDemo(); const [search,setSearch]=useState(""); if(!state)return null;
+  const groups=accountingGroups(state,search);
+  return <><PageHeader title="Accounting queue" description="MRF-grouped POs, financial review, payment preparation and release."/>
+    <Register rows={groups} resetKey={search+state.siteFilter} unit="MRFs" className="accounting-groups" filters={<input type="search" aria-label="Search accounting" placeholder="Search MRF, PO or supplier" value={search} onChange={event=>setSearch(event.target.value)}/>} empty={state.pos.length?"No purchase orders match this view.":"No purchase orders are linked to an MRF yet."} headers={<><th>PO</th><th>Supplier</th><th>PO status</th><th>Documents</th><th>Payment</th><th className="numeric">Balance</th><th>Next action</th></>} renderRow={({request,pos,totalCount})=>{
+      const eligible=pos.filter(po=>["approved","released"].includes(po.status)),balance=eligible.reduce((sum,po)=>sum+poTotal(state,po)-paidTotal(state,po.id),0);
+      return <Fragment key={request.id}><tr className="accounting-group"><td colSpan={7} className="register-group-cell"><div><div><Link className="table-primary" href={`/requests/${request.id}`}>{request.ref||"Unnumbered MRF"}</Link><small>{siteName(state,request.siteId)} / {pos.length===totalCount?`${totalCount} purchase orders`:`${pos.length} of ${totalCount} purchase orders match`} / {eligible.length} approved</small></div><div><small>Approved outstanding balance</small><strong>{money(balance)}</strong></div></div></td></tr>{pos.map(po=>{const ready=["approved","released"].includes(po.status);return <tr key={po.id}><td><Link className="table-primary" href={`/accounting/${po.id}`}>{po.ref}</Link></td><td><span className="table-text" title={supplierName(state,po)}>{supplierName(state,po)}</span></td><td><Badge value={po.status}>{poStatusLabel(po.status)}</Badge></td><td>{ready?<Badge value={state.accounting.find(value=>value.poId===po.id)?.review||"Incomplete"}/>:po.status==="rejected"?"Closed":"Awaiting approval"}</td><td>{ready?<Badge value={paymentStatus(state,po)}/>:"--"}</td><td className="numeric">{ready?money(poTotal(state,po)-paidTotal(state,po.id)):"--"}</td><td>{accountingNextAction(state,po)}</td></tr>;})}</Fragment>;
+    }}/>
+  </>;
 }
 
 export function AccountingDetail({ id }: { id: string }) {

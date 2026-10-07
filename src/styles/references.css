@@ -49,13 +49,22 @@ html[data-theme="dark"] .reference-upload-icon path:nth-child(2){fill:var(--colo
 .request-step-heading p{margin:0;font-size:13px}
 .request-wizard-actions{justify-content:space-between;gap:16px}
 .request-wizard-actions>div{display:flex;gap:8px;flex-wrap:wrap}
-.request-review-details{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 20px;margin-bottom:24px}
+.request-review-details{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin:0}
 .request-review-details dt{font-size:12px;color:var(--muted)}
 .request-review-details dd{margin:3px 0 0;font-weight:650;overflow-wrap:anywhere}
-.request-review-materials{list-style:none;margin:0;padding:0}
-.request-review-materials li{display:grid;gap:3px;border-top:1px solid var(--line);padding:12px 0;overflow-wrap:anywhere}
-.request-review-materials span{font-size:12px;color:var(--muted)}
-.request-review-instructions{overflow-wrap:anywhere;white-space:pre-wrap}
+.request-review .panel-heading{align-items:center;gap:16px;margin-bottom:16px;flex-wrap:wrap}
+.request-review .panel-heading h2{margin:0}
+.request-review .panel-heading .text-link{margin-left:auto}
+.request-review .request-review-details{gap:16px}
+.request-review-group+.request-review-group{margin-top:16px;padding-top:16px;border-top:1px solid var(--line)}
+.request-review-group h3{margin:0 0 12px;font-size:13px;color:var(--muted)}
+.request-review-instructions{margin:0;overflow-wrap:anywhere;white-space:pre-wrap;color:var(--ink)}
+.request-review-table{max-height:480px;overscroll-behavior:contain}
+.request-review-table thead th{position:sticky;top:0;z-index:1}
+.request-review-table tbody th{border-top:1px solid var(--line);vertical-align:middle}
+.request-review-table .material-table-name{max-width:360px;white-space:normal}
+.request-review-table .material-table-name small{white-space:pre-wrap;overflow-wrap:anywhere}
+.request-review-table td{overflow-wrap:anywhere}
 @media(max-width:650px){
   .request-steps{gap:5px;margin-bottom:20px}
   .request-steps button{flex-direction:column;gap:6px;padding:10px 2px;font-size:11px}

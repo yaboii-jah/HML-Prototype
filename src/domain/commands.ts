@@ -2,7 +2,7 @@ import { DELIVERY_LEGS, batchQuantityLimit, deliveryLocations, isSiteBatch, legF
 import type { DeliveryLeg, DeliveryLocation } from "./types.ts";
 import { openPaymentRequest, releaseBlocker } from "./workflow.ts";
 import { auditMetadata, copyIdentity, extraAudit, validIdentity } from "./audit.ts";
-import { projectScopes, scopeBudgetFor, scopeValidationError } from "./scope-budgets.ts";
+import { projectMinimumBudget, projectScopes, scopeBudgetFor, scopeRemovalReason, scopeValidationError } from "./scope-budgets.ts";
 import { operationEntity, operationError, operationRetry } from "./operations.ts";
 import type { AuditIdentity, OperationTarget } from "./types.ts";
 import { validAccountingDocument, MAX_ACCOUNTING_BATCH } from "./accounting-documents.ts";
@@ -22,6 +22,8 @@ import { procurementReady, supportingPdf } from "./request-archive.ts";
 import { ROLES, type ArchivedQuoteFile, type DemoSnapshot, type DocumentRef, type DocumentStatus, type Item, type POAdjustment, type POLine, type Priority, type Quote, type Role } from "./types.ts";
 
 export type Command =
+  | { type: "updateSite"; siteId: string; name: string; location: string; budget: number }
+  | { type: "removeProjectScope"; siteId: string; id: string }
   | { type: "saveProjectScope"; id?: string; siteId: string; name: string; budget: number }
   | { type: "startOperation"; target: OperationTarget }
   | { type: "attachAccountingDocuments"; poId: string; batchId: string; documents: Pick<AccountingDocument, "name" | "kind" | "mime" | "size" | "localFileId" | "sha256">[] }
@@ -122,6 +124,30 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
   const initializePo = (po: PO, request: MRF, quote: Quote) => { initializePoDocument(po, request, quote, state.sites.find(value => value.id === request.siteId)!, at); po.document!.vendorName ||= state.suppliers.find(value => value.id === quote.supplierId)?.name || ""; };
 
   switch (command.type) {
+    case "updateSite": {
+      if (!permit("Administrator")) return fail("Sign in as Administrator to edit a project.");
+      const site = state.sites.find(value => value.id === command.siteId);
+      if (!site) return fail("Project not found.");
+      const name = command.name.trim(), location = command.location.trim(), budget = roundMoney(command.budget);
+      if (!name || !location) return fail("Complete the project name and location.");
+      if (!nonnegative(command.budget) || !Number.isFinite(budget)) return fail("Enter a valid budget of zero or more.", "budget");
+      if (state.sites.some(value => value.id !== site.id && value.name.trim().toLowerCase() === name.toLowerCase())) return fail("Enter a unique project name.", "name");
+      if (budget < projectMinimumBudget(state, site.id)) return fail("Project budget cannot be below its scope allocations or committed and spent funds.", "budget");
+      if (site.name === name && site.location === location && site.budget === budget) return done("Project details unchanged.", site.id);
+      Object.assign(site, { name, location, budget });
+      log(site.id, "Project details updated");
+      return done("Project details saved.", site.id);
+    }
+    case "removeProjectScope": {
+      if (!permit("Administrator")) return fail("Sign in as Administrator to remove a scope.");
+      const scope = state.scopes.find(value => value.id === command.id && value.siteId === command.siteId);
+      if (!scope) return fail("Scope not found in this project.");
+      const blocked = scopeRemovalReason(state, scope.id);
+      if (blocked) return fail(blocked);
+      state.scopes = state.scopes.filter(value => value.id !== scope.id);
+      log(scope.id, "Unused scope of work removed");
+      return done("Scope removed. Its allocation is now unallocated within this project.", scope.id);
+    }
     case "saveProjectScope": {
       if (!permit("Administrator")) return fail("Sign in as Administrator to maintain scope budgets.");
       const project = state.sites.find(value => value.id === command.siteId);
@@ -760,6 +786,7 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       if (!permit("Administrator")) return fail("Sign in as Administrator to map a project folder.");
       const site = state.sites.find(value => value.id === command.siteId);
       if (!site || !command.folderId.trim()) return fail("Choose a valid project folder.");
+      if (site.driveFolderId === command.folderId.trim()) return done("This folder is already saved.", site.id);
       site.driveFolderId = command.folderId.trim();
       log(site.id, "Google Drive project folder mapped");
       return done("Project Drive folder saved.");
