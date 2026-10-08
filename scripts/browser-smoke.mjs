@@ -409,6 +409,18 @@ try {
   }
   await call("Emulation.clearDeviceMetricsOverride");
   await run("document.documentElement.dataset.theme='light';return true;");
+  await navigate("/purchase-orders/po1");
+  assert.equal(await run("return document.querySelector('.activity-timeline > details').open;"), false, 'PO activity timeline starts collapsed');
+  assert.match(await run("return document.querySelector('.activity-timeline > details > summary small').textContent.trim();"), /^\d+ history rows · \d+ recorded events$/, 'Collapsed PO timeline states its history counts');
+  await click('Activity timeline', '.activity-timeline > details > summary');
+  await wait("return document.querySelector('.activity-timeline > details').open;");
+  const timelineRows = await run("return document.querySelectorAll('.activity-timeline .audit-history tbody tr').length;");
+  assert.equal(await run("return [...document.querySelectorAll('.activity-timeline .audit-history tbody tr')].filter(row=>row.checkVisibility()).length;"), Math.min(10, timelineRows), 'PO timeline shows at most ten history rows per page');
+  assert.equal(await run("return document.querySelector('.activity-timeline .audit-history').classList.contains('is-paginated');"), true, 'PO timeline history is paginated');
+  assert.equal(await run("return document.querySelector('.activity-timeline .audit-history select[aria-label=\"History rows per page\"]').value;"), '10', 'PO timeline defaults to ten rows per page');
+  assert.equal(await run("return getComputedStyle(document.querySelector('.activity-timeline .audit-history .table-frame')).maxHeight;"), '420px', 'PO timeline history is height bounded');
+  assert.equal(await run("return getComputedStyle(document.querySelector('.activity-timeline .audit-history .table-frame thead th')).position;"), 'sticky', 'PO timeline header stays fixed while scrolling history');
+  assert.equal(await run("return document.documentElement.scrollWidth<=innerWidth+1;"), true, 'Expanded PO timeline adds no horizontal overflow');
   await navigate("/dashboard");
   console.log("Department sign-in passed; checking dashboard");
   await wait("return location.pathname === '/dashboard' && !!document.querySelector('.metric-strip');");
@@ -512,6 +524,8 @@ try {
   assert.equal(await run("return document.querySelector('.request-lifecycle > details').open;"), true);
   assert.equal(await run("return document.querySelectorAll('.lifecycle-summary tbody tr').length;"),4);
   assert.equal(await run("return document.querySelectorAll('.audit-history tbody tr').length;"),50);
+  assert.equal(await run("return document.querySelector('.request-lifecycle .audit-history').classList.contains('is-paginated');"), false, 'MRF lifecycle history keeps progressive loading');
+  assert.equal(await run("return !!document.querySelector('.request-lifecycle .audit-history .register-footer');"), false, 'MRF lifecycle history has no pagination footer');
   await click('Load more history','.audit-history button');
   assert.equal(await run("return document.querySelectorAll('.audit-history tbody tr').length>50;"),true);
   await run("document.querySelector('.audit-save-group').open=true;return true;");

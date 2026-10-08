@@ -150,6 +150,7 @@ The domain command layer in `src/domain/commands.ts` is the authority for permis
 - Desktop navigation is compact and never scrolls. All destinations appear when they fit; shorter windows keep role-primary destinations and expose the rest through More sections, marked active for a secondary route. Mobile retains a scrollable hamburger drawer. Account, department switching, project context, notifications and theme controls remain in the masthead.
 - Project settings, activity details, supplier quotation history and checklist related records use native modals with fixed title/Close and a scrolling body; closing restores the triggering control or a visible fallback. Quotation secondary actions use a More actions popover; operational record links retain their routes.
 - Workspace disclosures keep long expanded headings accessible below the measured workspace header/archive banner. MRF lifecycle always participates while expanded; nested headings do not stack. Material search follows its section heading. Horizontally clipped record headings use one accessible floating control, returning focus to the original toggle after collapse.
+- The purchase order, Accounting record, Finance payment and delivery batch activity timelines are collapsed disclosures whose heading states the history row and recorded event counts. Expanding one shows a height-bounded table with a fixed header and 10/25/50 pagination; every row stays mounted, so expanded grouped saves and printing the complete history are unaffected. The MRF lifecycle combined history keeps its own 50-row progressive loading.
 
 ### Delivery and inventory
 
@@ -320,6 +321,7 @@ When updating it:
 
 | Date | Context change |
 | --- | --- |
+| 2026-10-08 | Made the purchase order, Accounting record, Finance payment and delivery batch activity timelines collapsed, height-bounded and 10/25/50 paginated disclosures with their heading counts, keeping the MRF lifecycle combined history unchanged. |
 | 2026-10-08 | Combined Compare and Allocate into a material-based workspace with atomic confirmed saves, retained edits, mobile navigation, supplier review before PO generation and independent collapsed reports. |
 | 2026-10-07 | Replaced request material cards with a materials table and per-material dialog on both the request form and the request detail page; required fields became columns, invalid rows are flagged, and site stock is now visible on the detail table. |
 | 2026-10-07 | Applied compact adaptive navigation, shared paginated registers, grouped Accounting pages, Delivery/Admin tabs and record-detail modals; retained HML branding and department workflow. |

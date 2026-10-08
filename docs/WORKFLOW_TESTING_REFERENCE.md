@@ -24,6 +24,7 @@ Seven roles are available. Project setup requires no manager assignment; the MRF
 ## Returns and key checks
 
 - [ ] Registers use compact rows, a bounded scroll area, fixed table headers and visible pagination. Test 10/25/50, first/last/empty ranges, filter/sort/project resets, long names, light/dark themes and phone widths.
+- [ ] The purchase order, Accounting, Finance and delivery batch activity timelines start collapsed with their history row and event counts in the heading. Expand one to check the bounded scrolling table, its fixed header, 10/25/50 paging, that grouped saves stay expanded across pages, and that a short or empty history explains itself. The MRF lifecycle combined history keeps its 50-row Load more behaviour.
 - [ ] Accounting pages count MRF groups and keep all matching POs together. Deliveries separates Delivery batches and Ready to schedule, each retaining its own filters/page.
 - [ ] Desktop navigation fits without scrolling; short windows expose secondary routes through More sections, with the active rou
 te indicated. The mobile hamburger drawer scrolls. Every destination remains reachable.

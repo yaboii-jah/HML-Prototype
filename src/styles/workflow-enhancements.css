@@ -171,6 +171,10 @@ details[data-sticky-pinned="true"]>summary{border-radius:var(--radius) var(--rad
 .audit-history td:nth-child(3) { min-width: 130px; }
 .audit-history-footer { display: flex; justify-content: space-between; gap: var(--space-sm); align-items: center; flex-wrap: wrap; margin-top: var(--space-md); }
 .audit-history-footer small { color: var(--muted); }
+.audit-history.is-paginated .table-frame { max-height: 420px; }
+.audit-history.is-paginated .table-frame thead th { position: sticky; top: 0; z-index: 5; white-space: nowrap; background: var(--paper); }
+.audit-history [data-off-page="true"] { display: none; }
+@media print { .audit-history.is-paginated .table-frame { max-height: none; overflow: visible; } .audit-history [data-off-page="true"] { display: table-row; } .audit-history.is-paginated .register-page-controls, .audit-history.is-paginated .register-footer label { display: none !important; } }
 .audit-save-group summary { cursor: pointer; font-weight: 600; }
 .audit-save-group ol { padding-left: 20px; max-height: 360px; overflow: auto; margin-top: var(--space-sm); }
 .audit-save-group li { margin-bottom: var(--space-sm); }
