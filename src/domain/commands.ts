@@ -22,6 +22,7 @@ import { procurementReady, supportingPdf } from "./request-archive.ts";
 import { ROLES, type ArchivedQuoteFile, type DemoSnapshot, type DocumentRef, type DocumentStatus, type Item, type POAdjustment, type POLine, type Priority, type Quote, type Role } from "./types.ts";
 
 export type Command =
+  | { type: "replaceMaterialAwards"; requestId: string; itemId: string; awards: { quoteId: string; quoteLineId: string; quantity: number }[] }
   | { type: "updateSite"; siteId: string; name: string; location: string; budget: number }
   | { type: "removeProjectScope"; siteId: string; id: string }
   | { type: "saveProjectScope"; id?: string; siteId: string; name: string; budget: number }
@@ -400,6 +401,36 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       quote.archive.error = command.error.slice(0, 300);
       log(quote.id, "Drive archive failed", command.error);
       return done("Quotation archive pending. Retry the upload.");
+    }
+    case "replaceMaterialAwards": {
+      if (!permit("Procurement")) return fail("Sign in as Procurement to allocate materials.");
+      const request = state.requests.find(value => value.id === command.requestId);
+      const item = request?.items.find(value => value.id === command.itemId);
+      if (!procurementReady(request) || !item) return fail("Choose a material from an archived approved MRF.");
+      const prior = state.pendingAwards.filter(value => value.requestId === request.id && value.itemId === item.id);
+      const candidates: typeof prior = [];
+      const seen = new Set<string>();
+      for (const award of command.awards) {
+        if (seen.has(award.quoteLineId) || !positive(award.quantity)) return fail("Enter unique offers with positive award quantities.");
+        seen.add(award.quoteLineId);
+        const quote = state.quotes.find(value => value.id === award.quoteId && value.mrfId === request.id);
+        const offer = quote?.lines?.find(value => value.id === award.quoteLineId && value.requestItemId === item.id);
+        if (!quote || !offer || !isFinalizedQuote(quote) || hasFinalizedSuccessor(state, quote.id) || quote.currency && quote.currency !== "PHP") return fail("Use the current finalized PHP quotation.");
+        if (quote.archive && quote.archive.status !== "complete") return fail("Archive this supplier quotation to Google Drive before awarding it.");
+        if (!positive(offer.conversionFactor) || !positive(offer.unitPrice) || !positive(offer.quantity)) return fail("Use a valid reviewed supplier offer.");
+        if (state.pos.some(po => po.mrfId === request.id && po.status !== "rejected" && state.quotes.find(source => source.id === po.quoteId)?.supplierId === quote.supplierId)) return fail("An active PO already exists for this supplier and MRF. Edit that PO draft instead.");
+        const used = state.pos.filter(po => po.quoteId === quote.id && po.status !== "rejected").reduce((sum, po) => sum + (po.lines || []).filter(line => line.quoteLineId === offer.id).reduce((total, line) => total + line.quantity, 0), 0);
+        if (award.quantity + used > offer.quantity * offer.conversionFactor + 0.000001) return fail("Awarded quantity exceeds the supplier's quoted quantity.");
+        candidates.push({ id: prior.find(value => value.quoteLineId === offer.id)?.id || id("award"), requestId: request.id, itemId: item.id, quoteId: quote.id, quoteLineId: offer.id, quantity: award.quantity });
+      }
+      const ordered = state.pos.filter(po => po.mrfId === request.id && po.status !== "rejected").reduce((sum, po) => sum + orderedFor(state, po, item.id), 0);
+      if (ordered + candidates.reduce((sum, value) => sum + value.quantity, 0) > item.quantity + 0.000001) return fail("Awarded quantities exceed the MRF request.");
+      state.pendingAwards = [...state.pendingAwards.filter(value => value.requestId !== request.id || value.itemId !== item.id), ...candidates];
+      for (const award of [...prior, ...candidates.filter(value => !prior.some(old => old.id === value.id))]) {
+        const before = prior.find(value => value.id === award.id), after = candidates.find(value => value.id === award.id);
+        if (before?.quantity !== after?.quantity || before?.quoteId !== after?.quoteId) log(award.id, after ? "Supplier allocation saved" : "Supplier allocation removed");
+      }
+      return done("Material allocations applied.", item.id);
     }
     case "stageAward": {
       if (!permit("Procurement")) return fail("Sign in as Procurement to allocate materials.");

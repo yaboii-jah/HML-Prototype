@@ -78,6 +78,7 @@ html[data-theme="dark"] .quotation-summary-table{--quotation-selected-surface:co
 }
 .register-scroll .numeric{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
 .admin-projects .table-primary,.suppliers-register .table-primary{max-width:32ch}
+.admin-projects .register-scroll tbody tr:hover>.register-actions{background:inherit}
 
 .register:last-child{margin-bottom:0}
 

@@ -563,11 +563,11 @@ try {
   await run("const b=document.querySelector('.request-materials-panel .material-name-trigger');b.focus();b.click();return true;");
   await wait("return !!document.querySelector('.material-edit-dialog[open]');");
   assert.equal(await run("return !!document.querySelector('.material-edit-dialog[open] .data-rows');"), true, 'The read-only material dialog shows its recorded details');
-  await run("document.querySelector('.material-edit-dialog[open] .material-add-actions .button.primary').click();return true;");
+  await run("document.querySelector('.material-view-dialog[open] .material-dialog-heading .button.primary').click();return true;");
   await wait("return !document.querySelector('.material-edit-dialog[open]');");
   assert.equal(await run("return document.activeElement.classList.contains('material-name-trigger');"), true, 'Closing the dialog restores focus to its trigger');
   await navigate(materialLink);
-  assert.equal(await run("return document.querySelectorAll('.material-comparison.is-focused').length;"),1,'Material navigation highlights the relevant comparison');
+  assert.equal(await run("return document.querySelectorAll('.allocation-material-list button[aria-current=true]').length;"),1,'Material navigation highlights the relevant comparison');
   const pageContrastFailures = new Map();
   for (const [page, pageRole] of [["/projects","Management"],["/projects/site-a","Administrator"],["/suppliers","Procurement"],["/requests/m1/quotes","Procurement"],["/purchase-orders/po2/edit","Procurement"],["/accounting/po3","Accounting / Auditing"],["/finance/po3","Finance"],["/deliveries","Logistics"],["/inventory","Site Personnel"],["/accounting/po1","Accounting / Auditing"],["/accounting","Accounting / Auditing"],["/reports","Management"],["/admin","Administrator"]]) {
     await role(pageRole);
@@ -866,14 +866,14 @@ try {
   await editMaterial(0);
   assert.equal(await run("return document.querySelector('.material-edit-dialog input[name^=\"purpose-\"]').value;"), "Ground floor slab construction");
   await closeMaterialEditor();
-  await run("document.querySelector('[aria-label=\"Remove material 3\"]').click();return true;");
+  await run("document.querySelector('[aria-label=\"Delete material 3\"]').click();return true;");
   await wait("return document.querySelectorAll('.material-table tbody tr').length===2;");
-  await run("document.querySelector('[aria-label=\"Remove material 2\"]').click();return true;");
+  await run("document.querySelector('[aria-label=\"Delete material 2\"]').click();return true;");
   await wait("return document.querySelectorAll('.material-table tbody tr').length===1;");
   await click("Next", ".request-wizard-actions button");
   assert.equal(await requestStep(), "3Review & submit");
   await checkRequestWidths(3);
-  assert.equal(await run("return document.querySelector('.request-review').textContent.includes('Portland cement smoke lot');"), true);
+  assert.equal(await run("return document.querySelector('[aria-label=\"Materials review\"]').textContent.includes('Portland cement smoke lot');"), true);
   assert.equal(await run("return document.querySelector('.request-review-instructions').textContent.includes('Deliver after the slab inspection.');"), true);
   await submit('form.form-stack', 'button[value="submit"]');
   assert.equal(await run("return !!document.querySelector('.confirm-dialog[open]');"), false, "Missing PDF is checked before confirmation");
@@ -968,7 +968,7 @@ try {
   for (const width of [1440,1024,768,414,375,320]) {
     await call("Emulation.setDeviceMetricsOverride", { width,height:900,deviceScaleFactor:1,mobile:width<800 });
     await sleep(250);
-    await run("document.querySelector('.quote-review-line').scrollIntoView({block:'start'});return true;");
+    await run("document.querySelector('.quote-editor-lines').scrollIntoView({block:'start'});return true;");
     assert.equal(await run("return document.documentElement.scrollWidth<=innerWidth+1;"),true,`Offered-line review must fit at ${width}px`);
     for (const theme of ["light","dark"]) { await run(`document.documentElement.dataset.theme=${JSON.stringify(theme)};return true;`); await checkContrast(); }
     await run("document.documentElement.dataset.theme='light';return true;");
@@ -978,9 +978,11 @@ try {
   await click("Finalize quotation");
   await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).quotes.some(q=>q.ref==='QT-SMOKE-001'&&q.archive?.status==='complete');`);
   assert.equal((await state()).quotes.find(q=>q.ref==='QT-SMOKE-001').archive.files.length, 2);
-  await click("Allocate", ".procurement-steps button");
-  await fill('.quote-award-line input[type=number]', 20);
-  await fill('textarea', "Confirmed price and availability");
+  await click("Compare & allocate", ".procurement-steps button");
+  await fill('.allocation-offer-table input[type=number]', 20);
+  await click("Apply allocations");
+  await click("Review allocations");
+  await fill('.allocation-review textarea', "Confirmed price and availability");
   await click("Generate supplier PO drafts");
   await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).pos.some(p=>p.mrfId===${JSON.stringify(request.id)});`);
   snapshot = await state(); const po = snapshot.pos.at(-1); assert.equal(po.status, "draft");

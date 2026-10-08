@@ -56,7 +56,7 @@ try {
   const quote={...original,ref:'CONFIRM-FINAL',reviewStatus:'finalized',reviewedAt:'2026-10-07T00:00:00Z',currency:'PHP',lines:[offer],documents:[{name:'Supplier source.pdf',type:'application/pdf',fileId:'confirm-shared-file'}],supplierDetails:{name:'MetroBuild Materials',address:'',tin:'',contactName:'',email:'',phone:''},adjustments:[],archive:{status:'complete',files:[{localFileId:'confirm-shared-file',driveFileId:'confirm-drive',url:'https://drive.google.com/file/d/confirm-drive/view',name:'Supplier source.pdf'}]}};
   const draft={...structuredClone(quote),id:'confirm-draft',ref:'CONFIRM-DRAFT',reviewStatus:'draft',archive:undefined,reviewedAt:undefined,lines:[{...offer,id:'draft-offer'},{...offer,id:'draft-extra',description:'Extra offered material'}],adjustments:[{id:'draft-adjustment',label:'Freight',kind:'shipping',calculation:'fixed',value:100}]};
   fixture.quotes=fixture.quotes.filter(q=>q.mrfId!==request.id);fixture.quotes.push(quote,draft);
-  const load=async()=>{await run(`localStorage.setItem('hml-constructsync-demo-v12',${JSON.stringify(JSON.stringify(fixture))});return true;`);await navigate('/requests/m1/quotes');};
+  const load=async()=>{await run(`localStorage.setItem('hml-constructsync-demo-v12',${JSON.stringify(JSON.stringify(fixture))});return true;`);await navigate('/requests/m1/quotes');await wait("return document.querySelector('.quote-review')?.dataset.quotationId==='confirm-draft'&&!!document.querySelector('.supplier-upload-workbench');");};
   await load();
   await call('Emulation.setDeviceMetricsOverride',{width:1440,height:900,deviceScaleFactor:1,mobile:false});
   assert.equal(await run("return !document.querySelector('.quotation-summary-table')&&document.querySelector('.quote-review').dataset.quotationId==='confirm-draft';"),true,'Supplier tabs replace the review queue and focus the current draft');
@@ -82,7 +82,7 @@ try {
   assert.equal(JSON.parse(await snapshot()).quotes.length,countBefore+1,'Rapid create clicks create exactly one draft');
   await load();
   await press('+ Supplier quotation group');
-  const {root}=await call('DOM.getDocument');const {nodeId}=await call('DOM.querySelector',{nodeId:root.nodeId,selector:'.quote-upload-group input[type=file]'});await call('DOM.setFileInputFiles',{nodeId,files:[queued]});await sleep(100);
+  const {root}=await call('DOM.getDocument');const {nodeId}=await call('DOM.querySelector',{nodeId:root.nodeId,selector:'.supplier-upload-detail input[type=file]'});await call('DOM.setFileInputFiles',{nodeId,files:[queued]});await sleep(100);
   await prompt(buttonCode('Remove group'),{danger:true});
   await prompt("document.querySelector('.quote-file-order button[aria-label^=Remove]').click();return true;",{danger:true});
   await prompt("document.querySelector('.quote-queue-footer .button.primary').click();return true;",{escape:true});
@@ -122,24 +122,24 @@ try {
     }
   }
   await call('Emulation.setDeviceMetricsOverride',{width:1440,height:900,deviceScaleFactor:1,mobile:false});
-  await press('Allocate');
+  await press('Compare & allocate');
   const quantitySelector='.quote-award-edit input';
   const beforeQuantity=await snapshot();await fill(quantitySelector,'8');await sleep(100);
   assert.equal(await snapshot(),beforeQuantity,'Typing an award saves no allocation');
   assert.equal(await run("return [...document.querySelectorAll('button')].find(b=>b.textContent==='Generate supplier PO drafts').disabled;"),true);
-  await prompt(buttonCode('Apply award'));
+  await prompt(buttonCode('Apply allocations'));
   assert.equal(await run("return document.querySelector('.quote-award-edit input').value;"),'8','Cancel preserves typed award');
-  await press('Compare');await press('Allocate');assert.equal(await run("return document.querySelector('.quote-award-edit input').value;"),'8','Step navigation preserves unapplied quantities');
-  await run(buttonCode('Apply award'));await wait("return !!document.querySelector('.confirm-dialog[open]');");await click('.confirm-dialog[open] .confirm-actions button:last-child');
+  await press('Upload & review');await press('Compare & allocate');assert.equal(await run("return document.querySelector('.quote-award-edit input').value;"),'8','Step navigation preserves unapplied quantities');
+  await run(buttonCode('Apply allocations'));await wait("return !!document.querySelector('.confirm-dialog[open]');");await click('.confirm-dialog[open] .confirm-actions button:last-child');
   await wait("return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).pendingAwards.some(a=>a.quoteLineId==='confirm-offer'&&a.quantity===8);");
-  await fill(quantitySelector,'12');await sleep(100);await prompt(buttonCode('Update award'),{escape:true});
+  await fill(quantitySelector,'12');await sleep(100);await prompt(buttonCode('Apply allocations'),{escape:true});
   assert.equal(JSON.parse(await snapshot()).pendingAwards.find(a=>a.quoteLineId==='confirm-offer').quantity,8);
-  await fill(quantitySelector,'0');await sleep(100);await prompt(buttonCode('Remove award'),{danger:true});
-  await press('Reset',"document.querySelector('.quote-award-edit')");assert.equal(await run("return document.querySelector('.quote-award-edit input').value;"),'8');
-  for(const invalid of ['', '-1', '21']){await fill(quantitySelector,invalid);await press('Update award');assert.equal(await run("return !document.querySelector('.confirm-dialog[open]')&&!!document.querySelector('.quote-award-edit .field-error');"),true,'Invalid award shows a field error before confirmation');await press('Reset',"document.querySelector('.quote-award-edit')");}
-  await prompt(buttonCode('Generate supplier PO drafts'));
-  await fill(quantitySelector,'0');await press('Remove award');await click('.confirm-dialog[open] .confirm-actions button:last-child');await wait("return !JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).pendingAwards.some(a=>a.quoteLineId==='confirm-offer');");
-  await load();await press('Compare');await prompt(buttonCode('Generate bid comparison'));
+  await fill(quantitySelector,'0');await sleep(100);await prompt(buttonCode('Apply allocations'));
+  await press('Reset',"document.querySelector('.allocation-material-actions')");assert.equal(await run("return document.querySelector('.quote-award-edit input').value;"),'8');
+  for(const invalid of ['', '-1', '21']){await fill(quantitySelector,invalid);await press('Apply allocations');assert.equal(await run("return !document.querySelector('.confirm-dialog[open]')&&!!document.querySelector('.quote-award-edit .field-error');"),true,'Invalid award shows a field error before confirmation');await press('Reset',"document.querySelector('.allocation-material-actions')");}
+  await press('Review allocations');const beforeReview=await snapshot();await click('.record-dialog[open] .record-modal-close');assert.equal(await snapshot(),beforeReview,'Cancelling supplier review changes no allocations');
+  await fill(quantitySelector,'0');await press('Apply allocations');await click('.confirm-dialog[open] .confirm-actions button:last-child');await wait("return !JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).pendingAwards.some(a=>a.quoteLineId==='confirm-offer');");
+  await load();await press('Compare & allocate');await run("[...document.querySelectorAll('details')].find(d=>d.querySelector('summary strong')?.textContent==='Comparison reports').open=true;return true;");await prompt(buttonCode('Generate bid comparison'));
   quote.archive={status:'pending',files:[],error:'Archive needs retry'};await load();
   await click('[data-quote-id="q1"]');
   await prompt(buttonCode('Retry Drive archive',finalRow));

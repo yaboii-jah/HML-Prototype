@@ -6,14 +6,11 @@ import Link from "next/link";
 import { poStatusLabel } from "@/src/domain/workflow";
 import { useState } from "react";
 import { useDemo } from "@/src/app-state/DemoProvider";
-import { Badge, Empty, Field, InlineError, RecordHeader } from "@/src/components/ui/Primitives";
+import { Badge, Empty, InlineError, RecordHeader } from "@/src/components/ui/Primitives";
 import { useConfirmedAction } from "@/src/components/ui/useConfirmedAction";
 import { MissingRecord } from "@/src/components/ui/States";
-import { money } from "@/src/domain/format";
 import { newId } from "@/src/domain/ids";
 import { latestFinalizedQuotes } from "@/src/domain/procurement";
-import { quoteLineTotal } from "@/src/domain/pricing";
-import { orderedFor } from "@/src/domain/selectors";
 import { procurementReady } from "@/src/domain/request-archive";
 import type { DemoSnapshot, DocumentRef, Quote, QuoteAdjustment, QuoteLine } from "@/src/domain/types";
 import { QuoteDraftEditor } from "./QuoteDraftEditor";
@@ -21,14 +18,13 @@ import { QuotationReviewNavigation } from "./QuotationReviewNavigation";
 import { QuoteDocumentsDialog } from "./QuoteDocumentsDialog";
 import { deleteLocalFile, readQuoteFile, saveQuoteFiles } from "./quote-files";
 import { syncFinalizedQuote } from "./archive-purchasing";
-import { BidComparisonReports } from "./BidComparisonReports";
+import { CompareAllocate } from "./CompareAllocate";
 import { SupplierQuotationUploads, type QuotationUploadGroup as Group } from "./SupplierQuotationUploads";
 
-type Step = "review" | "compare" | "allocation" | "po";
+type Step = "review" | "compare" | "po";
 const num = (value: unknown) => Number.isFinite(Number(value)) ? Number(value) : 0;
 const blankLine = (): QuoteLine => ({ id: newId("offer"), description: "", quantity: 0, unit: "", unitPrice: 0, brand: "", specification: "", requestItemId: "", conversionFactor: 1, varianceReason: "", matchConfirmed: false, matchConfidence: "low", discountType: "none", discountValue: 0, taxRate: 0, printedTotal: null });
 const supplierName = (state: DemoSnapshot, quote: Quote) => quote.supplierDetails?.name || state.suppliers.find(value => value.id === quote.supplierId)?.name || "Unnamed supplier";
-const format = (currency: string | undefined, value: number) => currency === "PHP" || !currency ? money(value) : `${currency} ${value.toFixed(2)}`;
 const blankQuote = (requestId: string, documents: DocumentRef[] = [], supplier = ""): Quote => ({ id: newId("quote"), mrfId: requestId, supplierId: "", ref: "", prices: {}, available: "", leadDays: 0, terms: "", documents, lines: [blankLine()], currency: "PHP", tax: 0, freight: 0, discount: 0, validity: "", extraction: "manual", reviewStatus: "draft", supplierDetails: { name: supplier, address: "", tin: "", contactName: "", email: "", phone: "" }, adjustments: [], quoteDate: "", deliveryTerms: "", quoteNotes: "" });
 function extractedAdjustments(value: Record<string, unknown>): QuoteAdjustment[] {
   const list = Array.isArray(value.adjustments) ? value.adjustments : [];
@@ -44,14 +40,10 @@ export function QuotationWorkspace({ id, initialMaterialId = "" }: { id: string;
   const [previewQuote, setPreviewQuote] = useState<Quote | null>(null);
   const [reviewMode, setReviewMode] = useState<"focused" | "all">("focused");
   const [activeQuoteId, setActiveQuoteId] = useState("");
-  const [reasons, setReasons] = useState<Record<string, string>>({});
-  const [materialFilter, setMaterialFilter] = useState(initialMaterialId);
   const [busy, setBusy] = useState(false);
   const [batchBusy, setBatchBusy] = useState(false);
   const [error, setError] = useState("");
   const { confirmAction, working, confirmation } = useConfirmedAction(setError);
-  const [quantityEdits, setQuantityEdits] = useState<Record<string, string>>({});
-  const [quantityErrors, setQuantityErrors] = useState<Record<string, string>>({});
   const [archivingQuoteId, setArchivingQuoteId] = useState("");
   if (!state) return null;
   const request = state.requests.find(value => value.id === id);
@@ -63,14 +55,6 @@ export function QuotationWorkspace({ id, initialMaterialId = "" }: { id: string;
   const selectedQuote = quotes.find(value => value.id === activeQuoteId) || drafts[0] || finalized[0] || quotes[0];
   const pos = state.pos.filter(value => value.mrfId === id);
   const staged = state.pendingAwards.filter(value => value.requestId === id);
-  const pendingFor = (lineId: string) => staged.find(value => value.quoteLineId === lineId)?.quantity || 0;
-  const unapplied = Object.entries(quantityEdits).some(([lineId, value]) => value.trim() === "" || !Number.isFinite(Number(value)) || Number(value) !== pendingFor(lineId));
-  const resetQuantity = (lineId: string) => {
-    setQuantityEdits(current => { const next = { ...current }; delete next[lineId]; return next; });
-    setQuantityErrors(current => { const next = { ...current }; delete next[lineId]; return next; });
-  };
-  const ordered = (itemId: string) => pos.filter(po => po.status !== "rejected").reduce((total, po) => total + orderedFor(state, po, itemId), 0);
-  const stagedFor = (itemId: string) => staged.filter(value => value.itemId === itemId).reduce((total, value) => total + value.quantity, 0);
   const setGroup = (groupId: string, patch: Partial<Group>) => setGroups(current => current.map(group => group.id === groupId ? { ...group, ...patch } : group));
   const saveDraft = async (quote: Quote) => { const result = await run({ type: "saveQuoteDraft", quote }); if (!result.ok) setError(result.message); return result.ok; };
   const attachDraftFiles = async (quote: Quote, files: File[]) => {
@@ -161,30 +145,6 @@ export function QuotationWorkspace({ id, initialMaterialId = "" }: { id: string;
     catch (cause) { setError(cause instanceof Error ? cause.message : "Reanalysis failed."); }
     });
   };
-  const stage = async (quote: Quote, line: QuoteLine, quantity: number) => {
-    const item = request.items.find(value => value.id === line.requestItemId);
-    const previous = pendingFor(line.id);
-    if (quantity === previous) return;
-    await confirmAction(quantity === 0 ? "Remove this staged award?" : previous ? "Update this staged award?" : "Apply this supplier award?", `${supplierName(state, quote)} · ${quote.ref || "no reference"}\n${item?.name || line.description}: ${previous} → ${quantity} ${item?.unit || line.unit}. This changes staged coverage; purchase orders are generated separately.`, quantity === 0 ? "Remove award" : previous ? "Update award" : "Apply award", async () => {
-      const result = await run({ type: "stageAward", requestId: id, quoteId: quote.id, quoteLineId: line.id, quantity });
-      setError(result.ok ? "" : result.message);
-      if (result.ok) resetQuantity(line.id);
-    }, quantity === 0);
-  };
-  const applyQuantity = async (quote: Quote, line: QuoteLine, max: number) => {
-    const raw = quantityEdits[line.id] ?? String(pendingFor(line.id));
-    const quantity = Number(raw);
-    if (!raw.trim() || !Number.isFinite(quantity) || quantity < 0 || quantity > max) {
-      setQuantityErrors(current => ({ ...current, [line.id]: `Enter a quantity between 0 and ${max}.` })); return;
-    }
-    await stage(quote, line, quantity);
-  };
-  const generate = async () => {
-    if (unapplied) { setError("Apply or reset edited award quantities before generating PO drafts."); return; }
-    await confirmAction("Generate supplier PO drafts?", `${staged.length} staged awards from ${new Set(staged.map(value => value.quoteId)).size} supplier quotations will become purchase order drafts for review.`, "Generate PO drafts", async () => {
-      const result = await run({ type: "generateAwardPOs", requestId: id, reasons }); if (result.ok) { setStep("po"); setError(""); } else setError(result.message);
-    });
-  };
   const removeGroup = async (group: Group, position: number) => {
     const remove = () => setGroups(current => current.filter(value => value.id !== group.id));
     if (!group.files.length) { if (!working) remove(); return; }
@@ -217,7 +177,7 @@ export function QuotationWorkspace({ id, initialMaterialId = "" }: { id: string;
     <RecordHeader backHref={`/requests/${id}`} backLabel={request.ref} eyebrow="PROCUREMENT · QUOTATION REVIEW" title="Compare supplier quotations" badges={<Badge value={request.status}/>}/>
     <p className="muted">Review each supplier offer, confirm its MRF matches, allocate quantities, and prepare supplier purchase orders.</p>
     {request.status === "approved" && (request.correction || request.archive?.status === "pending") && <div className="callout warn"><strong>Purchasing is paused</strong><p>{request.correction ? "Procurement is waiting for a corrected MRF and its new Drive archive." : "The approved MRF is waiting for its Google Drive archive. Procurement or an Administrator can retry from the request page."}</p></div>}
-    <nav className="procurement-steps" aria-label="Procurement steps">{(["review", "compare", "allocation", "po"] as const).map((value, index) => <button key={value} type="button" className={step === value ? "active" : ""} onClick={() => { setStep(value); setError(""); }}><span>{String(index + 1).padStart(2, "0")}</span>{({ review: "Upload & review", compare: "Compare", allocation: "Allocate", po: "PO preparation" })[value]}<small>{({ review: `${drafts.length} draft · ${finalized.length} finalized`, compare: `${finalized.length} suppliers`, allocation: `${staged.length} staged`, po: `${pos.length} POs` })[value]}</small></button>)}</nav>
+    <nav className="procurement-steps" aria-label="Procurement steps">{(["review", "compare", "po"] as const).map((value, index) => <button key={value} type="button" className={step === value ? "active" : ""} onClick={() => { setStep(value); setError(""); }}><span>{String(index + 1).padStart(2, "0")}</span>{({ review: "Upload & review", compare: "Compare & allocate", po: "PO preparation" })[value]}<small>{({ review: `${drafts.length} draft · ${finalized.length} finalized`, compare: `${finalized.length} suppliers · ${staged.length} saved awards`, po: `${pos.length} POs` })[value]}</small></button>)}</nav>
     {step === "review" && <>
       {canEdit && <SupplierQuotationUploads groups={groups} locked={working || busy || batchBusy} extracting={batchBusy} onAdd={() => { const group: Group = { id: newId("group"), files: [], status: "ready" }; setGroups(current => [...current, group]); return group.id; }} onFiles={addGroupFiles} onOrder={(group, files) => setGroup(group.id, { files })} onRemove={removeGroup} onRemoveFile={removeGroupFile} onManual={startManual} onExtract={extractReady}/>}
       {!quotes.length ? <section className="panel"><Empty detail="Add a supplier quotation to start the review."/></section> : <>
@@ -230,35 +190,8 @@ export function QuotationWorkspace({ id, initialMaterialId = "" }: { id: string;
         </>}/>) }
       </>}
     </>}
-    {step === "compare" && <section className="panel"><h2 className="panel-title">Compare finalized offers</h2><p className="helper-note">Review offers by required MRF material. Procurement chooses awards in the next step.</p><Field label="Show MRF material"><select value={request.items.some(item => item.id === materialFilter) ? materialFilter : ""} onChange={event => setMaterialFilter(event.target.value)}><option value="">All materials</option>{request.items.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></Field>{!finalized.length ? <Empty detail="Finalize at least one supplier quotation to compare offers."/> : <div className="material-comparison-list">{request.items.filter(item => !materialFilter || !request.items.some(value => value.id === materialFilter) || item.id === materialFilter).map(item => <article className={`material-comparison ${materialFilter === item.id ? "is-focused" : ""}`} key={item.id}><header><div><span className="eyebrow">MRF MATERIAL</span><h3>{item.name}</h3><small>{item.quantity} {item.unit} requested · {Math.max(0, item.quantity - ordered(item.id) - stagedFor(item.id))} unawarded</small></div></header><div className="table-frame"><table className="quote-material-table"><thead><tr><th>Supplier</th><th>Offered material</th><th>Quantity</th><th>Unit price</th><th>Difference</th></tr></thead><tbody>{finalized.flatMap(quote => { const offers = (quote.lines || []).filter(line => line.requestItemId === item.id); return offers.length ? offers.map(line => <tr key={line.id}><td><strong>{supplierName(state, quote)}</strong><small>{quote.ref} · v{quote.version || 1}</small></td><td>{line.description}{line.brand && <small>{line.brand}</small>}</td><td>{line.quantity * line.conversionFactor} {item.unit}</td><td><strong>{format(quote.currency, quoteLineTotal(line) / (line.quantity * line.conversionFactor))} / {item.unit}</strong></td><td>{line.varianceReason || "—"}</td></tr>) : [<tr key={quote.id}><td>{supplierName(state, quote)}</td><td colSpan={4} className="muted">Not quoted</td></tr>]; })}</tbody></table></div></article>)}</div>}</section>}
-    {step === "allocation" && <>
-      <section className="panel"><h2 className="panel-title">MRF award coverage</h2><p className="helper-note">Coverage reflects applied awards. Apply or reset edited quantities before generating purchase order drafts.</p><div className="table-frame quote-coverage-table"><table><thead><tr><th>Goods</th><th>Unit</th><th>Requested</th><th>Ordered</th><th>Staged</th><th>Remaining</th></tr></thead><tbody>{request.items.map(item => <tr key={item.id}><th scope="row">{item.name}</th><td>{item.unit}</td><td>{item.quantity}</td><td>{ordered(item.id)}</td><td>{stagedFor(item.id)}</td><td>{Math.max(0,item.quantity - ordered(item.id) - stagedFor(item.id))}</td></tr>)}</tbody></table></div></section>
-      {finalized.filter(quote => quote.currency === "PHP" || !quote.currency).map(quote => <section className="panel" key={quote.id}>
-        <h2 className="panel-title">{supplierName(state, quote)} · {quote.ref}</h2><p className="helper-note">Award up to the remaining MRF and supplier-offered quantities. Unmatched lines stay outside the award.</p>
-        {quote.lines?.filter(line => line.requestItemId).map(line => {
-          const item = request.items.find(value => value.id === line.requestItemId); if (!item) return null;
-          const existing = pendingFor(line.id);
-          const usedOffer = pos.filter(po => po.status !== "rejected" && po.quoteId === quote.id).reduce((sum, po) => sum + (po.lines || []).filter(value => value.quoteLineId === line.id).reduce((count, value) => count + value.quantity, 0), 0);
-          const max = Math.max(0, Math.min(item.quantity - ordered(item.id) - stagedFor(item.id) + existing, line.quantity * line.conversionFactor - usedOffer));
-          const edited = quantityEdits[line.id];
-          const dirty = edited !== undefined && (edited.trim() === "" || Number(edited) !== existing);
-          const blocked = !canEdit || working || quote.archive?.status === "pending";
-          return <div className="quote-award-line" key={line.id}>
-            <div><strong>{item.name}</strong><small>{line.description} · {format(quote.currency, line.unitPrice / line.conversionFactor)} / {item.unit}</small><small>Up to {max} {item.unit} available</small></div>
-            <div className="quote-award-edit"><Field label={`Award quantity (${item.unit})`} error={quantityErrors[line.id]}><input type="number" min="0" max={max} step="any" disabled={blocked} value={edited ?? existing} onChange={event => { setQuantityEdits(current => ({ ...current, [line.id]: event.target.value })); setQuantityErrors(current => ({ ...current, [line.id]: "" })); }}/></Field>
-            {canEdit && <div className="button-row"><button type="button" className={`button ${edited?.trim() !== "" && Number(edited) === 0 && existing > 0 ? "danger-outline" : "secondary"}`} disabled={blocked || !dirty} onClick={() => void applyQuantity(quote, line, max)}>{edited?.trim() !== "" && Number(edited) === 0 && existing > 0 ? "Remove award" : existing > 0 ? "Update award" : "Apply award"}</button>{dirty && <button type="button" className="text-link" disabled={working} onClick={() => resetQuantity(line.id)}>Reset</button>}</div>}
-            </div>
-          </div>;
-        })}
-        {!quote.lines && <p className="helper-note">Legacy quotation · existing linked POs remain available.</p>}
-        {canEdit && staged.some(value => value.quoteId === quote.id) && <Field label="Supplier selection reason (optional)"><textarea value={reasons[quote.supplierId] || ""} onChange={event => setReasons(current => ({ ...current, [quote.supplierId]: event.target.value }))}/></Field>}
-      </section>)}
-      {!finalized.length && <section className="panel"><Empty detail="Finalize a PHP quotation to allocate materials."/></section>}
-      {canEdit && <><p className="helper-note" role="status">{unapplied ? "Apply or reset edited award quantities before generating PO drafts." : "All award quantities are applied."}</p>{unapplied && <button type="button" className="text-link" disabled={working} onClick={() => { setQuantityEdits({}); setQuantityErrors({}); }}>Reset unapplied quantities</button>}<div className="form-actions"><button type="button" className="button primary" disabled={!staged.length || unapplied || working} onClick={() => void generate()}>Generate supplier PO drafts</button></div></>}
-    </>}
+    <div hidden={step !== "compare"}><CompareAllocate state={state} request={request} initialMaterialId={initialMaterialId} canEdit={canEdit} working={working} confirmAction={confirmAction} onGenerated={() => { setStep("po"); setError(""); }} onPreview={setPreviewQuote}/></div>
     {step === "po" && <section className="panel"><h2 className="panel-title">Purchase orders from this MRF</h2><p className="helper-note">Confirm each draft&apos;s line discounts and quote adjustments before submitting it to Accounting. Item delivery locations come from the approved MRF.</p>{!pos.length && <Empty detail="Stage supplier awards, then generate PO drafts."/>}{pos.map(po => { const quote = quotes.find(value => value.id === po.quoteId); return <Link className="data-link" href={`/purchase-orders/${po.id}`} key={po.id}><span>{po.ref} · {quote ? supplierName(state, quote) : "Supplier"}</span><Badge value={po.status}>{poStatusLabel(po.status)}</Badge></Link>; })}</section>}
-    {step === "compare" && <BidComparisonReports requestId={id}/>}
-    {staged.filter(value => !finalized.some(quote => quote.id === value.quoteId)).map(value => { const quote = quotes.find(item => item.id === value.quoteId); const offer = quote?.lines?.find(item => item.id === value.quoteLineId); return quote && offer && <div className="callout warn" key={value.id}>A staged award from {quote.ref} uses an earlier quotation revision. <button type="button" className="text-link" disabled={!canEdit || working} onClick={() => void stage(quote, offer, 0)}>Remove stale award</button></div>; })}
     <InlineError message={error}/>
     </fieldset>
     {previewQuote && <QuoteDocumentsDialog key={previewQuote.id} quote={previewQuote} onClose={() => setPreviewQuote(null)}/>}

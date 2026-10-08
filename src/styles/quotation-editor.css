@@ -22,10 +22,16 @@
 .quote-editor-title p{margin:6px 0 0;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.quote-editor-title>small{display:block;margin-top:4px;color:var(--muted);font-size:11px}
 .quote-editor-header-actions{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap;max-width:50%}
 .quote-editor-header-actions>.button{min-height:34px;padding:6px 10px;font-size:12px}
-.quote-editor-issues{margin-bottom:16px;padding:12px 16px;border:1px solid var(--color-badge-rule-3);border-radius:7px;background:var(--color-badge-surface-3);font-size:12px}
-.quote-editor-issues ul{margin:6px 0;padding-left:18px}.quote-editor-issues .text-link{font-weight:400;text-align:left;color:var(--ink);font-size:12px;max-width:100%;min-width:0;white-space:normal;overflow-wrap:anywhere}.quote-editor-issues .text-link:hover{text-decoration:underline}
+.quote-editor-issues{position:fixed;inset:auto;margin:0;width:min(360px,calc(100vw - 16px));max-height:min(420px,calc(100dvh - 16px));overflow:auto;padding:12px 16px;border:1px solid var(--color-badge-rule-3);border-radius:7px;background:var(--color-badge-surface-3);color:var(--color-badge-ink-3);box-shadow:var(--shadow);font-size:12px}
+.quote-editor-header-actions .quote-review-trigger{border-color:var(--color-badge-rule-3);background:var(--color-badge-surface-3);color:var(--color-badge-ink-3)}
+.quote-review-trigger:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+.quote-editor-issues button:focus-visible{outline:3px solid var(--color-badge-ink-3);outline-offset:2px}
+.quote-review-count-status{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.quote-editor-issues ul{margin:6px 0;padding-left:18px}.quote-editor-issues .text-link{font-weight:400;text-align:left;color:inherit;font-size:12px;max-width:100%;min-width:0;white-space:normal;overflow-wrap:anywhere}.quote-editor-issues .text-link:hover{text-decoration:underline}
 .quote-editor-field-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0 16px}
 .quote-editor-panel .collapsible-section{margin:12px 0}.quote-editor-panel .collapsible-body{padding:16px}
+.quote-documents-section>summary>span:first-child{display:flex;align-items:center;flex-wrap:wrap;gap:4px 12px}
+.quote-documents-section>summary small{margin-top:0}
 .quote-editor-material-heading{margin:20px 0 12px}.quote-editor-material-heading h3{margin:0 0 6px}.quote-editor-material-heading p{margin:0}
 .quote-editor-material-tools{display:flex;align-items:center;gap:8px;margin-bottom:12px}.quote-editor-material-tools input{flex:1;min-width:0}.quote-editor-material-tools select{max-width:180px}
 .quote-editor-lines{max-width:100%;overflow-x:auto;overscroll-behavior-x:contain;box-shadow:none}

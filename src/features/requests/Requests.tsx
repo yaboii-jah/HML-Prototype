@@ -460,21 +460,23 @@ function RequestMaterialList({ state, siteId, items, requestId }: { state: DemoS
           </tr>;
         })}</tbody>
       </table></div>}
-    <dialog ref={viewDialogRef} className="material-edit-dialog" aria-labelledby="material-view-title" onCancel={event => { event.preventDefault(); closeViewer(); }}>
+    <dialog ref={viewDialogRef} className="material-edit-dialog material-view-dialog" aria-labelledby="material-view-title" onCancel={event => { event.preventDefault(); closeViewer(); }}>
       {(() => { const item = items.find(value => value.id === viewingId); const index = items.findIndex(value => value.id === viewingId);
         if (!item) return null;
         return <>
-          <div className="material-dialog-heading"><div><span className="eyebrow">{'MATERIAL ' + (index + 1) + ' OF ' + items.length}</span><h2 id="material-view-title">{item.name || 'Unnamed material'}</h2></div><button type="button" className="icon-button" aria-label="Close material details" onClick={closeViewer}>×</button></div>
-          <div className="data-rows material-view-rows">
-            <div><span>Requested</span><strong>{item.quantity} {item.unit}</strong></div>
-            <div><span>Site stock</span><strong>{stockFor(state, siteId, item.name, item.unit)} {item.unit}</strong></div>
-            <div><span>Date needed</span><strong>{item.neededDate ? dateText(item.neededDate) : "—"}</strong></div>
-            <div><span>Purpose</span><strong>{item.purpose || "—"}</strong></div>
-            <div><span>Delivery location</span><strong>{item.location || "—"}</strong></div>
-            {item.remarks && <div><span>Remarks</span><strong>{item.remarks}</strong></div>}
+          <div className="material-dialog-heading"><span className="eyebrow">{'MATERIAL ' + (index + 1) + ' OF ' + items.length}</span><button type="button" className="button primary" onClick={closeViewer}>Close</button></div>
+          <div className="material-view-content">
+            <h2 id="material-view-title">{item.name || 'Unnamed material'}</h2>
+            <div className="data-rows material-view-rows">
+              <div><span>Requested</span><strong>{item.quantity} {item.unit}</strong></div>
+              <div><span>Site stock</span><strong>{stockFor(state, siteId, item.name, item.unit)} {item.unit}</strong></div>
+              <div><span>Date needed</span><strong>{item.neededDate ? dateText(item.neededDate) : "—"}</strong></div>
+              <div><span>Purpose</span><strong>{item.purpose || "—"}</strong></div>
+              <div><span>Delivery location</span><strong>{item.location || "—"}</strong></div>
+              {item.remarks && <div><span>Remarks</span><strong>{item.remarks}</strong></div>}
+            </div>
+            {offersFor(item.id) && <div className="request-material-match"><small>Supplier offers match this material</small><Link className="text-link" href={`/requests/${requestId}/quotes?materialId=${encodeURIComponent(item.id)}`}>View matching offers</Link></div>}
           </div>
-          {offersFor(item.id) && <div className="request-material-match"><small>Supplier offers match this material</small><Link className="text-link" href={`/requests/${requestId}/quotes?materialId=${encodeURIComponent(item.id)}`}>View matching offers</Link></div>}
-          <div className="material-add-actions"><button type="button" className="button primary" onClick={closeViewer}>Close</button></div>
         </>;
       })()}
     </dialog>

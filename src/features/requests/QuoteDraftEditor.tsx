@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { adjustmentClassification } from "@/src/domain/expense-classification";
 import { CollapsibleSection, revealField } from "@/src/components/ui/CollapsibleSection";
 import { RegisterFrame } from "@/src/components/ui/Register";
@@ -22,7 +22,10 @@ const emptySupplier = (): SupplierQuoteDetails => ({ name: "", address: "", tin:
 
 export function QuoteDraftEditor({ state, request, quote, onSave, onFinalize, onAttach, onRemoveDocument, onConfirmAction, disabled = false, readOnly = false, compact = false, actions }: Props) {
   const root = useRef<HTMLElement>(null), detailFocus = useRef<string | null>(null), detailsInvoker = useRef<string | null>(null);
-  const [detailsId, setDetailsId] = useState<string | null>(null), [search, setSearch] = useState(""), [filter, setFilter] = useState("all"), [page, setPage] = useState(1), [size, setSize] = useState(10), [allIssues, setAllIssues] = useState(false);
+  const [detailsId, setDetailsId] = useState<string | null>(null), [search, setSearch] = useState(""), [filter, setFilter] = useState("all"), [page, setPage] = useState(1), [size, setSize] = useState(10);
+  const issuesId = useId(), issuesPanel = useRef<HTMLDivElement>(null), issuesTrigger = useRef<HTMLButtonElement>(null);
+  const navigatingIssue = useRef(false);
+  const [issuesOpen, setIssuesOpen] = useState(false);
   const [pendingFocus, setPendingFocus] = useState<string | null>(null);
   const lines = quote.lines || [], issues = quoteReviewIssues(state, quote), editable = !readOnly && !disabled;
   const fieldId = (name: string) => `quote-${quote.id}-${name}`;
@@ -61,7 +64,25 @@ export function QuoteDraftEditor({ state, request, quote, onSave, onFinalize, on
     });
     return () => cancelAnimationFrame(frame);
   }, [pendingFocus, currentPage, lines.length, search, filter]);
+  useEffect(() => {
+    if (!issuesOpen) return;
+    const position = () => {
+      const panel = issuesPanel.current, trigger = issuesTrigger.current;
+      if (!panel || !trigger || !panel.matches(":popover-open")) return;
+      const anchor = trigger.getBoundingClientRect(), rect = panel.getBoundingClientRect();
+      panel.style.left = Math.max(8, Math.min(innerWidth - rect.width - 8, anchor.right - rect.width)) + "px";
+      const below = anchor.bottom + 8;
+      panel.style.top = Math.max(8, Math.min(innerHeight - rect.height - 8, below + rect.height <= innerHeight - 8 ? below : anchor.top - rect.height - 8)) + "px";
+    };
+    position();
+    issuesPanel.current?.querySelector<HTMLButtonElement>("li button")?.focus({ preventScroll: true });
+    window.addEventListener("resize", position);
+    window.addEventListener("scroll", position, true);
+    return () => { window.removeEventListener("resize", position); window.removeEventListener("scroll", position, true); };
+  }, [issuesOpen]);
   const jump = (location: typeof locations[number]) => {
+    navigatingIssue.current = true;
+    issuesPanel.current?.hidePopover();
     if (location.offer) {
       setSearch(""); setFilter("all"); setPage(Math.floor(lines.findIndex(offer => offer.id === location.offer!.id) / size) + 1);
       if (location.secondary) { detailFocus.current = lineFieldId(location.offer.id, location.field); detailsInvoker.current = location.offer.id; setDetailsId(location.offer.id); }
@@ -77,8 +98,11 @@ export function QuoteDraftEditor({ state, request, quote, onSave, onFinalize, on
   const headerField = (name: string, label: string, value: string | number, change: (value: string) => void, type = "text") => <Field key={name} label={label}><input id={fieldId(name)} type={type} min={type === "number" ? 0 : undefined} value={value} onChange={event => change(event.target.value)}/></Field>;
   return <>
     <section ref={root} id={`quote-panel-${quote.id}`} className={`panel quote-review quote-editor-panel${readOnly ? " is-readonly" : ""}`} data-quotation-id={quote.id}>
-      <header className="quote-editor-header"><div className="quote-editor-title"><div><h2>{quote.supplierDetails?.name || state.suppliers.find(value => value.id === quote.supplierId)?.name || "Unnamed supplier"}</h2><Badge>{quote.reviewStatus || "finalized"}</Badge><Badge>{quote.extraction === "gemini" ? "AI extracted" : quote.extraction === "manual" ? "Manual entry" : "Legacy"}</Badge></div><p title={quote.documents.map(document => document.name).join(" · ")}>{quote.documents[0]?.name || "No supplier files attached"}{quote.documents.length > 1 ? ` · +${quote.documents.length - 1} files` : ""} · {quote.ref || "Reference needed"} · v{quote.version || 1}</p><small>{readOnly ? "Read-only quotation" : "Draft saved automatically"}</small></div><div className="quote-editor-header-actions">{!readOnly && <><button type="button" data-add-line className="button secondary" disabled={disabled} onClick={() => void addLine()}>+ Add line</button><button className="button primary" type="button" disabled={disabled || issues.length > 0} onClick={() => void onFinalize()}>Finalize quotation</button></>}{actions}</div></header>
-      {!readOnly && issues.length > 0 && <div className="quote-editor-issues" role="status"><strong>{issues.length} review items before finalizing</strong><ul>{(allIssues ? locations : locations.slice(0, 5)).map((location, index) => <li key={`${location.message}-${index}`}><button type="button" className="text-link" onClick={() => jump(location)}>{location.message}</button></li>)}</ul>{issues.length > 5 && <button type="button" className="text-link" onClick={() => setAllIssues(value => !value)}>{allIssues ? "Show fewer issues" : `Show all ${issues.length} issues`}</button>}</div>}
+      <header className="quote-editor-header"><div className="quote-editor-title"><div><h2>{quote.supplierDetails?.name || state.suppliers.find(value => value.id === quote.supplierId)?.name || "Unnamed supplier"}</h2><Badge>{quote.reviewStatus || "finalized"}</Badge><Badge>{quote.extraction === "gemini" ? "AI extracted" : quote.extraction === "manual" ? "Manual entry" : "Legacy"}</Badge></div><p title={quote.documents.map(document => document.name).join(" · ")}>{quote.documents[0]?.name || "No supplier files attached"}{quote.documents.length > 1 ? ` · +${quote.documents.length - 1} files` : ""} · {quote.ref || "Reference needed"} · v{quote.version || 1}</p><small>{readOnly ? "Read-only quotation" : "Draft saved automatically"}</small></div><div className="quote-editor-header-actions">{!readOnly && <><button type="button" data-add-line className="button secondary" disabled={disabled} onClick={() => void addLine()}>+ Add line</button><span className="quote-review-count-status" role="status">{issues.length > 0 ? issues.length + " review " + (issues.length === 1 ? "item" : "items") + " before finalizing" : "Quotation ready to finalize"}</span>{issues.length > 0 && <button ref={issuesTrigger} className="button quote-review-trigger" type="button" popoverTarget={issuesId} aria-expanded={issuesOpen} aria-controls={issuesId}>{issues.length} review {issues.length === 1 ? "item" : "items"}</button>}<button className="button primary" type="button" disabled={disabled || issues.length > 0} onClick={() => void onFinalize()}>Finalize quotation</button></>}{actions}</div></header>
+      {!readOnly && issues.length > 0 && <div ref={issuesPanel} id={issuesId} popover="auto" className="quote-editor-issues" aria-labelledby={issuesId + "-title"} onBeforeToggle={event => {
+        if (event.newState === "open") navigatingIssue.current = false;
+        else if (!navigatingIssue.current) issuesTrigger.current?.focus({ preventScroll: true });
+      }} onToggle={event => setIssuesOpen(event.newState === "open")}><strong id={issuesId + "-title"}>{issues.length} review {issues.length === 1 ? "item" : "items"} before finalizing</strong><ul>{locations.map((location, index) => <li key={location.message + "-" + index}><button type="button" className="text-link" onClick={() => jump(location)}>{location.message}</button></li>)}</ul></div>}
       <CollapsibleSection key={`${quote.id}-${compact}`} title="Supplier and quotation details" defaultOpen={!compact}><fieldset className="quotation-operation-fields" disabled={!editable}><div className="quote-editor-field-grid">
         {headerField("supplierName", "Supplier name", quote.supplierDetails?.name || state.suppliers.find(value => value.id === quote.supplierId)?.name || "", value => supplier({ name: value }))}
         {headerField("ref", "Quotation reference", quote.ref, value => patch({ ref: value }))}
@@ -97,7 +121,7 @@ export function QuoteDraftEditor({ state, request, quote, onSave, onFinalize, on
         {headerField("deliveryTerms", "Delivery terms", quote.deliveryTerms || "", value => patch({ deliveryTerms: value }))}
         <Field label="Quotation notes"><textarea id={fieldId("quoteNotes")} value={quote.quoteNotes || ""} onChange={event => patch({ quoteNotes: event.target.value })}/></Field>
       </div></CollapsibleSection></fieldset></CollapsibleSection>
-      <CollapsibleSection title="Supplier quotation documents" summary={`${quote.documents.length} files attached`} defaultOpen={!quote.documents.length && !readOnly}>
+      <CollapsibleSection className="quote-documents-section" title="Supplier quotation documents" summary={`${quote.documents.length} ${quote.documents.length === 1 ? "file" : "files"} attached`} defaultOpen={!quote.documents.length && !readOnly}>
         <div id={fieldId("documents")} tabIndex={-1} className="quote-document-attachments">{quote.documents.map(document => <div className="quote-document-attachment" key={document.fileId || document.name}><span>{document.name}</span>{document.fileId && !readOnly && <button type="button" className="text-link" disabled={disabled} onClick={() => void onRemoveDocument(document.fileId!)}>Remove</button>}</div>)}{!readOnly && <label className="button secondary file-button">+ Add supplier files<input type="file" accept=".pdf,.jpg,.jpeg,.png,.webp" multiple disabled={disabled} onChange={event => { const files = Array.from(event.target.files || []); event.target.value = ""; if (files.length) void onAttach(files); }}/></label>}{!quote.documents.length && <p className="helper-note">No original supplier documents attached.</p>}</div>
       </CollapsibleSection>
       <div id={fieldId("materials")} tabIndex={-1} className="quote-editor-material-heading"><h3>Offered materials · {lines.length}</h3><p className="helper-note">Confirm suggested MRF matches against the source. Unmatched extras cannot be awarded.</p></div>

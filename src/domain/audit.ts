@@ -65,7 +65,7 @@ export function auditChanges(previous: DemoSnapshot, state: DemoSnapshot, comman
     case "savePO": case "saveAccountingPO": return fieldsChanged(previous.pos.find(value => value.id === command.id), state.pos.find(value => value.id === command.id), ["notes", "document", "financial", "lines", "adjustments", "tax", "freight", "discount", "paymentMode"]);
     case "savePaymentRequest": return fieldsChanged(previous.paymentRequests.find(value => value.id === command.id), state.paymentRequests.find(value => value.id === command.id), ["amount", "note"]);
     case "setPriority": return fieldsChanged(previous.paymentRequests.find(value => value.id === command.id), state.paymentRequests.find(value => value.id === command.id), ["priority"]);
-    case "stageAward": return ["Supplier allocation quantity"];
+    case "stageAward": case "replaceMaterialAwards": return ["Supplier allocation quantity"];
     case "saveDocuments": return fieldsChanged(previous.accounting.find(value => value.poId === command.poId), state.accounting.find(value => value.poId === command.poId), ["review", "invoiceRef", "receiptRef", "note"]);
     default: return [];
   }
@@ -81,7 +81,7 @@ export function auditKind(command: Command, previous: DemoSnapshot): AuditEventT
     case "saveQuoteDraft": return previous.quotes.some(value => value.id === command.quote.id) ? "quote.draft.updated" : "quote.draft.created";
     case "deleteQuoteDraft": return "quote.draft.deleted";
     case "finalizeQuote": case "saveReviewedQuote": return "quote.finalized";
-    case "stageAward": return "allocation.changed";
+    case "stageAward": case "replaceMaterialAwards": return "allocation.changed";
     case "createAwardPO": case "createPO": case "generateAwardPOs": return "po.created";
     case "savePO": case "saveAccountingPO": return "po.saved";
     case "reviewPO": return "po.reviewed";

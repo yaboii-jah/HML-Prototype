@@ -66,6 +66,10 @@ details[data-sticky-pinned="true"]>summary{border-radius:var(--radius) var(--rad
 .material-comparison.is-focused{outline:2px solid var(--brand);outline-offset:3px}
 .request-material-match{padding:var(--space-sm) var(--space-md);border-top:1px solid var(--line);display:flex;gap:var(--space-sm);justify-content:space-between;align-items:center;flex-wrap:wrap}
 .material-edit-dialog .request-material-match{border-top:1px solid var(--line);margin-top:var(--space-sm)}
+.material-view-dialog .material-dialog-heading .eyebrow{margin:0}
+.material-view-dialog .material-dialog-heading .button{flex:none}
+.material-view-content{margin-top:20px;min-width:0}
+.material-view-content h2{margin:0 0 12px;font-size:22px;overflow-wrap:anywhere}
 .request-material-match small{color:var(--muted)}
 .request-material-summary{display:block;color:var(--muted);font-size:12px;font-weight:400;margin-top:var(--space-xs)}
 .accounting-group-balance{display:block;font-size:20px}
@@ -132,7 +136,7 @@ details[data-sticky-pinned="true"]>summary{border-radius:var(--radius) var(--rad
 .admin-edit-project fieldset,.admin-add-project fieldset{min-width:0;border:0;margin:0;padding:0}
 .admin-drive-settings h3{margin-bottom:var(--space-md)}
 .admin-drive-settings .drive-folder-form{display:grid;gap:var(--space-sm)}
-.admin-drive-settings .drive-folder-form>.button,.admin-drive-settings .drive-folder-form>.text-link{justify-self:start}
+.admin-drive-settings .drive-folder-actions{display:flex;align-items:center;flex-wrap:wrap;gap:16px}
 .admin-drive-settings .drive-folder-form .field{margin:0}
 .admin-feedback{padding:var(--space-sm) var(--space-md);margin-block:var(--space-sm);border:1px solid var(--line);border-radius:var(--radius);background:var(--paper);overflow-wrap:anywhere}
 .admin-feedback.success{color:var(--good)}

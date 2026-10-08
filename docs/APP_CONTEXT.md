@@ -2,7 +2,7 @@
 
 > **Living document:** This is the canonical, implementation-aligned context for the application. Update this file in the same change whenever a major implementation changes the product scope, business workflow, domain model, permissions, routes, persistence, seeded walkthrough, architecture, or verification strategy. Do not record small visual polish, copy edits, or isolated bug fixes unless they change one of those areas.
 
-**Last verified:** 2026-10-07
+**Last verified:** 2026-10-08
 **Application version:** Prototype (`package.json` 0.1.0)
 **State schema:** `DemoSnapshot` version 12
 
@@ -89,6 +89,11 @@ The domain command layer in `src/domain/commands.ts` is the authority for permis
 - Quotation review uses supplier/reference/version tabs and a searchable All quotations selector, replacing the summary queue table. Focused is the default; All quotations shows every quotation sheet with supplier fields collapsed. Draft core fields edit inline in a searchable/filterable material table with 10/25-line pages. Offered materials keep normal table rows and headers at every width, with an 1800px minimum and at least 160px more width than the viewport, fixed minimum column widths, and horizontal scrolling in the shared dashboard register frame. Its viewport caps at 520px, with sticky headers and pagination outside the scrolling body; changing pages resets vertical scrolling. Match metadata, validation messages, totals and actions do not wrap; supplier descriptions can wrap in their textareas. Details retains conversion, specifications, pricing differences, source-page metadata and notes. Issue links reveal the appropriate quote field or material page; validation always covers the full quotation. Finalized/historical quotations and non-Procurement access remain read-only, with the existing revision/reanalysis/Drive actions. Delete draft is a direct danger-outline header button with confirmation; secondary actions appear directly when there is only one, use More actions for multiple options, and render nothing when empty. Source files, confirmed removals, adjustments, pricing calculations and local autosaving stay intact.
 
 ### Quotations and purchase orders
+
+- Procurement uses three steps: Upload & review, Compare & allocate, and PO preparation. Compare & allocate has a searchable All/Remaining/Edited material list, selected-material offer table, saved coverage, base converted prices and optional offer details. Mobile uses separate material-list/detail views. Fill remaining proposes quantities for the user-selected offer within MRF and supplier capacity; it does not save.
+- Apply allocations confirms all changed supplier quantities for one material, then uses the atomic replaceMaterialAwards command. Full-capacity redistribution works without intermediate removals. Applied awards persist; edited quantities remain temporary while the workspace is open, survive material/step navigation, and block PO generation until applied or reset. Reset discards only the selected material's edits. Saved and edited coverage remain distinct.
+- The footer opens a supplier-grouped review dialog with optional supplier reasons and the final Generate supplier PO drafts action; this dialog is the generation confirmation. Partial purchasing remains supported. Base estimates exclude discounts, taxes and fees, which remain PO-preparation decisions. Existing active supplier POs are linked and prevent new allocations for another generated order. Stale revision awards remain visible and removable.
+- Comparison reports sit in a collapsed section whose contents remain mounted, preserving alternative choices. Reports remain independent of allocations and PO creation; generated draft creation opens PO preparation. The new command and UI preserve schema 12 and named audit ownership.
 
 - Quotations begin as persistent drafts and may cover some MRF lines. They retain offered lines, discounts and charges, supplier details, commercial terms, source file IDs, and immutable finalized revisions. Older seeded quotations remain readable as legacy references without original file bytes.
 - Supplier uploads use a bounded searchable/status-filtered queue with 10/25 groups per page and one selected-file panel. Each group accepts up to 12 ordered PDF/JPG/PNG/WebP files, 20 MB per file and 45 MB combined. Extract all ready groups processes eligible groups across every page/filter, with a per-group processing state. Header Enter manually creates a file-free draft; the selected group manual action includes its source files. Drafts must receive original supplier files before finalization. Quotation sheets are selected by supplier/reference/version tabs or search; source documents retain their multi-file preview dialog.
@@ -264,6 +269,8 @@ With the development server running, use `node scripts/browser-smoke.mjs` for th
 
 Use `node scripts/register-smoke.mjs http://localhost:3100` for complete Accounting groups, page sizes/ranges/filter resets, fixed headers and visible footers, independent Delivery tab controls, responsive themes, modal focus and quotation action popovers. The broader walkthrough also checks short desktop navigation, the mobile drawer, retained project drafts/tabs and late folder-validation cancellation.
 
+Use `node scripts/compare-allocate-smoke.mjs http://localhost:3100` for the combined workspace with 100 materials and five suppliers, retained temporary edits, cancelled confirmations, full-capacity redistribution, Fill remaining, stale revision removal, mobile list/detail navigation, persistence and partial PO generation. Desktop uses an offer table; mobile offers use cards with visible award inputs.
+
 The domain test suite currently protects these high-value behaviors:
 
 - Seeded purchasing, delivery, inventory, and budget consistency.
@@ -313,6 +320,7 @@ When updating it:
 
 | Date | Context change |
 | --- | --- |
+| 2026-10-08 | Combined Compare and Allocate into a material-based workspace with atomic confirmed saves, retained edits, mobile navigation, supplier review before PO generation and independent collapsed reports. |
 | 2026-10-07 | Replaced request material cards with a materials table and per-material dialog on both the request form and the request detail page; required fields became columns, invalid rows are flagged, and site stock is now visible on the detail table. |
 | 2026-10-07 | Applied compact adaptive navigation, shared paginated registers, grouped Accounting pages, Delivery/Admin tabs and record-detail modals; retained HML branding and department workflow. |
 | 2026-10-07 | Added confirmed project editing and unused-scope removal, single-open project cards, visible folder validation/save feedback, ten-row filtered activity with Philippine date ranges, and shared sticky disclosure headings. |
