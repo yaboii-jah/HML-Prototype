@@ -9,7 +9,11 @@ _Avoid_: Demo role, role picker
 
 **Workspace:** The linked projects, requests, purchasing, delivery and stock records shared by department accounts during a walkthrough.
 
+**Project budget:** The total allocation available to a project. Its cap covers scope allocations and existing committed/spent funds.
+
 **Scope of work:** A named work package within one project, such as Structural or Civil. Each MRF belongs to one scope; the supporting scope document is separate.
+
+**Unused scope:** A scope with no MRF referencing it, including drafts, returned and rejected requests. Removing it returns its allocation to unallocated project funds without changing the project budget.
 
 **Scope allocation:** The portion of the project's budget allotted to a scope by Administrator. Allocations share the project cap and cover both Goods and Services.
 

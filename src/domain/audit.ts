@@ -9,7 +9,7 @@ export function auditTime(value?: string) {
   if (!value || !Number.isFinite(Date.parse(value))) return "Time not recorded";
   return new Intl.DateTimeFormat("en-PH", { timeZone: "Asia/Manila", month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit", second: "2-digit" }).format(new Date(value));
 }
-export type AuditRecord = { id: string; type: AuditEntityType; ref: string; requestId?: string; poId?: string; href?: string };
+export type AuditRecord = { id: string; type: AuditEntityType; ref: string; projectId?: string; requestId?: string; poId?: string; href?: string };
 export function auditRecords(state: DemoSnapshot): Map<string, AuditRecord> {
   const records = new Map<string, AuditRecord>();
   const add = (record: AuditRecord) => records.set(record.id, record);
@@ -26,7 +26,17 @@ export function auditRecords(state: DemoSnapshot): Map<string, AuditRecord> {
   for (const project of state.sites) add({ id: project.id, type: "project", ref: project.name, href: `/projects/${project.id}` });
   for (const scope of state.scopes || []) add({ id: scope.id, type: "scope", ref: scope.name, href: `/projects/${scope.siteId}` });
   for (const supplier of state.suppliers) add({ id: supplier.id, type: "supplier", ref: supplier.name, href: "/suppliers" });
+  for (const record of records.values()) {
+    if (record.type === "project") record.projectId = record.id;
+    else if (record.type === "scope") record.projectId = state.scopes?.find(scope => scope.id === record.id)?.siteId;
+    else if (record.type === "movement") record.projectId = state.movements.find(movement => movement.id === record.id)?.siteId;
+    else if (record.requestId) record.projectId = state.requests.find(request => request.id === record.requestId)?.siteId;
+  }
   return records;
+}
+export function auditProjectId(state: DemoSnapshot, event: Activity, records = auditRecords(state)): string | undefined {
+  if (event.projectId) return event.projectId;
+  return records.get(event.entity)?.projectId || state.requests.find(request => request.id === event.requestId)?.siteId || state.requests.find(request => request.id === state.pos.find(po => po.id === event.poId)?.mrfId)?.siteId;
 }
 const same = (left: unknown, right: unknown) => JSON.stringify(left) === JSON.stringify(right);
 const labels: Record<string, string> = { ref: "Reference", siteId: "Project", requestDate: "Request date", requestedBy: "Requested by", approvedBy: "Approved by", purchaser: "Purchaser", financeOfficer: "Finance officer", specialInstructions: "Instructions", items: "Materials", documents: "Source documents", supplierId: "Supplier", supplierDetails: "Supplier details", available: "Availability", leadDays: "Lead time", terms: "Payment terms", currency: "Currency", tax: "Tax", freight: "Freight", discount: "Discount", validity: "Validity", quoteDate: "Quotation date", deliveryTerms: "Delivery terms", quoteNotes: "Notes", adjustments: "Charges and deductions", notes: "Notes", document: "Document details", financial: "VAT and EWT settings", lines: "Material lines", paymentMode: "Payment arrangement", amount: "Amount", note: "Note", priority: "Priority", quantity: "Quantity", review: "Document review", invoiceRef: "Invoice reference", receiptRef: "Receipt reference", scopeId: "Scope of work", name: "Scope name", budget: "Scope allocation", scopeDocument: "Scope document" };
@@ -44,6 +54,11 @@ function quoteChanges(before: Quote | undefined, after: Quote | undefined): stri
 }
 export function auditChanges(previous: DemoSnapshot, state: DemoSnapshot, command: Command): string[] {
   switch (command.type) {
+    case "updateSite": {
+      const before = previous.sites.find(site => site.id === command.siteId), after = state.sites.find(site => site.id === command.siteId);
+      return ( ["name", "location", "budget"] as const).filter(key => before?.[key] !== after?.[key]).map(key => ({ name: "Project name", location: "Location", budget: "Allocated budget" })[key]);
+    }
+    case "setProjectDriveFolder": return previous.sites.find(site => site.id === command.siteId)?.driveFolderId !== state.sites.find(site => site.id === command.siteId)?.driveFolderId ? ["Google Drive folder"] : [];
     case "saveProjectScope": return fieldsChanged(previous.scopes?.find(value => value.id === command.id), state.scopes.find(value => value.id === command.id), ["name", "budget"]);
     case "saveQuoteDraft": return quoteChanges(previous.quotes.find(value => value.id === command.quote.id), state.quotes.find(value => value.id === command.quote.id));
     case "saveRequest": return fieldsChanged(previous.requests.find(value => value.id === command.id), state.requests.find(value => value.id === command.id), ["ref", "siteId", "scopeId", "requestDate", "requestedBy", "approvedBy", "purchaser", "financeOfficer", "specialInstructions", "items", "documents", "scopeDocument"]);
@@ -57,6 +72,8 @@ export function auditChanges(previous: DemoSnapshot, state: DemoSnapshot, comman
 }
 export function auditKind(command: Command, previous: DemoSnapshot): AuditEventType {
   switch (command.type) {
+    case "updateSite": return "project.updated";
+    case "removeProjectScope": return "scope.removed";
     case "saveProjectScope": return "scope.saved";
     case "saveRequest": return "request.saved";
     case "reviewRequest": return "request.reviewed";
@@ -94,7 +111,7 @@ export function auditMetadata(previous: DemoSnapshot, state: DemoSnapshot, comma
   const records = auditRecords(state), oldRecords = auditRecords(previous);
   const record = records.get(entity) || oldRecords.get(entity);
   const requestId = record?.requestId || ("requestId" in command ? command.requestId : command.type === "saveQuoteDraft" ? command.quote.mrfId : undefined);
-  return { actorIdentity: copyIdentity(identity), eventType: auditKind(command, previous), requestId, poId: record?.poId, entityType: record?.type, entityRef: record?.ref, changedFields: auditChanges(previous, state, command) };
+  return { actorIdentity: copyIdentity(identity), eventType: auditKind(command, previous), projectId: record?.projectId || state.requests.find(request => request.id === requestId)?.siteId || previous.requests.find(request => request.id === requestId)?.siteId, requestId, poId: record?.poId, entityType: record?.type, entityRef: record?.ref, changedFields: auditChanges(previous, state, command) };
 }
 export function extraAudit(previous: DemoSnapshot, state: DemoSnapshot, command: Command): { entity: string; action: string; reason?: string } | undefined {
   switch (command.type) {

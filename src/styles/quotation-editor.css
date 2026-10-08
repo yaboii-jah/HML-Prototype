@@ -1,0 +1,69 @@
+/* Tabbed quotation sheets and compact line editing; HML blue and Geist. */
+.quotation-review-navigation{margin:20px 0 16px;min-width:0}
+.quotation-navigation-heading,.quotation-navigation-actions{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.quotation-navigation-heading{margin-bottom:12px}.quotation-navigation-heading h2{margin:0}.quotation-navigation-heading small{color:var(--muted)}
+.quotation-view-modes{display:flex;gap:4px;padding:4px;border:1px solid var(--line);border-radius:7px;background:var(--paper)}
+.quotation-view-modes button{border:0;border-radius:5px;background:transparent;color:var(--muted);padding:6px 10px;font-size:12px;font-weight:700}
+.quotation-view-modes button[aria-pressed="true"]{background:var(--surface);color:var(--brand);box-shadow:var(--shadow)}
+.quotation-tab-strip{display:flex;align-items:stretch;gap:4px;min-width:0;border-bottom:1px solid var(--line)}
+.quotation-tab-scroll{flex:none;width:28px;border:0;background:transparent;color:var(--brand);font-size:24px}
+.quotation-supplier-tabs{display:flex;min-width:0;flex:1;overflow-x:auto;scrollbar-width:none;overscroll-behavior-x:contain}
+.quotation-supplier-tabs::-webkit-scrollbar{display:none}
+.quotation-supplier-tabs>[role=tab]{flex:none;max-width:270px;min-height:52px;padding:8px 14px;border:0;border-bottom:3px solid transparent;background:transparent;color:var(--muted);text-align:left}
+.quotation-supplier-tabs>[role=tab][aria-selected="true"]{border-bottom-color:var(--brand);color:var(--brand);background:var(--nav-2)}
+.quotation-supplier-tabs>[role=tab]>span{display:flex;align-items:center;gap:8px}.quotation-supplier-tabs strong{font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.quotation-supplier-tabs small{display:block;margin-top:4px;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.quotation-picker{display:grid;gap:12px}.quotation-picker>input{width:100%}.quotation-picker-list{max-height:55dvh;overflow:auto}
+.quotation-picker-list>button{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:52px;width:100%;padding:12px;border:0;border-bottom:1px solid var(--line);background:var(--surface);color:var(--ink);text-align:left}
+.quotation-picker-list>button[aria-pressed="true"]{background:var(--nav-2)}.quotation-picker-list strong,.quotation-picker-list small{display:block;overflow-wrap:anywhere}.quotation-picker-list small{color:var(--muted);font-size:11px}
+.quote-editor-panel{padding:20px;min-width:0}
+.quote-editor-header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding-bottom:16px;margin-bottom:16px;border-bottom:1px solid var(--line)}
+.quote-editor-title{min-width:0;flex:1}.quote-editor-title>div{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.quote-editor-title h2{margin:0;font-size:21px;overflow-wrap:anywhere}
+.quote-editor-title p{margin:6px 0 0;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.quote-editor-title>small{display:block;margin-top:4px;color:var(--muted);font-size:11px}
+.quote-editor-header-actions{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap;max-width:50%}
+.quote-editor-header-actions>.button{min-height:34px;padding:6px 10px;font-size:12px}
+.quote-editor-issues{margin-bottom:16px;padding:12px 16px;border:1px solid var(--color-badge-rule-3);border-radius:7px;background:var(--color-badge-surface-3);font-size:12px}
+.quote-editor-issues ul{margin:6px 0;padding-left:18px}.quote-editor-issues .text-link{font-weight:400;text-align:left;color:var(--ink);font-size:12px;max-width:100%;min-width:0;white-space:normal;overflow-wrap:anywhere}.quote-editor-issues .text-link:hover{text-decoration:underline}
+.quote-editor-field-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0 16px}
+.quote-editor-panel .collapsible-section{margin:12px 0}.quote-editor-panel .collapsible-body{padding:16px}
+.quote-editor-material-heading{margin:20px 0 12px}.quote-editor-material-heading h3{margin:0 0 6px}.quote-editor-material-heading p{margin:0}
+.quote-editor-material-tools{display:flex;align-items:center;gap:8px;margin-bottom:12px}.quote-editor-material-tools input{flex:1;min-width:0}.quote-editor-material-tools select{max-width:180px}
+.quote-editor-lines{max-width:100%;overflow-x:auto;overscroll-behavior-x:contain;box-shadow:none}
+.quote-material-register .quote-editor-lines table{display:table;table-layout:auto;min-width:1800px;width:max(1800px,calc(100% + 160px))}
+.quote-editor-lines thead{display:table-header-group}
+.quote-editor-lines tbody{display:table-row-group}
+.quote-editor-lines tr{display:table-row}
+.quote-editor-lines th,.quote-material-register .quote-editor-lines td{max-width:none;display:table-cell}
+.quote-editor-lines thead th{white-space:nowrap;padding:10px 8px;font-size:11px}
+.quote-editor-lines :is(th,td):nth-child(1){width:480px;min-width:480px}
+.quote-editor-lines :is(th,td):nth-child(2){width:640px;min-width:640px}
+.quote-editor-lines :is(th,td):nth-child(3){width:100px;min-width:100px}
+.quote-editor-lines :is(th,td):nth-child(4){width:100px;min-width:100px}
+.quote-editor-lines :is(th,td):nth-child(5){width:140px;min-width:140px}
+.quote-editor-lines :is(th,td):nth-child(6){width:160px;min-width:160px}
+.quote-editor-lines :is(th,td):nth-child(7){width:180px;min-width:180px}
+.quote-material-register .quote-editor-lines td{max-width:none;padding:10px 8px;vertical-align:top;white-space:nowrap;overflow-wrap:normal;font-size:12px}
+.quote-editor-lines tr.needs-review{background:var(--color-badge-surface-3)}
+.quote-editor-lines .field{position:relative;margin:0}.quote-editor-lines .field>span{position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip-path:inset(50%)}
+.quote-editor-lines input:not([type=checkbox]),.quote-editor-lines select,.quote-editor-lines textarea{width:100%;min-width:0;min-height:34px;padding:6px;font-size:12px}
+.quote-editor-lines textarea{min-height:58px;resize:vertical;white-space:pre-wrap;overflow-wrap:break-word}
+.quote-line-number{display:block;margin-bottom:4px;color:var(--muted);font-size:11px}.quote-line-confidence{margin-top:5px}
+.quote-editor-lines .quote-check{display:flex;align-items:center;gap:6px;font-size:11px;margin:6px 0 0}.quote-editor-lines .quote-check input{flex:none}
+.quote-line-confidence{display:flex;align-items:center;gap:8px;flex-wrap:nowrap}
+.quote-line-confidence .quote-line-number{margin:0}
+.quote-editor-lines .quote-check input{width:14px;height:14px;min-height:14px;padding:0;margin:0}
+.quote-line-actions{display:flex;align-items:center;flex-direction:row;flex-wrap:nowrap;gap:12px}.quote-line-actions .button{min-height:32px;padding:5px 8px;font-size:12px}.quote-line-actions .text-link{font-size:12px}
+.quote-editor-no-lines{padding:24px;text-align:center;margin:0}
+.quote-editor-pagination{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:12px;font-size:12px}.quote-editor-pagination>div,.quote-editor-pagination label{display:flex;align-items:center;gap:8px}.quote-editor-pagination .button{min-height:32px;padding:5px 9px;font-size:12px}.quote-editor-pagination select{min-height:32px;padding:4px 8px}
+.quote-editor-adjustments{margin-top:16px;padding-top:16px;border-top:1px solid var(--line)}.quote-editor-adjustments .panel-heading{align-items:center;margin-bottom:12px}.quote-editor-adjustments h3{margin:0}.quote-editor-adjustments .table-frame{overflow:visible}
+.quote-editor-adjustments table{min-width:0;table-layout:fixed}.quote-editor-adjustments input,.quote-editor-adjustments select{width:100%;min-width:0;font-size:12px}
+.quote-editor-adjustments .quote-adjustment-row{display:table-row;padding:0;margin:0;border:0}.quote-editor-adjustments td{padding:8px;vertical-align:top}.quote-editor-adjustments .text-link{font-size:12px}
+.quote-editor-total{display:flex;justify-content:space-between;align-items:center;gap:16px;border-top:1px solid var(--line);margin-top:16px;padding-top:16px}.quote-editor-total strong{font-size:20px}
+.quote-editor-panel.is-readonly input:disabled,.quote-editor-panel.is-readonly textarea:disabled,.quote-editor-panel.is-readonly select:disabled,.quote-material-details input:disabled,.quote-material-details textarea:disabled,.quote-material-details select:disabled{opacity:1;color:var(--ink);-webkit-text-fill-color:var(--ink)}
+@media(max-width:1200px){.quote-editor-field-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.quote-editor-header{flex-wrap:wrap}.quote-editor-header-actions{max-width:100%}}
+@media(max-width:800px){.quotation-tab-strip{display:none}.quotation-navigation-actions{width:100%;justify-content:space-between}.quote-editor-panel{padding:16px}.quote-editor-header-actions .button,.quote-line-actions .button,.quote-editor-pagination .button{min-height:44px}.quote-editor-lines input:not([type=checkbox]),.quote-editor-lines select{min-height:44px}.quote-editor-adjustments thead{display:none}.quote-editor-adjustments table,.quote-editor-adjustments tbody{display:block}.quote-editor-adjustments .quote-adjustment-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.quote-editor-adjustments .quote-adjustment-row td:first-child{grid-column:1/-1}.quote-editor-material-tools{flex-wrap:wrap}.quote-editor-material-tools input{flex-basis:100%}}
+@media(max-width:500px){.quote-editor-field-grid{grid-template-columns:1fr}.quotation-navigation-actions{align-items:stretch;flex-direction:column}.quotation-view-modes button{flex:1}.quote-editor-title h2{font-size:19px}}
+@media(max-width:800px){.quote-editor-adjustments td::before{content:attr(data-label);display:block;margin-bottom:4px;font-size:11px;font-weight:700;color:var(--muted)}}
+
+.quote-material-register .quote-editor-lines{overflow-x:scroll;overflow-y:auto;scrollbar-gutter:stable;scroll-padding-top:48px}
+.quote-material-register .quote-editor-lines td small{max-width:none;overflow:visible;text-overflow:clip}

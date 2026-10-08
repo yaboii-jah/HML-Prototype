@@ -1,9 +1,17 @@
 import { roundMoney } from "./pricing.ts";
-import { paidTotal, poTotal, requestForPO } from "./selectors.ts";
+import { budgetFor, paidTotal, poTotal, requestForPO } from "./selectors.ts";
 import type { DemoSnapshot } from "./types.ts";
 
 export const projectScopes = (state: DemoSnapshot, siteId: string) => (state.scopes || []).filter(scope => scope.siteId === siteId);
 export const scopeName = (state: DemoSnapshot, scopeId?: string) => state.scopes?.find(scope => scope.id === scopeId)?.name || "Scope not assigned";
+export function projectMinimumBudget(state: DemoSnapshot, siteId: string) {
+  const budget = budgetFor(state, siteId);
+  return roundMoney(Math.max(projectScopes(state, siteId).reduce((sum, scope) => sum + scope.budget, 0), budget.committed + budget.spent));
+}
+export function scopeRemovalReason(state: DemoSnapshot, scopeId: string) {
+  if (!state.scopes?.some(scope => scope.id === scopeId)) return "Scope not found.";
+  return state.requests.some(request => request.scopeId === scopeId) ? "This scope is used by an MRF and must remain available for its linked history." : "";
+}
 export function scopeBudgetFor(state: DemoSnapshot, scopeId: string) {
   const scope = state.scopes?.find(value => value.id === scopeId);
   const pos = scope ? state.pos.filter(po => ["approved", "released"].includes(po.status) && requestForPO(state, po)?.scopeId === scope.id && requestForPO(state, po)?.siteId === scope.siteId) : [];

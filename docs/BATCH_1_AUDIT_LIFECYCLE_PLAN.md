@@ -4,7 +4,7 @@ Client requirements: **1 — Audit trail**, **2 — Combined timeline**. This sp
 
 ## Agreed behavior
 
-- Place a prominent lifecycle section on the existing MRF detail page, reached by dashboard and project links.
+- Place a lifecycle section on the existing MRF detail page, reached by dashboard and project links. It starts collapsed; progress and combined activity history expand together.
 - Summarize MRF, purchasing, payment and delivery progress, followed by full chronological history. Payment and delivery progress remain independent; no overall MRF completion rule is introduced.
 - Retain immutable user name/email/department snapshots when actions occur. Document signatories remain separate. Existing role-only history stays readable without inventing names.
 - Record business edits and archive outcomes, including previously silent quote drafts, supplier allocations and payment priorities. Edited records retain changed-field labels and required reasons, without before/after values; no-op automatic saves add no event.

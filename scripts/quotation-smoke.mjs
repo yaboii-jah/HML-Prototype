@@ -37,7 +37,7 @@ try {
   const navigate = async route => { await call("Page.navigate", { url: `${baseUrl}${route}` }); await wait(`return location.pathname === ${JSON.stringify(route)} && !!document.querySelector('h1');`); await sleep(150); };
   const fill = async (selector, value) => { await wait(`return !!document.querySelector(${JSON.stringify(selector)});`); await run(`const el=document.querySelector(${JSON.stringify(selector)});const kind=el.tagName==='TEXTAREA'?HTMLTextAreaElement:el.tagName==='SELECT'?HTMLSelectElement:HTMLInputElement;Object.getOwnPropertyDescriptor(kind.prototype,'value').set.call(el,${JSON.stringify(String(value))});el.dispatchEvent(new Event(el.tagName==='SELECT'?'change':'input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));return true;`); };
   const acceptPending = async () => { await sleep(90); if (await run("return !!document.querySelector('.confirm-dialog[open]');")) await run("document.querySelector('.confirm-dialog[open] .confirm-actions button:last-child').click();return true;"); };
-  const click = async label => { await wait(`return [...document.querySelectorAll('button')].some(button=>!button.disabled&&button.textContent.trim().includes(${JSON.stringify(label)}));`); await run(`const button=[...document.querySelectorAll('button')].find(value=>!value.disabled&&value.textContent.trim().includes(${JSON.stringify(label)}));button.click();return true;`); await acceptPending(); };
+  const click = async label => { await wait(`return [...document.querySelectorAll('button')].some(button=>!button.matches(':disabled')&&button.textContent.trim().includes(${JSON.stringify(label)}));`); await run(`const button=[...document.querySelectorAll('button')].find(value=>!value.matches(':disabled')&&value.textContent.trim().includes(${JSON.stringify(label)}));button.click();return true;`); await acceptPending(); };
   const upload = async (file, selector) => { await wait(`return !!document.querySelector(${JSON.stringify(selector)});`); const { root } = await call("DOM.getDocument"); const { nodeId } = await call("DOM.querySelector", { nodeId: root.nodeId, selector }); if (!nodeId) throw new Error("Quote file input missing"); await call("DOM.setFileInputFiles", { nodeId, files: [file] }); };
   const fillLabel = async (label, value) => { await wait(`return [...document.querySelectorAll('.quote-review label.field')].some(x=>x.querySelector('span')?.textContent===${JSON.stringify(label)});`); await run(`const field=[...document.querySelectorAll('.quote-review label.field')].find(x=>x.querySelector('span')?.textContent===${JSON.stringify(label)});const el=field.querySelector('input,select,textarea');const kind=el.tagName==='TEXTAREA'?HTMLTextAreaElement:el.tagName==='SELECT'?HTMLSelectElement:HTMLInputElement;Object.getOwnPropertyDescriptor(kind.prototype,'value').set.call(el,${JSON.stringify(String(value))});el.dispatchEvent(new Event(el.tagName==='SELECT'?'change':'input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));return true;`); };
   const snapshot = () => run("return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12'));");
@@ -64,9 +64,7 @@ try {
     await click("Supplier quotation group");
     await upload(file, '.quote-upload-group:last-of-type input[type=file]');
     await wait(`return [...document.querySelectorAll('.quote-upload-group')].some(value=>value.textContent.includes(${JSON.stringify(path.basename(file))}));`);
-    await click("Enter manually");
-    const groupNumber = await run("return document.querySelectorAll('.quote-upload-group').length;");
-    await click(`Supplier quotation ${groupNumber}`);
+    await click("Enter manually using these files");
     await wait("return !!document.querySelector('.quote-review');");
     await click("View documents");
     await wait("return !!document.querySelector('.quote-documents-dialog[open] .quote-document-preview iframe[src^=blob], .quote-documents-dialog[open] .quote-document-preview img[src^=blob]');");
@@ -94,6 +92,9 @@ try {
   await click("Allocate");
   async function award(reference, quantity) {
     await run(`const section=[...document.querySelectorAll('section.panel')].find(value=>value.querySelector('h2')?.textContent.includes(${JSON.stringify(reference)}));if(!section)throw Error('Supplier allocation missing');const el=section.querySelector('.quote-award-line input[type=number]');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(el,${JSON.stringify(String(quantity))});el.dispatchEvent(new Event('input',{bubbles:true}));return true;`);
+    await sleep(100);
+    const apply = await run(`const section=[...document.querySelectorAll('section.panel')].find(value=>value.querySelector('h2')?.textContent.includes(${JSON.stringify(reference)}));const button=section.querySelector('.quote-award-edit .button');if(button.matches(':disabled'))return false;button.click();return true;`);
+    if (apply) await acceptPending();
     await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).pendingAwards.some(value=>value.quantity===${quantity});`);
     await run(`const section=[...document.querySelectorAll('section.panel')].find(value=>value.querySelector('h2')?.textContent.includes(${JSON.stringify(reference)}));const el=section.querySelector('textarea');Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,'value').set.call(el,'Confirmed price and availability');el.dispatchEvent(new Event('input',{bubbles:true}));return true;`);
   }

@@ -1,66 +1,35 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useId, useRef, useState } from "react";
 import { useDemo } from "@/src/app-state/DemoProvider";
-import { Field, InlineError, PageHeader } from "@/src/components/ui/Primitives";
+import { PageHeader } from "@/src/components/ui/Primitives";
 import { useConfirmation } from "@/src/components/ui/ConfirmDialog";
-import { actorText, auditTime } from "@/src/domain/audit";
-import { ScopeBudgets } from "@/src/features/projects/ScopeBudgets";
-import { money } from "@/src/domain/format";
+import { AdminActivity } from "./AdminActivity";
+import { AdminProjectSettings, ProjectCreation } from "./AdminProjectSettings";
 import Link from "next/link";
+import { Register, ViewTabs } from "@/src/components/ui/Register";
+import { RecordModal } from "@/src/components/ui/RecordModal";
+import { projectScopes } from "@/src/domain/scope-budgets";
+import { money } from "@/src/domain/format";
 
 export function Admin() {
-  const { snapshot: state, run } = useDemo();
-  const [error, setError] = useState("");
-  if (!state) return null;
-
-  const addProject = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const formElement = event.currentTarget;
-    const form = new FormData(formElement);
-    const result = await run({ type: "addSite", name: String(form.get("name")), location: String(form.get("location")), budget: Number(form.get("budget")) });
-    if (result.ok) { setError(""); formElement.reset(); } else setError(result.message);
-  };
-
-  const saveDriveFolder = async (event: FormEvent<HTMLFormElement>, siteId: string) => {
-    event.preventDefault();
-    const folder = String(new FormData(event.currentTarget).get("folder") || "");
-    try {
-      const response = await fetch("/api/drive/validate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ folder }) });
-      const result = await response.json() as { id?: string; error?: string };
-      if (!response.ok || !result.id) throw new Error(result.error || "The Drive folder could not be validated.");
-      const saved = await run({ type: "setProjectDriveFolder", siteId, folderId: result.id });
-      setError(saved.ok ? "" : saved.message);
-    } catch (cause) { setError(cause instanceof Error ? cause.message : "The Drive folder could not be validated."); }
-  };
-
-  return <>
-    <PageHeader eyebrow="WORKSPACE SETTINGS" title="Administration" description="Manage projects and review workspace activity."/>
-    <section className="panel">
-      <h2 className="panel-title">Projects and Drive folders</h2>
-      {!state.sites.length && <p className="helper-note">Add the first project below to make it available on material requests.</p>}
-      {state.sites.map(site => <div className="admin-row" key={site.id}><div className="admin-project-details">
-        <h3>{site.name}</h3>
-        <p>{site.location}</p><p>Allocated budget: <strong>{money(site.budget)}</strong></p>
-      </div><form className="drive-folder-form" onSubmit={event => void saveDriveFolder(event, site.id)}><Field label="Google Drive project folder"><input name="folder" type="text" defaultValue={site.driveFolderId ? `https://drive.google.com/drive/folders/${site.driveFolderId}` : ""} placeholder="Paste the project folder URL"/></Field>{state.role === "Administrator" && <button className="button secondary">Validate and save folder</button>}<small>Required before Procurement approval. The folder must be inside the configured company root.</small></form><ScopeBudgets siteId={site.id} editable/></div>)}
-      {state.role === "Administrator" && <form className="subform admin-add-project" onSubmit={event => void addProject(event)}>
-        <h3>Add project / site</h3>
-        <div className="form-grid">
-          <Field label="Project name"><input name="name" required /></Field>
-          <Field label="Location"><input name="location" required /></Field>
-          <Field label="Allocated budget (PHP)"><input name="budget" type="number" min="0" step="0.01" required /></Field>
-        </div>
-        <button className="button primary">Add project</button>
-      </form>}
-    </section>
-    <InlineError message={error}/>
-    <section className="panel">
-      <h2 className="panel-title">Recent activity</h2>
-      {!state.activity.length && <p className="helper-note">Project setup and workflow decisions will appear here.</p>}
-      <div className="activity-list">{state.activity.slice(0, 18).map(activity => <div key={activity.id}>
-        <strong>{activity.action}</strong><span>{actorText(activity.actor, activity.actorIdentity)} / {auditTime(activity.at)}</span>{activity.reason && <small>{activity.reason}</small>}
-      </div>)}</div>
-    </section>
+  const {snapshot:state}=useDemo();const id=useId(),lastProject=useRef<string|null>(null);
+  const [creating,setCreating]=useState(false),[selected,setSelected]=useState<string|null>(null),[search,setSearch]=useState(""),[view,setView]=useState(0),[tabs,setTabs]=useState<Record<string,number>>({}),[message,setMessage]=useState("");
+  const {confirm,confirmation}=useConfirmation();if(!state)return null;
+  const rows=state.sites.filter(site=>`${site.name} ${site.location}`.toLowerCase().includes(search.trim().toLowerCase()));
+  const project=state.sites.find(site=>site.id===selected),tab=selected?tabs[selected]||0:0;
+  const select=(key:string)=>{lastProject.current=key;setSelected(key);};
+  return <><PageHeader title="Administration" description="Project setup and recorded workspace changes." actions={state.role==="Administrator"&&<button className="button primary" type="button" disabled={creating} onClick={()=>{setView(0);setCreating(true);}}>Add project</button>}/>
+    <ViewTabs id={id} labels={["Projects","Activity"]} active={view} onChange={setView}/>
+    <div role="tabpanel" id={`${id}-panel-0`} aria-labelledby={`${id}-tab-0`} hidden={view!==0}>
+      {creating&&<ProjectCreation confirm={confirm} onCancel={()=>setCreating(false)} onCreated={key=>{setCreating(false);setSearch("");setTabs(current=>({...current,[key]:1}));select(key);setMessage("Project added. Configure its Drive folder and scopes.");}}/>}
+      {message&&<p className="admin-feedback success" role="status">{message}</p>}
+      <div className="admin-projects"><Register rows={rows} unit="projects" resetKey={search} filters={<input type="search" aria-label="Search projects" placeholder="Search project or location" value={search} onChange={event=>setSearch(event.target.value)}/>} empty={state.sites.length?"No projects match this search.":"No projects yet. Add a project to configure its folder and scopes."} headers={<><th>Project</th><th>Location</th><th className="numeric">Budget</th><th className="numeric">Scopes</th><th>Drive</th><th>Details</th></>} renderRow={site=><tr key={site.id} data-project-row={site.id}><td><strong className="table-primary" title={site.name}>{site.name}</strong></td><td><span className="table-text" title={site.location}>{site.location}</span></td><td className="numeric">{money(site.budget)}</td><td className="numeric">{projectScopes(state,site.id).length}</td><td><span className={`badge ${site.driveFolderId?"good":"warn"}`}>{site.driveFolderId?"Linked":"Missing"}</span></td><td className="register-actions"><button id={`project-details-${site.id}`} type="button" className="button secondary" aria-haspopup="dialog" aria-label={`Details for ${site.name}`} onClick={()=>select(site.id)}>Details</button></td></tr>}/></div>
+    </div>
+    <div role="tabpanel" id={`${id}-panel-1`} aria-labelledby={`${id}-tab-1`} hidden={view!==1}><AdminActivity state={state}/></div>
+    <RecordModal open={!!project} title={project?.name||"Project settings"} onClose={()=>setSelected(null)} returnFocus={()=>{const trigger=document.getElementById(`project-details-${lastProject.current}`);return trigger?.checkVisibility()?trigger:document.querySelector<HTMLInputElement>('[aria-label="Search projects"]');}} tabs={<ViewTabs id={`${id}-settings`} labels={["Project","Drive folder","Scopes"]} active={tab} onChange={value=>selected&&setTabs(current=>({...current,[selected]:value}))}/>}>
+      {state.sites.map(site=><div key={site.id} role="tabpanel" id={site.id===selected?`${id}-settings-panel-${tab}`:undefined} aria-labelledby={site.id===selected?`${id}-settings-tab-${tab}`:undefined} hidden={site.id!==selected}><AdminProjectSettings site={site} active={site.id===selected} tab={tabs[site.id]||0} confirm={confirm}/></div>)}
+    </RecordModal>{confirmation}
   </>;
 }
 

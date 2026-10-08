@@ -1,4 +1,6 @@
 "use client";
+import { Register } from "@/src/components/ui/Register";
+import { useState } from "react";
 
 import { RequestMonitoringTable } from "@/src/features/requests/RequestMonitoringTable";
 
@@ -12,8 +14,11 @@ import { ScopeBudgets } from "./ScopeBudgets";
 import { DriveProjectFiles } from "./DriveProjectFiles";
 
 export function Projects() {
-  const { snapshot: state } = useDemo(); if (!state) return null;
-  return <><PageHeader eyebrow="PROJECT PORTFOLIO" title="Projects and sites" description="Open a site to review its requests, commitments, deliveries, and stock."/>{!state.sites.length && <section className="panel"><Empty title="No projects yet" detail="Ask an Administrator to add a project to start the workflow."/><Link className="button primary" href="/admin">Open administration</Link></section>}<div className="site-grid">{state.sites.filter(s=>state.siteFilter==="all"||s.id===state.siteFilter).map(site=>{const b=budgetFor(state,site.id);return <Link className="site-tile" href={`/projects/${site.id}`} key={site.id}><div className="site-tile-top"><span className="site-code">{site.id.toUpperCase()}</span><Badge>Active</Badge></div><h2>{site.name}</h2><p>{site.location}</p><dl><div><dt>Available</dt><dd>{money(b.available)}</dd></div><div><dt>Requests</dt><dd>{state.requests.filter(r=>r.siteId===site.id).length}</dd></div><div><dt>Purchase orders</dt><dd>{state.pos.filter(po=>requestForPO(state,po)?.siteId===site.id).length}</dd></div></dl><span>Open project workspace →</span></Link>})}</div></>;
+  const { snapshot: state } = useDemo(); const [search,setSearch]=useState(""); if (!state) return null;
+  const rows=state.sites.filter(site=>(state.siteFilter==="all"||site.id===state.siteFilter)&&`${site.name} ${site.location}`.toLowerCase().includes(search.toLowerCase()));
+  return <><PageHeader title="Projects and sites" description="Project budgets, material requests and purchasing."/>
+    <Register rows={rows} resetKey={search+state.siteFilter} filters={<input type="search" aria-label="Search project directory" placeholder="Search project or location" value={search} onChange={event=>setSearch(event.target.value)}/>} unit="projects" empty={state.sites.length?"No projects match this view.":"No projects yet. Ask an Administrator to add a project."} headers={<><th>Project</th><th>Location</th><th className="numeric">Allocated</th><th className="numeric">Available</th><th className="numeric">MRFs</th><th className="numeric">POs</th></>} renderRow={site=>{const budget=budgetFor(state,site.id);return <tr key={site.id}><td><Link className="table-primary" href={`/projects/${site.id}`} title={site.name}>{site.name}</Link></td><td><span className="table-text" title={site.location}>{site.location}</span></td><td className="numeric">{money(budget.allocated)}</td><td className="numeric">{money(budget.available)}</td><td className="numeric">{state.requests.filter(request=>request.siteId===site.id).length}</td><td className="numeric">{state.pos.filter(po=>requestForPO(state,po)?.siteId===site.id).length}</td></tr>;}}/>
+  </>;
 }
 
 export function ProjectDetail({ id }: { id: string }) {

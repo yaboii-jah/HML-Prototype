@@ -1,0 +1,84 @@
+/* Hallmark · studied list workspace · HML tokens · compact register hierarchy */
+.app-frame{grid-template-columns:220px minmax(0,1fr)}
+.side-nav{height:100dvh;padding:12px 10px;overflow-y:clip;box-shadow:none}
+.side-brand{height:44px;padding:0 8px}.brand-logo img{width:160px}
+.side-product{padding:4px 10px 10px;margin-bottom:8px}.side-product strong{font-size:14px}
+.compact-navigation{--nav-link-height:38px;min-height:0}.compact-navigation nav{display:grid;gap:2px}
+.compact-navigation .side-link{min-height:var(--nav-link-height);height:var(--nav-link-height);padding:7px 10px;font-size:12px;border-radius:5px;gap:9px}
+.nav-more-trigger{width:100%;border:0;background:transparent;text-align:left}.nav-more-trigger>span:first-child{width:18px;text-align:center}
+.nav-more-dialog{width:min(320px,calc(100vw - 24px));max-height:calc(100dvh - 24px);overflow:auto;margin:auto auto auto 12px;padding:16px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink)}
+.nav-more-dialog::backdrop,.record-dialog::backdrop{background:var(--overlay)}
+.masthead{height:60px;padding-inline:24px}.workspace-content{padding:24px 24px 16px;max-width:none}
+.workspace-content>.page-header{margin-bottom:16px}.workspace-content>.page-header h1{font-size:24px;letter-spacing:-.025em}.workspace-content>.page-header .eyebrow{display:none}.workspace-content>.page-header p{font-size:13px;max-width:75ch;margin-bottom:0}
+.register{height:var(--register-height,600px);min-height:300px;min-width:0;display:flex;flex-direction:column;border:1px solid var(--line);border-radius:8px;background:var(--surface);overflow:clip;margin-bottom:16px}
+.register-toolbar.toolbar{flex:none;margin:0;border:0;border-bottom:1px solid var(--line);border-radius:0;box-shadow:none;padding:12px;display:flex;flex-wrap:wrap;gap:8px}
+.register-toolbar>*{min-width:0}.register-toolbar input[type=search],.register-toolbar>input:first-child{flex:1;min-width:180px;max-width:420px}
+.register-scroll.table-frame{flex:1;min-height:0;margin:0;border:0;border-radius:0;box-shadow:none;overflow:auto;overscroll-behavior:contain}
+.register-scroll table{width:100%;min-width:760px}.register-scroll thead th{position:sticky;top:0;z-index:5;padding:10px 12px;font-size:12px;white-space:nowrap;background:var(--paper)}
+.register-scroll td{padding:9px 12px;font-size:13px;vertical-align:middle;max-width:280px;overflow-wrap:anywhere}.register-scroll td small{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:32ch}.register-scroll .table-primary{display:block;max-width:32ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.register-scroll .badge{padding:3px 7px;border-radius:4px;font-size:11px}.register-scroll .button{min-height:36px;padding:6px 10px}
+.register-actions{position:sticky;right:0;background:var(--surface);z-index:6;white-space:nowrap}.register-group-cell{background:var(--paper);padding:12px!important}.register-group-cell>div{display:flex;justify-content:space-between;gap:16px;align-items:center}.register-group-cell small{display:block}
+.register-footer{flex:none;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;border-top:1px solid var(--line);font-size:12px;background:var(--surface)}
+.register-footer label,.register-page-controls{display:flex;align-items:center;gap:8px}.register-footer select{min-height:36px;padding:4px 26px 4px 8px}.register-page-controls .button{min-height:36px;padding:5px 10px}
+.view-tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);padding:0 0 8px;margin-bottom:12px;flex:none}.view-tabs button{min-height:40px;padding:7px 12px;border:1px solid transparent;border-radius:5px;background:transparent;color:var(--muted);white-space:nowrap}.view-tabs button[aria-selected=true]{border-color:var(--line);background:var(--nav-2);color:var(--brand);font-weight:700}
+.record-dialog{--record-dialog-viewport-space:clamp(64px,12vw,128px);margin:auto;width:min(1100px,calc(100vw - var(--record-dialog-viewport-space)));max-width:calc(100vw - var(--record-dialog-viewport-space));height:fit-content;max-height:min(850px,calc(100dvh - 32px));padding:24px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);overflow:clip}
+.record-dialog[open]{display:flex;flex-direction:column;gap:16px}.record-dialog-heading{display:flex;align-items:center;justify-content:space-between;gap:16px;flex:none}.record-dialog-heading h2{font-size:20px;margin:0;overflow-wrap:anywhere}.record-dialog .view-tabs{margin:0}.record-dialog-body{flex:0 1 auto;min-height:0;overflow:auto;overscroll-behavior:contain;padding:6px}
+.record-dialog .monitoring-related{padding:0}.record-dialog .table-frame{box-shadow:none}.record-dialog .register{max-height:520px}
+.admin-projects .panel-heading{margin-bottom:12px}.admin-projects .toolbar{margin:0}.admin-activity.panel{border:0;padding:0;box-shadow:none;background:transparent}.admin-activity-filters{width:100%}.admin-project-settings .form-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+.register .empty{padding:24px}.register-footer .button:focus-visible,.view-tabs button:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+.register.is-embedded{min-height:160px}.workspace-content .table-frame{border-radius:8px;box-shadow:none}.workspace-content .table-frame td{font-size:13px}.workspace-content .table-frame th{font-size:12px}
+.record-dialog:has(.admin-project-settings){width:min(900px,calc(100vw - var(--record-dialog-viewport-space)))}
+.record-dialog-body .admin-project-settings .admin-project-details,.record-dialog-body .admin-drive-settings{padding:0;border:0}
+.record-dialog .admin-project-details .panel-heading{align-items:center;margin-bottom:12px}
+.record-dialog .admin-project-details .panel-heading h3{margin:0}
+.record-dialog .admin-drive-settings h3{margin:0 0 16px}
+.record-dialog .drive-folder-form{margin:0;gap:12px}
+.record-dialog .drive-folder-form .field{min-width:0}
+.record-dialog .drive-folder-form .admin-feedback{margin:0}
+.record-dialog .scope-budgets>.subheading{margin:0 0 12px}
+.row-action-menu{position:fixed;inset:auto;margin:0;width:240px;max-width:calc(100vw - 16px);max-height:calc(100dvh - 16px);overflow:auto;padding:12px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);box-shadow:var(--shadow)}
+.row-action-menu .quote-source-actions{display:grid;gap:8px}.row-action-menu :is(button,a){min-height:40px;justify-content:flex-start;white-space:nowrap}
+.register-scroll .monitoring-progress small{max-width:24ch}.register-scroll .monitoring-progress strong{font-size:12px}
+@media(max-width:800px),(pointer:coarse){.compact-navigation{--nav-link-height:44px}.compact-navigation .side-link{font-size:13px}.register .button,.register-footer select,.register-footer .button,.view-tabs button{min-height:44px}}
+@media(max-width:800px){.app-frame{display:block}.side-nav{overflow-y:auto}.workspace-content{padding:16px}.masthead{padding-inline:16px}.register-toolbar.toolbar{display:flex}.register-toolbar>*{width:auto!important}.register-toolbar input[type=search],.register-toolbar>input:first-child{max-width:none;flex-basis:100%}.record-dialog{padding:16px}.record-dialog[open]{gap:12px}.admin-project-settings .form-grid{grid-template-columns:1fr}.register-footer{gap:8px}.register-page-controls{margin-left:auto}}
+@media(max-height:400px) and (min-width:801px){.side-brand{height:32px}.side-product{padding-bottom:4px;margin-bottom:4px}.brand-logo img{width:128px}.side-nav{padding-block:6px}}
+@media print{.register{height:auto;overflow:visible}.register-scroll.table-frame{overflow:visible}.register-scroll th{position:static}.register-footer,.record-dialog,.nav-more-dialog{display:none!important}}
+
+.register-scroll tbody th{position:static;padding:9px 12px;font-size:13px;max-width:280px;overflow-wrap:anywhere}
+.quote-source-list.register{height:auto;min-height:0}
+.quote-source-list>.register-scroll{flex:none;overflow:visible}
+.register-scroll .quotation-summary-table{min-width:0;table-layout:fixed;--quotation-selected-surface:color-mix(in srgb,var(--brand) 8%,var(--surface))}
+.quotation-summary-table thead th{white-space:normal}
+.quotation-summary-table thead th:nth-child(1){width:32%}
+.quotation-summary-table thead th:nth-child(2){width:10%}
+.quotation-summary-table thead th:nth-child(3){width:16%}
+.quotation-summary-table thead th:nth-child(4){width:16%}
+.quotation-summary-table thead th:nth-child(5){width:26%}
+html[data-theme="dark"] .quotation-summary-table{--quotation-selected-surface:color-mix(in srgb,var(--brand) 12%,var(--surface))}
+.quotation-summary-table .quote-source,.quotation-summary-table .quote-source.is-active{display:table-row;overflow:visible;border:0;border-radius:0;padding:0;box-shadow:none;background:transparent}
+.quotation-summary-table .quote-source.is-active>td{background:var(--quotation-selected-surface)}
+.quotation-summary-table .quote-source.is-active>td:first-child{box-shadow:inset 3px 0 var(--brand)}
+.quotation-summary-table .quote-source>td:first-child .table-primary{max-width:none;white-space:normal;overflow-wrap:anywhere}
+.quotation-summary-table .quote-source>td:first-child small{max-width:none;white-space:normal;overflow-wrap:anywhere}
+.quotation-summary-table .quotation-actions-cell{padding-right:20px;min-width:0}
+.quotation-summary-table .quotation-row-actions{display:flex;align-items:center;justify-content:flex-end;gap:12px;flex-wrap:wrap}
+.quotation-summary-table .quotation-row-actions>.button{display:inline-flex;align-items:center;justify-content:center;width:auto;min-height:32px;padding:5px 9px;margin:0;font-size:12px;font-weight:700;white-space:nowrap;text-align:center}
+.quotation-summary-table .quotation-actions-cell>.field-error{margin:8px 0 0;white-space:normal;overflow-wrap:anywhere}
+@media(max-width:800px),(pointer:coarse){.quotation-summary-table .quotation-row-actions>.button{min-height:44px}}
+@media(max-width:700px){
+  .quotation-summary-table thead{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+  .quotation-summary-table,.quotation-summary-table tbody{display:block;width:100%}
+  .quotation-summary-table .quote-source,.quotation-summary-table .quote-source.is-active{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+  .quotation-summary-table .quote-source>td{display:block;max-width:none;min-width:0}
+  .quotation-summary-table .quote-source>td:first-child,.quotation-summary-table .quotation-actions-cell{grid-column:1/-1}
+  .quotation-summary-table .quote-source>td:nth-child(2)::before{content:"Review"}
+  .quotation-summary-table .quote-source>td:nth-child(3)::before{content:"Source files"}
+  .quotation-summary-table .quote-source>td:nth-child(4)::before{content:"Drive archive"}
+  .quotation-summary-table .quote-source>td:nth-child(n+2):nth-child(-n+4)::before{display:block;margin-bottom:4px;font-size:11px;color:var(--muted)}
+}
+.register-scroll .numeric{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.admin-projects .table-primary,.suppliers-register .table-primary{max-width:32ch}
+
+.register:last-child{margin-bottom:0}
+
+.register-scroll .table-text{display:block;max-width:32ch;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}

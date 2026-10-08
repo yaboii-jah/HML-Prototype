@@ -4,7 +4,7 @@ import { useArchive } from "@/src/app-state/ArchiveProvider";
 import type { ArchiveProgressListener } from "@/src/domain/archive-progress";
 import { useState } from "react";
 import { useDemo } from "@/src/app-state/DemoProvider";
-import { useConfirmation } from "@/src/components/ui/ConfirmDialog";
+import { useConfirmedAction } from "@/src/components/ui/useConfirmedAction";
 import { InlineError } from "@/src/components/ui/Primitives";
 import { bidReportReadiness } from "@/src/domain/bid-reports";
 import { captureBidReport } from "@/src/domain/bid-reports";
@@ -18,7 +18,7 @@ export function BidComparisonReports({ requestId }: { requestId: string }) {
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
   const [selections, setSelections] = useState<ComparisonSelections>({});
-  const { confirm, confirmation } = useConfirmation();
+  const { confirmAction, working, confirmation } = useConfirmedAction(setError);
   if (!snapshot) return null;
   const procurement = snapshot.role === "Procurement";
   const readiness = bidReportReadiness(snapshot, requestId);
@@ -62,15 +62,18 @@ export function BidComparisonReports({ requestId }: { requestId: string }) {
       }
       selected = resolveComparisonSelections(currentData, active);
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Choose the comparison alternatives."); return; }
-    if (!await confirm(reports.length ? "Generate a new bid comparison version?" : "Generate bid comparison?", "Save the current supplier bids and selected alternatives as PDF and a single comparison worksheet. Material totals use the required MRF quantity and exclude taxes, discounts and freight.", "Generate report")) return;
+    await confirmAction(reports.length ? "Generate a new bid comparison version?" : "Generate bid comparison?", "Save the current supplier bids and selected alternatives as PDF and a single comparison worksheet, then archive both to Google Drive. Material totals use the required MRF quantity and exclude taxes, discounts and freight.", "Generate report", async () => {
     setBusy("new"); setError("");
     try {
       const result = await run({ type: "createBidReport", requestId, comparisonSelections: selected });
       if (!result.ok) { setError(result.message); return; }
       await process(result.snapshot.bidReports.find(report => report.id === result.recordId)!, "generate");
     } finally { setBusy(""); }
+    });
   };
+  const retry = (report: BidReport, action: "generate" | "archive") => confirmAction(action === "generate" ? "Retry bid report generation?" : "Retry bid report Drive archive?", `Bid comparison v${report.version}: ${action === "generate" ? "retry preparing" : "retry uploading"} the saved ${report.pdf ? "PDF and Excel files" : "Excel workbook"} in the project Drive folder. This uses the existing saved report version.`, action === "generate" ? "Retry generation" : "Retry archive", () => process(report, action));
   return <section className="panel">
+    <fieldset className="quotation-operation-fields" disabled={working || !!busy}>
     <div className="panel-heading"><div><h2>Bid comparison reports</h2><p className="helper-note">New PDF and Excel versions compare required MRF quantities at quoted unit prices. Excel contains one comparison worksheet; previous versions retain their original format.</p></div>
       {procurement && <button className="button primary" type="button" disabled={!!busy || !!readiness} onClick={() => void generate()}>{busy ? "Processing…" : reports.length ? "Generate new version" : "Generate bid comparison"}</button>}
     </div>
@@ -85,13 +88,13 @@ export function BidComparisonReports({ requestId }: { requestId: string }) {
       <div className="button-row">
         {report.sha256 && <button className="button secondary" type="button" disabled={!!busy} onClick={() => void process(report, "download")}>Download Excel</button>}
         {report.pdf?.sha256 && <button className="button secondary" type="button" disabled={!!busy} onClick={() => void process(report, "download", "pdf")}>Download PDF</button>}
-        {procurement && (!report.sha256 || report.pdf && !report.pdf.sha256) && <button className="button secondary" type="button" disabled={!!busy} onClick={() => void process(report, "generate")}>Retry generation</button>}
-        {procurement && (report.sha256 && report.archive.status !== "complete" || report.pdf?.sha256 && report.pdf.archive.status !== "complete") && <button className="button secondary" type="button" disabled={!!busy} onClick={() => void process(report, "archive")}>Retry Drive archive</button>}
+        {procurement && (!report.sha256 || report.pdf && !report.pdf.sha256) && <button className="button secondary" type="button" disabled={!!busy} onClick={() => void retry(report, "generate")}>Retry generation</button>}
+        {procurement && (report.sha256 && report.archive.status !== "complete" || report.pdf?.sha256 && report.pdf.archive.status !== "complete") && <button className="button secondary" type="button" disabled={!!busy} onClick={() => void retry(report, "archive")}>Retry Drive archive</button>}
         {report.archive.url && <a className="text-link" href={report.archive.url} target="_blank" rel="noopener noreferrer">Open in Drive</a>}
         {report.pdf?.archive.url && <a className="text-link" href={report.pdf.archive.url} target="_blank" rel="noopener noreferrer">Open PDF in Drive</a>}
         {busy === report.id && <span role="status">Processing report…</span>}
       </div>
     </article>)}
-    <InlineError message={error}/>{confirmation}
+    <InlineError message={error}/></fieldset>{confirmation}
   </section>;
 }
