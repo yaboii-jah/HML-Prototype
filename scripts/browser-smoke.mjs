@@ -57,6 +57,8 @@ try {
     let accountingFailOnce = true;
     window.fetch = (input, init) => {
       const url = input instanceof Request ? input.url : String(input);
+      if (url === '/api/drive/delivery-receipts') { const {receipt}=JSON.parse(init.body); return reply({driveFileId:'receipt-'+receipt.id,url:'https://drive.google.com/file/d/receipt-'+receipt.id+'/view'}); }
+      if (url === '/api/drive/projects') return Promise.resolve(Response.json({error:'Automatic folder setup unavailable for this recovery test'},{status:503}));
       if (url === '/api/drive/validate') {
         window.__adminDriveCalls=(window.__adminDriveCalls||0)+1;
         if(window.__adminDriveFailure)return Promise.resolve(new Response(JSON.stringify({error:'Folder access could not be validated. Try again.'}),{status:503,headers:{'Content-Type':'application/json'}}));
@@ -242,13 +244,16 @@ try {
   assert.equal(await run("return location.pathname;"), '/sign-in', 'Retired credentials are rejected');
   await signInAs('Site Personnel');
   const storedSession = await run(`return JSON.parse(localStorage.getItem(${JSON.stringify(SESSION_STORAGE_KEY)}));`);
-  assert.deepEqual(storedSession, { email: ACCOUNT_FIXTURES[0].email, role: 'Site Personnel' });
+  assert.deepEqual(storedSession, { email: ACCOUNT_FIXTURES[0].email, role: 'Site Personnel', userId: 'bootstrap-site-personnel', revision: 1 });
   assert.equal((await state()).sites.length, 0, "A fresh workspace starts without projects");
   assert.equal(await run("return document.body.innerText.includes('Build your workflow from an empty workspace');"), true);
   await navigate("/reports");
+  assert.equal(await run("return document.querySelector('h1').textContent;"), "Access unavailable", "Reports require Project Manager or Administrator");
+  await role("Administrator"); await navigate("/reports");
   assert.equal(await run("return document.querySelector('.report-empty h2')?.textContent;"), "No projects to report yet");
   assert.equal(await run("return document.querySelectorAll('.empty').length;"), 0, "An empty report should show one useful starting state");
   await writeFile(path.join(profile, "report-empty.png"), Buffer.from((await call("Page.captureScreenshot", { format: "png" })).data, "base64"));
+  await role("Site Personnel");
   for (const [route, message] of [["/requests", "No material requests yet"], ["/suppliers", "No suppliers yet"], ["/purchase-orders", "No purchase orders yet"], ["/inventory", "No site stock yet"], ["/accounting", "No purchase orders are linked"]]) {
     await navigate(route);
     assert.equal(await run(`return document.querySelector('.empty')?.textContent.includes(${JSON.stringify(message)});`), true, `${route} should explain its empty state`);
@@ -264,6 +269,7 @@ try {
   assert.equal(await run("return !!document.querySelector('input[name=manager]');"), false, "Project setup has no PM assignment");
   await submit('form:has(input[name="budget"])');
   await wait("return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).sites.length===1;");
+  await wait("return !!document.querySelector('.record-dialog[open]');");
   await click('Scopes','.record-dialog[open] [role=tab]');
   await fill('.scope-budget-form input[name="scopeName"]', 'Structural');
   await fill('.scope-budget-form input[name="scopeBudget"]', 100001);
@@ -281,7 +287,7 @@ try {
   await click('Edit project','.admin-project-details button');
   await fill('.admin-edit-project .field:nth-child(1) input','Smoke project edited');
   await fill('.admin-edit-project .field:nth-child(2) input','Updated site');
-  await fill('.admin-edit-project input[type=number]',110000);
+  await fill('.admin-edit-project .field:nth-child(3) input',110000);
   const beforeEditCancel=await state();
   await run("document.querySelector('.admin-edit-project').requestSubmit();return true;");
   await wait("return !!document.querySelector('.confirm-dialog[open]');");
@@ -298,6 +304,7 @@ try {
   await wait("return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).scopes.length===2;");
   assert.equal((await state()).activity[0].eventType,'scope.removed');
   await click('Drive folder','.record-dialog[open] [role=tab]');
+  await click('Link an existing folder','.admin-drive-settings button');
   await fill('.drive-folder-form input[name=folder]','https://drive.google.com/drive/folders/smoke-project-folder');
   await run("window.__holdAdminDrive=true;document.querySelector('.drive-folder-form').requestSubmit();document.querySelector('.drive-folder-form').requestSubmit();return true;");
   await wait("return document.querySelector('.drive-folder-form button').disabled&&document.querySelector('.drive-folder-form').textContent.includes('Validating');");
@@ -309,13 +316,13 @@ try {
   assert.deepEqual(await state(),beforeFolderCancel,'Cancelling validated folder mapping preserves records');
   await submit('.drive-folder-form');
   await wait("return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).sites[0].driveFolderId==='smoke-project-folder';");
-  await wait("return document.querySelector('.drive-folder-form [role=status]')?.textContent.includes('Saved');");
+  await wait("return document.querySelector('.admin-drive-settings [role=status]')?.textContent.includes('Saved');");
   await run("window.__adminDriveFailure=true;return true;");
   await submit('.drive-folder-form');
-  await wait("return document.querySelector('.drive-folder-form [role=alert]')?.textContent.includes('could not be validated');");
+  await wait("return document.querySelector('.admin-drive-settings [role=alert]')?.textContent.includes('could not be validated');");
   const beforeFolderRetry=await state();
   await run("window.__adminDriveFailure=false;return true;"); await submit('.drive-folder-form');
-  await wait("return document.querySelector('.drive-folder-form [role=status]')?.textContent.includes('already saved');");
+  await wait("return document.querySelector('.admin-drive-settings [role=status]')?.textContent.includes('already saved');");
   assert.deepEqual(await state(),beforeFolderRetry,'An unchanged mapping adds no audit event');
   // Closing while validation is outstanding must invalidate even a late response.
   await run("window.__holdAdminDrive=true;document.querySelector('.drive-folder-form').requestSubmit();return true;");
@@ -344,7 +351,7 @@ try {
   await wait("return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).sites.length === 2;");
   await role('Administrator');
   const adminFixture=seedDemo();adminFixture.role='Administrator';
-  for(let index=0;index<30;index++)adminFixture.activity.unshift({id:'admin-history-'+index,entity:index%2?'site-b':'site-a',projectId:index%2?'site-b':'site-a',actor:index%2?'Procurement':'Administrator',actorIdentity:index%2?{name:'Andrea Reyes',email:ACCOUNT_FIXTURES[1].email,role:'Procurement'}:{name:'Daniel Garcia',email:ACCOUNT_FIXTURES[6].email,role:'Administrator'},eventType:'project.changed',action:'Project setup updated',entityRef:'ACTIVITY-'+index,at:index<2?'2026-10-07T16:00:'+String(index*30).padStart(2,'0')+'Z':'2026-10-07T15:59:'+String(index).padStart(2,'0')+'Z',changedFields:['Project setup']});
+  for(let index=0;index<30;index++)adminFixture.activity.unshift({id:'admin-history-'+index,entity:index%2?'site-b':'site-a',projectId:index%2?'site-b':'site-a',actor:index%2?'Procurement':'Administrator',actorIdentity:index%2?{name:'Andrea Reyes',email:ACCOUNT_FIXTURES.find(account=>account.role==='Procurement').email,role:'Procurement'}:{name:'Daniel Garcia',email:ACCOUNT_FIXTURES.find(account=>account.role==='Administrator').email,role:'Administrator'},eventType:'project.changed',action:'Project setup updated',entityRef:'ACTIVITY-'+index,at:index<2?'2026-10-07T16:00:'+String(index*30).padStart(2,'0')+'Z':'2026-10-07T15:59:'+String(index).padStart(2,'0')+'Z',changedFields:['Project setup']});
   await installFixture(adminFixture);await navigate('/admin');
   assert.equal(await run("return !document.querySelector('.record-dialog[open]')&&document.querySelectorAll('[data-project-row]').length===2;"),true,'Projects use compact rows with closed details');
   await click('Details','[data-project-row=site-a] button');
@@ -383,7 +390,7 @@ try {
   }
   await click('More sections','.nav-more-trigger');
   await wait("return !!document.querySelector('.nav-more-dialog[open]');");
-  await click('Reports','.nav-more-dialog a');await wait("return location.pathname==='/reports'&&!document.querySelector('.nav-more-dialog[open]');");
+  await click('Site inventory','.nav-more-dialog a');await wait("return location.pathname==='/inventory'&&!document.querySelector('.nav-more-dialog[open]');");
   assert.equal(await run("return document.querySelector('.nav-more-trigger').classList.contains('active');"),true,'More sections marks a selected secondary route');
   await click('More sections','.nav-more-trigger');
   await call('Input.dispatchKeyEvent',{type:'keyDown',key:'Escape',code:'Escape',windowsVirtualKeyCode:27});
@@ -507,7 +514,7 @@ try {
     await wait("return !!document.querySelector('.account-modal[open]');");
     await click(account.role, '.role-options button');
     await wait(`return !document.querySelector('.account-modal[open]')&&JSON.parse(localStorage.getItem(${JSON.stringify(SESSION_STORAGE_KEY)})).role===${JSON.stringify(account.role)}&&document.querySelector('.account-label strong')?.textContent===${JSON.stringify(account.name)};`);
-    assert.deepEqual(await run(`return JSON.parse(localStorage.getItem(${JSON.stringify(SESSION_STORAGE_KEY)}));`), { email: account.email, role: account.role });
+    assert.deepEqual(await run(`return JSON.parse(localStorage.getItem(${JSON.stringify(SESSION_STORAGE_KEY)}));`), { email: account.email, role: account.role, userId: 'bootstrap-' + account.role.toLowerCase().replace(/[^a-z]+/g, '-'), revision: 1 });
     assert.equal(await run("return location.pathname+location.search+location.hash;"), switchLocation, 'Switching keeps the current workspace page');
     assert.deepEqual(await state(), { ...beforeSwitching, role: account.role }, 'Switching preserves all records, history and project context');
     await wait("return document.activeElement === document.querySelector('.masthead-account');");
@@ -583,7 +590,7 @@ try {
   await navigate(materialLink);
   assert.equal(await run("return document.querySelectorAll('.allocation-material-list button[aria-current=true]').length;"),1,'Material navigation highlights the relevant comparison');
   const pageContrastFailures = new Map();
-  for (const [page, pageRole] of [["/projects","Management"],["/projects/site-a","Administrator"],["/suppliers","Procurement"],["/requests/m1/quotes","Procurement"],["/purchase-orders/po2/edit","Procurement"],["/accounting/po3","Accounting / Auditing"],["/finance/po3","Finance"],["/deliveries","Logistics"],["/inventory","Site Personnel"],["/accounting/po1","Accounting / Auditing"],["/accounting","Accounting / Auditing"],["/reports","Management"],["/admin","Administrator"]]) {
+  for (const [page, pageRole] of [["/projects","Project Manager"],["/projects/site-a","Administrator"],["/suppliers","Procurement"],["/requests/m1/quotes","Procurement"],["/purchase-orders/po2/edit","Procurement"],["/accounting/po3","Accounting / Auditing"],["/finance/po3","Finance"],["/deliveries","Logistics"],["/inventory","Site Personnel"],["/accounting/po1","Accounting / Auditing"],["/accounting","Accounting / Auditing"],["/reports","Project Manager"],["/admin","Administrator"]]) {
     await role(pageRole);
     await navigate(page);
     for (const width of [1440,1024,768,414,375,320]) {
@@ -896,7 +903,7 @@ try {
   await uploadFiles('input[aria-label="Choose combined supporting PDF"]', [sampleReference]);
   await wait("return document.querySelector('.reference-file-list')?.children.length === 1;");
   assert.equal(await run("return document.querySelector('.reference-count')?.textContent;"), "1 attached");
-  assert.equal(await run("return document.querySelector('.reference-note')?.textContent.includes('archived to Google Drive after Procurement approval');"), true);
+  assert.equal(await run("return document.querySelector('.reference-note')?.textContent.includes('archived to Google Drive after MRF approval');"), true);
   await click("Edit details", ".request-review button");
   assert.equal(await requestStep(), "1Request details");
   await click("Next", ".request-wizard-actions button");
@@ -935,7 +942,10 @@ try {
   await run("document.documentElement.dataset.theme='light';return true;");
   await call("Emulation.clearDeviceMetricsOverride");
   await click("Close", 'dialog[aria-label="MRF print preview"] button');
-  console.log("Request submitted", request.id);
+  assert.equal(request.workflow, "pm-external-v1", "New MRFs receive the revised workflow marker");
+  // Continue this broad regression through a grandfathered request; the revised handoffs have a dedicated full-disbursement smoke.
+  const legacyFlowFixture = await state(); delete legacyFlowFixture.requests.find(value=>value.id===request.id).workflow; await installFixture(legacyFlowFixture);
+  console.log("Request submitted; legacy payment regression", request.id);
   await role("Procurement"); await navigate(`/requests/${request.id}`); await click("Return with reason");
   await fill('textarea[name="reason"]', "Clarify the slab work package"); await submit('form.decision-panel');
   await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).requests.find(x=>x.id===${JSON.stringify(request.id)}).status==='returned';`);
@@ -1095,7 +1105,7 @@ try {
   assert.equal(events.every(event=>!!event.actorIdentity?.name),true,'Every new process event retains a user name');
   for(const kind of ['quote.finalized','payment.recorded','batch.received','batch.posted']) assert.equal(events.some(event=>event.eventType===kind),true,`Lifecycle includes ${kind}`);
   assert.equal(await run("return document.querySelector('.request-lifecycle').textContent.includes('Miguel Santos');"),true);
-  await role("Management"); await navigate("/reports"); assert.equal(await run("return document.querySelector('h1')?.textContent;"), "Operations report");
+  await role("Project Manager"); await navigate("/reports"); assert.equal(await run("return document.querySelector('h1')?.textContent;"), "Operations report");
   await call("Emulation.setDeviceMetricsOverride", { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false });
   await writeFile(path.join(profile, "desktop.png"), Buffer.from((await call("Page.captureScreenshot", { format: "png" })).data, "base64"));
   for (const width of [768, 414, 375, 320]) { await call("Emulation.setDeviceMetricsOverride", { width, height: 900, deviceScaleFactor: 1, mobile: true }); await sleep(100); const overflow = await run("return document.documentElement.scrollWidth > innerWidth + 1;"); assert.equal(overflow, false, `Horizontal page overflow at ${width}px`); if (width === 375) { await run("document.querySelector('.mobile-menu').click();return true;"); assert.equal(await run("return document.querySelector('.side-nav').classList.contains('is-open');"), true); await run("document.querySelector('.mobile-close').click();return true;"); } }

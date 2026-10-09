@@ -1,3 +1,7 @@
+import { philippineDate, validPaymentDate } from "./credit-terms.ts";
+import { canAttachDelivery, canArchiveAccounting, deliveryReceiptVersion, deliveryDocumentIssues, receivedDelivery } from "./delivery-archive.ts";
+import { archivedProof, canAttachPaymentProof, isExternalCredit, isExternalPayment, proofAssigned, requiresPMReview } from "./full-disbursement.ts";
+import type { PaymentProof, Payment } from "./types.ts";
 import { DELIVERY_LEGS, batchQuantityLimit, deliveryLocations, isSiteBatch, legFor, warehouseAvailableFor } from "./delivery-flow.ts";
 import type { DeliveryLeg, DeliveryLocation } from "./types.ts";
 import { openPaymentRequest, releaseBlocker } from "./workflow.ts";
@@ -23,12 +27,23 @@ import { procurementReady, supportingPdf } from "./request-archive.ts";
 import { ROLES, type ArchivedQuoteFile, type DemoSnapshot, type DocumentRef, type DocumentStatus, type Item, type POAdjustment, type POLine, type Priority, type Quote, type Role } from "./types.ts";
 
 export type Command =
+  | { type: "recordCreditPayment"; poId: string; paymentId: string; amount: number; method: Payment["method"]; reference: string; date: string; proofIds: string[] }
+  | { type: "voidCreditPayment"; poId: string; paymentId: string; reason: string }
+  | { type: "issuePO"; id: string }
+  | { type: "reopenPOReview"; id: string; reason: string }
+  | { type: "attachPaymentProofs"; poId: string; documents: Pick<PaymentProof, "name" | "mime" | "size" | "localFileId" | "sha256">[] }
+  | { type: "removePaymentProof"; poId: string; documentId: string }
+  | { type: "completePaymentProofArchive"; poId: string; documentId: string; fileId: string; url: string }
+  | { type: "failPaymentProofArchive"; poId: string; documentId: string; error: string }
+  | { type: "verifyExternalPayment"; poId: string; method: Payment["method"]; reference: string; date: string }
+  | { type: "reopenPaymentVerification"; poId: string; reason: string }
+
   | { type: "replaceMaterialAwards"; requestId: string; itemId: string; awards: { quoteId: string; quoteLineId: string; quantity: number }[] }
   | { type: "updateSite"; siteId: string; name: string; location: string; budget: number }
   | { type: "removeProjectScope"; siteId: string; id: string }
   | { type: "saveProjectScope"; id?: string; siteId: string; name: string; budget: number }
   | { type: "startOperation"; target: OperationTarget }
-  | { type: "attachAccountingDocuments"; poId: string; batchId: string; documents: Pick<AccountingDocument, "name" | "kind" | "mime" | "size" | "localFileId" | "sha256">[] }
+  | { type: "attachAccountingDocuments"; poId: string; batchId?: string; documents: Pick<AccountingDocument, "name" | "kind" | "mime" | "size" | "localFileId" | "sha256">[] }
   | { type: "completeAccountingArchive"; poId: string; documentId: string; fileId: string; url: string }
   | { type: "failAccountingArchive"; poId: string; documentId: string; error: string }
   | { type: "createBidReport"; requestId: string; comparisonSelections?: ComparisonSelections }
@@ -43,6 +58,8 @@ export type Command =
   | { type: "reopenApprovedRequest"; id: string; reason: string }
   | { type: "completeRequestArchive"; id: string; formFileId: string; supportFileId: string; formUrl: string; supportUrl: string }
   | { type: "failRequestArchive"; id: string; error: string }
+  | { type: "completeProjectFolder"; siteId: string; folderId: string }
+  | { type: "failProjectFolder"; siteId: string; error: string }
   | { type: "setProjectDriveFolder"; siteId: string; folderId: string }
   | { type: "addQuote"; requestId: string; supplierId: string; ref: string; prices: Record<string, number>; available: string; leadDays: number; terms: string; document?: string }
   | { type: "saveReviewedQuote"; requestId: string; supplierId: string; ref: string; available: string; leadDays: number; terms: string; documents: DocumentRef[]; lines: Quote["lines"]; currency: string; tax: number; freight: number; discount: number; validity: string; extraction: "gemini" | "manual"; supersedesId?: string }
@@ -61,7 +78,7 @@ export type Command =
   | { type: "completePOArchive"; id: string; fileId: string; url: string }
   | { type: "failPOArchive"; id: string; error: string }
   | { type: "releasePO"; id: string }
-  | { type: "saveAccountingPO"; id: string; paymentMode: PO["paymentMode"]; financial: PO["financial"]; document?: PO["document"]; supplierId?: string; lines?: POLine[]; notes?: string; tax?: number; freight?: number; discount?: number; adjustments?: POAdjustment[] }
+  | { type: "saveAccountingPO"; paymentDueDate?: string; id: string; paymentMode: PO["paymentMode"]; financial: PO["financial"]; document?: PO["document"]; supplierId?: string; lines?: POLine[]; notes?: string; tax?: number; freight?: number; discount?: number; adjustments?: POAdjustment[] }
   | { type: "savePaymentRequest"; poId: string; id?: string; amount: number; note: string; submit: boolean }
   | { type: "reviewPaymentRequest"; id: string; decision: "approve" | "hold" | "return" | "reject"; reason?: string }
   | { type: "dispatchBatch"; id: string }
@@ -69,6 +86,10 @@ export type Command =
   | { type: "confirmBatch"; id: string; lines: Record<string, { accepted: number; issue: string }> }
   | { type: "postBatch"; id: string; accepted: Record<string, number>; reason: string }
   | { type: "recordMovement"; siteId: string; itemName: string; unit: string; kind: "usage" | "adjustment"; quantity: number; reason: string }
+  | { type: "captureDeliveryReceipt"; id: string }
+  | { type: "completeDeliveryReceiptArchive"; batchId: string; receiptId: string; fileId: string; url: string }
+  | { type: "failDeliveryReceiptArchive"; batchId: string; receiptId: string; error: string }
+  | { type: "classifyAccountingDocument"; poId: string; documentId: string; kind: AccountingDocument["kind"]; batchId?: string }
   | { type: "saveDocuments"; poId: string; invoiceRef: string; receiptRef: string; review: DocumentStatus; note: string }
   | { type: "recordPayment"; paymentRequestId: string; method: "Cash" | "Bank" | "Check" | "Other"; reference: string; date: string }
   | { type: "addSite"; name: string; location: string; budget: number }
@@ -114,9 +135,15 @@ function awardError(state: DemoSnapshot, requestId: string, quote: Quote, lines:
 export function applyCommand(previous: DemoSnapshot, command: Command, ctx: CommandContext = defaultContext): CommandResult {
   const state = structuredClone(previous);
   state.scopes ||= [];
-  if (ctx.actor && !validIdentity(ctx.actor)) return fail("The acting account is invalid.");
+  if (ctx.actor && (!validIdentity(ctx.actor) || !ROLES.includes(ctx.actor.role))) return fail("The acting account is invalid.");
   const actor = ctx.actor?.role || state.role;
   const identity = copyIdentity(ctx.actor);
+  const reopenDocumentReview = (poId: string, reason: string) => {
+    const record = state.accounting.find(value => value.poId === poId);
+    if (record?.review !== "Complete") return;
+    (record.reviewHistory ||= []).push({ review: record.review, invoiceRef: record.invoiceRef, receiptRef: record.receiptRef, note: record.note, at: record.reviewedAt || at, by: record.reviewedBy, reason });
+    record.review = "Under Review"; record.reviewedAt = at; record.reviewedBy = copyIdentity(identity);
+  };
   const at = ctx.now();
   const id = ctx.id;
   let logged = false;
@@ -127,7 +154,7 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
 
   switch (command.type) {
     case "updateSite": {
-      if (!permit("Administrator")) return fail("Sign in as Administrator to edit a project.");
+      if (!permit("Administrator", "Project Manager")) return fail("Sign in as Administrator or Project Manager to edit a project.");
       const site = state.sites.find(value => value.id === command.siteId);
       if (!site) return fail("Project not found.");
       const name = command.name.trim(), location = command.location.trim(), budget = roundMoney(command.budget);
@@ -141,7 +168,7 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       return done("Project details saved.", site.id);
     }
     case "removeProjectScope": {
-      if (!permit("Administrator")) return fail("Sign in as Administrator to remove a scope.");
+      if (!permit("Administrator", "Project Manager")) return fail("Sign in as Administrator or Project Manager to remove a scope.");
       const scope = state.scopes.find(value => value.id === command.id && value.siteId === command.siteId);
       if (!scope) return fail("Scope not found in this project.");
       const blocked = scopeRemovalReason(state, scope.id);
@@ -151,7 +178,7 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       return done("Scope removed. Its allocation is now unallocated within this project.", scope.id);
     }
     case "saveProjectScope": {
-      if (!permit("Administrator")) return fail("Sign in as Administrator to maintain scope budgets.");
+      if (!permit("Administrator", "Project Manager")) return fail("Sign in as Administrator or Project Manager to maintain scope budgets.");
       const project = state.sites.find(value => value.id === command.siteId);
       if (!project) return fail("Project not found.");
       const existing = command.id ? state.scopes.find(scope => scope.id === command.id) : undefined;
@@ -175,7 +202,7 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       const error = operationError(state, command.target, actor);
       if (error) return fail(error);
       const retry = operationRetry(state, command.target);
-      const label = command.target.kind === "report" ? "Comparison processing" : command.target.kind === "attachment" ? "Evidence attachment" : "Drive archive";
+      const label = command.target.kind === "project" ? "Project folder creation" : command.target.kind === "report" ? "Comparison processing" : command.target.kind === "attachment" ? "Evidence attachment" : "Drive archive";
       log(operationEntity(command.target), `${label} ${retry ? "retried" : "started"}`);
       state.activity[0].eventType = retry ? "operation.retried" : "operation.started";
       return done(`${label} started.`);
@@ -265,17 +292,18 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
         } else Object.assign(original, fields);
         Object.assign(original, aiReview);
         log(original.id, command.intent === "submit" ? "MRF revised and resubmitted" : "MRF draft saved");
-        return done(command.intent === "submit" ? "MRF submitted to Procurement." : "MRF draft saved.", original.id);
+        return done(command.intent === "submit" ? `MRF submitted to ${requiresPMReview(original) ? "Project Manager" : "Procurement"}.` : "MRF draft saved.", original.id);
       }
       const requestId = id("mrf");
-      state.requests.push({ id: requestId, createdAt: at, ...fields, ...aiReview });
+      state.requests.push({ id: requestId, workflow: "pm-external-v1", createdAt: at, ...fields, ...aiReview });
       log(requestId, command.intent === "submit" ? "MRF submitted" : "MRF draft saved");
-      return done(command.intent === "submit" ? "MRF submitted to Procurement." : "MRF draft saved.", requestId);
+      return done(command.intent === "submit" ? "MRF submitted to Project Manager." : "MRF draft saved.", requestId);
     }
     case "reviewRequest": {
-      if (!permit("Procurement")) return fail("Sign in as Procurement to review an MRF.");
       const request = state.requests.find(r => r.id === command.id);
-      if (!request || request.status !== "submitted" && !(request.status === "approved" && request.correction?.status === "submitted")) return fail("This MRF is no longer awaiting Procurement review.");
+      const reviewer = requiresPMReview(request) ? "Project Manager" : "Procurement";
+      if (!permit(reviewer)) return fail(`Sign in as ${reviewer} to review this MRF.`);
+      if (!request || request.status !== "submitted" && !(request.status === "approved" && request.correction?.status === "submitted")) return fail(`This MRF is no longer awaiting ${reviewer} review.`);
       if (command.decision !== "approve" && !reasonOK(command.reason)) return fail("Enter a reason of at least five characters.", "reason");
       if (command.decision === "approve" && request.correction?.scope !== "documents") { const error = scopeValidationError(state, request.siteId, request.scopeId); if (error) return fail(error, "scopeId"); }
       if (command.decision === "approve" && !state.sites.find(site => site.id === request.siteId)?.driveFolderId) return fail("Map this project's Google Drive folder before approval.");
@@ -307,7 +335,7 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       return done("Site Personnel can revise this MRF.");
     }
     case "completeRequestArchive": {
-      if (!permit("Procurement", "Administrator")) return fail("Sign in as Procurement or Administrator to complete an MRF archive.");
+      if (!permit("Procurement", "Administrator") && !(permit("Project Manager") && requiresPMReview(state.requests.find(r => r.id === command.id)))) return fail("Sign in with the MRF reviewing department or Administrator to complete its archive.");
       const request = state.requests.find(value => value.id === command.id);
       if (request?.archive?.status === "complete" && request.archive.versions.at(-1)?.formFileId === command.formFileId && request.archive.versions.at(-1)?.supportFileId === command.supportFileId) return done("MRF already archived.");
       if (!request || request.status !== "approved" || request.archive?.status !== "pending" || request.correction) return fail("This MRF is not awaiting a Drive archive.");
@@ -320,7 +348,7 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       return done("MRF archived to Google Drive. Procurement can continue.");
     }
     case "failRequestArchive": {
-      if (!permit("Procurement", "Administrator")) return fail("Sign in as Procurement or Administrator to update an MRF archive.");
+      if (!permit("Procurement", "Administrator") && !(permit("Project Manager") && requiresPMReview(state.requests.find(r => r.id === command.id)))) return fail("Sign in with the MRF reviewing department or Administrator to update its archive.");
       const request = state.requests.find(value => value.id === command.id);
       if (!request || request.archive?.status !== "pending") return fail("This MRF is not awaiting a Drive archive.");
       request.archive.error = command.error.slice(0, 300);
@@ -550,7 +578,7 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       if (po.lines) {
         const lines = command.lines || po.lines;
         const tax = command.tax ?? po.tax ?? 0, freight = command.freight ?? po.freight ?? 0, discount = command.discount ?? po.discount ?? 0;
-        const error = po.accountingEdited && command.quoteId === po.quoteId ? directPoError(state, po, lines, poSupplierId(state, po) || "") : awardError(state, po.mrfId, quote, lines, tax, freight, discount, po.id);
+        const error = (po.accountingEdited || !!po.approvalHistory?.length) && command.quoteId === po.quoteId ? directPoError(state, po, lines, poSupplierId(state, po) || "") : awardError(state, po.mrfId, quote, lines, tax, freight, discount, po.id);
         if (error) return fail(error);
         if (lines.some(line => !nonnegative(line.discountValue ?? 0) || !nonnegative(line.taxRate ?? 0) || line.discountType === "percentage" && (line.discountValue || 0) > 100 || line.discountType === "fixed" && (line.discountValue || 0) > line.quantity * line.unitPrice)) return fail("Review PO line discounts and tax rates.");
         po.lines = lines; po.tax = tax; po.freight = freight; po.discount = discount;
@@ -611,6 +639,9 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       if (command.document) po.document = command.document;
       if (command.notes !== undefined) po.notes = command.notes.trim();
       if (command.adjustments && command.adjustments.some(value => !value.label.trim() || !nonnegative(value.value) || value.calculation === "percentage" && value.value > 100)) return fail("Review each PO adjustment amount.");
+      if (command.paymentDueDate && !validPaymentDate(command.paymentDueDate)) return fail("Enter a valid payment due date.");
+      po.paymentDueDate = command.paymentMode === "credit" ? command.paymentDueDate || po.paymentDueDate : undefined;
+      if (command.paymentMode !== "credit") po.externalCredit = undefined;
       po.financial = command.financial; po.paymentMode = command.paymentMode;
       if (command.adjustments) po.adjustments = command.adjustments;
       for (const key of ["tax", "freight", "discount"] as const) if (command[key] !== undefined) { if (!nonnegative(command[key]!)) return fail("PO charges must be nonnegative."); po[key] = command[key]; }
@@ -624,6 +655,7 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
     case "setPriority": {
       if (!permit("Finance")) return fail("Sign in as Finance to set payment priority.");
       const payment = state.paymentRequests.find(value => value.id === command.id);
+      if (payment && isExternalPayment(state.pos.find(po => po.id === payment.poId)!)) return fail("This PO uses external payment verification by Accounting.");
       if (!payment || !["submitted", "hold", "approved"].includes(payment.status)) return fail("This payment request is not in Finance review.");
       payment.priority = command.priority; payment.updatedAt = at; return done("Payment priority updated.");
     }
@@ -634,7 +666,7 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       if (command.decision === "approve") {
         const request = requestForPO(state, po);
         if (!request || !procurementReady(request)) return fail("The linked MRF archive must be ready.");
-        if (po.accountingEdited) {
+        if (po.accountingEdited || po.approvalHistory?.length) {
           const directError = directPoError(state, po, po.lines || [], poSupplierId(state, po) || "");
           if (directError) return fail(directError);
         }
@@ -648,6 +680,10 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
         if (scopeError) return fail(scopeError, "scopeId");
         if (poTotal(state, po) > scopeBudgetFor(state, request.scopeId!).available) return fail("This PO exceeds the available scope budget.");
         if (poTotal(state, po) <= 0 || poTotal(state, po) > budgetFor(state, request.siteId).available) return fail("This PO exceeds the available project budget or has an invalid total.");
+        if (po.workflow === "pm-external-v1" && po.paymentMode === "credit") {
+          if (!po.paymentDueDate || !validPaymentDate(po.paymentDueDate)) return fail("Enter the agreed payment due date before approving credit terms.", "paymentDueDate");
+          po.externalCredit = true;
+        }
         po.status = "approved"; po.reviewReason = undefined; po.updatedAt = at; po.reviewedAt = at; po.reviewedBy = actor; po.reviewedByIdentity = copyIdentity(identity); po.archive = { status: "pending" };
         log(po.id, "PO approved by Accounting; budget committed"); return done("PO approved. Archive its PDF before release to Logistics.");
       }
@@ -656,10 +692,105 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       po.reviewReason = command.reason!.trim(); po.updatedAt = at;
       log(po.id, `Accounting ${po.status}`, po.reviewReason); return done(`PO ${po.status}.`);
     }
+    case "issuePO": {
+      if (!permit("Procurement")) return fail("Sign in as Procurement to issue the PO.");
+      const po = state.pos.find(value => value.id === command.id);
+      if (!po || !isExternalPayment(po) || po.status !== "approved" || po.issuance) return fail("This PO is not available for supplier issuance.");
+      if (!procurementReady(requestForPO(state, po)) || po.archive?.status !== "complete" || !po.archive.url) return fail("Complete the current MRF and approved PO archives before issuance.");
+      if (!identity) return fail("A named Procurement account is required.");
+      po.issuance = { at, by: identity }; po.updatedAt = at;
+      log(po.id, "PO issued to supplier; marked Served"); return done("PO Served. Accounting can verify external payment.");
+    }
+    case "reopenPOReview": {
+      if (!permit("Procurement")) return fail("Sign in as Procurement to revise this PO.");
+      const po = state.pos.find(value => value.id === command.id);
+      if (!po || !isExternalPayment(po) || po.status !== "approved" || po.issuance || !reasonOK(command.reason)) return fail("Only an unissued approved PO can return for recheck, with a reason.");
+      po.approvalHistory = [...(po.approvalHistory || []), { at: po.reviewedAt, by: po.reviewedByIdentity, archive: po.archive, reason: command.reason.trim() }];
+      po.status = "returned"; po.reviewReason = command.reason.trim(); po.reviewedAt = undefined; po.reviewedBy = undefined; po.reviewedByIdentity = undefined; po.archive = undefined; po.updatedAt = at;
+      if (po.financial) po.financial.reviewed = false;
+      log(po.id, "PO reopened for Accounting recheck", command.reason); return done("Revise the PO and resubmit it to Accounting.");
+    }
+    case "attachPaymentProofs": {
+      if (!permit("Accounting / Auditing")) return fail("Sign in as Accounting to attach payment proof.");
+      const po = state.pos.find(value => value.id === command.poId);
+      if (!po || !canAttachPaymentProof(po)) return fail("Attach proof after supplier issuance and before payment verification.");
+      const documents = po.paymentProofs || [];
+      const pending = isExternalCredit(po) ? documents.filter(proof => !proofAssigned(po, proof.id)) : documents;
+      if (!command.documents.length || command.documents.length + pending.length > 12 || command.documents.some(value => !validAccountingDocument({ ...value, kind: "Payment receipt" })) || [...pending, ...command.documents].reduce((n, value) => n + value.size, 0) > MAX_ACCOUNTING_BATCH) return fail("Use up to 12 PDF/image proof files, 20 MB each and 45 MB total.");
+      if (new Set([...documents, ...command.documents].map(value => value.localFileId)).size !== documents.length + command.documents.length) return fail("This proof file is already attached.");
+      if (isExternalCredit(po) && (command.documents.some(value => documents.some(proof => proof.sha256 === value.sha256)) || new Set(command.documents.map(value => value.sha256)).size !== command.documents.length)) return fail("This proof content is already attached. Use a distinct proof for each payment.");
+      po.paymentProofs = [...documents, ...command.documents.map(value => ({ ...value, id: id("proof"), uploadedAt: at, uploadedBy: actor, uploadedByIdentity: identity, archive: { status: "pending" as const } }))];
+      log(po.id, "Payment proof attached"); return done("Proof attached. Archive it before verification.");
+    }
+    case "removePaymentProof": {
+      if (!permit("Accounting / Auditing")) return fail("Sign in as Accounting to remove proof.");
+      const po = state.pos.find(value => value.id === command.poId);
+      if (!po || !canAttachPaymentProof(po) || proofAssigned(po, command.documentId) || !po.paymentProofs?.some(value => value.id === command.documentId)) return fail("Reopen verification before changing its proof; cleared payments are locked.");
+      po.paymentProofs = po.paymentProofs.filter(value => value.id !== command.documentId);
+      log(po.id, "Payment proof removed"); return done("Proof removed. Archived copies and verification history are retained.");
+    }
+    case "completePaymentProofArchive":
+    case "failPaymentProofArchive": {
+      if (!permit("Accounting / Auditing", "Administrator")) return fail("Sign in as Accounting to archive proof.");
+      const po = state.pos.find(value => value.id === command.poId), proof = po?.paymentProofs?.find(value => value.id === command.documentId);
+      if (command.type === "completePaymentProofArchive" && proof?.archive.status === "complete" && proof.archive.fileId === command.fileId && proof.archive.url === command.url) return done("Payment proof already archived.");
+      if (!po || !isExternalPayment(po) || !proof || proof.archive.status !== "pending") return fail("This proof has no pending archive.");
+      if (command.type === "completePaymentProofArchive") {
+        if (!validDriveFileLink(command.url, command.fileId)) return fail("The proof archive link is invalid.");
+        proof.archive = { status: "complete", fileId: command.fileId, url: command.url };
+        log(po.id, "Payment proof archived"); return done("Payment proof archived.");
+      }
+      proof.archive.error = command.error.slice(0, 300); log(po.id, "Payment proof archive failed", command.error); return done("Proof archive needs retry.");
+    }
+    case "recordCreditPayment": {
+      if (!permit("Accounting / Auditing")) return fail("Sign in as Accounting to verify credit payments.");
+      const po = state.pos.find(value => value.id === command.poId);
+      if (!po || !isExternalCredit(po) || !canAttachPaymentProof(po) || !identity) return fail("Supplier issuance is required before credit payment verification.");
+      if (!procurementReady(requestForPO(state, po)) || po.archive?.status !== "complete") return fail("Complete current purchasing archives before verification.");
+      if (!command.paymentId?.trim() || po.creditPayments?.some(value => value.id === command.paymentId)) return fail("This payment has already been recorded or has an invalid ID.");
+      if (!positive(command.amount) || !close(command.amount, roundMoney(command.amount)) || command.amount > roundMoney(poTotal(state, po) - paidTotal(state, po.id))) return fail("Enter a positive payment within the unpaid balance, with up to two decimal places.", "amount");
+      if (!["Bank", "Cash", "Check", "Other"].includes(command.method) || !command.reference.trim() || !validPaymentDate(command.date) || command.date > philippineDate(new Date(at))) return fail("Enter a valid method, reference and actual payment date.");
+      if (po.creditPayments?.some(value => !value.voided && value.reference.toLowerCase() === command.reference.trim().toLowerCase())) return fail("This payment reference is already recorded for the PO.");
+      const proofs = command.proofIds.map(proofId => po.paymentProofs?.find(proof => proof.id === proofId));
+      if (!proofs.length || new Set(command.proofIds).size !== proofs.length || proofs.some(proof => !proof || !archivedProof(proof) || proofAssigned(po, proof.id))) return fail("Select unused archived proof for this payment.");
+      po.creditPayments = [...(po.creditPayments || []), { id: command.paymentId, amount: command.amount, method: command.method, reference: command.reference.trim(), date: command.date, verifiedAt: at, verifiedBy: identity, proofs: structuredClone(proofs.filter((proof): proof is PaymentProof => !!proof)) }];
+      po.updatedAt = at; log(po.id, `External credit payment verified: ${command.amount}`, command.reference);
+      return done("Payment verified. Delivery status is unchanged.", command.paymentId);
+    }
+    case "voidCreditPayment": {
+      if (!permit("Accounting / Auditing")) return fail("Sign in as Accounting to correct credit payments.");
+      const po = state.pos.find(value => value.id === command.poId), payment = po?.creditPayments?.find(value => value.id === command.paymentId);
+      if (!po || !isExternalCredit(po) || !["approved", "released"].includes(po.status) || !payment || payment.voided || !identity || !reasonOK(command.reason)) return fail("Choose a recorded payment and enter a correction reason of at least five characters.");
+      payment.voided = { at, by: identity, reason: command.reason.trim() }; po.updatedAt = at;
+      log(po.id, `External credit payment voided: ${payment.amount}`, command.reason);
+      return done("Payment voided; history retained and balance restored. Delivery status is unchanged.");
+    }
+    case "verifyExternalPayment": {
+      if (!permit("Accounting / Auditing")) return fail("Sign in as Accounting to verify full payment.");
+      const po = state.pos.find(value => value.id === command.poId);
+      if (!po || !isExternalPayment(po) || isExternalCredit(po) || po.status !== "approved" || !po.issuance || po.externalPayment || !identity) return fail("This PO is not awaiting external payment verification.");
+      if (!procurementReady(requestForPO(state, po)) || po.archive?.status !== "complete") return fail("Complete current purchasing archives before verification.");
+      const proofs = po.paymentProofs?.filter(archivedProof) || [];
+      if (!proofs.length) return fail("Attach and archive payment proof before confirming full payment.");
+      if (!["Cash", "Bank", "Check", "Other"].includes(command.method) || !command.reference.trim() || !/^\d{4}-\d{2}-\d{2}$/.test(command.date) || Number.isNaN(Date.parse(command.date)) || new Date(command.date).toISOString().slice(0,10) !== command.date) return fail("Enter a valid payment method, reference and date.");
+      const amount = poTotal(state, po);
+      if (!(amount > 0)) return fail("The PO must have a positive net payable amount.");
+      po.externalPayment = { amount, method: command.method, reference: command.reference.trim(), date: command.date, verifiedAt: at, verifiedBy: identity, proofs: structuredClone(proofs) }; po.updatedAt = at;
+      log(po.id, "Full external payment verified by Accounting"); return done("Full payment verified. Confirm delivery clearance separately.");
+    }
+    case "reopenPaymentVerification": {
+      if (!permit("Accounting / Auditing")) return fail("Sign in as Accounting to reopen verification.");
+      const po = state.pos.find(value => value.id === command.poId);
+      if (!po || !isExternalPayment(po) || isExternalCredit(po) || po.status !== "approved" || !po.externalPayment || !identity || !reasonOK(command.reason)) return fail("Only verified payments before delivery clearance can reopen, with a reason.");
+      po.verificationHistory = [...(po.verificationHistory || []), { ...structuredClone(po.externalPayment), reopenedAt: at, reopenedBy: identity, reason: command.reason.trim() }];
+      po.externalPayment = undefined; po.updatedAt = at;
+      log(po.id, "External payment verification reopened", command.reason); return done("Correct the proof or payment details, then verify full payment again.");
+    }
     case "savePaymentRequest": {
       if (!permit("Accounting / Auditing")) return fail("Sign in as Accounting to prepare a payment request.");
       const po = state.pos.find(value => value.id === command.poId && ["approved", "released"].includes(value.status));
       if (!po) return fail("Accounting must approve the PO before requesting payment.");
+      if (isExternalPayment(po)) return fail("This PO uses external payment verification by Accounting.");
       const existing = command.id ? state.paymentRequests.find(value => value.id === command.id && value.poId === po.id) : undefined;
       if ((command.id && !existing) || (existing && !["draft", "returned"].includes(existing.status))) return fail("This payment request is locked for editing.");
       const open = openPaymentRequest(state, po.id);
@@ -675,6 +806,7 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       const payment = state.paymentRequests.find(value => value.id === command.id && ["submitted", "hold"].includes(value.status));
       if (!payment) return fail("This payment request is not awaiting Finance review.");
       const po = state.pos.find(value => value.id === payment.poId && ["approved", "released"].includes(value.status));
+      if (isExternalPayment(po)) return fail("This PO uses external payment verification by Accounting.");
       if (!po || payment.amount > poTotal(state, po) - paidTotal(state, po.id) + 0.000001) return fail("This payment request exceeds the current unpaid balance.");
       if (command.decision !== "approve" && !reasonOK(command.reason)) return fail("Enter a reason of at least five characters.", "reason");
       payment.status = command.decision === "approve" ? "approved" : command.decision === "return" ? "returned" : command.decision === "hold" ? "hold" : "rejected";
@@ -725,6 +857,7 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       if (!lines.length || lines.some(line => !nonnegative(line.expected) || line.expected > limit(line.itemId))) return fail("Expected quantities must fit the available supplier or warehouse balance.", "expected");
       const batchId = id("batch");
       state.batches.push({ id: batchId, ref: nextRef("DEL-2026", state.batches), poId: po.id, leg, parentBatchId: parent?.id, origin: structuredClone(leg === "warehouse-site" ? parent!.destination! : locations.origin), destination: { name: destination.name.trim(), address: destination.address.trim() }, scheduledDate: command.scheduledDate, evidence: command.evidence.trim(), delayReason: command.delayReason.trim(), lines, status: "expected", createdAt: at, updatedAt: at, createdByIdentity: copyIdentity(identity) });
+      reopenDocumentReview(po.id, "New delivery scheduled");
       log(batchId, leg === "warehouse-site" ? "Warehouse onward delivery scheduled" : "Delivery batch scheduled", command.delayReason);
       return done("Delivery scheduled. Logistics records dispatch when it leaves.", batchId);
     }
@@ -749,6 +882,8 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
         line.accepted = input.accepted; line.issue = input.issue.trim();
       }
       batch.status = "confirmed"; batch.receivedAt = at; batch.updatedAt = at; batch.receivedByIdentity = copyIdentity(identity);
+      (batch.receiptVersions ||= []).push(deliveryReceiptVersion(state, batch, id("delivery-receipt"), at));
+      reopenDocumentReview(po.id, "Delivery quantities confirmed");
       log(batch.id, warehouse ? "Company warehouse receipt confirmed" : "Site received quantities confirmed");
       return done(warehouse ? "Warehouse quantities confirmed. Logistics can schedule onward deliveries." : "Quantities confirmed. Review the posting preview.");
     }
@@ -770,6 +905,7 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
         const item = request.items.find(value => value.id === line.itemId)!;
         state.movements.push({ id: id("movement"), siteId: request.siteId, itemName: item.name, unit: item.unit, quantity: line.accepted, kind: "receipt", reason: `Posted ${batch.ref}${command.reason.trim() ? " - " + command.reason.trim() : ""}`, batchId: batch.id, actor, actorIdentity: copyIdentity(identity), at });
       }
+      if (changed) { (batch.receiptVersions ||= []).push(deliveryReceiptVersion(state, batch, id("delivery-receipt"), at)); reopenDocumentReview(po.id, "Accepted delivery quantities corrected"); }
       log(batch.id, "Accepted stock posted", command.reason);
       return done("Accepted quantities posted to site stock.");
     }
@@ -787,24 +923,24 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       return done(`${command.kind === "usage" ? "Usage" : "Adjustment"} recorded.`, movementId);
     }
     case "attachAccountingDocuments": {
-      if (!permit("Site Personnel")) return fail("Sign in as Site Personnel to upload delivery documents.");
-      const batch = state.batches.find(value => value.id === command.batchId && value.poId === command.poId && isSiteBatch(value) && ["confirmed", "posted"].includes(value.status));
-      const po = state.pos.find(value => value.id === command.poId && value.status === "released");
-      if (!batch || !po) return fail("Confirm this delivered batch before uploading accounting documents.");
+      if (!canAttachDelivery(state, command.poId, command.batchId, actor)) return fail("Upload documents as Accounting, or as the receiving department for a confirmed delivery.");
+      const batch = state.batches.find(value => value.id === command.batchId);
+      const po = state.pos.find(value => value.id === command.poId)!;
+      if (command.documents.some(value => value.kind === "Signed delivery receipt") && !batch) return fail("Link signed delivery receipts to a confirmed delivery batch.");
       let record = state.accounting.find(value => value.poId === command.poId);
-      const existing = (record?.documents || []).filter(value => value.batchId === batch.id);
+      const existing = (record?.documents || []).filter(value => value.batchId === command.batchId);
       if (!command.documents.length || command.documents.some(value => !validAccountingDocument(value)) || existing.length + command.documents.length > 12 || [...existing, ...command.documents].reduce((total, value) => total + value.size, 0) > MAX_ACCOUNTING_BATCH) return fail("Use up to 12 PDF or image files, at most 20 MB each and 45 MB per batch.");
       const fileIds = [...(record?.documents || []).map(value => value.localFileId), ...command.documents.map(value => value.localFileId)];
       if (new Set(fileIds).size !== fileIds.length) return fail("This document is already attached.");
       if (!record) { record = { poId: po.id, invoiceRef: "", receiptRef: "", review: "Incomplete", note: "", documents: [] }; state.accounting.push(record); }
-      record.documents = [...(record.documents || []), ...command.documents.map(value => ({ ...value, id: id("account-doc"), batchId: batch.id, uploadedAt: at, uploadedBy: actor, uploadedByIdentity: copyIdentity(identity), archive: { status: "pending" as const } }))];
-      if (record.review === "Complete") record.review = "Under Review";
-      log(batch.id, `Accounting evidence attached for ${batch.ref}`);
+      record.documents = [...(record.documents || []), ...command.documents.map(value => ({ ...value, id: id("account-doc"), batchId: command.batchId, receiptVersion: value.kind === "Signed delivery receipt" ? batch?.receiptVersions?.at(-1)?.version : undefined, uploadedAt: at, uploadedBy: actor, uploadedByIdentity: copyIdentity(identity), archive: { status: "pending" as const } }))];
+      reopenDocumentReview(po.id, "New evidence attached");
+      log(batch?.id || po.id, `Accounting evidence attached for ${batch?.ref || po.ref}`);
       return done("Accounting documents saved. Archiving to Google Drive…");
     }
     case "completeAccountingArchive":
     case "failAccountingArchive": {
-      if (!permit("Site Personnel", "Accounting / Auditing", "Administrator")) return fail("Sign in as Site Personnel, Accounting or Administrator to archive accounting documents.");
+      if (!canArchiveAccounting(state, command.poId, command.documentId, actor)) return fail("Archive evidence as Accounting, Administrator, or its receiving department.");
       const document = state.accounting.find(value => value.poId === command.poId)?.documents?.find(value => value.id === command.documentId);
       if (!document) return fail("Accounting document not found.");
       if (document.archive.status === "complete") return done("Accounting document already archived.");
@@ -818,13 +954,46 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       log(document.id, "Evidence archive failed", command.error);
       return done("Accounting document saved; Drive archive needs retry.");
     }
+    case "captureDeliveryReceipt": {
+      const batch = state.batches.find(value => value.id === command.id);
+      if (!batch || !receivedDelivery(batch) || !permit("Accounting / Auditing", "Administrator", isSiteBatch(batch) ? "Site Personnel" : "Procurement")) return fail("This confirmed receipt cannot be archived by this department.");
+      if (!batch.receiptVersions?.length) { batch.receiptVersions = [deliveryReceiptVersion(state, batch, id("delivery-receipt"), at)]; reopenDocumentReview(batch.poId, "Historical delivery receipt captured"); log(batch.id, "Generated delivery receipt captured"); }
+      return done("Generated delivery receipt ready for archive.");
+    }
+    case "completeDeliveryReceiptArchive":
+    case "failDeliveryReceiptArchive": {
+      const batch = state.batches.find(value => value.id === command.batchId);
+      const receipt = batch?.receiptVersions?.find(value => value.id === command.receiptId);
+      if (!batch || !receipt || !permit("Accounting / Auditing", "Administrator", isSiteBatch(batch) ? "Site Personnel" : "Procurement")) return fail("This receipt archive is not available to this department.");
+      if (receipt.archive.status === "complete") return done("Delivery receipt already archived.");
+      if (command.type === "completeDeliveryReceiptArchive") {
+        if (!validDriveFileLink(command.url, command.fileId)) return fail("Invalid delivery receipt Drive link.");
+        receipt.archive = { status: "complete", fileId: command.fileId, url: command.url };
+        log(batch.id, `Generated delivery receipt v${receipt.version} archived`);
+      } else { receipt.archive.error = command.error; log(batch.id, "Delivery receipt archive failed", command.error); }
+      return done("Delivery receipt archive status saved.");
+    }
+    case "classifyAccountingDocument": {
+      if (!permit("Accounting / Auditing")) return fail("Only Accounting can classify existing evidence.");
+      const document = state.accounting.find(value => value.poId === command.poId)?.documents?.find(value => value.id === command.documentId);
+      if (!document || command.batchId !== document.batchId || !validAccountingDocument({ ...document, kind: command.kind })) return fail("Choose a valid category without changing the document's delivery association.");
+      const batch = state.batches.find(value => value.id === document.batchId);
+      if (command.kind === "Signed delivery receipt" && (!batch || !receivedDelivery(batch) || !batch.receiptVersions?.length)) return fail("Archive the generated receipt before classifying signed delivery evidence.");
+      reopenDocumentReview(command.poId, "Evidence classification changed");
+      document.kind = command.kind; document.receiptVersion = command.kind === "Signed delivery receipt" ? batch?.receiptVersions?.at(-1)?.version : undefined;
+      log(document.id, "Accounting evidence classified", command.kind);
+      return done("Document category updated.");
+    }
     case "saveDocuments": {
       if (!permit("Accounting / Auditing")) return fail("Sign in as Accounting to review documents.");
       if (!state.pos.some(p => p.id === command.poId && ["approved", "released"].includes(p.status))) return fail("This PO is not ready for accounting review.");
       if (command.review === "Complete" && (!command.invoiceRef.trim() || !command.receiptRef.trim())) return fail("Invoice and receipt references are required to complete review.");
+      if (command.review === "Complete") { const issues = deliveryDocumentIssues(state, command.poId); if (issues.length) return fail(issues[0]); }
       if (command.review === "Discrepancy" && !reasonOK(command.note)) return fail("Describe the discrepancy.", "note");
       let record = state.accounting.find(a => a.poId === command.poId);
       if (!record) { record = { poId: command.poId, invoiceRef: "", receiptRef: "", review: "Incomplete", note: "" }; state.accounting.push(record); }
+      if (record.reviewedAt) (record.reviewHistory ||= []).push({ review: record.review, invoiceRef: record.invoiceRef, receiptRef: record.receiptRef, note: record.note, at: record.reviewedAt, by: record.reviewedBy, reason: "Review updated" });
+      record.reviewedAt = at; record.reviewedBy = copyIdentity(identity);
       Object.assign(record, { invoiceRef: command.invoiceRef.trim(), receiptRef: command.receiptRef.trim(), review: command.review, note: command.note.trim() });
       log(command.poId, `Documents marked ${record.review}`, record.note);
       return done("Document review saved.");
@@ -832,6 +1001,7 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
     case "recordPayment": {
       if (!permit("Finance")) return fail("Sign in as Finance to record disbursement.");
       const payment = state.paymentRequests.find(value => value.id === command.paymentRequestId && value.status === "approved");
+      if (payment && isExternalPayment(state.pos.find(po => po.id === payment.poId)!)) return fail("This PO uses external payment verification by Accounting.");
       if (!payment || state.payments.some(value => value.paymentRequestId === payment.id)) return fail("An approved, undisbursed payment request is required.");
       const po = state.pos.find(value => value.id === payment.poId && ["approved", "released"].includes(value.status));
       if (!po || !positive(payment.amount) || payment.amount > poTotal(state, po) - paidTotal(state, po.id) + 0.000001) return fail("Disbursement exceeds the unpaid PO balance.");
@@ -841,23 +1011,39 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       payment.status = "disbursed"; payment.disbursedAt = at; payment.updatedAt = at;
       log(paymentId, `Finance disbursement recorded: ${payment.amount}`, command.reference); return done("Disbursement recorded. Accounting can review release eligibility.", paymentId);
     }
+    case "completeProjectFolder":
+    case "failProjectFolder": {
+      if (!permit("Administrator", "Project Manager")) return fail("Sign in as Administrator or Project Manager to configure a project folder.");
+      const site = state.sites.find(value => value.id === command.siteId);
+      if (!site || site.driveFolderId) return fail("This project already has a folder or is unavailable.");
+      if (command.type === "completeProjectFolder") {
+        if (!command.folderId.trim()) return fail("Choose a valid project folder.");
+        site.driveFolderId = command.folderId.trim(); site.driveFolderSetup = { status: "ready" };
+        log(site.id, "Google Drive project folder created");
+        return done("Project folder ready.");
+      }
+      site.driveFolderSetup = { status: "pending", error: command.error.trim() || "Folder creation failed. Retry or link an existing folder." };
+      log(site.id, "Google Drive project folder creation failed", site.driveFolderSetup.error);
+      return done("Project saved. Folder setup pending.");
+    }
     case "setProjectDriveFolder": {
-      if (!permit("Administrator")) return fail("Sign in as Administrator to map a project folder.");
+      if (!permit("Administrator", "Project Manager")) return fail("Sign in as Administrator or Project Manager to map a project folder.");
       const site = state.sites.find(value => value.id === command.siteId);
       if (!site || !command.folderId.trim()) return fail("Choose a valid project folder.");
       if (site.driveFolderId === command.folderId.trim()) return done("This folder is already saved.", site.id);
       site.driveFolderId = command.folderId.trim();
+      site.driveFolderSetup = { status: "ready" };
       log(site.id, "Google Drive project folder mapped");
       return done("Project Drive folder saved.");
     }
     case "addSite": {
-      if (!permit("Administrator")) return fail("Sign in as Administrator to add a project.");
+      if (!permit("Administrator", "Project Manager")) return fail("Sign in as Administrator or Project Manager to add a project.");
       const name = command.name.trim();
       if (!name || !command.location.trim()) return fail("Complete the project name and location.");
       if (!nonnegative(command.budget)) return fail("Enter a valid budget of zero or more.", "budget");
       if (state.sites.some(site => site.name.toLowerCase() === name.toLowerCase())) return fail("Enter a unique project name.", "name");
       const siteId = id("site");
-      state.sites.push({ id: siteId, name, location: command.location.trim(), budget: command.budget, personnel: "" });
+      state.sites.push({ id: siteId, name, location: command.location.trim(), budget: command.budget, personnel: "", driveFolderSetup: { status: "pending" } });
       log(siteId, "Project added");
       return done("Project added. Site Personnel can now create an MRF.", siteId);
     }

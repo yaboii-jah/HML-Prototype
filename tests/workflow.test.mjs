@@ -23,8 +23,10 @@ function submittedPO() {
   state = run(state, { type: 'saveProjectScope', siteId, name: 'Structural', budget: 10000 });
   state = as(state, 'Site Personnel');
   state = run(state, { type: 'saveRequest', intent: 'submit', siteId, scopeId: state.scopes[0].id, ref: 'MRF-CLIENT-001', requestDate: '2026-10-05', requestedBy: 'Site user', approvedBy: 'Signatory', purchaser: 'Buyer', financeOfficer: 'Finance', documents: [{ name: 'Supporting.pdf', type: 'Supporting PDF', fileId: 'support' }], items: [{ id: 'cement', name: 'Cement', unit: 'bag', quantity: 10, neededDate: '2026-10-06', purpose: '', location: 'Pasig', remarks: '' }] });
+  // These scenarios intentionally exercise grandfathered Finance/payment-request records.
+  delete state.requests[0].workflow;
   const request = state.requests[0];
-  fail(as(state, 'Management'), { type: 'reviewRequest', id: request.id, decision: 'approve' }, /Procurement/);
+  fail(as(state, 'Logistics'), { type: 'reviewRequest', id: request.id, decision: 'approve' }, /Procurement/);
   state = as(state, 'Procurement');
   state = run(state, { type: 'reviewRequest', id: request.id, decision: 'approve' });
   state = run(state, { type: 'completeRequestArchive', id: request.id, formFileId: 'form', supportFileId: 'support', formUrl: 'https://drive.google.com/file/d/form/view', supportUrl: 'https://drive.google.com/file/d/support/view' });
@@ -147,7 +149,7 @@ test('Accounting PO holds and returns reopen Procurement editing without committ
   assert.equal(budgetFor(state, state.sites[0].id).committed, 0);
 });
 
-test('department permissions reject crossed handoffs and Management has oversight only', () => {
+test('department permissions reject crossed handoffs and Administrator has oversight only', () => {
   const submitted = submittedPO(), approved = archive(approve(submitted)), requested = requestPayment(approved), disbursable = run(as(requested, 'Finance'), { type: 'reviewPaymentRequest', id: requested.paymentRequests[0].id, decision: 'approve' });
   const checks = [
     [submitted, { type: 'reviewPO', id: submitted.pos[0].id, decision: 'approve' }, 'Accounting / Auditing'],
@@ -157,7 +159,7 @@ test('department permissions reject crossed handoffs and Management has oversigh
     [approved, { type: 'releasePO', id: approved.pos[0].id }, 'Accounting / Auditing'],
   ];
   for (const [state, command, owner] of checks) for (const role of ROLES) if (role !== owner) fail(as(state, role), command, /Sign in/);
-  assert.deepEqual(tasksFor(as(submitted, 'Management')), []);
+  assert.deepEqual(tasksFor(as(submitted, 'Administrator')), []);
 });
 
 test('archive failures block Logistics while allowing independent payment preparation', () => {

@@ -83,3 +83,65 @@ html[data-theme="dark"] .quotation-summary-table{--quotation-selected-surface:co
 .register:last-child{margin-bottom:0}
 
 .register-scroll .table-text{display:block;max-width:32ch;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+.admin-drive-settings .drive-folder-form[hidden]{display:none}
+
+.record-dialog:has(.admin-project-settings)>.view-tabs{min-width:0;max-width:100%;overflow-x:auto}
+
+/* Hallmark - pre-emit critique: P4 H4 E4 S5 R5 V3. Existing payment panels, readable proof rows and compact actions. */
+.external-payment-panel .panel-heading { align-items: flex-start; gap: 16px; flex-wrap: wrap; }
+.external-payment-panel .panel-heading > div { flex: 1 1 280px; min-width: 0; }
+.external-payment-panel .panel-heading .helper-note { margin-bottom: 0; }
+.payment-verification-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: 16px; padding: 16px 0; }
+.payment-verification-summary > div { display: flex; flex-direction: column; gap: 6px; }
+.payment-verification-summary small, .payment-verification-summary span, .payment-proof-row small { color: var(--muted); }
+.payment-proof-list { display: grid; gap: 12px; }
+.payment-proof-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px; border: 1px solid var(--line); border-radius: 12px; flex-wrap: wrap; }
+.payment-proof-row > div:first-child { flex: 1 1 220px; min-width: 0; overflow-wrap: anywhere; }
+.payment-proof-row small { display: block; margin-top: 6px; }
+.proof-upload input { max-width: 100%; }
+.external-payment-panel .button-row { flex-wrap: wrap; gap: 10px; }
+@media (max-width: 600px) { .payment-proof-row { padding: 12px; } .external-payment-panel .button, .proof-upload input { min-height: 44px; } }
+
+.delivery-evidence-group { margin-top: 16px; padding: 16px; border: 1px solid var(--line); border-radius: 12px; min-width: 0; }
+.delivery-evidence-group > summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; cursor: pointer; }
+.delivery-evidence-group > summary > span:first-child { min-width: 0; flex: 1 1 200px; overflow-wrap: anywhere; }
+.delivery-evidence-group small, .generated-delivery-receipt small { display: block; margin-top: 6px; color: var(--muted); }
+.generated-delivery-receipt { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin: 16px 0; padding: 16px; background: var(--surface-alt, var(--surface)); border: 1px solid var(--line); border-radius: 10px; }
+.generated-delivery-receipt > div:first-child { flex: 1 1 200px; min-width: 0; overflow-wrap: anywhere; }
+.generated-delivery-receipt .button-row, .accounting-evidence .button-row { gap: 10px; flex-wrap: wrap; }
+.generated-delivery-receipt .field-error, .receipt-history { flex-basis: 100%; }
+.receipt-history > div { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 8px; }
+.accounting-evidence .evidence-upload { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; }
+.accounting-evidence .evidence-upload > .field { flex: 1 1 220px; min-width: 0; }
+.accounting-evidence .evidence-upload > small { flex-basis: 100%; }
+.accounting-evidence .evidence-file > div:first-child { min-width: 0; overflow-wrap: anywhere; }
+.accounting-evidence .evidence-file select { max-width: 100%; }
+.document-review-issues { color: var(--muted); padding-left: 20px; overflow-wrap: anywhere; }
+@media (max-width: 600px) { .delivery-evidence-group, .generated-delivery-receipt { padding: 12px; } .accounting-evidence .button { white-space: nowrap; min-height: 44px; } }
+
+.delivery-evidence-group[open] > summary .section-chevron { transform: rotate(180deg); }
+
+/* Named user administration uses compact, wrapping controls. */
+.admin-users .panel-heading { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
+.user-row-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.user-row-actions .button { padding: 8px 12px; min-height: 36px; font-size: .875rem; }
+.admin-users td small { display: block; overflow-wrap: anywhere; }
+.admin-users td { white-space: normal; }
+.user-edit-form, .user-password-form { display: grid; gap: 18px; }
+.role-options { max-height: 55vh; overflow-y: auto; }
+
+@media (max-width: 800px) { .user-row-actions .button { min-height: 44px; } }
+
+.account-details strong, .account-departments .role-options small { overflow-wrap: anywhere; white-space: normal; }
+
+.credit-payment-panel > .panel-heading { display: flex; gap: 16px; align-items: start; justify-content: space-between; flex-wrap: wrap; }
+.credit-proof-selection { display: grid; gap: 12px; margin-top: 16px; }
+.credit-proof-selection label { display: flex; align-items: center; gap: 10px; overflow-wrap: anywhere; }
+.credit-proof-selection input { width: 18px; height: 18px; flex: none; }
+.credit-payment-history summary { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; cursor: pointer; }
+.credit-payment-history summary strong, .credit-payment-history p { overflow-wrap: anywhere; }
+.credit-payment-panel .metric-strip > div { min-width: 0; }
+.credit-payment-panel .metric-strip strong { overflow-wrap: anywhere; }
+
+.credit-payment-form fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }

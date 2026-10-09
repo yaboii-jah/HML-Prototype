@@ -84,7 +84,7 @@ test("warehouse receipt belongs to Procurement, excludes site stock/fulfilment, 
   assert.equal(schedulableFor(state, state.pos.find(po => po.id === "po1"), "m1-i1"), 20);
   assert.match(requestLifecycle(state, "m1").stages.find(stage => stage.name === "Delivery").progress, /Not received.*1 receipts held at warehouse/);
   reject(state, post(parentId), "Site Personnel", /not a site receipt/);
-  reject(state, { type: "attachAccountingDocuments", poId: "po1", batchId: parentId, documents: [] }, "Site Personnel", /Confirm/);
+  reject(state, { type: "attachAccountingDocuments", poId: "po1", batchId: parentId, documents: [] }, "Site Personnel", /receiving department/);
   state = run(state, schedule(60, { leg: "warehouse-site", parentBatchId: parentId }));
   assert.deepEqual(state.batches.at(-1).origin, state.batches[0].destination);
 });

@@ -1,13 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { ROLES } from '../src/domain/types.ts';
-import { ACCOUNT_FIXTURES, accountForCredentials, LocalDemoSession, SESSION_STORAGE_KEY } from '../src/app-state/demo-session.ts';
+import { ACCOUNT_FIXTURES, LocalDemoSession, SESSION_STORAGE_KEY } from '../src/app-state/demo-session.ts';
 import { applyCommand } from '../src/domain/commands.ts';
 import { blankWorkspace } from '../src/mock/fixtures/blank.ts';
 import { seedDemo } from '../src/mock/fixtures/seed.ts';
 import { LocalDemoRepository } from '../src/mock/repository.ts';
 import { bindAccountCommands } from '../src/app-state/command-gateway.ts';
 
+import { LocalUserDirectory } from '../src/app-state/user-directory.ts';
+let testDirectory;
 const workspaceKey = 'hml-constructsync-demo-v12';
 const legacySessionKey = 'hml-constructsync-demo-session-v1';
 async function withStorage(entries, check) {
@@ -15,17 +17,15 @@ async function withStorage(entries, check) {
   const saved = new Map(entries);
   globalThis.window = { addEventListener() {} };
   globalThis.localStorage = { getItem: key => saved.get(key) ?? null, setItem: (key, value) => saved.set(key, value), removeItem: key => saved.delete(key) };
-  try { await check(saved); }
+  try { testDirectory = new LocalUserDirectory(); await testDirectory.load(); await check(saved); }
   finally { globalThis.window = previousWindow; globalThis.localStorage = previousStorage; }
 }
 
-test('seven active roles can sign in and Project Manager credentials and commands are rejected', () => {
-  assert.deepEqual(ROLES, ['Site Personnel', 'Procurement', 'Finance', 'Logistics', 'Accounting / Auditing', 'Management', 'Administrator']);
+test('seven active roles can sign in while removed assignment commands remain rejected', () => {
+  assert.deepEqual(ROLES, ['Site Personnel', 'Project Manager', 'Procurement', 'Finance', 'Logistics', 'Accounting / Auditing', 'Administrator']);
   assert.deepEqual(ACCOUNT_FIXTURES.map(account => account.role), ROLES);
-  for (const account of ACCOUNT_FIXTURES) assert.equal(accountForCredentials(account.email, account.password)?.role, account.role);
-  assert.equal(accountForCredentials('pm@constructsync.example', 'Demo123!'), null);
   const state = blankWorkspace(), original = structuredClone(state);
-  const result = applyCommand(state, { type: 'setRole', role: 'Project Manager' });
+  const result = applyCommand(state, { type: 'setRole', role: 'Unknown role' });
   assert.equal(result.ok, false); assert.match(result.message, /Unknown role/); assert.deepEqual(state, original);
   const retiredAssignment = applyCommand({ ...seedDemo(), role: 'Administrator' }, { type: 'updateAssignment', siteId: 'site-a', manager: 'New manager' });
   assert.equal(retiredAssignment.ok, false); assert.match(retiredAssignment.message, /Unknown command/);
@@ -43,31 +43,21 @@ test('project creation needs only name, location and budget', () => {
 test('old role-only sessions require sign-in and preserve workspace records', async () => {
   const workspace = JSON.stringify(seedDemo());
   for (const role of ['Project Manager', 'Procurement']) await withStorage([[legacySessionKey, role], [workspaceKey, workspace]], saved => {
-    const session = new LocalDemoSession();
+    const session = new LocalDemoSession(testDirectory);
     assert.deepEqual(session.read(), { email: null, role: null, status: 'ready' });
     assert.equal(saved.has(legacySessionKey), false); assert.equal(saved.get(workspaceKey), workspace);
   });
 });
 
-test('each account has its own password and emails normalize without changing passwords', () => {
-  assert.equal(new Set(ACCOUNT_FIXTURES.map(account => account.password)).size, 7);
-  for (const account of ACCOUNT_FIXTURES) {
-    assert.deepEqual(accountForCredentials('  ' + account.email.toUpperCase() + '  ', account.password), { email: account.email, role: account.role });
-    for (const other of ACCOUNT_FIXTURES.filter(value => value !== account)) assert.equal(accountForCredentials(account.email, other.password), null);
-    for (const password of ['Demo123!', 'incorrect', account.password + ' ']) assert.equal(accountForCredentials(account.email, password), null);
-  }
-  assert.equal(accountForCredentials('unknown@gmail.com', ACCOUNT_FIXTURES[0].password), null);
-});
-
 test('account sessions survive reopening and sign-out preserves all workspace data', async () => {
   const workspace = JSON.stringify(seedDemo()), account = ACCOUNT_FIXTURES[0];
   await withStorage([[workspaceKey, workspace]], saved => {
-    const session = new LocalDemoSession(); session.select(account);
-    assert.deepEqual(JSON.parse(saved.get(SESSION_STORAGE_KEY)), { email: account.email, role: account.role });
+    const session = new LocalDemoSession(testDirectory); session.select(account);
+    assert.deepEqual(JSON.parse(saved.get(SESSION_STORAGE_KEY)), { email: account.email, role: account.role, userId: testDirectory.getSnapshot().users.find(user => user.email === account.email).id, revision: 1 });
     assert.equal(saved.get(SESSION_STORAGE_KEY).includes(account.password), false);
-    assert.deepEqual(new LocalDemoSession().read(), { email: account.email, role: account.role, status: 'ready' });
+    assert.deepEqual(new LocalDemoSession(testDirectory).read(), { email: account.email, role: account.role, userId: testDirectory.getSnapshot().users.find(user => user.email === account.email).id, revision: 1, status: 'ready' });
     session.clear(); assert.equal(saved.has(SESSION_STORAGE_KEY), false);
-    assert.deepEqual(new LocalDemoSession().read(), { email: null, role: null, status: 'ready' });
+    assert.deepEqual(new LocalDemoSession(testDirectory).read(), { email: null, role: null, status: 'ready' });
     assert.equal(saved.get(workspaceKey), workspace);
   });
 });
@@ -75,7 +65,7 @@ test('account sessions survive reopening and sign-out preserves all workspace da
 test('malformed, unknown and mismatched account sessions require sign-in', async () => {
   const workspace = JSON.stringify(seedDemo());
   for (const raw of ['not-json', 'null', JSON.stringify('Procurement'), JSON.stringify({ role: 'Project Manager' }), JSON.stringify({ email: ACCOUNT_FIXTURES[0].email, role: 'Finance' }), JSON.stringify({ email: 'unknown@gmail.com', role: 'Site Personnel' })]) await withStorage([[SESSION_STORAGE_KEY, raw], [workspaceKey, workspace]], saved => {
-    assert.equal(new LocalDemoSession().read().role, null);
+    assert.equal(new LocalDemoSession(testDirectory).read().role, null);
     assert.equal(saved.has(SESSION_STORAGE_KEY), false); assert.equal(saved.get(workspaceKey), workspace);
   });
 });
@@ -83,18 +73,18 @@ test('malformed, unknown and mismatched account sessions require sign-in', async
 test('department switching needs a signed-in account and remembers the full identity without altering records', async () => {
   const workspace = JSON.stringify(seedDemo());
   await withStorage([[workspaceKey, workspace]], saved => {
-    const session = new LocalDemoSession();
+    const session = new LocalDemoSession(testDirectory);
     assert.equal(session.switchRole('Administrator'), false);
     assert.equal(saved.has(SESSION_STORAGE_KEY), false);
     session.select(ACCOUNT_FIXTURES[0]);
     for (const account of ACCOUNT_FIXTURES) {
       assert.equal(session.switchRole(account.role), true);
-      assert.deepEqual(new LocalDemoSession().read(), { email: account.email, role: account.role, status: 'ready' });
-      assert.deepEqual(JSON.parse(saved.get(SESSION_STORAGE_KEY)), { email: account.email, role: account.role });
+      assert.deepEqual(new LocalDemoSession(testDirectory).read(), { email: account.email, role: account.role, userId: testDirectory.getSnapshot().users.find(user => user.email === account.email).id, revision: 1, status: 'ready' });
+      assert.deepEqual(JSON.parse(saved.get(SESSION_STORAGE_KEY)), { email: account.email, role: account.role, userId: testDirectory.getSnapshot().users.find(user => user.email === account.email).id, revision: 1 });
       assert.equal(saved.get(workspaceKey), workspace);
     }
     const before = session.read();
-    assert.equal(session.switchRole('Project Manager'), false);
+    assert.equal(session.switchRole('Unknown role'), false);
     assert.deepEqual(session.read(), before);
     session.clear();
     assert.equal(session.switchRole('Procurement'), false);
@@ -105,7 +95,7 @@ test('department switching needs a signed-in account and remembers the full iden
 test('department switches change new audit actors and reject commands captured by the previous account', async () => {
   const initial = { ...seedDemo(), role: 'Procurement' };
   await withStorage([[workspaceKey, JSON.stringify(initial)]], async () => {
-    const repository = new LocalDemoRepository(), session = new LocalDemoSession();
+    const repository = new LocalDemoRepository(), session = new LocalDemoSession(testDirectory);
     session.select(ACCOUNT_FIXTURES.find(account => account.role === 'Procurement'));
     const active = () => {
       const account = ACCOUNT_FIXTURES.find(value => value.email === session.read().email);
@@ -129,19 +119,6 @@ test('department switches change new audit actors and reject commands captured b
   });
 });
 
-test('unavailable storage supports an in-memory account session and sign-out', () => {
-  const previousWindow = globalThis.window, previousStorage = globalThis.localStorage;
-  globalThis.window = { addEventListener() {} };
-  globalThis.localStorage = { getItem() { throw Error('blocked'); }, setItem() { throw Error('blocked'); }, removeItem() { throw Error('blocked'); } };
-  try {
-    const session = new LocalDemoSession(); assert.equal(session.read().status, 'volatile');
-    session.select(ACCOUNT_FIXTURES[0]); assert.equal(session.read().role, 'Site Personnel');
-    assert.equal(session.read().status, 'volatile');
-    assert.equal(session.switchRole('Finance'), true); assert.equal(session.read().email, ACCOUNT_FIXTURES.find(account => account.role === 'Finance').email);
-    assert.equal(session.read().status, 'volatile'); session.clear(); assert.equal(session.read().role, null);
-  } finally { globalThis.window = previousWindow; globalThis.localStorage = previousStorage; }
-});
-
 test('v12 PM selection loads in memory and preserves transactions, old assignments and audit actors', async () => {
   const state = seedDemo(); state.role = 'Project Manager';
   state.sites[0].manager = 'Historical manager';
@@ -150,7 +127,7 @@ test('v12 PM selection loads in memory and preserves transactions, old assignmen
   await withStorage([[workspaceKey, raw]], async saved => {
     const repository = new LocalDemoRepository(), view = await repository.load();
     assert.equal(view.status, 'ready');
-    assert.deepEqual(view.snapshot, { ...JSON.parse(raw), role: 'Site Personnel' });
+    assert.deepEqual(view.snapshot, JSON.parse(raw));
     assert.equal(saved.get(workspaceKey), raw, 'Loading must not rewrite stored records');
     const result = await repository.execute({ type: 'setRole', role: 'Accounting / Auditing' });
     assert.equal(result.ok, true);

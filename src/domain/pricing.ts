@@ -44,9 +44,9 @@ export function poFinancialBreakdown(po: Pick<PO, "lines" | "adjustments" | "fin
   const gross = roundMoney(lines.reduce((sum, value) => sum + value.amount, 0) + adjustments.reduce((sum, value) => sum + value.amount, 0) + legacyCharges);
   const divisor = settings?.vatStatus === "VAT" && settings.priceBasis === "inclusive" ? 1 + settings.vatRate / 100 : 1;
   const goodsBase = inputSubtotal / divisor;
-  const servicesBase = (po.adjustments || []).filter(value => value.included && (value.kind === "shipping" || value.kind === "other")).reduce((sum, value) => {
+  const servicesBase = (po.adjustments || []).filter(value => value.included && value.taxable !== false && (value.kind === "shipping" || value.kind === "other")).reduce((sum, value) => {
     const amount = value.calculation === "percentage" ? roundMoney(inputSubtotal * value.value / 100) : value.value;
-    return sum + amount / (value.taxable === false ? 1 : divisor);
+    return sum + amount / divisor;
   }, 0);
   const calculatedGoods = settings?.vatStatus === "VAT" ? roundMoney(goodsBase * .01) : 0;
   const calculatedServices = settings?.vatStatus === "VAT" ? roundMoney(servicesBase * .02) : 0;

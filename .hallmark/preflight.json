@@ -1,0 +1,35 @@
+{
+  "scannedAt": "2026-10-09",
+  "framework": {
+    "name": "Next.js App Router",
+    "version": "16.3.6",
+    "source": "package.json"
+  },
+  "fonts": {
+    "body": "Geist",
+    "mono": "Geist Mono",
+    "source": "app/layout.tsx"
+  },
+  "palette": {
+    "system": "HML blue OKLCH tokens, light and dark",
+    "source": "src/styles/tokens.css"
+  },
+  "spacing": {
+    "system": "Existing compact registers and panel rhythm, 12/16px spacing",
+    "sources": [
+      "src/styles/registers.css",
+      "src/styles/components.css"
+    ]
+  },
+  "motion": {
+    "stance": "CSS interactions; no animation dependency",
+    "source": "package.json"
+  },
+  "preserve": [
+    "font stack",
+    "palette",
+    "spacing",
+    "compact registers"
+  ],
+  "scope": "Additive Procurement issuance and Accounting external payment controls"
+}

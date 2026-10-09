@@ -1,11 +1,11 @@
 import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
 import { ACCOUNTING_MIMES, MAX_ACCOUNTING_FILE } from "../domain/accounting-documents.ts";
-export type AccountingUploadTicket = { documentId: string; poId: string; batchId: string; total: number; mime: string; sessionUri: string; expiresAt: number };
+export type AccountingUploadTicket = { documentId: string; poId: string; batchId?: string; total: number; mime: string; sessionUri: string; expiresAt: number };
 const key = () => { const value = Buffer.from(process.env.GOOGLE_DRIVE_UPLOAD_TOKEN_KEY || "", "base64"); if (value.length !== 32) throw new Error("Configure the Drive upload token key."); return value; };
 function valid(ticket: AccountingUploadTicket) {
   try {
     const url = new URL(ticket.sessionUri);
-    return !!ticket.documentId && !!ticket.poId && !!ticket.batchId && Number.isInteger(ticket.total) && ticket.total >= 12 && ticket.total <= MAX_ACCOUNTING_FILE && ACCOUNTING_MIMES.some(mime => mime === ticket.mime) && url.protocol === "https:" && url.hostname === "www.googleapis.com" && url.pathname === "/upload/drive/v3/files" && url.searchParams.get("uploadType") === "resumable" && !!url.searchParams.get("upload_id") && Number.isFinite(ticket.expiresAt) && ticket.expiresAt > Date.now();
+    return !!ticket.documentId && !!ticket.poId && (ticket.batchId === undefined || typeof ticket.batchId === "string" && !!ticket.batchId) && Number.isInteger(ticket.total) && ticket.total >= 12 && ticket.total <= MAX_ACCOUNTING_FILE && ACCOUNTING_MIMES.some(mime => mime === ticket.mime) && url.protocol === "https:" && url.hostname === "www.googleapis.com" && url.pathname === "/upload/drive/v3/files" && url.searchParams.get("uploadType") === "resumable" && !!url.searchParams.get("upload_id") && Number.isFinite(ticket.expiresAt) && ticket.expiresAt > Date.now();
   } catch { return false; }
 }
 export function sealAccountingUploadTicket(input: Omit<AccountingUploadTicket, "expiresAt">) {

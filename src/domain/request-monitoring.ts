@@ -1,3 +1,5 @@
+import { creditOverdue } from "./credit-terms.ts";
+import { servedPO, requiresPMReview, isExternalPayment } from "./full-disbursement.ts";
 import { auditRecords, type AuditRecord } from "./audit.ts";
 import { isSiteBatch, normalizedQuantity, warehouseAvailableFor, warehouseHeldFor } from "./delivery-flow.ts";
 import { roundMoney } from "./pricing.ts";
@@ -7,7 +9,7 @@ import type { Activity, Batch, DemoSnapshot, Item, MRF, PaymentRequest, PO } fro
 
 export type MonitoringState = "pending" | "partial" | "complete" | "blocked" | "inactive";
 export type MonitoringMilestone = Readonly<{ state: MonitoringState; label: string; detail: string }>;
-export type MaterialCoverage = Readonly<{ item: Item; approved: number; released: number; accepted: number; posted: number }>;
+export type MaterialCoverage = Readonly<{ item: Item; approved: number; served: number; released: number; accepted: number; posted: number }>;
 export type RequestMonitoring = Readonly<{
   request: MRF; projectName: string; scopeName: string;
   review: MonitoringMilestone; served: MonitoringMilestone; finance: MonitoringMilestone; logistics: MonitoringMilestone; delivered: MonitoringMilestone; stock: MonitoringMilestone;
@@ -19,8 +21,8 @@ export type RequestMonitoring = Readonly<{
 const milestone = (state: MonitoringState, label: string, detail = ""): MonitoringMilestone => ({ state, label, detail });
 const sum = (values: number[]) => normalizedQuantity(values.reduce((total, value) => total + value, 0));
 const validRequirement = (row: MaterialCoverage) => Number.isFinite(row.item.quantity) && row.item.quantity > 0;
-const fullCoverage = (coverage: MaterialCoverage[], key: "approved" | "released" | "accepted" | "posted") => coverage.length > 0 && coverage.every(row => validRequirement(row) && row[key] >= row.item.quantity);
-function coverageMilestone(coverage: MaterialCoverage[], key: "released" | "accepted" | "posted", pending: string, partial: string, complete: string) {
+const fullCoverage = (coverage: MaterialCoverage[], key: "approved" | "served" | "released" | "accepted" | "posted") => coverage.length > 0 && coverage.every(row => validRequirement(row) && row[key] >= row.item.quantity);
+function coverageMilestone(coverage: MaterialCoverage[], key: "served" | "released" | "accepted" | "posted", pending: string, partial: string, complete: string) {
   const completeLines = coverage.filter(row => validRequirement(row) && row[key] >= row.item.quantity).length;
   const any = coverage.some(row => row[key] > 0);
   return milestone(fullCoverage(coverage, key) ? "complete" : any ? "partial" : "pending", fullCoverage(coverage, key) ? complete : any ? partial : pending, `${completeLines} of ${coverage.length} materials fully covered`);
@@ -32,10 +34,11 @@ export function requestMonitoring(state: DemoSnapshot, requestId: string, record
   const active = pos.filter(po => po.status !== "rejected"), approved = active.filter(po => ["approved", "released"].includes(po.status)), released = active.filter(po => po.status === "released");
   const poIds = new Set(pos.map(po => po.id)), activeIds = new Set(active.map(po => po.id)), approvedIds = new Set(approved.map(po => po.id));
   const batches = state.batches.filter(batch => poIds.has(batch.poId)), activeBatches = batches.filter(batch => activeIds.has(batch.poId));
-  const paymentRequests = state.paymentRequests.filter(payment => poIds.has(payment.poId)), openPayments = paymentRequests.filter(payment => approvedIds.has(payment.poId) && !["rejected", "disbursed"].includes(payment.status));
+  const paymentRequests = state.paymentRequests.filter(payment => poIds.has(payment.poId) && !isExternalPayment(pos.find(po => po.id === payment.poId))), openPayments = paymentRequests.filter(payment => approvedIds.has(payment.poId) && !["rejected", "disbursed"].includes(payment.status));
   const coverage = request.items.map(item => ({
     item,
     approved: sum(approved.map(po => orderedFor(state, po, item.id))),
+    served: sum(active.filter(servedPO).map(po => orderedFor(state, po, item.id))),
     released: sum(released.map(po => orderedFor(state, po, item.id))),
     accepted: sum(active.map(po => acceptedFor(state, po.id, item.id))),
     posted: sum(activeBatches.filter(batch => isSiteBatch(batch) && batch.status === "posted").flatMap(batch => batch.lines.filter(line => line.itemId === item.id).map(line => line.accepted))),
@@ -53,12 +56,12 @@ export function requestMonitoring(state: DemoSnapshot, requestId: string, record
   const receiptIssues = activeBatches.filter(batch => batch.lines.some(line => line.accepted < line.expected && line.issue.trim())).length;
   const archivePending = request.archive?.status === "pending" || active.some(po => po.archive?.status === "pending");
   const hasBlocker = request.status === "returned" || !!request.correction || poHeld > 0 || poReturned > 0 || paymentHeld > 0 || paymentReturned > 0 || archivePending || receiptIssues > 0 && !fullCoverage(coverage, "accepted");
-  const review = request.status === "approved" ? milestone("complete", "Approved", request.correction ? `Correction ${request.correction.status}` : request.archive?.status === "pending" ? "MRF archive pending" : "Procurement reviewed") : request.status === "rejected" ? milestone("inactive", "Rejected", request.reason || "") : request.status === "returned" ? milestone("blocked", "Returned", request.reason || "") : milestone("pending", request.status === "draft" ? "Draft" : "For Procurement", request.status === "draft" ? "Awaiting submission" : "Review required");
-  const servedBase = coverageMilestone(coverage, "released", "Not served", "Partly served", "Served");
+  const review = request.status === "approved" ? milestone("complete", "Approved", request.correction ? `Correction ${request.correction.status}` : request.archive?.status === "pending" ? "MRF archive pending" : `${requiresPMReview(request) ? "Project Manager" : "Procurement"} reviewed`) : request.status === "rejected" ? milestone("inactive", "Rejected", request.reason || "") : request.status === "returned" ? milestone("blocked", "Returned", request.reason || "") : milestone("pending", request.status === "draft" ? "Draft" : requiresPMReview(request) ? "For Project Manager" : "For Procurement", request.status === "draft" ? "Awaiting submission" : "Review required");
+  const servedBase = coverageMilestone(coverage, "served", "Not served", "Partly served", "Served");
   const poProblems = [poHeld ? `${poHeld} PO on hold` : "", poReturned ? `${poReturned} PO returned` : ""].filter(Boolean).join(" · ");
   const served = milestone(servedBase.state === "pending" && poProblems ? "blocked" : servedBase.state, servedBase.label, `${servedBase.detail}${poProblems ? ` · ${poProblems}` : ""}`);
   const paidComplete = fullCoverage(coverage, "approved") && approved.length > 0 && approved.every(po => poTotal(state, po) > 0 && paidTotal(state, po.id) + .000001 >= poTotal(state, po));
-  const finance = paidComplete ? milestone("complete", "Paid", "All requested goods covered by paid approved POs") : paymentHeld ? milestone("blocked", "On hold", `${paymentHeld} Finance request on hold`) : paymentReturned ? milestone("blocked", "Returned to Accounting", `${paymentReturned} payment request to revise`) : forFinance ? milestone(paid > 0 ? "partial" : "pending", "For Finance", `${forFinance} requests · ${toDisburse} ready to disburse`) : approved.length ? milestone(paid > 0 ? "partial" : "pending", paid > 0 ? "Partly paid" : "Accounting preparation", outstanding > 0 ? "Payment request preparation required" : "Current POs paid · further purchasing required") : milestone("pending", "Not ready", "Awaiting Accounting PO approval");
+  const finance = paidComplete ? milestone("complete", "Paid", "All requested goods covered by paid approved POs") : paymentHeld ? milestone("blocked", "On hold", `${paymentHeld} Finance request on hold`) : paymentReturned ? milestone("blocked", "Returned to Accounting", `${paymentReturned} payment request to revise`) : forFinance ? milestone(paid > 0 ? "partial" : "pending", "For Finance", `${forFinance} requests · ${toDisburse} ready to disburse`) : approved.some(po => creditOverdue(state,po)) ? milestone(paid > 0 ? "partial" : "pending", "Payment overdue", "External credit balance needs Accounting follow-up; delivery can continue") : approved.some(po => isExternalPayment(po) && paidTotal(state,po.id) < poTotal(state,po)) ? milestone(paid > 0 ? "partial" : "pending", "Accounting verification", "External payment proof and verification required") : approved.length ? milestone(paid > 0 ? "partial" : "pending", paid > 0 ? "Partly paid" : "Accounting preparation", outstanding > 0 ? "Payment request preparation required" : "Current POs paid · further purchasing required") : milestone("pending", "Not ready", "Awaiting Accounting PO approval");
   const delivered = coverageMilestone(coverage, "accepted", "Not delivered", "Partly delivered", "Delivered");
   const stockBase = coverageMilestone(coverage, "posted", "Not posted", "Partly posted", "Stock posted");
   const stock = milestone(stockBase.state, stockBase.label, `${stockBase.detail}${awaitingPosting ? ` · ${awaitingPosting} batches to post` : ""}`);

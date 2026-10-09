@@ -1,4 +1,6 @@
-import type { AccountingDocument, Batch, MRF, PO } from "../domain/types.ts";
+import { createHash } from "node:crypto";
+import type { DeliveryReceiptVersion } from "../domain/types.ts";
+import type { AccountingDocument, Batch, MRF, PO, PaymentProof } from "../domain/types.ts";
 import { ACCOUNTING_MIMES, MAX_ACCOUNTING_FILE } from "../domain/accounting-documents.ts";
 import "server-only";
 import { GoogleAuth, OAuth2Client } from "google-auth-library";
@@ -69,6 +71,26 @@ export async function validateProjectFolder(input: string) {
   const file = await getDriveFile(id);
   if (file.mimeType !== FOLDER || file.capabilities?.canAddChildren === false) throw new Error("Choose a folder where the Drive connection can add files.");
   return { id, name: file.name };
+}
+
+// Stable project tags make interrupted setup and retries reuse the same folder.
+const projectFolderRequests = new Map<string, Promise<{ id: string; name: string }>>();
+export function createProjectFolder(projectId: string, projectName: string) {
+  const key = `${process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID}:${projectId}`;
+  const existing = projectFolderRequests.get(key);
+  if (existing) return existing;
+  const task = (async () => {
+    const root = folderIdFromInput(process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID || "");
+    const parent = await getDriveFile(root);
+    if (parent.mimeType !== FOLDER || parent.capabilities?.canAddChildren === false) throw new Error("The Drive connection cannot create folders in the company root.");
+    const tag = { hmlProjectId: projectId, hmlKind: "project-folder" };
+    const prior = await taggedChild(root, "", tag, false);
+    const folder = prior || await createFolder(root, safeName(projectName), tag, false);
+    if (folder.mimeType !== FOLDER || folder.capabilities?.canAddChildren === false) throw new Error("The project folder cannot receive files. Link another folder.");
+    return { id: folder.id, name: folder.name };
+  })().finally(() => projectFolderRequests.delete(key));
+  projectFolderRequests.set(key, task);
+  return task;
 }
 
 export async function listChildren(parentId: string, pageToken?: string) {
@@ -158,12 +180,12 @@ export async function prepareQuoteFile(projectFolderId: string, requestId: strin
   return { sessionUri: await beginUpload(supplierFolder.id, fileName, size, mime, tag) };
 }
 
-export async function archivePurchaseOrder(projectFolderId: string, requestId: string, requestRef: string, poId: string, poRef: string, bytes: Uint8Array) {
+export async function archivePurchaseOrder(projectFolderId: string, requestId: string, requestRef: string, poId: string, poRef: string, bytes: Uint8Array, revision?: number) {
   await validateProjectFolder(projectFolderId);
   const requestTag = { hmlRequestId: requestId };
   const requestFolder = await createFolder(projectFolderId, safeName(requestRef), requestTag, false);
   const poFolder = await createFolder(requestFolder.id, "Purchase Orders", requestTag);
-  const file = await uploadPdf(poFolder.id, `${safeName(poRef)}.pdf`, bytes, { hmlPoId: poId, hmlType: "purchase-order" });
+  const file = await uploadPdf(poFolder.id, `${safeName(poRef)}${revision ? `-v${revision}` : ""}.pdf`, bytes, { hmlPoId: poId, hmlType: "purchase-order", ...(revision ? { hmlApprovalVersion: String(revision) } : {}) });
   return { fileId: file.id, url: fileUrl(file) };
 }
 
@@ -225,14 +247,14 @@ async function uploadResult(response: Response): Promise<{ offset: number; suppo
 
 const safeName = (value: string) => value.replace(/[\\/:*?"<>|]/g, "-").trim().slice(0, 120) || "MRF";
 
-export async function prepareAccountingFile(projectFolderId: string, mrf: MRF, po: PO, batch: Batch, document: AccountingDocument) {
+export async function prepareAccountingFile(projectFolderId: string, mrf: MRF, po: PO, batch: Batch | undefined, document: AccountingDocument) {
   await validateProjectFolder(projectFolderId);
   const requestTag = { hmlRequestId: mrf.id };
   const requestFolder = await createFolder(projectFolderId, safeName(mrf.ref), requestTag, false);
   const accounting = await createFolder(requestFolder.id, "Accounting Documents", requestTag);
   const poFolder = await createFolder(accounting.id, safeName(po.ref), { ...requestTag, hmlPoId: po.id }, false);
-  const batchFolder = await createFolder(poFolder.id, safeName(batch.ref), { ...requestTag, hmlPoId: po.id, hmlBatchId: batch.id }, false);
-  const tags = { ...requestTag, hmlPoId: po.id, hmlBatchId: batch.id, hmlDocumentId: document.id, hmlType: "accounting-document", hmlSha256: document.sha256 };
+  const batchFolder = batch ? await createFolder(poFolder.id, safeName(batch.ref), { ...requestTag, hmlPoId: po.id, hmlBatchId: batch.id }, false) : poFolder;
+  const tags = { ...requestTag, hmlPoId: po.id, hmlBatchId: batch?.id || "", hmlDocumentId: document.id, hmlType: "accounting-document", hmlSha256: document.sha256 };
   const existing = await taggedChild(batchFolder.id, document.name, { hmlDocumentId: document.id }, false);
   if (existing) {
     if (existing.appProperties?.hmlSha256 !== document.sha256 || existing.mimeType !== document.mime) throw new Error("This evidence already has a different Drive copy.");
@@ -246,4 +268,48 @@ export async function downloadAccountingFile(projectFolderId: string, requestId:
   if (!ACCOUNTING_MIMES.some(mime => mime === file.mimeType) || tags?.hmlType !== "accounting-document" || tags.hmlRequestId !== requestId || tags.hmlPoId !== poId || tags.hmlBatchId !== batchId || tags.hmlDocumentId !== documentId || Number(file.size) > MAX_ACCOUNTING_FILE || !await isWithinFolder(fileId, projectFolderId)) throw new Error("This accounting file is outside its project or has invalid document metadata.");
   const bytes = Buffer.from(await (await drive(`${API}/${encodeURIComponent(fileId)}?alt=media&supportsAllDrives=true`)).arrayBuffer());
   return { bytes, mime: file.mimeType };
+}
+
+export async function preparePaymentProof(projectFolderId: string, mrf: MRF, po: PO, proof: PaymentProof) {
+  await validateProjectFolder(projectFolderId);
+  const requestTag = { hmlRequestId: mrf.id };
+  const requestFolder = await createFolder(projectFolderId, safeName(mrf.ref), requestTag, false);
+  const accounting = await createFolder(requestFolder.id, "Accounting Documents", requestTag);
+  const poFolder = await createFolder(accounting.id, safeName(po.ref), { ...requestTag, hmlPoId: po.id }, false);
+  const proofFolder = await createFolder(poFolder.id, "Payment Proof", { ...requestTag, hmlPoId: po.id });
+  const tags = { ...requestTag, hmlPoId: po.id, hmlDocumentId: proof.id, hmlType: "payment-proof", hmlSha256: proof.sha256 };
+  const existing = await taggedChild(proofFolder.id, proof.name, { hmlDocumentId: proof.id }, false);
+  if (existing) {
+    if (existing.appProperties?.hmlSha256 !== proof.sha256 || existing.mimeType !== proof.mime || Number(existing.size) !== proof.size) throw new Error("The existing proof archive does not match this file.");
+    return { driveFileId: existing.id, url: fileUrl(existing) };
+  }
+  return { sessionUri: await beginUpload(proofFolder.id, safeName(proof.name), proof.size, proof.mime, tags) };
+}
+export async function downloadPaymentProof(projectFolderId: string, requestId: string, poId: string, documentId: string, fileId: string) {
+  await validateProjectFolder(projectFolderId);
+  const file = await getDriveFile(fileId), tags = file.appProperties;
+  if (!ACCOUNTING_MIMES.some(mime => mime === file.mimeType) || tags?.hmlType !== "payment-proof" || tags.hmlRequestId !== requestId || tags.hmlPoId !== poId || tags.hmlDocumentId !== documentId || Number(file.size) > MAX_ACCOUNTING_FILE || !await isWithinFolder(fileId, projectFolderId)) throw new Error("This payment proof is outside its project or has invalid metadata.");
+  const bytes = Buffer.from(await (await drive(`${API}/${encodeURIComponent(fileId)}?alt=media&supportsAllDrives=true`)).arrayBuffer());
+  return { bytes, mime: file.mimeType };
+}
+
+// Stable receipt IDs and snapshot fingerprints make retries reuse the original Drive file.
+export async function archiveDeliveryReceipt(projectFolderId: string, receipt: DeliveryReceiptVersion, generate: () => Promise<Uint8Array>) {
+  await validateProjectFolder(projectFolderId);
+  const { request, po, batch } = receipt.data;
+  const requestTag = { hmlRequestId: request.id };
+  const requestFolder = await createFolder(projectFolderId, safeName(request.ref), requestTag, false);
+  const receipts = await createFolder(requestFolder.id, "Delivery Receipts", requestTag);
+  const poFolder = await createFolder(receipts.id, safeName(po.ref), { ...requestTag, hmlPoId: po.id }, false);
+  const batchFolder = await createFolder(poFolder.id, safeName(batch.ref), { ...requestTag, hmlPoId: po.id, hmlBatchId: batch.id }, false);
+  const fingerprint = createHash("sha256").update(JSON.stringify(receipt.data)).digest("hex");
+  const tags = { ...requestTag, hmlPoId: po.id, hmlBatchId: batch.id, hmlDocumentId: receipt.id, hmlVersion: String(receipt.version), hmlType: "delivery-receipt", hmlSha256: fingerprint };
+  const name = `${safeName(batch.ref)}-receipt-v${receipt.version}.pdf`;
+  const existing = await taggedChild(batchFolder.id, name, { hmlDocumentId: receipt.id }, false);
+  if (existing) {
+    if (existing.mimeType !== "application/pdf" || existing.appProperties?.hmlSha256 !== fingerprint) throw new Error("This receipt version already has a different Drive snapshot.");
+    return { driveFileId: existing.id, url: fileUrl(existing) };
+  }
+  const file = await uploadPdf(batchFolder.id, name, await generate(), tags);
+  return { driveFileId: file.id, url: fileUrl(file) };
 }

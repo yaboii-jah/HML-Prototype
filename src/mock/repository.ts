@@ -21,7 +21,7 @@ export interface DemoRepository {
 
 const isRecord = (value: unknown): value is Record<string, unknown> => !!value && typeof value === "object" && !Array.isArray(value);
 const arrays = ["sites", "suppliers", "categories", "requests", "quotes", "pos", "batches", "movements", "payments", "accounting", "activity"] as const;
-const isSnapshotShape = (value: unknown): value is Record<string, unknown> => isRecord(value) && arrays.every(key => Array.isArray(value[key])) && ROLES.includes(value.role as (typeof ROLES)[number]) && typeof value.siteFilter === "string";
+const isSnapshotShape = (value: unknown): value is Record<string, unknown> => isRecord(value) && arrays.every(key => Array.isArray(value[key])) && (ROLES.includes(value.role as (typeof ROLES)[number]) || value.role === "Management") && typeof value.siteFilter === "string";
 const dateFromTimestamp = (timestamp: string) => {
   const date = new Date(timestamp);
   if (Number.isNaN(date.getTime())) return "";
@@ -67,9 +67,7 @@ export function migrateV10(value: unknown): DemoSnapshot | null {
 }
 const parseCurrent = (raw: string): DemoSnapshot | null => {
   const saved: unknown = JSON.parse(raw);
-  // Retiring a role must not make an otherwise current workspace require clearing.
-  const parsed = isRecord(saved) && saved.version === 12 && saved.role === "Project Manager"
-    ? { ...saved, role: "Site Personnel" } : saved;
+  const parsed = isRecord(saved) && saved.role === "Management" ? { ...saved, role: "Project Manager" } : saved;
   if (!isSnapshotShape(parsed) || parsed.version !== 12 || !Array.isArray(parsed.paymentRequests) || !Array.isArray(parsed.pendingAwards) || !Array.isArray(parsed.bidReports)) return null;
   const state = parsed as DemoSnapshot;
   if (!state.pos.every(po => ["draft", "submitted", "hold", "returned", "rejected", "approved", "released"].includes(po.status))) return null;

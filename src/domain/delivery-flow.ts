@@ -55,6 +55,6 @@ export function deliveryLocations(state: DemoSnapshot, po: PO, batch?: Batch): {
 }
 export function deliveryPayment(state: DemoSnapshot, po: PO) {
   const arrangement = po.paymentMode === "credit" ? "Credit / terms" : po.paymentMode === "upfront" ? "Upfront" : "Arrangement not recorded";
-  const methods = [...new Set(state.payments.filter(payment => payment.poId === po.id).map(payment => payment.method))];
+  const methods = [...new Set([...(po.externalPayment ? [po.externalPayment.method] : []), ...state.payments.filter(payment => payment.poId === po.id).map(payment => payment.method)])];
   return `${arrangement} · ${methods.length ? methods.join(", ") : "Method not recorded"}`;
 }

@@ -7,7 +7,7 @@ registerHooks({ resolve(specifier, context, nextResolve) {
   if (specifier === 'google-auth-library') return { url: 'data:text/javascript,' + encodeURIComponent('export class OAuth2Client { setCredentials() {} async getAccessToken() { return {token:"test-only-token"}; } } export class GoogleAuth {}'), shortCircuit: true };
   return nextResolve(specifier, context);
 } });
-const { prepareRequestArchive, prepareBidFile, prepareAccountingFile, downloadAccountingFile } = await import('../src/server/drive.ts');
+const { prepareRequestArchive, prepareBidFile, prepareAccountingFile, downloadAccountingFile, preparePaymentProof, downloadPaymentProof, archivePurchaseOrder, archiveDeliveryReceipt } = await import('../src/server/drive.ts');
 
 function driveFixture(t) {
   const previousFetch = globalThis.fetch, previousEnv = { ...process.env };
@@ -79,4 +79,54 @@ test('accounting evidence archives into its MRF/PO/batch folders and reuses the 
   assert.equal(events.filter(value=>value.url.includes('/upload/')).length,starts);
   await assert.rejects(prepareAccountingFile('project-folder-12345',mrf,po,batch,{...document,sha256:'b'.repeat(64)}),/different Drive copy/);
   await assert.rejects(downloadAccountingFile('project-folder-12345','mrf-1','different-po','batch-1',document.id,session.file.id),/invalid document metadata/);
+});
+
+
+test('payment proof archives under its PO before any delivery exists, recovers the exact copy and rejects mismatched metadata', async t => {
+  const { files, sessions, events } = driveFixture(t);
+  const proof={id:'proof-1',name:'Bank.pdf',mime:'application/pdf',size:1024,sha256:'a'.repeat(64)}, mrf={id:'mrf-1',ref:'MRF-1'},po={id:'po-1',ref:'PO-1'};
+  const result=await preparePaymentProof('project-folder-12345',mrf,po,proof),session=sessions.get(new URL(result.sessionUri).searchParams.get('upload_id'));
+  assert.equal(session.file.appProperties.hmlType,'payment-proof');assert.equal(session.file.appProperties.hmlPoId,po.id);assert.equal(session.file.appProperties.hmlBatchId,undefined);
+  let parent=files.get(session.file.parents[0]);assert.equal(parent.name,'Payment Proof');parent=files.get(parent.parents[0]);assert.equal(parent.name,'PO-1');parent=files.get(parent.parents[0]);assert.equal(parent.name,'Accounting Documents');
+  files.set(session.file.id,{...session.file,size:'1024'});const starts=events.filter(event=>event.url.includes('/upload/')).length;
+  const retried=await preparePaymentProof('project-folder-12345',mrf,po,proof);assert.equal(retried.driveFileId,session.file.id);assert.equal(events.filter(event=>event.url.includes('/upload/')).length,starts);
+  await assert.rejects(preparePaymentProof('project-folder-12345',mrf,po,{...proof,sha256:'b'.repeat(64)}),/does not match/);
+  await assert.rejects(preparePaymentProof('project-folder-12345',mrf,po,{...proof,size:2048}),/does not match/);
+  await assert.rejects(downloadPaymentProof('project-folder-12345','foreign-mrf',po.id,proof.id,session.file.id),/invalid metadata/);
+  await assert.rejects(downloadPaymentProof('project-folder-12345',mrf.id,'foreign-po',proof.id,session.file.id),/invalid metadata/);
+});
+
+test('renewed PO approvals archive distinct numbered PDFs and preserve prior copies while retries reuse a version', async t => {
+  const {files}=driveFixture(t),args=['project-folder-12345','mrf-1','MRF-1','po-1','PO-1',Buffer.from('%PDF-approved')];
+  const first=await archivePurchaseOrder(...args,1),second=await archivePurchaseOrder(...args,2),retried=await archivePurchaseOrder(...args,2);
+  assert.notEqual(first.fileId,second.fileId);assert.equal(retried.fileId,second.fileId);
+  assert.equal(files.get(first.fileId).name,'PO-1-v1.pdf');assert.equal(files.get(second.fileId).appProperties.hmlApprovalVersion,'2');
+  const legacy=await archivePurchaseOrder(...args);assert.equal(files.get(legacy.fileId).name,'PO-1.pdf');assert.equal(files.get(legacy.fileId).appProperties.hmlApprovalVersion,undefined);
+});
+
+
+test('generated delivery archives preserve versions and reuse the immutable snapshot on retry', async t => {
+  const { files, events } = driveFixture(t);
+  const receipt = { id: 'receipt-1', version: 1, data: { request: { id: 'mrf-1', ref: 'MRF-1' }, po: { id: 'po-1', ref: 'PO-1' }, batch: { id: 'batch-1', ref: 'DEL-1', lines: [{ accepted: 10 }] } } };
+  let generated = 0;
+  const generate = async () => { generated++; return Buffer.from('%PDF-generated-delivery'); };
+  const first = await archiveDeliveryReceipt('project-folder-12345', receipt, generate);
+  const retried = await archiveDeliveryReceipt('project-folder-12345', receipt, generate);
+  assert.equal(retried.driveFileId, first.driveFileId); assert.equal(generated, 1);
+  assert.equal(files.get(first.driveFileId).appProperties.hmlType, 'delivery-receipt');
+  assert.ok([...files.values()].some(file => file.name === 'Delivery Receipts'));
+  await assert.rejects(archiveDeliveryReceipt('project-folder-12345', { ...receipt, data: { ...receipt.data, batch: { ...receipt.data.batch, lines: [{ accepted: 9 }] } } }, generate), /different Drive snapshot/);
+  const second = await archiveDeliveryReceipt('project-folder-12345', { ...receipt, id: 'receipt-2', version: 2 }, generate);
+  assert.notEqual(second.driveFileId, first.driveFileId);
+  assert.equal(files.get(second.driveFileId).name, 'DEL-1-receipt-v2.pdf');
+  assert.equal(events.filter(event => event.method === 'PUT').length, 2);
+});
+
+test('PO-level invoice archives do not require a delivery folder', async t => {
+  const { files, sessions } = driveFixture(t);
+  const document = { id: 'invoice-1', name: 'Invoice.pdf', mime: 'application/pdf', size: 1024, sha256: 'a'.repeat(64) };
+  const result = await prepareAccountingFile('project-folder-12345', { id: 'mrf-1', ref: 'MRF-1' }, { id: 'po-1', ref: 'PO-1' }, undefined, document);
+  const session = sessions.get(new URL(result.sessionUri).searchParams.get('upload_id'));
+  assert.equal(session.file.appProperties.hmlBatchId, '');
+  assert.equal(files.get(session.file.parents[0]).name, 'PO-1');
 });

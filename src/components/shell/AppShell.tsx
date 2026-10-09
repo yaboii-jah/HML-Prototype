@@ -8,9 +8,9 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { useDemo } from "@/src/app-state/DemoProvider";
-import { ACCOUNT_FIXTURES, accountDisplayName } from "@/src/app-state/demo-session";
+import { accountDisplayName } from "@/src/app-state/demo-session";
 import { tasksFor } from "@/src/domain/queues";
-import { type Role } from "@/src/domain/types";
+import { ROLES, type Role } from "@/src/domain/types";
 
 type IconName = "grid" | "building" | "request" | "supplier" | "purchase" | "finance" | "delivery" | "inventory" | "accounting" | "report" | "admin" | "bell" | "menu" | "close" | "chevron" | "moon" | "sun";
 const icons: Record<IconName, ReactNode> = {
@@ -56,16 +56,16 @@ const NAV: { href: string; label: string; icon: IconName; group: string }[] = [
 ];
 const primary: Record<Role, string[]> = {
   "Site Personnel": ["/dashboard", "/requests", "/deliveries", "/inventory", "/projects"],
+  "Project Manager": ["/dashboard", "/requests", "/projects", "/purchase-orders", "/reports"],
   Procurement: ["/dashboard", "/requests", "/purchase-orders", "/suppliers"],
   Finance: ["/dashboard", "/finance", "/purchase-orders", "/projects"],
   Logistics: ["/dashboard", "/deliveries", "/purchase-orders", "/projects"],
   "Accounting / Auditing": ["/dashboard", "/accounting", "/inventory", "/purchase-orders"],
-  Management: ["/dashboard", "/reports", "/projects", "/purchase-orders"],
-  Administrator: ["/dashboard", "/admin", "/projects", "/suppliers"],
+  Administrator: ["/dashboard", "/admin", "/projects", "/suppliers", "/reports"],
 };
 
 export function AppShell({ children }: { children: ReactNode }) {
-  const { snapshot, session, run, switchRole, signOut, notice, clearNotice } = useDemo();
+  const { snapshot, session, directory, run, switchAccount, signOut, notice, clearNotice } = useDemo();
   const [accountOpen, setAccountOpen] = useState(false);
   const [accountError, setAccountError] = useState("");
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -126,8 +126,8 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="account-details"><strong>{accountName}</strong><small>{snapshot.role}</small><span>{session.email}</span></div>
         <section className="account-departments" aria-labelledby="account-departments-title">
           <h3 id="account-departments-title">Switch department</h3>
-          <div className="role-options">{ACCOUNT_FIXTURES.map(account => <button key={account.role} type="button" className={snapshot.role === account.role ? "selected" : ""} aria-pressed={snapshot.role === account.role} onClick={() => {
-            const result = switchRole(account.role);
+          <div className="role-options">{ROLES.flatMap(role => directory.users.filter(user => user.active && user.role === role)).map(account => <button key={account.id} type="button" className={session.userId === account.id ? "selected" : ""} aria-pressed={session.userId === account.id} onClick={() => {
+            const result = switchAccount(account.id);
             if (!result.ok) { setAccountError(result.message); return; }
             setAccountOpen(false);
             setNotificationsOpen(false);

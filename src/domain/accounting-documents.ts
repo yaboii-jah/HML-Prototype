@@ -1,6 +1,6 @@
 import { supplierName } from "./selectors.ts";
 import type { AccountingDocument, DemoSnapshot } from "./types.ts";
-export const ACCOUNTING_KINDS = ["Payment receipt", "Invoice", "Delivery receipt", "Other"] as const;
+export const ACCOUNTING_KINDS = ["Payment receipt", "Invoice", "Delivery receipt", "Signed delivery receipt", "Other"] as const;
 export const ACCOUNTING_MIMES = ["application/pdf", "image/jpeg", "image/png", "image/webp"] as const;
 export const MAX_ACCOUNTING_FILE = 20 * 1024 * 1024;
 export const MAX_ACCOUNTING_BATCH = 45 * 1024 * 1024;

@@ -28,7 +28,8 @@ test('received evidence belongs to its batch/PO and reopens a completed review w
 });
 test('upload commands reject wrong roles, unreceived batches, cross-PO evidence and invalid file limits', () => {
   const { state, command } = fixture();
-  for (const role of ['Procurement','Finance','Accounting / Auditing','Administrator']) assert.equal(applyCommand({ ...state, role }, command).ok, false);
+  for (const role of ['Procurement','Finance','Administrator']) assert.equal(applyCommand({ ...state, role }, command).ok, false);
+  assert.equal(applyCommand({ ...state, role: 'Accounting / Auditing' }, command).ok, true);
   const expected = structuredClone(state); expected.batches.find(value => value.id === command.batchId).status = 'expected';
   assert.equal(applyCommand(expected, command).ok, false);
   assert.equal(applyCommand(state, { ...command, poId: 'another-po' }).ok, false);

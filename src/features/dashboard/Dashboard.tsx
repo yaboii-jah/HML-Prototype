@@ -16,11 +16,11 @@ export function Dashboard() {
   const visibleSites = state.sites.filter(site => state.siteFilter === "all" || site.id === state.siteFilter);
   return <>
     <PageHeader eyebrow={`${state.role} workspace`} title="Operations dashboard" description="Your next decisions and the current position of every project." actions={state.role === "Site Personnel" && state.sites.length ? <Link href="/requests/new" className="button primary">New material request</Link> : undefined}/>
-    {!state.sites.length && <section className="panel"><span className="eyebrow">START HERE</span><h2>Build your workflow from an empty workspace</h2><p>An Administrator adds projects, then Site Personnel creates material requests. Each department receives the next task in its queue.</p><Link className="button primary" href="/admin">Set up project</Link></section>}
+    {!state.sites.length && <section className="panel"><span className="eyebrow">START HERE</span><h2>Build your workflow from an empty workspace</h2><p>A Project Manager or Administrator adds projects, then Site Personnel creates material requests. Each department receives the next task in its queue.</p><Link className="button primary" href="/projects">Set up project</Link></section>}
     <div className="metric-strip dashboard-metrics">
-      <div><span className="metric-icon blue">MRF</span><small>Procurement reviews</small><strong>{metrics.procurementReviews}</strong><span>Requests awaiting a decision</span></div>
+      <div><span className="metric-icon blue">MRF</span><small>MRF reviews</small><strong>{metrics.procurementReviews}</strong><span>Requests awaiting a decision</span></div>
       <div><span className="metric-icon cyan">PO</span><small>Accounting reviews</small><strong>{metrics.accountingReviews}</strong><span>Purchase orders to assess</span>
-      </div><div><span className="metric-icon cyan">PAY</span><small>Finance payments</small><strong>{metrics.financeReviews}</strong><span>Review or disburse payment</span></div>
+      </div><div><span className="metric-icon cyan">PAY</span><small>Payment actions</small><strong>{metrics.financeReviews + metrics.externalVerifications}</strong><span>Verify payment or review clearance</span></div>
       <div><span className="metric-icon amber">DR</span><small>Open delivery lines</small><strong>{metrics.openDeliveryLines}</strong><span>Materials still expected</span></div>
       <div><span className="metric-icon teal">₱</span><small>Approved commitment</small><strong>{money(metrics.commitment)}</strong><span>Unpaid approved PO value</span></div>
     </div>

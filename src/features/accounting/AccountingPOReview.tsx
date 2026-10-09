@@ -1,5 +1,6 @@
 "use client";
 
+import { isExternalPayment } from "@/src/domain/full-disbursement";
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
 import { useDemo } from "@/src/app-state/DemoProvider";
@@ -55,7 +56,7 @@ export function AccountingPOReview({ po }: { po: PO }) {
     const form = new FormData(event.currentTarget);
     const approve = (event.nativeEvent as SubmitEvent).submitter?.getAttribute("value") === "approve";
     if (approve && !await confirm(`Approve ${po.ref}?`, "Accounting will commit the project budget and archive the PO. Purchasing and financial details will lock.", "Approve PO")) return;
-    const saved = await run({ type: "saveAccountingPO", id: po.id, paymentMode: mode as PO["paymentMode"], financial: readPoFinancial(form), adjustments, document: readPoDocument(form), lines: baseline.lines, supplierId: baseline.supplierId || quote.supplierId, notes: baseline.notes });
+    const saved = await run({ type: "saveAccountingPO", id: po.id, paymentDueDate: String(form.get("paymentDueDate") || ""), paymentMode: mode as PO["paymentMode"], financial: readPoFinancial(form), adjustments, document: readPoDocument(form), lines: baseline.lines, supplierId: baseline.supplierId || quote.supplierId, notes: baseline.notes });
     if (!saved.ok) { setError(saved.message); return; }
     setError("");
     if (approve) {
@@ -79,10 +80,11 @@ export function AccountingPOReview({ po }: { po: PO }) {
       <p className="helper-note">Edit the PO directly or return it to Procurement. Confirm materials, document fields, taxes and charges before approval.</p>
       <form className="form-stack accounting-po-form" onSubmit={save} onChange={event => { if ((!(event.target instanceof HTMLInputElement) || event.target.name !== "financialReviewed")) setReviewed(false); }}>
         <Field label="Payment arrangement"><select name="paymentMode" value={mode} onChange={event => setMode(event.target.value as typeof mode)} required><option value="">Choose payment arrangement</option><option value="upfront">Upfront — full disbursement before delivery</option><option value="credit">Credit / terms — delivery can proceed before payment</option></select></Field>
+        {mode === "credit" && po.workflow === "pm-external-v1" && <Field label="Agreed payment due date" hint="Enter the date agreed with the supplier. Finance processes payment outside the app; delivery can proceed unpaid."><input type="date" name="paymentDueDate" defaultValue={po.paymentDueDate || ""} required/></Field>}
         <p className="helper-note">Supplier terms: {po.document?.terms || quote.terms || "Not entered"}</p>
         <PoDocumentFields key={baseline.supplierId || quote.supplierId} document={baseline.document!} financial={financial} reviewed={reviewed} onReview={setReviewed} onFinancialChange={setFinancialDraft} breakdown={breakdown} allowOverride/>
         <PoContentsFields state={state} po={baseline} onChange={next => { setContents(next); setReviewed(false); }}/>
-        <div className="data-rows"><div><span>Net supplier payable</span><strong>{money(total)}</strong></div><div><span>Available project budget</span><strong>{money(budget.available)}</strong></div></div>
+        <div className="data-rows"><div><span>Net supplier payable</span><strong>{money(total)}</strong></div>{po.paymentDueDate && <div><span>Payment due date</span><strong>{po.paymentDueDate}</strong></div>}<div><span>Available project budget</span><strong>{money(budget.available)}</strong></div></div>
         <div className="data-rows"><div><span>Scope of work</span><strong>{scopeName(state, request.scopeId)}</strong></div><div><span>Available scope budget</span><strong>{money(scopeBudget.available)}</strong></div></div>
         {approvalBlocked && <p className="callout bad" role="alert">{approvalBlocked}</p>}
         {total > budget.available && <p className="callout bad">Approval exceeds available budget by {money(total - budget.available)}.</p>}
@@ -90,9 +92,9 @@ export function AccountingPOReview({ po }: { po: PO }) {
       </form>
       <div className="button-row subform"><button className="button secondary" onClick={() => setDecision("hold")}>Hold with reason</button><button className="button secondary" onClick={() => setDecision("return")}>Return to Procurement</button><button className="button danger-outline" onClick={() => setDecision("reject")}>Reject with reason</button></div>
       {decision && <form className="decision-panel" onSubmit={decide}><Field label={`${decision} reason`}><textarea name="reason" required minLength={5}/></Field><div className="button-row"><button type="button" className="button secondary" onClick={() => setDecision(null)}>Cancel</button><button className="button primary">Continue to confirmation</button></div></form>}
-    </> : <div className="data-rows"><div><span>Payment arrangement</span><strong>{po.paymentMode === "credit" ? "Credit / terms" : po.paymentMode === "upfront" ? "Upfront" : "Awaiting Accounting review"}</strong></div><div><span>Available project budget</span><strong>{money(budget.available)}</strong></div><div><span>Scope of work</span><strong>{scopeName(state,request.scopeId)}</strong></div><div><span>Available scope budget</span><strong>{money(scopeBudget.available)}</strong></div></div>}
+    </> : <div className="data-rows"><div><span>Payment arrangement</span><strong>{po.paymentMode === "credit" ? "Credit / terms" : po.paymentMode === "upfront" ? "Upfront" : "Awaiting Accounting review"}</strong></div>{po.paymentDueDate && <div><span>Payment due date</span><strong>{po.paymentDueDate}</strong></div>}<div><span>Available project budget</span><strong>{money(budget.available)}</strong></div><div><span>Scope of work</span><strong>{scopeName(state,request.scopeId)}</strong></div><div><span>Available scope budget</span><strong>{money(scopeBudget.available)}</strong></div></div>}
     {po.archive && <div className="subform"><h3>Approved PO archive</h3><Badge value={po.archive.status === "complete" ? "Complete" : "Pending"}/>{po.archive.url && <p><a className="text-link" href={po.archive.url} target="_blank" rel="noreferrer">Open approved PO in Drive ↗</a></p>}{po.archive.error && <p className="field-error" role="alert">{po.archive.error}</p>}{po.archive.status === "pending" && ["Accounting / Auditing", "Administrator"].includes(state.role) && <button className="button secondary" disabled={busy} onClick={() => void archive()}>{busy ? "Archiving…" : "Retry Drive archive"}</button>}</div>}
-    {po.status === "approved" && <div className="subform"><h3>Release to Logistics</h3><p className="helper-note">{blocked || (po.paymentMode === "credit" ? "Credit terms allow delivery to proceed while Finance handles payment separately." : "Full disbursement is recorded. This PO is ready for delivery.")}</p>{state.role === "Accounting / Auditing" && <button className="button primary" disabled={!!blocked || busy} onClick={async () => { if (!await confirm(`Release ${po.ref} to Logistics?`, "Logistics will be able to schedule material delivery.", "Release to Logistics")) return; const result = await run({ type: "releasePO", id: po.id }); setError(result.ok ? "" : result.message); }}>Release to Logistics</button>}</div>}
+    {po.status === "approved" && !isExternalPayment(po) && <div className="subform"><h3>Release to Logistics</h3><p className="helper-note">{blocked || (po.paymentMode === "credit" ? "Credit terms allow delivery to proceed while Finance handles payment separately." : "Full disbursement is recorded. This PO is ready for delivery.")}</p>{state.role === "Accounting / Auditing" && <button className="button primary" disabled={!!blocked || busy} onClick={async () => { if (!await confirm(`Release ${po.ref} to Logistics?`, "Logistics will be able to schedule material delivery.", "Release to Logistics")) return; const result = await run({ type: "releasePO", id: po.id }); setError(result.ok ? "" : result.message); }}>Release to Logistics</button>}</div>}
     <InlineError message={error}/>{confirmation}
   </section>;
 }

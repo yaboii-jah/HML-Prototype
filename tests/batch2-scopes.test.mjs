@@ -11,6 +11,7 @@ import { LocalDemoRepository } from "../src/mock/repository.ts";
 const actors = {
   admin: { name: "Daniel Garcia", email: "admin@example.com", role: "Administrator" },
   site: { name: "Miguel Santos", email: "site@example.com", role: "Site Personnel" },
+  pm: { name: "Project Manager", email: "pm@example.com", role: "Project Manager" },
   buyer: { name: "Andrea Reyes", email: "buyer@example.com", role: "Procurement" },
   accounting: { name: "Camille Torres", email: "accounting@example.com", role: "Accounting / Auditing" },
   finance: { name: "Paolo Mendoza", email: "finance@example.com", role: "Finance" },
@@ -64,7 +65,7 @@ test("MRFs require a funded scope in their project while drafts and competing un
   assert.deepEqual(budgetFor(state, command.siteId), before); assert.equal(scopeBudgetFor(state, command.scopeId).available, 600);
   state = run(state, { type: "saveProjectScope", id: command.scopeId, siteId: command.siteId, name: "Structural", budget: 0 });
   reject(state, requestCommand(state, "MRF-SCOPE-3"), actors.site, /no remaining budget/);
-  reject(state, { type: "reviewRequest", id: state.requests.at(-1).id, decision: "approve" }, actors.buyer, /no remaining budget/);
+  reject(state, { type: "reviewRequest", id: state.requests.at(-1).id, decision: "approve" }, actors.pm, /no remaining budget/);
 });
 
 test("scope budget blocks a second split PO and includes service fees while the project retains its guard", () => {
