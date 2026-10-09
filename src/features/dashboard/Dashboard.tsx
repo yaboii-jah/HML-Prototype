@@ -20,7 +20,7 @@ export function Dashboard() {
     <div className="metric-strip dashboard-metrics">
       <div><span className="metric-icon blue">MRF</span><small>MRF reviews</small><strong>{metrics.procurementReviews}</strong><span>Requests awaiting a decision</span></div>
       <div><span className="metric-icon cyan">PO</span><small>Accounting reviews</small><strong>{metrics.accountingReviews}</strong><span>Purchase orders to assess</span>
-      </div><div><span className="metric-icon cyan">PAY</span><small>Payment actions</small><strong>{metrics.financeReviews + metrics.externalVerifications}</strong><span>Verify payment or review clearance</span></div>
+      </div><div><span className="metric-icon cyan">PAY</span><small>Payment actions</small><strong>{metrics.financeReviews + (state.role === "Finance" ? metrics.financeCoordination : metrics.externalVerifications)}</strong><span>{state.role === "Finance" ? "Coordinate payment or review legacy requests" : "Verify payment or review clearance"}</span></div>
       <div><span className="metric-icon amber">DR</span><small>Open delivery lines</small><strong>{metrics.openDeliveryLines}</strong><span>Materials still expected</span></div>
       <div><span className="metric-icon teal">₱</span><small>Approved commitment</small><strong>{money(metrics.commitment)}</strong><span>Unpaid approved PO value</span></div>
     </div>

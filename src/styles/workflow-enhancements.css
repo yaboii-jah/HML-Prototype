@@ -248,3 +248,6 @@ details[data-sticky-pinned="true"]>summary{border-radius:var(--radius) var(--rad
 .monitoring-table > tbody > tr.monitoring-detail-row > td { max-width: none; padding: 0; }
 
 .quote-source-list.table-frame { display: block; }
+
+.payment-coordination-summary p,.payment-coordination-summary .data-rows>div>*{min-width:0;overflow-wrap:anywhere}.payment-coordination-summary .data-rows small{display:block}.payment-coordination-summary>.panel-heading{flex-wrap:wrap}
+@media(max-width:600px){.payment-coordination-summary .data-rows>div{flex-wrap:wrap}.payment-coordination-summary .data-rows strong{text-align:left}}

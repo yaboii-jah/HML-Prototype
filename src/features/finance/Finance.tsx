@@ -1,7 +1,8 @@
 ﻿"use client";
 
 import { isExternalPayment } from "@/src/domain/full-disbursement";
-import { Register } from "@/src/components/ui/Register";
+import { CoordinationQueue, CoordinationReview } from "./PaymentCoordination";
+import { Register, ViewTabs } from "@/src/components/ui/Register";
 
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
@@ -16,6 +17,13 @@ import type { Payment, PaymentRequest, Priority } from "@/src/domain/types";
 
 export function FinanceQueue() {
   const { snapshot: state } = useDemo();
+  const [active, setActive] = useState(0);
+  if (!state) return null;
+  return <><PageHeader eyebrow="FINANCE" title="Finance queue" description="Prioritize and coordinate external payments. Accounting verifies payment proof; delivery follows the agreed payment arrangement."/><ViewTabs labels={["Payment coordination", "Legacy payment requests"]} active={active} onChange={setActive} id="finance"/><div role="tabpanel" id={`finance-panel-${active}`} aria-labelledby={`finance-tab-${active}`}>{active === 0 ? <CoordinationQueue state={state}/> : <LegacyFinanceQueue/>}</div></>;
+}
+
+function LegacyFinanceQueue() {
+  const { snapshot: state } = useDemo();
   const [search, setSearch] = useState("");
   const [priority, setPriority] = useState("all"), [min, setMin] = useState(""), [sort, setSort] = useState("priority");
   if (!state) return null;
@@ -24,7 +32,7 @@ export function FinanceQueue() {
     const po = state.pos.find(po => po.id === value.poId);
     return po && !isExternalPayment(po) && `${value.ref} ${po.ref} ${supplierName(state,po)}`.toLowerCase().includes(search.toLowerCase()) && ["submitted", "hold", "approved"].includes(value.status) && (state.siteFilter === "all" || requestForPO(state, po)?.siteId === state.siteFilter) && (priority === "all" || value.priority === priority) && (!min || value.amount >= Number(min));
   }).sort((a, b) => sort === "amount" ? b.amount - a.amount : sort === "waiting" ? a.updatedAt.localeCompare(b.updatedAt) : rank[a.priority] - rank[b.priority] || a.updatedAt.localeCompare(b.updatedAt));
-  return <><PageHeader eyebrow="PAYMENT APPROVAL AND DISBURSEMENT" title="Finance queue" description="Review payment requests from Accounting for existing POs using the Finance workflow. New upfront and credit/terms payments are processed outside the app and verified in Accounting."/>
+  return <><div className="panel-heading"><div><h2>Legacy payment requests</h2><p className="helper-note">Review and disburse existing Finance-managed payment requests.</p></div></div>
     <Register rows={rows} resetKey={priority+min+sort+search+state.siteFilter} filters={<><input type="search" aria-label="Search Finance" placeholder="Search payment, PO or supplier" value={search} onChange={event=>setSearch(event.target.value)}/><select aria-label="Priority" value={priority} onChange={event => setPriority(event.target.value)}><option value="all">All priorities</option><option>Normal</option><option>High</option><option>Urgent</option></select><input aria-label="Minimum payment amount" type="number" min="0" placeholder="Minimum amount ₱" value={min} onChange={event => setMin(event.target.value)}/><select aria-label="Sort Finance queue" value={sort} onChange={event => setSort(event.target.value)}><option value="priority">Priority, then oldest</option><option value="waiting">Longest waiting</option><option value="amount">Highest amount</option></select></>} headers={<><th>Payment request / PO</th><th>Project</th><th>Priority</th><th className="numeric">Amount</th><th>Waiting</th><th>Status</th><th>Next action</th></>} empty={"No payment requests currently need Finance action."} renderRow={value => { const po = state.pos.find(po => po.id === value.poId)!; return <tr key={value.id}><td><Link className="table-primary" href={`/finance/${po.id}`}>{value.ref}</Link><small>{po.ref} · {supplierName(state, po)}</small></td><td>{siteName(state, requestForPO(state, po)?.siteId || "")}</td><td><Badge value={value.priority}/></td><td className="numeric">{money(value.amount)}</td><td>{daysWaiting(value.updatedAt)} days</td><td><Badge value={value.status}/></td><td>{value.status === "approved" ? "Record disbursement" : "Review payment"}</td></tr>; }}/></>;
 }
 
@@ -35,7 +43,7 @@ export function FinanceReview({ id }: { id: string }) {
   if (!po) return <MissingRecord name="Payment review" listHref="/finance"/>;
   const request = requestForPO(state, po);
   if (!request) return <MissingRecord name="Linked MRF" listHref="/finance"/>;
-  if (isExternalPayment(po)) return <><RecordHeader backHref="/finance" backLabel="Finance queue" eyebrow={po.ref} badges={null} title="External payment"/><section className="panel"><h2>Payment is processed outside ConstructSync</h2><p>Accounting attaches payment proof and verifies external payments. Credit delivery clearance is independent of payment; upfront delivery requires full verified payment.</p><Link className="button secondary" href={`/accounting/${id}`}>Open Accounting verification</Link></section></>;
+  if (isExternalPayment(po)) return <CoordinationReview po={po} state={state}/>;
   const requests = state.paymentRequests.filter(value => value.poId === id).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   return <><RecordHeader backHref="/finance" backLabel="Finance queue" eyebrow={`${siteName(state, request.siteId)} · ${po.ref}`} title="Payment review" badges={<Badge value={po.status}>{poStatusLabel(po.status)}</Badge>}/>
     <div className="metric-strip"><div><small>PO TOTAL</small><strong>{money(poTotal(state, po))}</strong></div><div><small>DISBURSED</small><strong>{money(paidTotal(state, id))}</strong></div><div><small>UNPAID BALANCE</small><strong>{money(Math.max(0, poTotal(state, po) - paidTotal(state, id)))}</strong></div><div><small>ARRANGEMENT</small><strong>{po.paymentMode === "credit" ? "Credit / terms" : po.paymentMode === "upfront" ? "Upfront" : "Awaiting review"}</strong></div></div>

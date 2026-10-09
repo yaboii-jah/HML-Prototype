@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { blankWorkspace } from '../src/mock/fixtures/blank.ts';
 import { applyCommand } from '../src/domain/commands.ts';
+import { coordinatedPOs, coordinationStatus } from '../src/domain/payment-coordination.ts';
 import { budgetFor, paidTotal, poTotal } from '../src/domain/selectors.ts';
 import { releaseBlocker } from '../src/domain/workflow.ts';
 import { tasksFor } from '../src/domain/queues.ts';
@@ -78,7 +79,7 @@ test('new MRFs require PM review, inherit flow on PO, and supplier issuance mark
   assert.equal(requestMonitoring(state, po.mrfId).logistics.label, 'Awaiting release');
   assert.equal(state.pos[0].issuance.by.role, 'Procurement');
   fail(state, { type: 'issuePO', id: po.id });
-  assert.equal(tasksFor(as(state, 'Finance')).length, 0);
+  assert.equal(tasksFor(as(state, 'Finance')).length, 1, 'Issued PO requires Finance coordination');
 });
 
 test('Accounting requires archived proof and complete details, verifies computed net after EWT, then clears delivery separately', () => {
@@ -166,4 +167,16 @@ test('PM owns documents-only correction reapproval after purchasing starts, pres
   assert.equal(state.requests[0].archive.status,'pending'); assert.equal(state.requests[0].scopeId,request.scopeId);
   state=run(state,{type:'completeRequestArchive',id:request.id,formFileId:'corrected-form',supportFileId:'corrected-support',formUrl:'https://drive.google.com/file/d/corrected-form/view',supportUrl:'https://drive.google.com/file/d/corrected-support/view'});
   assert.equal(state.requests[0].archive.versions.length,2);assert.equal(state.activity[0].actor,'Project Manager');
+});
+
+
+test('upfront Finance coordination cannot clear delivery and reopens after Accounting corrects full verification',()=>{
+ let state=as(issued(),'Finance'),po=state.pos[0];
+ state=run(state,{type:'savePaymentCoordination',poId:po.id,revision:0,priority:'Urgent',status:'Processing',plannedDate:'2026-10-06',note:'Bank transfer pending'});
+ assert.equal(paidTotal(state,po.id),0);assert.match(releaseBlocker(state,state.pos[0]),/payment/i);
+ state=withProof(state);state=run(state,verifyCommand(po.id));
+ assert.equal(coordinationStatus(state,state.pos[0]),'Settled');assert.equal(coordinatedPOs(state).length,0);
+ state=run(state,{type:'reopenPaymentVerification',poId:po.id,reason:'Wrong bank reference confirmed'});
+ assert.equal(coordinationStatus(state,state.pos[0]),'Pending');assert.equal(coordinatedPOs(state).length,1);
+ assert.equal(state.pos[0].paymentCoordination.priority,'Urgent');assert.equal(state.pos[0].paymentCoordination.plannedDate,'');assert.equal(state.pos[0].coordinationHistory.length,3);
 });

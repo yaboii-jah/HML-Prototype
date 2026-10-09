@@ -1,3 +1,5 @@
+import { coordinationEligible, coordinationBalance, coordinationError, saveCoordination, resetCoordination } from "./payment-coordination.ts";
+import type { PaymentCoordination } from "./types.ts";
 import { philippineDate, validPaymentDate } from "./credit-terms.ts";
 import { canAttachDelivery, canArchiveAccounting, deliveryReceiptVersion, deliveryDocumentIssues, receivedDelivery } from "./delivery-archive.ts";
 import { archivedProof, canAttachPaymentProof, isExternalCredit, isExternalPayment, proofAssigned, requiresPMReview } from "./full-disbursement.ts";
@@ -27,6 +29,7 @@ import { procurementReady, supportingPdf } from "./request-archive.ts";
 import { ROLES, type ArchivedQuoteFile, type DemoSnapshot, type DocumentRef, type DocumentStatus, type Item, type POAdjustment, type POLine, type Priority, type Quote, type Role } from "./types.ts";
 
 export type Command =
+  | { type: "savePaymentCoordination"; poId: string; revision: number; priority: PaymentCoordination["priority"]; status: PaymentCoordination["status"]; plannedDate: string; note: string }
   | { type: "recordCreditPayment"; poId: string; paymentId: string; amount: number; method: Payment["method"]; reference: string; date: string; proofIds: string[] }
   | { type: "voidCreditPayment"; poId: string; paymentId: string; reason: string }
   | { type: "issuePO"; id: string }
@@ -153,6 +156,21 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
   const initializePo = (po: PO, request: MRF, quote: Quote) => { initializePoDocument(po, request, quote, state.sites.find(value => value.id === request.siteId)!, at); po.document!.vendorName ||= state.suppliers.find(value => value.id === quote.supplierId)?.name || ""; };
 
   switch (command.type) {
+    case "savePaymentCoordination": {
+      if (!permit("Finance") || !identity) return fail("Sign in as Finance to coordinate payments.");
+      const po = state.pos.find(value => value.id === command.poId);
+      if (!po || !coordinationEligible(po) || !coordinationBalance(state, po)) return fail("Only issued, unpaid external-payment POs can be coordinated.");
+      if (command.revision !== (po.paymentCoordination?.revision || 0)) return fail("This coordination plan changed. Reload it before saving.");
+      const value = { priority: command.priority, status: command.status, plannedDate: command.plannedDate.trim(), note: command.note.trim() };
+      const error = coordinationError(value);
+      if (error) return fail(error);
+      const prior = po.paymentCoordination;
+      if (prior && prior.priority === value.priority && prior.status === value.status && prior.plannedDate === value.plannedDate && prior.note === value.note) return done("Coordination unchanged.");
+      saveCoordination(po, value, at, identity, "Finance updated payment coordination");
+      po.updatedAt = at;
+      log(po.id, `Payment coordination: ${value.status}`, value.note);
+      return done("Payment coordination saved. Accounting verifies payment separately.");
+    }
     case "updateSite": {
       if (!permit("Administrator", "Project Manager")) return fail("Sign in as Administrator or Project Manager to edit a project.");
       const site = state.sites.find(value => value.id === command.siteId);
@@ -754,6 +772,7 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       const proofs = command.proofIds.map(proofId => po.paymentProofs?.find(proof => proof.id === proofId));
       if (!proofs.length || new Set(command.proofIds).size !== proofs.length || proofs.some(proof => !proof || !archivedProof(proof) || proofAssigned(po, proof.id))) return fail("Select unused archived proof for this payment.");
       po.creditPayments = [...(po.creditPayments || []), { id: command.paymentId, amount: command.amount, method: command.method, reference: command.reference.trim(), date: command.date, verifiedAt: at, verifiedBy: identity, proofs: structuredClone(proofs.filter((proof): proof is PaymentProof => !!proof)) }];
+      resetCoordination(po, at, identity, coordinationBalance(state, po) > 0 ? "Accounting verified a credit payment; remaining balance requires a new plan" : "Accounting verified full credit payment", coordinationBalance(state, po) === 0);
       po.updatedAt = at; log(po.id, `External credit payment verified: ${command.amount}`, command.reference);
       return done("Payment verified. Delivery status is unchanged.", command.paymentId);
     }
@@ -762,6 +781,7 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       const po = state.pos.find(value => value.id === command.poId), payment = po?.creditPayments?.find(value => value.id === command.paymentId);
       if (!po || !isExternalCredit(po) || !["approved", "released"].includes(po.status) || !payment || payment.voided || !identity || !reasonOK(command.reason)) return fail("Choose a recorded payment and enter a correction reason of at least five characters.");
       payment.voided = { at, by: identity, reason: command.reason.trim() }; po.updatedAt = at;
+      resetCoordination(po, at, identity, "Accounting voided a payment; Finance follow-up reopened");
       log(po.id, `External credit payment voided: ${payment.amount}`, command.reason);
       return done("Payment voided; history retained and balance restored. Delivery status is unchanged.");
     }
@@ -776,6 +796,7 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       const amount = poTotal(state, po);
       if (!(amount > 0)) return fail("The PO must have a positive net payable amount.");
       po.externalPayment = { amount, method: command.method, reference: command.reference.trim(), date: command.date, verifiedAt: at, verifiedBy: identity, proofs: structuredClone(proofs) }; po.updatedAt = at;
+      resetCoordination(po, at, identity, "Accounting verified full payment; coordination settled", true);
       log(po.id, "Full external payment verified by Accounting"); return done("Full payment verified. Confirm delivery clearance separately.");
     }
     case "reopenPaymentVerification": {
@@ -784,6 +805,7 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       if (!po || !isExternalPayment(po) || isExternalCredit(po) || po.status !== "approved" || !po.externalPayment || !identity || !reasonOK(command.reason)) return fail("Only verified payments before delivery clearance can reopen, with a reason.");
       po.verificationHistory = [...(po.verificationHistory || []), { ...structuredClone(po.externalPayment), reopenedAt: at, reopenedBy: identity, reason: command.reason.trim() }];
       po.externalPayment = undefined; po.updatedAt = at;
+      resetCoordination(po, at, identity, "Accounting reopened verification; Finance follow-up reopened");
       log(po.id, "External payment verification reopened", command.reason); return done("Correct the proof or payment details, then verify full payment again.");
     }
     case "savePaymentRequest": {
