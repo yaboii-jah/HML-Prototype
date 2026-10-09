@@ -10,8 +10,10 @@ import { money } from "@/src/domain/format";
 import { newId } from "@/src/domain/ids";
 import type { ConfirmedAction } from "@/src/components/ui/useConfirmedAction";
 import { quoteReviewIssues } from "@/src/domain/procurement";
-import { quoteLineTotal } from "@/src/domain/pricing";
+import { quotationLineAmount } from "@/src/domain/pricing";
 import { quoteTotal } from "@/src/domain/selectors";
+import { QuotationFinancialFields } from "./QuotationFinancialFields";
+import { moveQuotationServices } from "@/src/domain/quotation-services";
 import type { DemoSnapshot, MRF, Quote, QuoteAdjustment, QuoteLine, SupplierQuoteDetails } from "@/src/domain/types";
 
 type Props = { state: DemoSnapshot; request: MRF; quote: Quote; onSave: (quote: Quote) => Promise<boolean>; onFinalize: () => Promise<void>; onAttach: (files: File[]) => Promise<void>; onRemoveDocument: (fileId: string) => Promise<void>; onConfirmAction: ConfirmedAction; disabled?: boolean; readOnly?: boolean; compact?: boolean; actions?: ReactNode };
@@ -38,7 +40,7 @@ export function QuoteDraftEditor({ state, request, quote, onSave, onFinalize, on
       else if (message.includes("select a valid MRF")) field = "requestItemId";
       else if (message.includes("confirm the suggested")) field = "matchConfirmed";
       else { secondary = true; field = message.includes("unit conversion") ? "conversionFactor" : message.includes("unit difference") ? "varianceReason" : message.includes("discount") ? "discountValue" : message.includes("tax rate") ? "taxRate" : "discrepancyReason"; }
-    } else field = message.includes("supplier name") ? "supplierName" : message.includes("quotation reference") ? "ref" : message.includes("supplier quotation PDF") ? "documents" : message.includes("currency") ? "currency" : message.includes("offered line") ? "materials" : message.includes("adjustment") ? "adjustments" : "total";
+    } else field = message.includes("VAT") ? "financial" : message.includes("supplier name") ? "supplierName" : message.includes("quotation reference") ? "ref" : message.includes("supplier quotation PDF") ? "documents" : message.includes("currency") ? "currency" : message.includes("offered line") ? "materials" : message.includes("adjustment") ? "adjustments" : "total";
     return { message, offer, field, secondary };
   });
   const reviewIds = new Set(locations.flatMap(location => location.offer ? [location.offer.id] : []));
@@ -135,17 +137,19 @@ export function QuoteDraftEditor({ state, request, quote, onSave, onFinalize, on
           <td data-label="Qty"><Field label="Quoted quantity"><input id={lineFieldId(offer.id,"quantity")} type="number" min="0" step="any" disabled={!editable} value={offer.quantity || ""} onChange={event => line(offer.id, { quantity: num(event.target.value) })}/></Field></td>
           <td data-label="Unit"><Field label="Quoted unit"><input id={lineFieldId(offer.id,"unit")} disabled={!editable} value={offer.unit} onChange={event => line(offer.id, { unit: event.target.value, matchConfirmed: false })}/></Field></td>
           <td data-label="Unit price"><Field label="Unit price"><input id={lineFieldId(offer.id,"unitPrice")} type="number" min="0" step="any" disabled={!editable} value={offer.unitPrice || ""} onChange={event => line(offer.id, { unitPrice: num(event.target.value) })}/></Field></td>
-          <td data-label="Calculated total"><strong>{format(quote.currency, quoteLineTotal(offer))}</strong></td>
+          <td data-label="Calculated total"><strong>{format(quote.currency, quotationLineAmount(quote, offer))}</strong></td>
           <td data-label="Actions"><div className="quote-line-actions"><button type="button" data-line-details className="button secondary" aria-label={`Details for line ${index + 1}`} disabled={disabled} onClick={() => { detailFocus.current = null; detailsInvoker.current = offer.id; setDetailsId(offer.id); }}>Details</button>{!readOnly && <button className="text-link" type="button" aria-label={`Delete line ${index + 1}`} disabled={disabled} onClick={() => void removeLine(offer)}>Delete</button>}</div></td>
         </tr>;
       })}</tbody></table>{!shown.length && <p className="quote-editor-no-lines">{!lines.length ? readOnly ? "Detailed offered lines were not recorded for this legacy quotation." : "Add an offered material to start this quotation." : "No materials match this view."}</p>}
       </RegisterFrame>
 
       <div id={fieldId("adjustments")} tabIndex={-1} className="quote-editor-adjustments"><div className="panel-heading"><h3>Quote-level adjustments</h3>{!readOnly && <button type="button" className="text-link" disabled={disabled} onClick={() => patch({ adjustments: [...(quote.adjustments || []), { id: newId("adjustment"), label: "", kind: "other", calculation: "fixed", value: 0 }] })}>+ Add adjustment</button>}</div>{!quote.adjustments?.length ? <p className="helper-note">No quote-level charges recorded.</p> : <div className="table-frame"><table><thead><tr><th>Label / classification</th><th>Kind</th><th>Calculation</th><th>Value</th>{!readOnly && <th>Actions</th>}</tr></thead><tbody>{quote.adjustments.map(value => <tr key={value.id} className="quote-adjustment-row"><td data-label="Label / classification"><input aria-label="Adjustment label" disabled={!editable} value={value.label} onChange={event => adjustment(value.id, { label: event.target.value })}/><small>{adjustmentClassification(value.kind)}</small></td><td data-label="Kind"><select aria-label="Adjustment kind" disabled={!editable} value={value.kind} onChange={event => adjustment(value.id, { kind: event.target.value as QuoteAdjustment["kind"] })}><option value="discount">Discount</option><option value="tax">Tax</option><option value="shipping">Shipping</option><option value="other">Other</option></select></td><td data-label="Calculation"><select aria-label="Adjustment calculation" disabled={!editable} value={value.calculation} onChange={event => adjustment(value.id, { calculation: event.target.value as QuoteAdjustment["calculation"] })}><option value="fixed">Fixed</option><option value="percentage">Percentage</option></select></td><td data-label="Value"><input aria-label="Adjustment value" type="number" min="0" step="any" disabled={!editable} value={value.value} onChange={event => adjustment(value.id, { value: num(event.target.value) })}/></td>{!readOnly && <td data-label="Actions"><button type="button" className="text-link" disabled={disabled} onClick={() => void onConfirmAction("Remove this financial adjustment?", `${value.label || "Unnamed adjustment"} (${value.kind}) will be removed from ${quote.supplierDetails?.name || "this quotation"}, changing its quoted total.`, "Remove adjustment", () => onSave({ ...quote, adjustments: quote.adjustments?.filter(item => item.id !== value.id) }), true)}>Remove</button></td>}</tr>)}</tbody></table></div>}</div>
+      {(quote.financial || !readOnly) && <QuotationFinancialFields quote={quote} disabled={!editable} onChange={financial => patch({ financial })}/>}
       <div id={fieldId("total")} tabIndex={-1} className="quote-editor-total"><span>Quotation total</span><strong>{format(quote.currency, quoteTotal(state, quote))}</strong></div>
     </section>
     <RecordModal open={!!activeLine} title={`Line ${lines.findIndex(value => value.id === detailsId) + 1} · ${activeLine?.description || "Material details"}`} onClose={closeDetails} returnFocus={() => root.current?.querySelector<HTMLElement>(`[data-line-id="${CSS.escape(detailsInvoker.current || "")}"] [data-line-details]`) || root.current?.querySelector<HTMLElement>("[data-add-line]") || null}>
-      {activeLine && <div className="quote-material-details"><fieldset className="quotation-operation-fields" disabled={!editable}><div className="form-grid">
+      {activeLine && <div className="quote-material-details"><fieldset className="quotation-operation-fields" disabled={!editable}>
+        <button type="button" className="button secondary" onClick={() => void onSave(moveQuotationServices(quote, [activeLine.id])).then(saved => { if (saved) closeDetails(); })}>Move to delivery / other services</button><div className="form-grid">
         <Field label="Supplier item code"><input id={lineFieldId(activeLine.id,"supplierItemCode")} value={activeLine.supplierItemCode || ""} onChange={event => line(activeLine.id, { supplierItemCode: event.target.value })}/></Field>
         <Field label="Brand"><input value={activeLine.brand} onChange={event => line(activeLine.id, { brand: event.target.value })}/></Field>
         <Field label="Specification"><input value={activeLine.specification} onChange={event => line(activeLine.id, { specification: event.target.value })}/></Field>
@@ -158,7 +162,7 @@ export function QuoteDraftEditor({ state, request, quote, onSave, onFinalize, on
         <Field label="Printed line total"><input id={lineFieldId(activeLine.id,"printedTotal")} type="number" min="0" step="any" value={activeLine.printedTotal ?? ""} onChange={event => line(activeLine.id, { printedTotal: event.target.value ? num(event.target.value) : null })}/></Field>
         <Field label="Reason for accepting printed total difference"><input id={lineFieldId(activeLine.id,"discrepancyReason")} value={activeLine.discrepancyReason || ""} onChange={event => line(activeLine.id, { discrepancyReason: event.target.value })}/></Field>
         <Field label="Line notes"><textarea value={activeLine.notes || ""} onChange={event => line(activeLine.id, { notes: event.target.value })}/></Field>
-      </div></fieldset><p className="helper-note">Source page: {activeLine.sourcePage || "Not recorded"} · {activeLine.matchRationale || "No match explanation recorded."}</p><p className="helper-note">Calculated: {format(quote.currency, quoteLineTotal(activeLine))}{activeLine.printedTotal != null ? ` · Printed: ${format(quote.currency, activeLine.printedTotal)}` : ""}</p></div>}
+      </div></fieldset><p className="helper-note">Source page: {activeLine.sourcePage || "Not recorded"} · {activeLine.matchRationale || "No match explanation recorded."}</p><p className="helper-note">Calculated: {format(quote.currency, quotationLineAmount(quote, activeLine))}{activeLine.printedTotal != null ? ` · Printed: ${format(quote.currency, activeLine.printedTotal)}` : ""}</p></div>}
     </RecordModal>
   </>;
 }

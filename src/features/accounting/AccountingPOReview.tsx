@@ -6,14 +6,15 @@ import { useDemo } from "@/src/app-state/DemoProvider";
 import { useArchive } from "@/src/app-state/ArchiveProvider";
 import { useConfirmation } from "@/src/components/ui/ConfirmDialog";
 import { Badge, Field, InlineError } from "@/src/components/ui/Primitives";
-import { budgetFor, poTotal, quoteForPO, requestForPO } from "@/src/domain/selectors";
+import { budgetFor, quoteForPO, requestForPO } from "@/src/domain/selectors";
 import { scopeBudgetFor, scopeName, scopeValidationError } from "@/src/domain/scope-budgets";
-import { adjustmentClassification } from "@/src/domain/expense-classification";
+import { poFinancialBreakdown } from "@/src/domain/pricing";
 import { money } from "@/src/domain/format";
 import { initializePoDocument } from "@/src/domain/po-document";
 import { releaseBlocker } from "@/src/domain/workflow";
-import type { PO, POAdjustment, POFinancial } from "@/src/domain/types";
-import { PoFinancialFields, readPoFinancial } from "@/src/features/purchase/PoDocumentFields";
+import type { PO, POFinancial } from "@/src/domain/types";
+import { PoDocumentFields, readPoDocument, readPoFinancial } from "@/src/features/purchase/PoDocumentFields";
+import { PoContentsFields } from "@/src/features/purchase/PoContentsFields";
 import { syncApprovedPO } from "@/src/features/requests/archive-purchasing";
 
 export function AccountingPOReview({ po }: { po: PO }) {
@@ -25,20 +26,21 @@ export function AccountingPOReview({ po }: { po: PO }) {
   const [reviewed, setReviewed] = useState(po.financial?.reviewed || false);
   const [financialDraft, setFinancialDraft] = useState<POFinancial | null>(null);
   const [mode, setMode] = useState(po.paymentMode || "");
-  const [charges, setCharges] = useState<POAdjustment[] | null>(null);
+  const [contents, setContents] = useState<PO | null>(null);
   if (!state) return null;
   const request = requestForPO(state, po), quote = quoteForPO(state, po);
   if (!request || !quote) return null;
   const editable = state.role === "Accounting / Auditing" && ["submitted", "hold"].includes(po.status);
-  const baseline = structuredClone(po);
+  const baseline = structuredClone(contents || po);
   if (!baseline.document || !baseline.financial) {
     initializePoDocument(baseline, request, quote, state.sites.find(site => site.id === request.siteId)!, po.createdAt);
     baseline.document = po.document || baseline.document;
     baseline.financial = po.financial || baseline.financial;
   }
-  const adjustments = charges || baseline.adjustments || [];
+  const adjustments = baseline.adjustments || [];
   const financial = financialDraft || baseline.financial!;
-  const total = poTotal(state, { ...baseline, financial, adjustments });
+  const breakdown = poFinancialBreakdown({ ...baseline, financial, adjustments });
+  const total = breakdown.net;
   const budget = budgetFor(state, request.siteId);
   const scopeBudget = scopeBudgetFor(state, request.scopeId || "");
   const scopeError = scopeValidationError(state, request.siteId, request.scopeId);
@@ -53,7 +55,7 @@ export function AccountingPOReview({ po }: { po: PO }) {
     const form = new FormData(event.currentTarget);
     const approve = (event.nativeEvent as SubmitEvent).submitter?.getAttribute("value") === "approve";
     if (approve && !await confirm(`Approve ${po.ref}?`, "Accounting will commit the project budget and archive the PO. Purchasing and financial details will lock.", "Approve PO")) return;
-    const saved = await run({ type: "saveAccountingPO", id: po.id, paymentMode: mode as PO["paymentMode"], financial: readPoFinancial(form), adjustments });
+    const saved = await run({ type: "saveAccountingPO", id: po.id, paymentMode: mode as PO["paymentMode"], financial: readPoFinancial(form), adjustments, document: readPoDocument(form), lines: baseline.lines, supplierId: baseline.supplierId || quote.supplierId, notes: baseline.notes });
     if (!saved.ok) { setError(saved.message); return; }
     setError("");
     if (approve) {
@@ -70,24 +72,21 @@ export function AccountingPOReview({ po }: { po: PO }) {
     setError(result.ok ? "" : result.message);
     if (result.ok) setDecision(null);
   };
-  const editCharge = (id: string, patch: Partial<POAdjustment>) => { setCharges(adjustments.map(value => value.id === id ? { ...value, ...patch } : value)); setReviewed(false); };
   const blocked = releaseBlocker(state, po);
   return <section className="panel accounting-po-review"><div className="panel-heading"><h2>Accounting PO review</h2><Link className="text-link" href={`/purchase-orders/${po.id}`}>View supplier and materials →</Link></div>
     {po.reviewReason && <div className="callout warn"><strong>Review reason</strong><p>{po.reviewReason}</p></div>}
     {editable ? <>
-      <p className="helper-note">Confirm payment terms, taxes and charges. Return supplier or quantity corrections to Procurement.</p>
-      <form className="form-stack accounting-po-form" onSubmit={save} onChange={event => { if ((!(event.target instanceof HTMLInputElement) || event.target.name !== "financialReviewed")) setReviewed(false); setFinancialDraft(readPoFinancial(new FormData(event.currentTarget))); }}>
+      <p className="helper-note">Edit the PO directly or return it to Procurement. Confirm materials, document fields, taxes and charges before approval.</p>
+      <form className="form-stack accounting-po-form" onSubmit={save} onChange={event => { if ((!(event.target instanceof HTMLInputElement) || event.target.name !== "financialReviewed")) setReviewed(false); }}>
         <Field label="Payment arrangement"><select name="paymentMode" value={mode} onChange={event => setMode(event.target.value as typeof mode)} required><option value="">Choose payment arrangement</option><option value="upfront">Upfront — full disbursement before delivery</option><option value="credit">Credit / terms — delivery can proceed before payment</option></select></Field>
         <p className="helper-note">Supplier terms: {po.document?.terms || quote.terms || "Not entered"}</p>
-        <PoFinancialFields financial={baseline.financial!} reviewed={reviewed} onReview={setReviewed}/>
-        <h3 className="subheading">PO charges and deductions</h3>
-        {adjustments.map(value => <div className="po-adjustment-row" key={value.id}><Field label="Charge label"><input value={value.label} onChange={event => editCharge(value.id, { label: event.target.value, confirmed: false })} required/><small className="expense-classification">{adjustmentClassification(value.kind)}</small></Field><Field label="Type"><select value={value.kind} onChange={event => editCharge(value.id, { kind: event.target.value as POAdjustment["kind"], confirmed: false })}>{["shipping", "discount", "tax", "other"].map(kind => <option key={kind}>{kind}</option>)}</select></Field><Field label="Calculation"><select value={value.calculation} onChange={event => editCharge(value.id, { calculation: event.target.value as POAdjustment["calculation"], confirmed: false })}><option value="fixed">Fixed amount</option><option value="percentage">Percentage</option></select></Field><Field label="Amount"><input type="number" min="0" max={value.calculation === "percentage" ? 100 : undefined} step="0.01" value={value.value} onChange={event => editCharge(value.id, { value: Number(event.target.value), confirmed: false })}/></Field><label className="quote-check"><input type="checkbox" checked={value.included} onChange={event => editCharge(value.id, { included: event.target.checked, confirmed: false })}/> Include</label><label className="quote-check"><input type="checkbox" checked={value.taxable !== false} onChange={event => editCharge(value.id, { taxable: event.target.checked, confirmed: false })}/> Taxable</label><label className="quote-check"><input type="checkbox" checked={value.confirmed} onChange={event => editCharge(value.id, { confirmed: event.target.checked })}/> Confirm</label></div>)}
-        <button type="button" className="button secondary" onClick={() => { setCharges([...adjustments, { id: crypto.randomUUID(), label: "", kind: "other", calculation: "fixed", value: 0, included: true, taxable: true, confirmed: false }]); setReviewed(false); }}>Add charge or deduction</button>
+        <PoDocumentFields key={baseline.supplierId || quote.supplierId} document={baseline.document!} financial={financial} reviewed={reviewed} onReview={setReviewed} onFinancialChange={setFinancialDraft} breakdown={breakdown} allowOverride/>
+        <PoContentsFields state={state} po={baseline} onChange={next => { setContents(next); setReviewed(false); }}/>
         <div className="data-rows"><div><span>Net supplier payable</span><strong>{money(total)}</strong></div><div><span>Available project budget</span><strong>{money(budget.available)}</strong></div></div>
         <div className="data-rows"><div><span>Scope of work</span><strong>{scopeName(state, request.scopeId)}</strong></div><div><span>Available scope budget</span><strong>{money(scopeBudget.available)}</strong></div></div>
         {approvalBlocked && <p className="callout bad" role="alert">{approvalBlocked}</p>}
         {total > budget.available && <p className="callout bad">Approval exceeds available budget by {money(total - budget.available)}.</p>}
-        <div className="button-row"><button className="button secondary" value="save">Save financial review</button><button className="button primary" value="approve" disabled={!!approvalBlocked || busy}>Approve PO</button></div>
+        <div className="button-row"><button className="button secondary" value="save">Save PO review</button><button className="button primary" value="approve" disabled={!!approvalBlocked || busy}>Approve PO</button></div>
       </form>
       <div className="button-row subform"><button className="button secondary" onClick={() => setDecision("hold")}>Hold with reason</button><button className="button secondary" onClick={() => setDecision("return")}>Return to Procurement</button><button className="button danger-outline" onClick={() => setDecision("reject")}>Reject with reason</button></div>
       {decision && <form className="decision-panel" onSubmit={decide}><Field label={`${decision} reason`}><textarea name="reason" required minLength={5}/></Field><div className="button-row"><button type="button" className="button secondary" onClick={() => setDecision(null)}>Cancel</button><button className="button primary">Continue to confirmation</button></div></form>}

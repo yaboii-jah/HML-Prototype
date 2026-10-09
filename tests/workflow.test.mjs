@@ -28,7 +28,7 @@ function submittedPO() {
   state = as(state, 'Procurement');
   state = run(state, { type: 'reviewRequest', id: request.id, decision: 'approve' });
   state = run(state, { type: 'completeRequestArchive', id: request.id, formFileId: 'form', supportFileId: 'support', formUrl: 'https://drive.google.com/file/d/form/view', supportUrl: 'https://drive.google.com/file/d/support/view' });
-  state = run(state, { type: 'saveQuoteDraft', quote: { id: 'offer', mrfId: request.id, supplierId: '', ref: 'QT-001', currency: 'PHP', prices: {}, available: 'In stock', leadDays: 1, terms: 'Agreed supplier terms', extraction: 'manual', reviewStatus: 'draft', supplierDetails: { name: 'Supplier', address: 'Pasig', tin: '', contactName: '', email: '', phone: '' }, documents: [{ name: 'Quote.pdf', type: 'application/pdf', fileId: 'quotation' }], adjustments: [], lines: [{ id: 'offer-cement', requestItemId: 'cement', description: 'Cement', quantity: 10, unit: 'bag', unitPrice: 100, conversionFactor: 1, brand: '', specification: '', varianceReason: '', matchConfirmed: true }] } });
+  state = run(state, { type: 'saveQuoteDraft', quote: { financial: { vatStatus: 'NON-VAT', priceBasis: 'inclusive', vatRate: 12, reviewed: true }, id: 'offer', mrfId: request.id, supplierId: '', ref: 'QT-001', currency: 'PHP', prices: {}, available: 'In stock', leadDays: 1, terms: 'Agreed supplier terms', extraction: 'manual', reviewStatus: 'draft', supplierDetails: { name: 'Supplier', address: 'Pasig', tin: '', contactName: '', email: '', phone: '' }, documents: [{ name: 'Quote.pdf', type: 'application/pdf', fileId: 'quotation' }], adjustments: [], lines: [{ id: 'offer-cement', requestItemId: 'cement', description: 'Cement', quantity: 10, unit: 'bag', unitPrice: 100, conversionFactor: 1, brand: '', specification: '', varianceReason: '', matchConfirmed: true }] } });
   state = run(state, { type: 'finalizeQuote', id: 'offer' });
   state = run(state, { type: 'completeQuoteArchive', id: 'offer', files: [{ localFileId: 'quotation', driveFileId: 'quote-drive', url: 'https://drive.google.com/file/d/quote-drive/view', name: 'Quote.pdf' }] });
   state = run(state, { type: 'createBidReport', requestId: request.id });
@@ -127,7 +127,7 @@ test('one open payment request, amount bounds and duplicate disbursement are enf
 test('Accounting budget approval covers both arrangements, locks prices and preserves purchasing fields', () => {
   for (const paymentMode of ['upfront', 'credit']) {
     let state = submittedPO(); const po = structuredClone(state.pos[0]);
-    const command = { type: 'saveAccountingPO', id: po.id, paymentMode, financial: { ...po.financial, priceBasis: 'exclusive', ewtGoods: 20, reviewed: true }, adjustments: [{ id: 'freight', label: 'Freight', kind: 'shipping', calculation: 'fixed', value: 100, included: true, confirmed: true, taxable: false }] };
+    const command = { type: 'saveAccountingPO', id: po.id, paymentMode, financial: { ...po.financial, vatStatus: 'VAT', priceBasis: 'exclusive', ewtMode: 'manual', ewtGoodsManual: true, ewtServicesManual: true, ewtGoods: 20, reviewed: true }, adjustments: [{ id: 'freight', label: 'Freight', kind: 'shipping', calculation: 'fixed', value: 100, included: true, confirmed: true, taxable: false }] };
     state = run(state, command);
     assert.equal(poTotal(state, state.pos[0]), 1200); assert.deepEqual(state.pos[0].lines, po.lines); assert.deepEqual(state.pos[0].document, po.document);
     state.sites[0].budget = 1199; fail(state, { type: 'reviewPO', id: po.id, decision: 'approve' }, /budget/);

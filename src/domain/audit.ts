@@ -46,7 +46,7 @@ function fieldsChanged(before: object | undefined, after: object | undefined, ke
 }
 function quoteChanges(before: Quote | undefined, after: Quote | undefined): string[] {
   if (!before || !after) return [];
-  const fields = fieldsChanged(before, after, ["ref", "supplierId", "supplierDetails", "available", "leadDays", "terms", "documents", "currency", "tax", "freight", "discount", "validity", "quoteDate", "deliveryTerms", "quoteNotes", "adjustments"]);
+  const fields = fieldsChanged(before, after, ["ref", "supplierId", "supplierDetails", "available", "leadDays", "terms", "documents", "currency", "tax", "freight", "discount", "validity", "quoteDate", "deliveryTerms", "quoteNotes", "adjustments", "financial"]);
   const lineLabels = { description: "Description", quantity: "Quantity", unit: "Unit", unitPrice: "Unit price", brand: "Brand", specification: "Specification", requestItemId: "MRF match", conversionFactor: "Unit conversion", varianceReason: "Variance reason", discountType: "Discount type", discountValue: "Discount", taxRate: "Tax rate", printedTotal: "Printed total", discrepancyReason: "Discrepancy reason", matchConfirmed: "Match confirmation", leadTime: "Lead time", supplierItemCode: "Supplier item code" };
   if (!same(before?.lines?.map(line => line.id), after.lines?.map(line => line.id))) fields.push("Offered lines");
   for (const [index, line] of (after.lines || []).entries()) { const prior = before?.lines?.find(value => value.id === line.id); for (const key of Object.keys(lineLabels) as (keyof typeof lineLabels)[]) if (!same(prior?.[key], line[key])) fields.push(`Line ${index + 1}: ${lineLabels[key]}`); }
@@ -62,7 +62,7 @@ export function auditChanges(previous: DemoSnapshot, state: DemoSnapshot, comman
     case "saveProjectScope": return fieldsChanged(previous.scopes?.find(value => value.id === command.id), state.scopes.find(value => value.id === command.id), ["name", "budget"]);
     case "saveQuoteDraft": return quoteChanges(previous.quotes.find(value => value.id === command.quote.id), state.quotes.find(value => value.id === command.quote.id));
     case "saveRequest": return fieldsChanged(previous.requests.find(value => value.id === command.id), state.requests.find(value => value.id === command.id), ["ref", "siteId", "scopeId", "requestDate", "requestedBy", "approvedBy", "purchaser", "financeOfficer", "specialInstructions", "items", "documents", "scopeDocument"]);
-    case "savePO": case "saveAccountingPO": return fieldsChanged(previous.pos.find(value => value.id === command.id), state.pos.find(value => value.id === command.id), ["notes", "document", "financial", "lines", "adjustments", "tax", "freight", "discount", "paymentMode"]);
+    case "savePO": case "saveAccountingPO": return fieldsChanged(previous.pos.find(value => value.id === command.id), state.pos.find(value => value.id === command.id), ["supplierId", "notes", "document", "financial", "lines", "adjustments", "tax", "freight", "discount", "paymentMode"]);
     case "savePaymentRequest": return fieldsChanged(previous.paymentRequests.find(value => value.id === command.id), state.paymentRequests.find(value => value.id === command.id), ["amount", "note"]);
     case "setPriority": return fieldsChanged(previous.paymentRequests.find(value => value.id === command.id), state.paymentRequests.find(value => value.id === command.id), ["priority"]);
     case "stageAward": case "replaceMaterialAwards": return ["Supplier allocation quantity"];

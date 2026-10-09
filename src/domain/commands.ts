@@ -12,10 +12,11 @@ import { initializePoDocument } from "./po-document.ts";
 import { resolveComparisonSelections } from "./comparison-report.ts";
 import type { ComparisonSelections } from "./types.ts";
 import type { PO, MRF } from "./types.ts";
-import { poFinancialError, roundMoney } from "./pricing.ts";
+import { calculatedPoFinancial, defaultQuotationFinancial, poFinancialError, roundMoney } from "./pricing.ts";
+import { directPoError } from "./po-review.ts";
 import { newId, nextRef } from "./ids.ts";
 import { bidReportReadiness, captureBidReport } from "./bid-reports.ts";
-import { budgetFor, inventoryFor, orderedFor, paidTotal, poItems, poTotal, requestForPO, schedulableFor, stockFor } from "./selectors.ts";
+import { budgetFor, inventoryFor, orderedFor, paidTotal, poItems, poSupplierId, poTotal, requestForPO, schedulableFor, stockFor } from "./selectors.ts";
 import { hasFinalizedSuccessor, isFinalizedQuote, latestFinalizedQuotes, quoteReviewIssues } from "./procurement.ts";
 import { poLineTotal } from "./pricing.ts";
 import { procurementReady, supportingPdf } from "./request-archive.ts";
@@ -60,7 +61,7 @@ export type Command =
   | { type: "completePOArchive"; id: string; fileId: string; url: string }
   | { type: "failPOArchive"; id: string; error: string }
   | { type: "releasePO"; id: string }
-  | { type: "saveAccountingPO"; id: string; paymentMode: PO["paymentMode"]; financial: PO["financial"]; tax?: number; freight?: number; discount?: number; adjustments?: POAdjustment[] }
+  | { type: "saveAccountingPO"; id: string; paymentMode: PO["paymentMode"]; financial: PO["financial"]; document?: PO["document"]; supplierId?: string; lines?: POLine[]; notes?: string; tax?: number; freight?: number; discount?: number; adjustments?: POAdjustment[] }
   | { type: "savePaymentRequest"; poId: string; id?: string; amount: number; note: string; submit: boolean }
   | { type: "reviewPaymentRequest"; id: string; decision: "approve" | "hold" | "return" | "reject"; reason?: string }
   | { type: "dispatchBatch"; id: string }
@@ -343,7 +344,7 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       if (incoming.supersedesId && !previousQuote) return fail("Choose a finalized quotation to revise.");
       if (!existing && state.quotes.some(value => value.id === incoming.id)) return fail("Quotation ID already exists.");
       if (!existing && incoming.supersedesId && state.quotes.some(value => value.supersedesId === incoming.supersedesId && value.reviewStatus === "draft")) return fail("A draft revision already exists for this quotation.");
-      const draft: Quote = { ...incoming, reviewStatus: "draft", prices: {}, version: existing?.version || (previousQuote?.version || 0) + 1, documents: incoming.documents, archive: undefined, reviewedAt: undefined };
+      const draft: Quote = { ...incoming, financial: incoming.financial || (existing ? existing.financial : defaultQuotationFinancial()), reviewStatus: "draft", prices: {}, version: existing?.version || (previousQuote?.version || 0) + 1, documents: incoming.documents, archive: undefined, reviewedAt: undefined };
       if (existing) Object.assign(existing, draft);
       else state.quotes.push(draft);
       return done(existing ? "Quotation draft saved." : "Quotation draft created.", draft.id);
@@ -418,7 +419,7 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
         if (!quote || !offer || !isFinalizedQuote(quote) || hasFinalizedSuccessor(state, quote.id) || quote.currency && quote.currency !== "PHP") return fail("Use the current finalized PHP quotation.");
         if (quote.archive && quote.archive.status !== "complete") return fail("Archive this supplier quotation to Google Drive before awarding it.");
         if (!positive(offer.conversionFactor) || !positive(offer.unitPrice) || !positive(offer.quantity)) return fail("Use a valid reviewed supplier offer.");
-        if (state.pos.some(po => po.mrfId === request.id && po.status !== "rejected" && state.quotes.find(source => source.id === po.quoteId)?.supplierId === quote.supplierId)) return fail("An active PO already exists for this supplier and MRF. Edit that PO draft instead.");
+        if (state.pos.some(po => po.mrfId === request.id && po.status !== "rejected" && poSupplierId(state, po) === quote.supplierId)) return fail("An active PO already exists for this supplier and MRF. Edit that PO draft instead.");
         const used = state.pos.filter(po => po.quoteId === quote.id && po.status !== "rejected").reduce((sum, po) => sum + (po.lines || []).filter(line => line.quoteLineId === offer.id).reduce((total, line) => total + line.quantity, 0), 0);
         if (award.quantity + used > offer.quantity * offer.conversionFactor + 0.000001) return fail("Awarded quantity exceeds the supplier's quoted quantity.");
         candidates.push({ id: prior.find(value => value.quoteLineId === offer.id)?.id || id("award"), requestId: request.id, itemId: item.id, quoteId: quote.id, quoteLineId: offer.id, quantity: award.quantity });
@@ -470,7 +471,7 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       let firstId: string | undefined;
       for (const [quoteId, awards] of groups) {
         const quote = state.quotes.find(value => value.id === quoteId)!;
-        if (state.pos.some(value => value.mrfId === command.requestId && value.status !== "rejected" && state.quotes.find(source => source.id === value.quoteId)?.supplierId === quote.supplierId)) return fail("An active PO already exists for this supplier and MRF. Edit that PO draft instead.");
+        if (state.pos.some(value => value.mrfId === command.requestId && value.status !== "rejected" && poSupplierId(state, value) === quote.supplierId)) return fail("An active PO already exists for this supplier and MRF. Edit that PO draft instead.");
         const selectionReason = (command.reasons[quote.supplierId] || "").trim();
         const lines: POLine[] = awards.map(award => {
           const offer = quote.lines!.find(value => value.id === award.quoteLineId)!;
@@ -545,11 +546,11 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       if (!procurementReady(state.requests.find(value => value.id === po.mrfId))) return fail("Procurement is paused until the MRF archive is ready.");
       const quote = state.quotes.find(q => q.id === command.quoteId && q.mrfId === po.mrfId);
       if (!quote) return fail("Choose a quote linked to this MRF.");
-      if (state.pos.some(value => value.id !== po.id && value.mrfId === po.mrfId && value.status !== "rejected" && state.quotes.find(source => source.id === value.quoteId)?.supplierId === quote.supplierId)) return fail("An active PO already exists for this supplier and MRF. Edit that PO instead.");
+      if (state.pos.some(value => value.id !== po.id && value.mrfId === po.mrfId && value.status !== "rejected" && poSupplierId(state, value) === quote.supplierId)) return fail("An active PO already exists for this supplier and MRF. Edit that PO instead.");
       if (po.lines) {
         const lines = command.lines || po.lines;
         const tax = command.tax ?? po.tax ?? 0, freight = command.freight ?? po.freight ?? 0, discount = command.discount ?? po.discount ?? 0;
-        const error = awardError(state, po.mrfId, quote, lines, tax, freight, discount, po.id);
+        const error = po.accountingEdited && command.quoteId === po.quoteId ? directPoError(state, po, lines, poSupplierId(state, po) || "") : awardError(state, po.mrfId, quote, lines, tax, freight, discount, po.id);
         if (error) return fail(error);
         if (lines.some(line => !nonnegative(line.discountValue ?? 0) || !nonnegative(line.taxRate ?? 0) || line.discountType === "percentage" && (line.discountValue || 0) > 100 || line.discountType === "fixed" && (line.discountValue || 0) > line.quantity * line.unitPrice)) return fail("Review PO line discounts and tax rates.");
         po.lines = lines; po.tax = tax; po.freight = freight; po.discount = discount;
@@ -561,7 +562,16 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       }
       if (po.financial) {
         if (command.document) po.document = command.document;
-        if (command.financial) po.financial = command.financial;
+        if (command.financial) {
+          const manualValues = (financial: NonNullable<PO["financial"]>) => [financial.ewtMode, financial.ewtGoodsManual !== false, financial.ewtServicesManual !== false, financial.ewtGoodsManual !== false ? financial.ewtGoods : null, financial.ewtServicesManual !== false ? financial.ewtServices : null];
+          if (command.financial.ewtMode === "manual" && JSON.stringify(manualValues(command.financial)) !== JSON.stringify(manualValues(po.financial))) return fail("Only Accounting can override EWT.");
+          if (!command.financial.ewtMode && (command.financial.ewtGoods !== po.financial.ewtGoods || command.financial.ewtServices !== po.financial.ewtServices)) return fail("Only Accounting can override EWT.");
+          if (!command.financial.ewtMode && po.financial.ewtMode) return fail("Choose calculated EWT for this purchase order.");
+          po.financial = command.financial;
+        }
+        const rawFinancialError = poFinancialError(po);
+        if (rawFinancialError) return fail(rawFinancialError);
+        po.financial = calculatedPoFinancial(po);
         const financialError = poFinancialError(po, false);
         if (financialError) return fail(financialError);
       }
@@ -572,6 +582,7 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
         if (poTotal(state, po) <= 0) return fail("PO total must be positive.");
       }
       po.supersededReason = hasFinalizedSuccessor(state, quote.id) ? command.supersededReason?.trim() : undefined;
+      if (command.quoteId !== po.quoteId) { po.supplierId = undefined; po.accountingEdited = undefined; }
       po.quoteId = command.quoteId; po.notes = command.notes.trim(); po.updatedAt = at;
       if (command.finalize) { po.status = "submitted"; po.reviewReason = undefined; log(po.id, "PO submitted to Accounting", po.supersededReason); return done("PO submitted. Accounting review is next."); }
       log(po.id, "PO draft updated"); return done("PO draft saved.");
@@ -590,13 +601,25 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       }
       if (!["upfront", "credit"].includes(command.paymentMode || "")) return fail("Select upfront payment or credit terms.");
       if (!command.financial) return fail("Review VAT and withholding.");
+      if (command.lines || command.supplierId) {
+        const lines = command.lines || po.lines || [];
+        const supplierId = command.supplierId || poSupplierId(state, po) || "";
+        const lineError = directPoError(state, po, lines, supplierId);
+        if (lineError) return fail(lineError);
+        po.lines = lines; po.supplierId = supplierId; po.accountingEdited = true;
+      }
+      if (command.document) po.document = command.document;
+      if (command.notes !== undefined) po.notes = command.notes.trim();
       if (command.adjustments && command.adjustments.some(value => !value.label.trim() || !nonnegative(value.value) || value.calculation === "percentage" && value.value > 100)) return fail("Review each PO adjustment amount.");
       po.financial = command.financial; po.paymentMode = command.paymentMode;
       if (command.adjustments) po.adjustments = command.adjustments;
       for (const key of ["tax", "freight", "discount"] as const) if (command[key] !== undefined) { if (!nonnegative(command[key]!)) return fail("PO charges must be nonnegative."); po[key] = command[key]; }
+      const rawFinancialError = poFinancialError(po);
+      if (rawFinancialError) return fail(rawFinancialError);
+      po.financial = calculatedPoFinancial(po);
       const error = poFinancialError(po);
       if (error || poTotal(state, po) <= 0) return fail(error || "PO total must be positive.");
-      po.updatedAt = at; log(po.id, "Accounting financial review saved"); return done("PO financial review saved.");
+      po.updatedAt = at; log(po.id, "Accounting PO review saved"); return done("PO review saved.");
     }
     case "setPriority": {
       if (!permit("Finance")) return fail("Sign in as Finance to set payment priority.");
@@ -611,6 +634,11 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       if (command.decision === "approve") {
         const request = requestForPO(state, po);
         if (!request || !procurementReady(request)) return fail("The linked MRF archive must be ready.");
+        if (po.accountingEdited) {
+          const directError = directPoError(state, po, po.lines || [], poSupplierId(state, po) || "");
+          if (directError) return fail(directError);
+        }
+        if (po.lines?.some(line => line.discountType === "fixed" && line.fixedDiscountConfirmed !== true)) return fail("Confirm each fixed line discount before approval.");
         if (!["upfront", "credit"].includes(po.paymentMode || "")) return fail("Confirm upfront payment or credit terms before approval.");
         const error = poFinancialError(po, true);
         if (error) return fail(error);

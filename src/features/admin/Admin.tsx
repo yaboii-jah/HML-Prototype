@@ -19,7 +19,7 @@ export function Admin() {
   const rows=state.sites.filter(site=>`${site.name} ${site.location}`.toLowerCase().includes(search.trim().toLowerCase()));
   const project=state.sites.find(site=>site.id===selected),tab=selected?tabs[selected]||0:0;
   const select=(key:string)=>{lastProject.current=key;setSelected(key);};
-  return <><PageHeader title="Administration" description="Project setup and recorded workspace changes." actions={state.role==="Administrator"&&<button className="button primary" type="button" disabled={creating} onClick={()=>{setView(0);setCreating(true);}}>Add project</button>}/>
+  return <><PageHeader title="Administration" description="Project setup and recorded workspace changes." actions={state.role==="Administrator"&&<><Link href="/admin/maintenance" className="button danger-outline">Clear workspace</Link><button className="button primary" type="button" disabled={creating} onClick={()=>{setView(0);setCreating(true);}}>Add project</button></>}/>
     <ViewTabs id={id} labels={["Projects","Activity"]} active={view} onChange={setView}/>
     <div role="tabpanel" id={`${id}-panel-0`} aria-labelledby={`${id}-tab-0`} hidden={view!==0}>
       {creating&&<ProjectCreation confirm={confirm} onCancel={()=>setCreating(false)} onCreated={key=>{setCreating(false);setSearch("");setTabs(current=>({...current,[key]:1}));select(key);setMessage("Project added. Configure its Drive folder and scopes.");}}/>}

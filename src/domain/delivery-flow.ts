@@ -47,9 +47,9 @@ export function batchQuantityLimit(state: DemoSnapshot, po: PO, batch: Batch, it
 }
 export function deliveryLocations(state: DemoSnapshot, po: PO, batch?: Batch): { origin: DeliveryLocation; destination: DeliveryLocation } {
   const request = state.requests.find(value => value.id === po.mrfId), project = state.sites.find(value => value.id === request?.siteId);
-  const quote = state.quotes.find(value => value.id === po.quoteId), supplier = state.suppliers.find(value => value.id === quote?.supplierId);
+  const quote = state.quotes.find(value => value.id === po.quoteId), supplier = state.suppliers.find(value => value.id === (po.supplierId || quote?.supplierId));
   return {
-    origin: batch?.origin || { name: po.document?.vendorName || supplier?.name || "Supplier", address: po.document?.vendorAddress || quote?.supplierDetails?.address || supplier?.location || "" },
+    origin: batch?.origin || { name: po.document?.vendorName || supplier?.name || "Supplier", address: po.document?.vendorAddress || (po.supplierId ? "" : quote?.supplierDetails?.address) || supplier?.location || "" },
     destination: batch?.destination || { name: po.document?.shipToName || project?.name || "Site", address: po.document?.shipToAddress || project?.location || "" },
   };
 }

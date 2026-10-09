@@ -24,6 +24,7 @@ Seven roles are available. Project setup requires no manager assignment; the MRF
 ## Returns and key checks
 
 - [ ] Registers use compact rows, a bounded scroll area, fixed table headers and visible pagination. Test 10/25/50, first/last/empty ranges, filter/sort/project resets, long names, light/dark themes and phone widths.
+- [ ] The purchase order, Accounting, Finance and delivery batch activity timelines start collapsed with their history row and event counts in the heading. Expand one to check the bounded scrolling table, its fixed header, 10/25/50 paging, that grouped saves stay expanded across pages, and that a short or empty history explains itself. The MRF lifecycle combined history keeps its 50-row Load more behaviour.
 - [ ] Accounting pages count MRF groups and keep all matching POs together. Deliveries separates Delivery batches and Ready to schedule, each retaining its own filters/page.
 - [ ] Desktop navigation fits without scrolling; short windows expose secondary routes through More sections, with the active rou
 te indicated. The mobile hamburger drawer scrolls. Every destination remains reachable.
@@ -57,7 +58,7 @@ te indicated. The mobile hamburger drawer scrolls. Every destination remains rea
 - [ ] Start an upload, sign out and sign in as another department: completion retains the initiator and current login. Retries retain their own actor/outcome, even for repeated errors; duplicate callbacks add no event. Stale forms cannot make new decisions.
 
 - [ ] Sign-in has no credential hints or role picker and requires valid credentials. On workspace pages, **Account → Switch department** offers all seven departments without another password. Switching updates the user name, email, permissions and new audit actors while keeping the current page, project filter and records/files. Refresh keeps the selected account; sign-out keeps records/files; old role-only sessions require new sign-in.
-- [ ] Screens and page titles have no prototype/demo/mock labels. Normal Administration has no reset action; `/admin/maintenance` allows Administrator reset only, with confirmation.
+- [ ] Screens and page titles have no prototype/demo/mock labels. Administration exposes **Clear workspace** to Administrator only; `/admin/maintenance` retains the reset confirmation.
 
 - [ ] **Optional AI MRF entry:** In Step 1, import one PDF or up to 12 ordered page photos (4 MB total). Preview, extract, then apply. Choose the project manually; correct missing values and check all materials.
 - [ ] AI import requires a separate supporting PDF and review checkbox before submission. Editing details/materials or reopening a saved AI draft requires review again. Import failures preserve manual entries; source scans disappear on reload and never become attachments.
@@ -76,3 +77,7 @@ Current rules and routes: [APP_CONTEXT.md](APP_CONTEXT.md).
 - [ ] Quotation Offered materials: scroll horizontally to all columns and vertically through long pages; headers stay visible and the scrollbar sits above pagination. Page changes reset vertical scrolling; issue links reveal the correct field. Check desktop/mobile and both themes without page overflow.
 
 - [ ] Compare & allocate: test 20-100 materials, All/Remaining/Edited filters, partial and split awards, per-material Reset, Next remaining material, existing-PO restrictions and stale allocation removal. Mobile Materials/back navigation preserves edits. Offer details show conversion, adjusted pricing and terms; base estimates exclude later PO adjustments. Collapsing Comparison reports preserves alternative choices.
+
+- [ ] Quotation VAT review: confirm VAT / NON VAT, price basis and rate after manual entry or extraction. Financial summaries show goods/services and estimated EWT/net; comparison prices and exports remain material projections. Change finalized treatment through a revision. Move delivery/service rows into adjustments and verify they are counted once.
+- [ ] Automatic EWT: VAT-inclusive goods use amount / 1.12 × 1%; delivery and other services use amount / 1.12 × 2% at 12% VAT. Test other rates, exclusive prices, exempt fees, line discounts and general discounts. NON VAT has zero VAT/EWT. Sample gross ₱1,236,196.38 produces goods EWT ₱10,858.90, services EWT ₱357.14 and net ₱1,224,980.34.
+- [ ] Accounting PO edits: while submitted/on hold, edit supplier, requested materials, quantities/prices, discounts, fees, document fields and EWT. Reject unrequested materials, excess MRF quantities, duplicate supplier POs and invalid totals. Manual category overrides survive price edits; **Use calculated EWT** restores formulas. Return/resubmit preserves direct edits and source quotations stay unchanged. Approved/released POs remain locked. Verify effective supplier and net payable in previews/PDFs, Finance and budget figures.

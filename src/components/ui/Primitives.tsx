@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { AuditHistory } from "./AuditHistory";
+import { CollapsibleSection } from "./CollapsibleSection";
 import { auditRecords } from "@/src/domain/audit";
+import { groupAuditEvents } from "@/src/domain/request-lifecycle";
 import { activityFor } from "@/src/domain/selectors";
 import { statusLabel } from "@/src/domain/format";
 import type { DemoSnapshot, DocumentRef } from "@/src/domain/types";
@@ -20,5 +22,5 @@ export function Documents({ docs, showType = true }: { docs: DocumentRef[]; show
   const [error, setError] = useState("");
   return <div className="documents">{docs.length ? docs.map((doc, index) => <div className="document" key={`${doc.name}-${index}`}><span>▤</span><div><strong>{doc.name}</strong>{showType && <small>{doc.type}</small>}</div>{doc.fileId && <button type="button" className="text-link" onClick={() => void openQuoteFile(doc.fileId!).catch(cause => setError(cause instanceof Error ? cause.message : "File unavailable."))}>Open file ↗</button>}</div>) : <p className="muted">No document references recorded.</p>}{error && <p className="inline-error" role="alert">{error}</p>}</div>;
 }
-export function Timeline({ state, ids }: { state: DemoSnapshot; ids: string[] }) { const entries = activityFor(state, ids); return <section className="panel"><h2 className="panel-title">Activity timeline</h2><AuditHistory entries={entries} records={auditRecords(state)}/></section>; }
+export function Timeline({ state, ids }: { state: DemoSnapshot; ids: string[] }) { const entries = activityFor(state, ids); return <section className="activity-timeline"><CollapsibleSection title="Activity timeline" defaultOpen={false} summary={`${groupAuditEvents(entries).length} history rows · ${entries.length} recorded events`}><AuditHistory entries={entries} records={auditRecords(state)} paginated/></CollapsibleSection></section>; }
 export function InlineError({ message }: { message?: string }) { return message ? <p className="inline-error" role="alert">{message}</p> : null; }

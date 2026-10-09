@@ -8,6 +8,7 @@ export function drawPoLayout(template: Awaited<ReturnType<typeof documentTemplat
   const blue = rgb(0, .36, .68), grey = rgb(.88, .89, .94), edge = rgb(.75, .75, .75);
   const left = 36, size = 7.5, leading = 10;
   const info = po.document;
+  const supplierDetails = !po.supplierId || po.supplierId === quote.supplierId ? quote.supplierDetails : undefined;
   const extra: string[][] = [];
   const lines = (value: unknown, cellWidth: number, strong = false) => wrapText(value, strong ? bold : regular, size, cellWidth - 6);
   const write = (page: PDFPage, value: string[], x: number, top: number, cellWidth: number, align: "left" | "center" | "right" = "left", strong = false, white = false) => value.forEach((text, index) => {
@@ -46,7 +47,7 @@ export function drawPoLayout(template: Awaited<ReturnType<typeof documentTemplat
     top = Math.max(bodyTop + 8, headerTop + 12);
     if (first) {
       const blocks = [
-        ["VENDOR", [info?.vendorName || quote.supplierDetails?.name || "", info?.vendorAddress || quote.supplierDetails?.address || "", info?.vendorContact || quote.supplierDetails?.contactName || "", info?.vendorPhone || quote.supplierDetails?.phone || ""]],
+        ["VENDOR", [info?.vendorName || supplierDetails?.name || "", info?.vendorAddress || supplierDetails?.address || "", info?.vendorContact || supplierDetails?.contactName || "", info?.vendorPhone || supplierDetails?.phone || ""]],
         ["VENDOR BANK DETAILS", [info?.bankName || "", info?.bankAccountName || "", info?.bankAccountNumber || ""]],
         ["SHIP TO", [info?.shipToName || projectName, info?.shipToAddress || "", info?.shipToContact || "", info?.shipToPhone || ""]],
       ] as const;
