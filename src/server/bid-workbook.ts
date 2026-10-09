@@ -135,7 +135,8 @@ export function buildBidWorkbook(report: BidReport) {
   headings(awards, 8, ["PO", "Supplier", "Source quotation", "Revision", "PO state", "Material / charge", "Unit", "Award quantity", "Unit price", "Discount type", "Discount value", "Tax %", "Base", "Discount", "After discount", "Tax amount", "Amount", "Selection reason / notes"]);
   const awardRows = new Map<string, number[]>();
   for (const po of data.pos) {
-    const offer = data.offers.find(value => value.quote.id === po.quoteId)!;
+    const sourceOffer = data.offers.find(value => value.quote.id === po.quoteId)!;
+    const offer = { ...sourceOffer, supplierName: po.document?.vendorName || sourceOffer.supplierName };
     const financial = po.financial ? poFinancialBreakdown(po) : undefined;
     const vatRate = po.financial?.vatStatus === "VAT" && po.financial.priceBasis === "exclusive" ? po.financial.vatRate : 0;
     const first = awards.rowCount + 1;

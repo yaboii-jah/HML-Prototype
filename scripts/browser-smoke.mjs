@@ -989,6 +989,7 @@ try {
     if (width===1440 || width===375) await writeFile(path.join(profile,`quote-review-${width}.png`),Buffer.from((await call("Page.captureScreenshot",{format:"png"})).data,"base64"));
   }
   await call("Emulation.clearDeviceMetricsOverride");
+  await run("document.querySelector('input[aria-label^=\"Confirm quotation VAT\"]').click();return true;");
   await click("Finalize quotation");
   await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).quotes.some(q=>q.ref==='QT-SMOKE-001'&&q.archive?.status==='complete');`);
   assert.equal((await state()).quotes.find(q=>q.ref==='QT-SMOKE-001').archive.files.length, 2);
@@ -1002,11 +1003,11 @@ try {
   snapshot = await state(); const po = snapshot.pos.at(-1); assert.equal(po.status, "draft");
   console.log("PO drafted", po.id);
   console.log("Opening PO edit"); await navigate(`/purchase-orders/${po.id}/edit`); await wait("return !!document.querySelector('form.form-stack');");
-  await fill('.quote-award-line input[type=number]',-1);await fill('input[name="ewtGoods"]',-1);
+  await fill('.quote-award-line input[type=number]',-1);
   await run("document.querySelectorAll('.po-edit-form details').forEach(section=>section.open=false);return true;");
   await submit('form.form-stack','button[value="finalize"]');
   await wait("return document.activeElement===document.querySelector('.po-edit-form :invalid');");
-  await fill('.quote-award-line input[type=number]',20);await fill('input[name="ewtGoods"]',0);
+  await fill('.quote-award-line input[type=number]',20);
   await fill('input[name="poDocument.terms"]', '30 days after delivery');
   await submit('form.form-stack', 'button[value="finalize"]');
   await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).pos.find(x=>x.id===${JSON.stringify(po.id)}).status==='submitted';`);
@@ -1088,7 +1089,7 @@ try {
   assert.equal(await run("return !!document.querySelector('.evidence-preview a[download]');"),true,'Accounting can restore and download the archived evidence');
   await click("Close", ".evidence-preview button"); await fill('input[name="invoice"]', "INV-SMOKE-01"); await fill('input[name="receipt"]', "DR-SMOKE-01"); await fill('select[name="review"]', "Complete"); await click("Save document review");
   console.log("Accounting review");
-  snapshot = await state(); assert.equal(snapshot.payments.find(p => p.poId === po.id)?.amount, 5710);
+  snapshot = await state(); assert.equal(snapshot.payments.find(p => p.poId === po.id)?.amount, 5658.93, "Finance pays 5710 gross less 50.89 goods EWT and 0.18 services EWT");
   await navigate(`/requests/${request.id}`);
   const events=(await state()).activity.filter(event=>event.requestId===request.id);
   assert.equal(events.every(event=>!!event.actorIdentity?.name),true,'Every new process event retains a user name');
@@ -1150,7 +1151,14 @@ try {
   }
   await call("Emulation.clearDeviceMetricsOverride");
   assert.equal(await run("return [...document.querySelectorAll('button')].some(button => /Reset workspace|Clear all workspace/.test(button.textContent));"), false);
-  assert.equal(await run("return !!document.querySelector('a[href=\"/admin/maintenance\"]');"), false);
+  assert.equal(await run("return document.querySelector('a[href=\"/admin/maintenance\"]')?.textContent;"), 'Clear workspace');
+  await click('Clear workspace', 'a');
+  await wait("return document.querySelector('h1')?.textContent==='Workspace maintenance';");
+  const beforeResetCancel = await state();
+  await run("[...document.querySelectorAll('button')].find(button=>button.textContent==='Reset workspace').click();return true;");
+  await wait("return !!document.querySelector('.confirm-dialog[open]');");
+  await click('Cancel', '.confirm-dialog[open] button');
+  assert.deepEqual(await state(), beforeResetCancel, 'Cancelling workspace reset preserves records');
   await role('Site Personnel'); await navigate('/admin/maintenance');
   assert.equal(await run("return document.querySelector('h1').textContent;"), 'Access unavailable');
   assert.equal(await run("return [...document.querySelectorAll('button')].some(button=>button.textContent==='Reset workspace');"), false);

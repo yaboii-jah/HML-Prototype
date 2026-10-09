@@ -15,7 +15,6 @@
 
 # next.js
 /.next/
-/.quotation-review-prototype-cache/
 /out/
 
 # production

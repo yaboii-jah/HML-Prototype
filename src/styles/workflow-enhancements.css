@@ -122,7 +122,7 @@ details[data-sticky-pinned="true"]>summary{border-radius:var(--radius) var(--rad
 .account-departments { border-top: 1px solid var(--line); padding-top: 16px; }
 .account-departments h3 { font-size: 14px; }
 .account-departments .role-options { margin-top: 12px; }
-.account-departments .role-options button { min-width: 0; }
+.account-departments .role-options button { min-width: 0; color: var(--ink); }
 .account-departments .role-options button > span { flex: none; }
 .account-departments .role-options button > div { display: grid; gap: 4px; min-width: 0; }
 .account-departments .role-options small { color: var(--muted); font-size: 11px; }

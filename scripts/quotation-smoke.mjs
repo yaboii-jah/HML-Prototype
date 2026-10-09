@@ -6,6 +6,7 @@ import assert from "node:assert/strict";
 import ExcelJS from "exceljs";
 import { ACCOUNT_FIXTURES } from "../src/app-state/demo-session.ts";
 import { seedDemo } from "../src/mock/fixtures/seed.ts";
+import { poFinancialBreakdown } from "../src/domain/pricing.ts";
 
 const edge = "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe";
 const profile = await mkdtemp(path.join(os.tmpdir(), "hml-quote-smoke-"));
@@ -82,6 +83,7 @@ try {
       await wait("return !!document.querySelector('.quote-review .quote-check input[type=checkbox]');");
     }
     await run("document.querySelector('.quote-review .quote-check input[type=checkbox]').click();return true;");
+    await run("document.querySelector('input[aria-label^=\"Confirm quotation VAT\"]').click();return true;");
     await click("Finalize quotation");
     await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).quotes.some(q=>q.ref===${JSON.stringify(reference)}&&q.archive?.status==='complete');`);
   }
@@ -174,6 +176,39 @@ try {
   const downloadsBefore=await run("return window.__bidDownloads.length;"); await click('Download Excel'); await wait(`return window.__bidDownloads.length>${downloadsBefore};`);
   await role('Accounting / Auditing');
   await navigate(`/accounting/${firstPo.id}`); await fill('select[name="paymentMode"]','credit');
+  const sourceBeforeReview = (await snapshot()).quotes.find(value => value.id === firstPo.quoteId);
+  await fill('[aria-label="PO unit price 1"]', firstPo.lines[0].unitPrice + 100);
+  await fill('input[name="ewtGoods"]', 3.45);
+  await run("document.querySelector('.accounting-po-form input[name=financialReviewed]').click();return true;");
+  await click('Save PO review');
+  await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).pos.find(value=>value.id===${JSON.stringify(firstPo.id)}).financial.ewtGoods===3.45;`);
+  await navigate(`/accounting/${firstPo.id}`);
+  await fill('[aria-label="PO unit price 1"]', firstPo.lines[0].unitPrice + 200);
+  await click('Save PO review');
+  await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).pos.find(value=>value.id===${JSON.stringify(firstPo.id)}).lines[0].unitPrice===${firstPo.lines[0].unitPrice + 200};`);
+  assert.equal((await snapshot()).pos.find(value => value.id === firstPo.id).financial.ewtGoods, 3.45, 'Manual EWT survives price changes');
+  await click('Use calculated EWT');
+  await click('Save PO review');
+  await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).pos.find(value=>value.id===${JSON.stringify(firstPo.id)}).financial.ewtMode==='automatic';`);
+  let reviewedPo = (await snapshot()).pos.find(value => value.id === firstPo.id);
+  assert.equal(reviewedPo.financial.ewtGoods, poFinancialBreakdown(reviewedPo).calculatedGoods);
+  assert.deepEqual((await snapshot()).quotes.find(value => value.id === firstPo.quoteId), sourceBeforeReview, 'Accounting never rewrites the supplier quotation');
+  for (const width of [1440, 375]) {
+    await call('Emulation.setDeviceMetricsOverride', { width, height: 900, deviceScaleFactor: 1, mobile: width < 800 });
+    await sleep(350);
+    await run("document.querySelector('[name=vatStatus]').scrollIntoView({block:'center'});return true;");
+    assert.equal(await run("return document.documentElement.scrollWidth<=innerWidth+1;"), true, `Accounting PO form fits at ${width}px`);
+    await writeFile(path.join(profile, `vat-accounting-${width}.png`), Buffer.from((await call('Page.captureScreenshot', { format: 'png' })).data, 'base64'));
+  }
+  await call('Emulation.clearDeviceMetricsOverride');
+  await click('Return to Procurement'); await fill('textarea[name="reason"]', 'Confirm corrected order details'); await click('Continue to confirmation');
+  await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).pos.find(value=>value.id===${JSON.stringify(firstPo.id)}).status==='returned';`);
+  await role('Procurement'); await navigate(`/purchase-orders/${firstPo.id}/edit`);
+  assert.equal(await run("return Number(document.querySelector('[aria-label=\"PO unit price 1\"]').value);"), firstPo.lines[0].unitPrice + 200);
+  await run("document.querySelector('input[name=financialReviewed]').click();return true;");
+  await click('Submit to Accounting');
+  await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).pos.find(value=>value.id===${JSON.stringify(firstPo.id)}).status==='submitted';`);
+  await role('Accounting / Auditing'); await navigate(`/accounting/${firstPo.id}`); await fill('select[name="paymentMode"]','credit');
   await run("document.querySelector('.accounting-po-form input[name=financialReviewed]').click();return true;");
   await click('Approve PO');
   await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).pos.find(value=>value.id===${JSON.stringify(firstPo.id)}).archive?.status==='complete';`);

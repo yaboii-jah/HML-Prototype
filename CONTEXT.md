@@ -42,6 +42,12 @@ _Avoid_: Demo role, role picker
 **PO review:** Accounting's review of a purchase order, including its taxes, charges, payment mode and project budget.
 _Avoid_: Finance PO approval
 
+**Calculated EWT:** Withholding derived from the VAT-exclusive goods and services amounts at 1% and 2% respectively. NON VAT quotations and orders have zero calculated EWT.
+
+**Manual EWT override:** An Accounting-entered withholding amount retained until Accounting restores calculated EWT.
+
+**Effective PO supplier:** The supplier currently named on the purchase order, which may differ from the original quotation's supplier following Accounting review.
+
 **Payment request:** Accounting's request for Finance to approve and disburse a specified amount against a PO.
 _Avoid_: Payment, receipt
 

@@ -11,9 +11,9 @@ This is a staged roadmap. Implement one batch at a time; settle its client decis
 | #3 — Quotations covering multiple MRFs | Deferred | Keep quotation consolidation outside these batches. |
 | #6 — Owed/outstanding PO item management | Deferred | Do not add owed-item or finalization states. Existing remaining quantities and partial deliveries continue to support delivery tracking. |
 | #10 — Planned project material master list | Deferred | Do not add planned-material allowances or remaining-plan quantity validation. |
-| #17 — Request-level VAT/Non-VAT and mixed treatment | Deferred | Do not introduce request-level tax policies in these batches. |
+| #17 — Request-level VAT/Non-VAT and mixed treatment | Dropped / replaced | VAT stays outside the MRF. Quotation-level VAT review carries into PO-level VAT and calculated EWT, with Accounting overrides and direct PO edits before approval. |
 | #4 — Generate bid comparisons while comparing quotations | Completed | Verify the existing Compare-step feature during procurement regressions. |
-| #18 — Payment deductions | Optional follow-up | Not scheduled. Confirm deduction types and effects on tax, payable amounts and settlement before planning it. |
+| #18 — Payment deductions | Partially covered / optional follow-up | Calculated goods/services EWT and Accounting PO overrides are implemented. Other payment-stage deduction types remain unscheduled. |
 
 ## Implementation batches
 

@@ -11,7 +11,8 @@ import { normalizedQuantity } from "@/src/domain/delivery-flow";
 import { money } from "@/src/domain/format";
 import { latestFinalizedQuotes } from "@/src/domain/procurement";
 import { quoteLineTotal } from "@/src/domain/pricing";
-import { orderedFor } from "@/src/domain/selectors";
+import { QuotationFinancialSummary } from "./QuotationFinancialFields";
+import { orderedFor, poSupplierId } from "@/src/domain/selectors";
 import type { DemoSnapshot, MRF, Quote, QuoteLine } from "@/src/domain/types";
 import { BidComparisonReports } from "./BidComparisonReports";
 
@@ -19,9 +20,9 @@ type Offer = { quote: Quote; line: QuoteLine };
 const supplier = (state: DemoSnapshot, quote: Quote) => quote.supplierDetails?.name || state.suppliers.find(value => value.id === quote.supplierId)?.name || "Unnamed supplier";
 const price = (quote: Quote, value: number) => !quote.currency || quote.currency === "PHP" ? money(value) : `${quote.currency} ${value.toFixed(2)}`;
 
-export function CompareAllocate({ state, request, initialMaterialId, canEdit, working, confirmAction, onGenerated, onPreview }: {
+export function CompareAllocate({ state, request, initialMaterialId, canEdit, working, confirmAction, onGenerated, onPreview, onReview }: {
   state: DemoSnapshot; request: MRF; initialMaterialId: string; canEdit: boolean; working: boolean;
-  confirmAction: ConfirmedAction; onGenerated: () => void; onPreview: (quote: Quote) => void;
+  confirmAction: ConfirmedAction; onGenerated: () => void; onPreview: (quote: Quote) => void; onReview: (quote: Quote) => void;
 }) {
   const { run } = useDemo();
   const [selectedId, setSelectedId] = useState(initialMaterialId || request.items[0]?.id || "");
@@ -44,7 +45,7 @@ export function CompareAllocate({ state, request, initialMaterialId, canEdit, wo
   const remaining = (itemId: string) => Math.max(0, normalizedQuantity((request.items.find(item => item.id === itemId)?.quantity || 0) - ordered(itemId) - allocated(itemId)));
   const editedCount = request.items.filter(item => materialEdited(item.id)).length;
   const blocked = working || generating;
-  const activePO = (quote: Quote) => pos.find(po => quotes.find(source => source.id === po.quoteId)?.supplierId === quote.supplierId);
+  const activePO = (quote: Quote) => pos.find(po => poSupplierId(state, po) === quote.supplierId);
   const eligibility = (quote: Quote) => !finalized.some(current => current.id === quote.id) ? "Earlier quotation revision" : quote.currency && quote.currency !== "PHP" ? "Only PHP offers can be allocated" : quote.archive?.status === "pending" ? "Quotation archive pending" : activePO(quote) ? "An active PO already exists" : "";
   const capacity = ({ quote, line }: Offer) => Math.max(0, normalizedQuantity(line.quantity * line.conversionFactor - pos.filter(po => po.quoteId === quote.id).reduce((sum, po) => sum + (po.lines || []).filter(row => row.quoteLineId === line.id).reduce((total, row) => total + row.quantity, 0), 0)));
   const offers = selected ? materialLines(selected.id).filter(({ quote, line }) => finalized.some(current => current.id === quote.id) || saved(line.id) > 0 || dirty(line.id)) : [];
@@ -106,7 +107,7 @@ export function CompareAllocate({ state, request, initialMaterialId, canEdit, wo
             <p className="helper-note">Base prices are converted to {selected.unit}; discounts, tax and fees are shown in offer details.</p>
             <div className="table-frame allocation-offer-table"><table className="quote-material-table"><thead><tr><th>Supplier / offer</th><th className="numeric">Base price / {selected.unit}</th><th className="numeric">Available ({selected.unit})</th><th>Award ({selected.unit})</th><th>Details</th></tr></thead><tbody>
               {offers.map(offer => { const { quote, line } = offer, reason = eligibility(quote), existingPO = activePO(quote); return <tr key={line.id} data-allocation-offer={line.id} data-quote-ref={quote.ref}>
-                <td><strong>{supplier(state, quote)}</strong><small>{quote.ref} · v{quote.version || 1}</small><span>{line.description}</span>{reason && <small className="field-error">{reason}</small>}{existingPO && <Link className="text-link" href={`/purchase-orders/${existingPO.id}`}>Open {existingPO.ref}</Link>}</td>
+                <td><strong>{supplier(state, quote)}</strong><small>{quote.ref} · v{quote.version || 1} · {quote.financial?.vatStatus === "NON-VAT" ? "NON VAT" : quote.financial?.vatStatus || "VAT not reviewed"}</small><span>{line.description}</span>{reason && <small className="field-error">{reason}</small>}{existingPO && <Link className="text-link" href={`/purchase-orders/${existingPO.id}`}>Open {existingPO.ref}</Link>}</td>
                 <td className="numeric">{price(quote, line.unitPrice / line.conversionFactor)}</td><td className="numeric">{capacity(offer)}</td>
                 <td><div className="quote-award-edit"><Field label={`Award quantity (${selected.unit})`} error={errors[line.id]}><input aria-label={`Award ${quote.ref} ${line.description}`} type="number" min="0" max={capacity(offer)} step="any" disabled={!canEdit || blocked || !!reason} value={value(line.id)} onChange={event => edit(line.id, event.target.value)}/></Field>{canEdit && !reason && <button type="button" className="text-link" disabled={blocked} onClick={() => fillRemaining(offer)}>Fill remaining</button>}{canEdit && reason && saved(line.id) > 0 && <button type="button" className="text-link" disabled={blocked} onClick={() => edit(line.id, "0")}>Remove allocation</button>}</div></td>
                 <td><button type="button" className="text-link" onClick={() => setDetails(offer)}>Details</button></td>
@@ -121,6 +122,7 @@ export function CompareAllocate({ state, request, initialMaterialId, canEdit, wo
       </div>
       <footer className="allocation-footer"><div><strong>{request.items.filter(item => remaining(item.id) === 0).length} of {request.items.length} materials covered</strong><small>{staged.length} saved awards · {editedCount} materials with unapplied edits</small><small>Applied allocations survive refresh. Unapplied edits last while this workspace is open.</small></div><button ref={reviewTrigger} type="button" className="button secondary" disabled={!staged.length || blocked} onClick={() => { setError(""); setReviewOpen(true); }}>Review allocations</button></footer>
     </section>
+    <CollapsibleSection title="Quotation financial summaries" defaultOpen={false}>{finalized.map(quote => <section className="panel" key={quote.id}><h3>{supplier(state, quote)} · {quote.ref}</h3><QuotationFinancialSummary quote={quote}/><button type="button" className="button secondary" onClick={() => onReview(quote)}>Review VAT / NON VAT</button></section>)}</CollapsibleSection>
     <CollapsibleSection title="Comparison reports" summary="PDF / Excel exports and saved versions" defaultOpen={false}><BidComparisonReports requestId={request.id}/></CollapsibleSection>
     <RecordModal open={reviewOpen} title="Review supplier allocations" onClose={() => { if (!generating) setReviewOpen(false); }} returnFocus={() => reviewTrigger.current}>
       <div className="allocation-review"><p>These saved awards will become supplier PO drafts. Partial purchasing is allowed; taxes, discounts and charges are reviewed during PO preparation.</p>
