@@ -2,6 +2,7 @@
 
 import { useRef, useState, type FormEvent } from "react";
 import { useDemo } from "@/src/app-state/DemoProvider";
+import { BudgetInput } from "@/src/components/ui/BudgetInput";
 import { Field, InlineError } from "@/src/components/ui/Primitives";
 import { Register } from "@/src/components/ui/Register";
 import { money } from "@/src/domain/format";
@@ -20,7 +21,7 @@ export function ScopeBudgets({ siteId, editable = false, confirmChange }: { site
   if (!state) return null;
   const site = state.sites.find(value => value.id === siteId);
   if (!site) return null;
-  const scopes = projectScopes(state, siteId), canEdit = editable && state.role === "Administrator";
+  const scopes = projectScopes(state, siteId), canEdit = editable && ["Administrator", "Project Manager"].includes(state.role);
   const allocated = roundMoney(scopes.reduce((sum, scope) => sum + scope.budget, 0));
   const clear = () => { setDraft({ id: "", name: "", budget: "" }); setError(""); };
   const save = async (event: FormEvent<HTMLFormElement>) => {
@@ -57,7 +58,7 @@ export function ScopeBudgets({ siteId, editable = false, confirmChange }: { site
     }}/> : <p className="muted">An Administrator must add a funded scope before new requests can be submitted.</p>}
     {canEdit && <form className="scope-budget-form subform" onSubmit={save}>
       <h4>{draft.id ? "Edit scope allocation" : "Add scope of work"}</h4>
-      <div className="form-grid"><Field label="Scope name"><input name="scopeName" value={draft.name} required disabled={saving} onChange={event => setDraft(current => ({ ...current, name: event.target.value }))}/></Field><Field label="Scope allocation (PHP)"><input name="scopeBudget" type="number" min="0" step="0.01" value={draft.budget} required disabled={saving} onChange={event => setDraft(current => ({ ...current, budget: event.target.value }))}/></Field></div>
+      <div className="form-grid"><Field label="Scope name"><input name="scopeName" value={draft.name} required disabled={saving} onChange={event => setDraft(current => ({ ...current, name: event.target.value }))}/></Field><Field label="Scope allocation (PHP)"><BudgetInput name="scopeBudget" value={draft.budget} required disabled={saving} onValueChange={budget => setDraft(current => ({ ...current, budget }))}/></Field></div>
       <p className="helper-note">Scope allocations share the project cap. Committed and spent funds stay allocated to their scope.</p>
       <InlineError message={error}/><div className="button-row"><button className="button secondary" disabled={saving}>{saving ? "Saving…" : "Save scope allocation"}</button>{draft.id && <button className="button secondary" type="button" disabled={saving} onClick={clear}>Cancel editing</button>}</div>
     </form>}

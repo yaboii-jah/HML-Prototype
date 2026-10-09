@@ -8,7 +8,7 @@ type Repository = { execute: (command: Command, actor?: AuditIdentity) => Promis
 const denied = (message: string): CommandResult => ({ ok: false, message });
 export function bindAccountCommands(repository: Repository, expected: AuditIdentity | undefined, activeAccount: () => AuditIdentity | undefined) {
   const actor = copyIdentity(expected);
-  const current = () => { const active = activeAccount(); return actor && validIdentity(actor) && active?.email === actor.email && active.role === actor.role; };
+  const current = () => { const active = activeAccount(); return actor && validIdentity(actor) && active?.email === actor.email && active.role === actor.role && active.userId === actor.userId && active.sessionRevision === actor.sessionRevision; };
   const run: CommandRunner = async command => {
     if (command.type === "setRole" || command.type === "startOperation") return denied("Use the account or operation controls to continue.");
     if (!current()) return denied("Your account changed. Sign in and try this action again.");

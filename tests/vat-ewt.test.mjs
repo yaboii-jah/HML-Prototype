@@ -38,8 +38,39 @@ test("inclusive/exclusive VAT, changed rate and exempt fees apply VAT once", () 
   assert.equal(poFinancialBreakdown(po).net, 221);
   po.financial.priceBasis = "inclusive"; po.financial.vatRate = 10; po.lines[0].unitPrice = 110; po.adjustments[0].value = 110;
   assert.equal(poFinancialBreakdown(po).net, 217);
-  po.adjustments[0].taxable = false; assert.equal(poFinancialBreakdown(po).ewtServices, 2.2);
+  po.adjustments[0].taxable = false; assert.equal(poFinancialBreakdown(po).ewtServices, 0);
   po.financial.vatStatus = "NON-VAT"; assert.equal(poFinancialBreakdown(po).net, 220);
+});
+
+test("automatic service EWT excludes non-taxable charges in quotation and PO totals", () => {
+  for (const priceBasis of ["inclusive", "exclusive"]) {
+    for (const kind of ["shipping", "other"]) {
+      const po = { financial: { ...automatic, priceBasis }, lines: [priced(112)], adjustments: [{ ...service(112, false), kind }] };
+      const exempt = poFinancialBreakdown(po);
+      assert.equal(exempt.servicesBase, 0);
+      assert.equal(exempt.calculatedServices, 0);
+      assert.equal(exempt.ewtServices, 0);
+      assert.equal(exempt.gross, priceBasis === "inclusive" ? 224 : 237.44);
+      assert.equal(exempt.ewtGoods, priceBasis === "inclusive" ? 1 : 1.12);
+      assert.equal(exempt.net, priceBasis === "inclusive" ? 223 : 236.32);
+
+      po.adjustments.push({ ...service(112), id: "taxable-service", kind, taxable: undefined });
+      po.adjustments.push({ ...service(112), id: "excluded-service", kind, included: false });
+      const mixed = poFinancialBreakdown(po);
+      assert.equal(mixed.ewtServices, priceBasis === "inclusive" ? 2 : 2.24);
+      assert.equal(mixed.gross, priceBasis === "inclusive" ? 336 : 362.88);
+      assert.equal(mixed.net, priceBasis === "inclusive" ? 333 : 359.52);
+      const quote = { financial: po.financial, lines: po.lines, adjustments: po.adjustments.filter(value => value.included) };
+      assert.equal(quoteFinancialBreakdown(quote).net, mixed.net);
+
+      po.adjustments = [po.adjustments[0]];
+      po.financial = { ...po.financial, ewtMode: "manual", ewtServicesManual: true, ewtGoodsManual: false, ewtServices: 5 };
+      const manual = poFinancialBreakdown(po);
+      assert.equal(manual.calculatedServices, 0);
+      assert.equal(manual.ewtServices, 5);
+      assert.equal(manual.net, exempt.net - 5);
+    }
+  }
 });
 
 test("line discounts lower goods EWT but general discounts only lower payable", () => {
@@ -57,7 +88,8 @@ test("quotation settings initialize automatic withholding on actual partial PO q
   assert.equal(quoteFinancialBreakdown(quote).ewtGoods, 100); assert.equal(poFinancialBreakdown(po).ewtGoods, 10); assert.equal(po.financial.ewtMode, "automatic");
   quote.adjustments = [service(112, false)]; delete po.adjustments;
   initializePoDocument(po, request, quote, state.sites[0], po.createdAt);
-  assert.equal(po.adjustments[0].taxable, false); assert.equal(poFinancialBreakdown(po).ewtServices, 2.24);
+  assert.equal(po.adjustments[0].taxable, false); assert.equal(poFinancialBreakdown(po).ewtServices, 0);
+  assert.equal(quoteFinancialBreakdown(quote).ewtServices, 0);
 });
 
 test("manual category overrides persist through price edits and can be recalculated", () => {

@@ -1,4 +1,3 @@
-import { isSiteBatch } from "@/src/domain/delivery-flow";
 import type { AccountingDocument, Batch, MRF, PO } from "@/src/domain/types";
 import { MAX_ACCOUNTING_FILE, validAccountingDocument } from "@/src/domain/accounting-documents";
 import { prepareAccountingFile, downloadAccountingFile } from "@/src/server/drive";
@@ -10,11 +9,12 @@ const nonempty = (value: unknown): value is string => typeof value === "string" 
 export async function POST(request: Request) {
   const denied = driveAccessError(request, true); if (denied) return denied;
   try {
-    const { document, po, batch, mrf, projectFolderId } = await request.json() as { document: AccountingDocument; po: PO; batch: Batch; mrf: MRF; projectFolderId: string };
-    if (!document || !validAccountingDocument(document) || !nonempty(document.id) || document.archive?.status !== "pending" || !po || !nonempty(po.id) || !nonempty(po.ref) || po.status !== "released" || !batch || !nonempty(batch.id) || !nonempty(batch.ref) || !isSiteBatch(batch) || !["confirmed", "posted"].includes(batch.status) || batch.id !== document.batchId || batch.poId !== po.id || !mrf || !nonempty(mrf.id) || !nonempty(mrf.ref) || mrf.id !== po.mrfId || !nonempty(projectFolderId)) return Response.json({ error: "The delivered accounting document is invalid." }, { status: 400 });
+    const { document, po, batch, mrf, projectFolderId } = await request.json() as { document: AccountingDocument; po: PO; batch?: Batch; mrf: MRF; projectFolderId: string };
+    if (!document || !validAccountingDocument(document) || !nonempty(document.id) || document.archive?.status !== "pending" || !po || !nonempty(po.id) || !nonempty(po.ref) || !["approved", "released"].includes(po.status) || !mrf || !nonempty(mrf.id) || !nonempty(mrf.ref) || mrf.id !== po.mrfId || !nonempty(projectFolderId)) return Response.json({ error: "The accounting document is invalid." }, { status: 400 });
+    if (document.batchId ? !batch || !nonempty(batch.ref) || batch.id !== document.batchId || batch.poId !== po.id || !["confirmed", "posted"].includes(batch.status) : batch || document.kind === "Signed delivery receipt") return Response.json({ error: "The document delivery association is invalid." }, { status: 400 });
     const result = await prepareAccountingFile(projectFolderId, mrf, po, batch, document);
     if ("driveFileId" in result) return Response.json(result);
-    return Response.json({ ticket: sealAccountingUploadTicket({ documentId: document.id, poId: po.id, batchId: batch.id, total: document.size, mime: document.mime, sessionUri: result.sessionUri }), offset: 0 });
+    return Response.json({ ticket: sealAccountingUploadTicket({ documentId: document.id, poId: po.id, batchId: batch?.id, total: document.size, mime: document.mime, sessionUri: result.sessionUri }), offset: 0 });
   } catch (cause) { return Response.json({ error: driveError(cause) }, { status: 502 }); }
 }
 export async function GET(request: Request) {
@@ -22,8 +22,8 @@ export async function GET(request: Request) {
   try {
     const query = new URL(request.url).searchParams;
     const project = query.get("projectFolderId"), requestId = query.get("requestId"), poId = query.get("poId"), batchId = query.get("batchId"), documentId = query.get("documentId"), fileId = query.get("fileId");
-    if (!project || !requestId || !poId || !batchId || !documentId || !fileId) return Response.json({ error: "The document download is invalid." }, { status: 400 });
-    const { bytes, mime } = await downloadAccountingFile(project, requestId, poId, batchId, documentId, fileId);
+    if (!project || !requestId || !poId || !documentId || !fileId) return Response.json({ error: "The document download is invalid." }, { status: 400 });
+    const { bytes, mime } = await downloadAccountingFile(project, requestId, poId, batchId || "", documentId, fileId);
     if (bytes.length > MAX_ACCOUNTING_FILE) throw new Error("The document exceeds the file limit.");
     return new Response(new Uint8Array(bytes), { headers: { "Content-Type": mime, "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" } });
   } catch (cause) { return Response.json({ error: driveError(cause) }, { status: 502 }); }

@@ -6,7 +6,7 @@ import { demoRepository, serverRepositoryView, type RepositoryView } from "@/src
 import { demoSession, accountForCredentials, serverSessionView, type DemoSessionView } from "./demo-session";
 import type { Command, CommandResult } from "@/src/domain/commands";
 import type { AuditIdentity, OperationTarget, Role } from "@/src/domain/types";
-import { ACCOUNT_FIXTURES } from "./demo-session";
+import { userDirectory, serverUserDirectory, type UserDirectoryView, type UserChange } from "./user-directory";
 import { bindAccountCommands, type CommandRunner } from "./command-gateway";
 
 type DemoContextValue = RepositoryView & {
@@ -15,6 +15,9 @@ type DemoContextValue = RepositoryView & {
   session: DemoSessionView;
   signedOut: boolean;
   signIn: (email: string, password: string) => Promise<{ ok: boolean; message: string }>;
+  directory: UserDirectoryView;
+  manageUser: (change: UserChange) => Promise<{ ok: boolean; message: string }>;
+  switchAccount: (id: string) => { ok: boolean; message: string };
   switchRole: (role: Role) => { ok: boolean; message: string };
   signOut: () => void;
   reset: () => Promise<void>;
@@ -29,13 +32,15 @@ const subscribeSession = (listener: () => void) => demoSession.subscribe(listene
 const getSession = () => demoSession.read();
 const getServerSession = () => serverSessionView;
 const identityFor = (account: DemoSessionView): AuditIdentity | undefined => {
-  const fixture = ACCOUNT_FIXTURES.find(value => value.email === account.email && value.role === account.role);
-  return fixture ? { name: fixture.name, email: fixture.email, role: fixture.role } : undefined;
+  const user = userDirectory.getSnapshot().users.find(value => value.active && value.id === account.userId && value.email === account.email && value.role === account.role && value.revision === account.revision);
+  return user ? { name: user.name, email: user.email, role: user.role, userId: user.id, sessionRevision: user.revision } : undefined;
 };
 
 export function DemoProvider({ children }: { children: ReactNode }) {
   const view = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
   const session = useSyncExternalStore(subscribeSession, getSession, getServerSession);
+  const directory = useSyncExternalStore(listener => userDirectory.subscribe(listener), () => userDirectory.getSnapshot(), () => serverUserDirectory);
+  useEffect(() => { void userDirectory.load(); }, []);
   const [notice, setNotice] = useState("");
   const [signedOut, setSignedOut] = useState(false);
   const snapshotRole = view.snapshot?.role;
@@ -52,8 +57,12 @@ export function DemoProvider({ children }: { children: ReactNode }) {
   };
   const signIn = async (email: string, password: string) => {
     if (demoSession.read().role) return { ok: false, message: "Sign out before signing in with another account." };
-    const account = accountForCredentials(email, password);
+    const account = await accountForCredentials(email, password);
     if (!account) return { ok: false, message: "Invalid email or password." };
+    if (view.status === "recovery") {
+      if (account.role !== "Administrator") return { ok: false, message: "An Administrator must restore this workspace before signing in." };
+      demoSession.select(account); return { ok: true, message: "Administrator verified. You can restore the workspace." };
+    }
     const result = await demoRepository.execute({ type: "setRole", role: account.role });
     if (!result.ok) return { ok: false, message: result.message };
     demoSession.select(account);
@@ -68,8 +77,18 @@ export function DemoProvider({ children }: { children: ReactNode }) {
     setNotice("");
     return { ok: true, message: "Department changed." };
   };
-  const reset = async () => { await demoRepository.reset(); setNotice("Workspace cleared. Start by adding a project."); };
-  return <ArchiveProvider><DemoContext.Provider value={{ ...view, run, beginOperation: gateway.beginOperation, session, signedOut, signIn, switchRole, signOut, reset, notice, clearNotice: () => setNotice("") }}>{children}</DemoContext.Provider></ArchiveProvider>;
+  const switchAccount = (id: string) => {
+    const active = demoSession.read();
+    if (!view.snapshot || active.userId !== session.userId || active.revision !== session.revision || !demoSession.switchAccount(id)) return { ok: false, message: "Sign in before switching accounts." };
+    setNotice(""); return { ok: true, message: "Account changed." };
+  };
+  const manageUser = async (change: UserChange) => {
+    const actor = identityFor(demoSession.read());
+    if (!actor || actor.role !== "Administrator" || actor.userId !== session.userId || actor.sessionRevision !== session.revision) return { ok: false, message: "Your account changed. Sign in as Administrator to manage users." };
+    return userDirectory.change(actor, change);
+  };
+  const reset = async () => { if (demoSession.read().role !== "Administrator") throw new Error("Workspace reset requires an Administrator."); await demoRepository.reset(); setNotice("Workspace cleared. Start by adding a project."); };
+  return <ArchiveProvider><DemoContext.Provider value={{ ...view, run, beginOperation: gateway.beginOperation, session, signedOut, directory, manageUser, signIn, switchRole, switchAccount, signOut, reset, notice, clearNotice: () => setNotice("") }}>{children}</DemoContext.Provider></ArchiveProvider>;
 }
 
 export function useDemo() {

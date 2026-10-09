@@ -1,8 +1,8 @@
 import { ROLES, type Activity, type AuditEntityType, type AuditEventType, type AuditIdentity, type DemoSnapshot, type HistoricalActor, type Quote } from "./types.ts";
 import type { Command } from "./commands.ts";
 
-export const copyIdentity = (identity?: AuditIdentity): AuditIdentity | undefined => identity ? { name: identity.name, email: identity.email, role: identity.role } : undefined;
-export const validIdentity = (identity: AuditIdentity) => typeof identity.name === "string" && !!identity.name.trim() && typeof identity.email === "string" && !!identity.email.trim() && ROLES.includes(identity.role);
+export const copyIdentity = (identity?: AuditIdentity): AuditIdentity | undefined => identity ? { name: identity.name, email: identity.email, role: identity.role, ...(identity.userId ? { userId: identity.userId } : {}), ...(identity.sessionRevision ? { sessionRevision: identity.sessionRevision } : {}) } : undefined;
+export const validIdentity = (identity: AuditIdentity) => typeof identity.name === "string" && !!identity.name.trim() && typeof identity.email === "string" && !!identity.email.trim() && (ROLES.includes(identity.role) || String(identity.role) === "Management");
 export const actorName = (role: HistoricalActor, identity?: AuditIdentity) => identity && validIdentity(identity) && identity.role === role ? identity.name : "User not recorded";
 export const actorText = (role: HistoricalActor, identity?: AuditIdentity) => `${actorName(role, identity)} · ${role}`;
 export function auditTime(value?: string) {
@@ -16,6 +16,7 @@ export function auditRecords(state: DemoSnapshot): Map<string, AuditRecord> {
   for (const request of state.requests) add({ id: request.id, type: "request", ref: request.ref || "Unnumbered MRF", requestId: request.id, href: `/requests/${request.id}` });
   for (const quote of state.quotes) add({ id: quote.id, type: "quote", ref: quote.ref || `Quotation draft v${quote.version || 1}`, requestId: quote.mrfId, href: `/requests/${quote.mrfId}/quotes` });
   for (const po of state.pos) add({ id: po.id, type: "po", ref: po.ref, requestId: po.mrfId, poId: po.id, href: `/purchase-orders/${po.id}` });
+  for (const po of state.pos) for (const proof of po.paymentProofs || []) add({ id: proof.id, type: "evidence", ref: proof.name, requestId: po.mrfId, poId: po.id, href: `/accounting/${po.id}` });
   for (const payment of state.paymentRequests) { const po = state.pos.find(value => value.id === payment.poId); add({ id: payment.id, type: "payment-request", ref: payment.ref, requestId: po?.mrfId, poId: po?.id, href: po ? `/finance/${po.id}` : undefined }); }
   for (const payment of state.payments) { const po = state.pos.find(value => value.id === payment.poId); add({ id: payment.id, type: "payment", ref: payment.reference, requestId: po?.mrfId, poId: po?.id, href: po ? `/finance/${po.id}` : undefined }); }
   for (const batch of state.batches) { const po = state.pos.find(value => value.id === batch.poId); add({ id: batch.id, type: "batch", ref: batch.ref, requestId: po?.mrfId, poId: po?.id, href: `/deliveries/${batch.id}` }); }
@@ -62,7 +63,7 @@ export function auditChanges(previous: DemoSnapshot, state: DemoSnapshot, comman
     case "saveProjectScope": return fieldsChanged(previous.scopes?.find(value => value.id === command.id), state.scopes.find(value => value.id === command.id), ["name", "budget"]);
     case "saveQuoteDraft": return quoteChanges(previous.quotes.find(value => value.id === command.quote.id), state.quotes.find(value => value.id === command.quote.id));
     case "saveRequest": return fieldsChanged(previous.requests.find(value => value.id === command.id), state.requests.find(value => value.id === command.id), ["ref", "siteId", "scopeId", "requestDate", "requestedBy", "approvedBy", "purchaser", "financeOfficer", "specialInstructions", "items", "documents", "scopeDocument"]);
-    case "savePO": case "saveAccountingPO": return fieldsChanged(previous.pos.find(value => value.id === command.id), state.pos.find(value => value.id === command.id), ["supplierId", "notes", "document", "financial", "lines", "adjustments", "tax", "freight", "discount", "paymentMode"]);
+    case "savePO": case "saveAccountingPO": return fieldsChanged(previous.pos.find(value => value.id === command.id), state.pos.find(value => value.id === command.id), ["supplierId", "notes", "document", "financial", "lines", "adjustments", "tax", "freight", "discount", "paymentMode", "paymentDueDate"]);
     case "savePaymentRequest": return fieldsChanged(previous.paymentRequests.find(value => value.id === command.id), state.paymentRequests.find(value => value.id === command.id), ["amount", "note"]);
     case "setPriority": return fieldsChanged(previous.paymentRequests.find(value => value.id === command.id), state.paymentRequests.find(value => value.id === command.id), ["priority"]);
     case "stageAward": case "replaceMaterialAwards": return ["Supplier allocation quantity"];
@@ -86,6 +87,14 @@ export function auditKind(command: Command, previous: DemoSnapshot): AuditEventT
     case "savePO": case "saveAccountingPO": return "po.saved";
     case "reviewPO": return "po.reviewed";
     case "releasePO": return "po.released";
+    case "issuePO": return "po.issued";
+    case "reopenPOReview": return "po.reopened";
+    case "recordCreditPayment": case "verifyExternalPayment": return "payment.verified";
+    case "voidCreditPayment": case "reopenPaymentVerification": return "payment.reopened";
+    case "attachPaymentProofs": return "proof.attached";
+    case "removePaymentProof": return "proof.removed";
+    case "completePaymentProofArchive": return "archive.completed";
+    case "failPaymentProofArchive": return "archive.failed";
     case "savePaymentRequest": return "payment-request.saved";
     case "reviewPaymentRequest": return "payment-request.reviewed";
     case "setPriority": return "payment.priority.changed";
@@ -95,14 +104,14 @@ export function auditKind(command: Command, previous: DemoSnapshot): AuditEventT
     case "confirmBatch": return "batch.received";
     case "postBatch": return "batch.posted";
     case "recordMovement": return "stock.changed";
-    case "attachAccountingDocuments": return "evidence.attached";
+    case "captureDeliveryReceipt": case "classifyAccountingDocument": case "attachAccountingDocuments": return "evidence.attached";
     case "saveDocuments": return "documents.reviewed";
     case "createBidReport": return "comparison.captured";
     case "saveBidReportFile": return "comparison.generated";
     case "failBidGeneration": return "comparison.generation.failed";
-    case "failRequestArchive": case "failQuoteArchive": case "failPOArchive": case "failBidArchive": case "failAccountingArchive": return "archive.failed";
+    case "failRequestArchive": case "failQuoteArchive": case "failPOArchive": case "failBidArchive": case "failAccountingArchive": case "failDeliveryReceiptArchive": return "archive.failed";
     case "startOperation": return "operation.started";
-    case "addSite": case "setProjectDriveFolder": return "project.changed";
+    case "completeProjectFolder": case "failProjectFolder": case "addSite": case "setProjectDriveFolder": return "project.changed";
     case "addSupplierFromQuote": return "supplier.created";
     default: return "archive.completed";
   }

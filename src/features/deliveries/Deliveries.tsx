@@ -1,4 +1,6 @@
 "use client";
+
+import { useDeliveryReceiptArchive } from "./DeliveryReceiptArchive";
 import { Register, ViewTabs } from "@/src/components/ui/Register";
 
 import Link from "next/link";
@@ -79,6 +81,7 @@ function BatchEditor({ state, po, parent }: { state: DemoSnapshot; po: PO; paren
 }
 
 export function BatchDetail({ id }: { id: string }) {
+  const archiveReceipt = useDeliveryReceiptArchive();
   const { snapshot: state, run } = useDemo(), { confirm: confirmAction, confirmation } = useConfirmation();
   const [error, setError] = useState(""), [preview, setPreview] = useState<Record<string, number>>({}), [busy, setBusy] = useState(false);
   if (!state) return null;
@@ -100,6 +103,7 @@ export function BatchDetail({ id }: { id: string }) {
     setBusy(true);
     try { if (!await confirmAction(`Confirm received quantities for ${batch.ref}?`, warehouse ? "Accepted quantities become available for onward delivery to this PO's site." : "Accepted quantities will move to the stock posting review.", "Confirm receipt")) return;
       const result = await run({ type: "confirmBatch", id, lines }); setError(result.ok ? "" : result.message);
+      if (result.ok) void archiveReceipt(result.snapshot, id).catch(() => {});
     } catch { setError("Receipt could not be recorded. Try again."); } finally { setBusy(false); }
   };
   const post = async (event: FormEvent<HTMLFormElement>) => {
@@ -108,6 +112,7 @@ export function BatchDetail({ id }: { id: string }) {
     setBusy(true);
     try { if (!await confirmAction(`Post ${batch.ref} to site stock?`, "This batch can be posted only once. Review accepted quantities before continuing.", "Post to stock")) return;
       const result = await run({ type: "postBatch", id, accepted, reason: String(form.get("reason") || "") }); setError(result.ok ? "" : result.message);
+      if (result.ok) void archiveReceipt(result.snapshot, id).catch(() => {});
     } catch { setError("Stock posting could not be recorded. Try again."); } finally { setBusy(false); }
   };
   return <>
@@ -129,7 +134,7 @@ export function BatchDetail({ id }: { id: string }) {
     <Link className="data-link" href={`/purchase-orders/${po.id}`}><strong>{po.ref}</strong><span>Open purchase order →</span></Link>{batch.status === "posted" && <div className="callout good"><strong>Posted to {siteName(state, request.siteId)}</strong><p>{auditTime(batch.postedAt)} · {actorName("Site Personnel", batch.postedByIdentity)}</p></div>}</section></div>
     {canReceive && <form className="panel form-stack" onSubmit={receive}><h2 className="panel-title">{warehouse ? "Confirm warehouse receipt" : "Confirm received quantities"}</h2><p className="muted">Confirm accepted quantities and explain every shortage or damaged amount.</p>{batch.lines.map(line => { const item = request.items.find(value => value.id === line.itemId)!; return <div className="form-grid" key={line.itemId}><Field label={`${item.name} · accepted ${item.unit}`}><input name={`accepted-${line.itemId}`} type="number" min="0" max={batchQuantityLimit(state, po, batch, line.itemId)} step="any" defaultValue={line.expected} required/></Field><Field label="Shortage / damage note"><input name={`issue-${line.itemId}`} placeholder="Required if accepted is lower"/></Field></div>; })}<button className="button primary" disabled={busy}>{warehouse ? "Confirm warehouse receipt" : "Confirm received quantities"}</button></form>}
     {!warehouse && state.role === "Site Personnel" && batch.status === "confirmed" && <form className="panel form-stack" onSubmit={post}><span className="eyebrow">POSTING PREVIEW</span><h2 className="panel-title">Increase site stock</h2><p className="muted">Any change to confirmed quantities requires a reason.</p>{batch.lines.map(line => { const item = request.items.find(value => value.id === line.itemId)!, amount = preview[line.itemId] ?? line.accepted; return <div className="posting-preview" key={line.itemId}><div><strong>{item.name}</strong><small>Current stock: {stockFor(state, request.siteId, item.name, item.unit)} {item.unit}</small></div><Field label={`Accepted ${item.unit}`}><input name={`post-${line.itemId}`} type="number" min="0" max={batchQuantityLimit(state, po, batch, line.itemId)} step="any" value={amount} onChange={event => setPreview(current => ({ ...current, [line.itemId]: Number(event.target.value) }))}/></Field><strong>+{amount} {item.unit}</strong></div>; })}<Field label="Reason if quantities changed"><input name="reason" placeholder="Required for a correction"/></Field><button className="button primary" disabled={busy}>Post to site stock</button></form>}
-    {!warehouse && isReceivedBatch(batch) && <AccountingDocuments poId={po.id} batchId={batch.id}/>}
+    {isReceivedBatch(batch) && <AccountingDocuments poId={po.id} batchId={batch.id}/>}
     <InlineError message={error}/>{confirmation}<Timeline state={state} ids={[batch.id]}/>
   </>;
 }

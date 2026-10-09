@@ -2,7 +2,7 @@
 
 ## Language
 
-**Department account:** A predefined sign-in identity linked to one of the seven department roles.
+**Department account:** A named browser-local sign-in identity managed by Administrator and linked to one of the seven department roles.
 _Avoid_: Demo role, role picker
 
 **Department session:** The active department account, retained until sign-out. A different account begins a new session.
@@ -15,7 +15,7 @@ _Avoid_: Demo role, role picker
 
 **Unused scope:** A scope with no MRF referencing it, including drafts, returned and rejected requests. Removing it returns its allocation to unallocated project funds without changing the project budget.
 
-**Scope allocation:** The portion of the project's budget allotted to a scope by Administrator. Allocations share the project cap and cover both Goods and Services.
+**Scope allocation:** The portion of the project's budget allotted to a scope by Project Manager or Administrator. Allocations share the project cap and cover both Goods and Services.
 
 **Available scope budget:** The scope allocation remaining after approved commitments and recorded spending. An unpriced MRF does not reserve these funds.
 
@@ -48,7 +48,7 @@ _Avoid_: Finance PO approval
 
 **Effective PO supplier:** The supplier currently named on the purchase order, which may differ from the original quotation's supplier following Accounting review.
 
-**Payment request:** Accounting's request for Finance to approve and disburse a specified amount against a PO.
+**Payment request:** Accounting's request for Finance to approve and disburse a specified amount against a PO using the earlier Finance-managed payment flow.
 _Avoid_: Payment, receipt
 
 **Disbursement:** A payment recorded by Finance against an approved payment request. Approval alone is not disbursement.
@@ -56,9 +56,15 @@ _Avoid_: Payment, receipt
 **Release to Logistics:** Accounting's authorization for delivery scheduling after PO review and required payment conditions are satisfied.
 _Avoid_: Serve PO
 
-**Upfront order:** A PO requiring full recorded disbursement before release to Logistics.
+**Upfront order:** A PO requiring full verified supplier payment before release to Logistics.
 
-**Credit / terms order:** A PO whose delivery can proceed independently of payment processing after Accounting review.
+**Credit / terms order:** A PO allowing delivery after approval and supplier issuance before full payment. Settlement can comprise partial payments toward an agreed due date.
+
+**External payment verification:** Accounting's confirmation of a supplier payment processed outside ConstructSync by Finance, supported by archived proof. A credit payment can settle part or all of the outstanding balance.
+
+**Payment due date:** The agreed date for settling the outstanding supplier balance. A remaining credit balance becomes overdue on the following Philippine calendar day, independently of delivery progress.
+
+**Voided payment:** A recorded payment corrected with a reason, excluded from the paid balance while its original details and evidence remain in history. Voiding does not revoke delivery clearance or change receiving records.
 
 **Document review:** Accounting's review of invoice and receipt evidence, separate from PO approval and payment approval.
 
@@ -73,5 +79,13 @@ _Avoid_: Serve PO
 **Warehouse forwarding:** Allocation and dispatch of accepted warehouse goods to their original PO's site. A shortage at site does not restore the dispatched allocation.
 
 **Delivery receipt:** The company document showing a leg's expected and recorded accepted quantities. A pending receipt identifies goods awaiting confirmation.
+
+**Generated receipt snapshot:** The company-produced delivery receipt preserving quantities and receiver details at confirmation or a later posting correction. Earlier snapshots remain distinct from corrected ones.
+_Avoid_: Signed receipt, payment proof
+
+**Signed delivery receipt:** Uploaded delivery paperwork bearing a receiving acknowledgment, linked to a particular delivery and its recorded quantities. Accounting checks its signature and contents separately from the generated receipt.
+_Avoid_: Generated receipt, payment receipt
+
+**PO-level document:** Invoice or supporting paperwork associated with a purchase order as a whole rather than a particular delivery batch.
 
 **Site Personnel / Warehouse:** The role that requests materials, confirms site receiving, posts stock and records material usage.

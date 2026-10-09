@@ -66,7 +66,7 @@ export function drawPoLayout(template: Awaited<ReturnType<typeof documentTemplat
       });
       top = blockBottom + 10;
       const widths = [184, 157, 59, 140], labels = ["REQUISITIONER", "TERMS", "F.O.B.", "SHIPPING TERMS"];
-      const content = [info?.requisitioner || request.requestedBy, info?.terms || quote.terms, info?.fob || "", info?.shippingTerms || quote.deliveryTerms || ""].map((value, index) => {
+      const content = [info?.requisitioner || request.requestedBy, [info?.terms || quote.terms, po.paymentDueDate ? `Payment due: ${po.paymentDueDate}` : ""].filter(Boolean).join(" / "), info?.fob || "", info?.shippingTerms || quote.deliveryTerms || ""].map((value, index) => {
         const wrapped = lines(value, widths[index]);
         if (wrapped.length > 8) extra.push(["", `${labels[index]}: ${value}`, "", "", "", ""]);
         return wrapped.slice(0, 8);

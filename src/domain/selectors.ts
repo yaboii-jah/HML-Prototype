@@ -1,3 +1,4 @@
+import { isExternalCredit, isExternalPayment } from "./full-disbursement.ts";
 import { isSiteBatch, normalizedQuantity, orderedQuantity, siteAcceptedFor, supplierSchedulableFor } from "./delivery-flow.ts";
 import { materialId } from "./ids.ts";
 import { poFinancialBreakdown, poLineTotal, quoteFinancialBreakdown, quoteLineTotal, totalWithAdjustments } from "./pricing.ts";
@@ -21,7 +22,7 @@ export const quoteTotal = (state: DemoSnapshot, quote: Quote) => quote.financial
 export const poTotal = (state: DemoSnapshot, po: PO) => po.financial ? poFinancialBreakdown(po).net : po.lines
   ? po.adjustments ? totalWithAdjustments(po.lines.reduce((sum, line) => sum + poLineTotal(line), 0), po.adjustments) : po.lines.reduce((sum, line) => sum + poLineTotal(line), 0) + (po.tax || 0) + (po.freight || 0) - (po.discount || 0)
   : (quoteForPO(state, po) ? quoteTotal(state, quoteForPO(state, po)!) : 0);
-export const paidTotal = (state: DemoSnapshot, poId: string) => state.payments.filter(p => p.poId === poId).reduce((sum, p) => sum + p.amount, 0);
+export const paidTotal = (state: DemoSnapshot, poId: string) => { const po = state.pos.find(value => value.id === poId); return po && isExternalCredit(po) ? Math.round((po.creditPayments || []).filter(payment => !payment.voided).reduce((sum, payment) => sum + payment.amount, 0) * 100) / 100 : po && isExternalPayment(po) ? po.externalPayment?.amount || 0 : state.payments.filter(p => p.poId === poId).reduce((sum, p) => sum + p.amount, 0); };
 export const paymentStatus = (state: DemoSnapshot, po: PO) => { const paid = paidTotal(state, po.id); return paid <= 0 ? "Unpaid" : paid >= poTotal(state, po) ? "Paid" : "Partly Paid"; };
 export const budgetFor = (state: DemoSnapshot, siteId: string) => {
   const allocated = state.sites.find(s => s.id === siteId)?.budget ?? 0;

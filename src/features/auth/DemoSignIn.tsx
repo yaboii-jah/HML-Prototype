@@ -8,7 +8,7 @@ import { useConfirmation } from "@/src/components/ui/ConfirmDialog";
 
 const WORKFLOW_STAGES = [
   { name: "Request", title: "Start with a clear request.", description: "Capture the materials a site needs and keep the handoff visible to everyone involved.", card: "Material request", detail: "Ready for review" },
-  { name: "Review", title: "Keep decisions moving.", description: "Procurement reviews material requests and keeps each purchasing decision linked to the site.", card: "Procurement review", detail: "Decision in one place" },
+  { name: "Review", title: "Keep decisions moving.", description: "Project Manager reviews material requests and keeps each approval linked to the site.", card: "Project Manager review", detail: "Decision in one place" },
   { name: "Procure", title: "Turn approval into action.", description: "Compare quotations and prepare purchase orders without losing the request trail.", card: "Procurement", detail: "From quote to order" },
   { name: "Receive", title: "Close the loop on site.", description: "Record deliveries, confirm quantities, and make received materials visible in site stock.", card: "Site receiving", detail: "Stock stays in sync" },
 ] as const;
@@ -21,7 +21,7 @@ function destinationAfterSignIn() {
 
 export function DemoSignIn() {
   const { confirm, confirmation } = useConfirmation();
-  const { snapshot, status, message, session, signIn, reset } = useDemo();
+  const { snapshot, status, message, session, directory, signIn, reset } = useDemo();
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -59,14 +59,17 @@ export function DemoSignIn() {
     setError("");
     try {
       const result = await signIn(email, password);
-      if (result.ok) router.replace(destinationAfterSignIn());
+      if (result.ok && status !== "recovery") router.replace(destinationAfterSignIn());
+      else if (result.ok) setPassword("");
       else setError(result.message);
     } catch { setError("Sign-in could not finish. Please try again."); }
     finally { setBusy(false); }
   };
 
   if (status === "loading" || session.status === "loading") return <div className="state-screen"><div className="state-card"><span className="eyebrow">HML ConstructSync</span><h1>Opening sign-in</h1><p>Preparing your workspace…</p></div></div>;
-  if (status === "recovery" || !snapshot) return <><div className="state-screen"><div className="state-card"><span className="eyebrow">WORKSPACE RECOVERY</span><h1>Saved data needs attention</h1><p>{message}</p><button className="button primary" onClick={() => void (async () => { if (await confirm("Restore this workspace?", "Saved records and uploaded files will be removed and replaced with an empty workspace.", "Restore workspace", true)) await reset(); })()}>Restore workspace</button></div></div>{confirmation}</>;
+  if (directory.status === "recovery") return <div className="state-screen"><div className="state-card"><h1>Saved user accounts need attention</h1><p>{directory.error}</p><p>Restore the saved user directory in browser storage before continuing.</p></div></div>;
+  if (status === "recovery" || !snapshot) return <><div className="state-screen"><div className="state-card"><span className="eyebrow">WORKSPACE RECOVERY</span><h1>Saved data needs attention</h1><p>{message}</p>{session.role === "Administrator" ? <button className="button primary" onClick={() => void (async () => { if (await confirm("Restore this workspace?", "Saved operational records and uploaded files will be removed. User accounts and their management history are preserved.", "Restore workspace", true)) await reset(); })()}>Restore workspace</button> : <form className="signin-form" onSubmit={event => void submit(event)}><p>Sign in as Administrator to restore the workspace.</p><label>Email<input type="email" required value={email} onChange={event => setEmail(event.target.value)} autoComplete="username"/></label><label>Password<input type="password" required value={password} onChange={event => setPassword(event.target.value)} autoComplete="current-password"/></label><button className="button primary" disabled={busy}>Verify Administrator</button>{error && <p role="alert">{error}</p>}</form>}</div></div>{confirmation}</>;
+
 
   const stage = WORKFLOW_STAGES[stageIndex];
   const playbackPaused = manualPaused || reducedMotion;

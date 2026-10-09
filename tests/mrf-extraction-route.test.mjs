@@ -13,6 +13,24 @@ const configure = t => {
 };
 const reply = (raw, finishReason = "STOP") => Response.json({ candidates: [{ finishReason, content: { parts: [{ thought: true, text: "ignore reasoning" }, { text: JSON.stringify(raw) }] } }] });
 
+test("MRF endpoint avoids provider-rejected array bounds while validating output locally", async t => {
+  configure(t);
+  globalThis.fetch = async (_url, options) => {
+    const schema = JSON.parse(options.body).generationConfig.responseFormat.text.schema;
+    return JSON.stringify(schema).includes('"maxItems"')
+      ? Response.json({ error: "Invalid argument" }, { status: 400 })
+      : reply(rawMrf());
+  };
+  assert.equal((await POST(request())).status, 200);
+  for (const raw of [
+    { ...rawMrf(), items: Array.from({ length: 101 }, () => rawMrf().items[0]) },
+    { ...rawMrf(), warnings: Array.from({ length: 300 }, () => "Unreadable field") },
+  ]) {
+    globalThis.fetch = async () => reply(raw);
+    assert.equal((await POST(request())).status, 422);
+  }
+});
+
 test("MRF endpoint sends ordered sources with a structured schema and returns normalized results", async t => {
   configure(t); const pages = [png("page-2"), png("page-1")];
   globalThis.fetch = async (url, options) => {
@@ -65,9 +83,10 @@ test("MRF endpoint rejects multiple requests, unrelated documents and truncated 
 
 test("MRF endpoint handles upstream failures and cancellation without leaking provider details", async t => {
   configure(t);
-  for (const status of [400, 429, 500]) {
+  for (const [status, message] of [[400, /request was rejected/], [401, /access was denied/], [403, /access was denied/], [429, /limit was reached/], [500, /service is unavailable/]]) {
     globalThis.fetch = async () => Response.json({ error: "sensitive provider detail test-key" }, { status });
-    const response = await POST(request()); assert.equal(response.status, 502); assert.doesNotMatch((await response.json()).error, /sensitive|test-key/);
+    const response = await POST(request()); assert.equal(response.status, 502);
+    const result = await response.json(); assert.match(result.error, message); assert.doesNotMatch(result.error, /sensitive|test-key/);
   }
   globalThis.fetch = async () => { throw new DOMException("aborted", "AbortError"); };
   const response = await POST(request()); assert.equal(response.status, 502); assert.match((await response.json()).error, /Retry|manually/);

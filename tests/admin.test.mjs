@@ -25,9 +25,9 @@ test('project editing preserves links, document snapshots and historical actors 
   assert.deepEqual(state.activity[0].changedFields, ['Project name','Location','Allocated budget']);
 });
 
-test('project editing enforces existing cap obligations and Administrator access, including unscoped legacy POs', () => {
+test('project editing enforces existing cap obligations and project editor access, including unscoped legacy POs', () => {
   const state = seedDemo(), site = state.sites[0], command = { type: 'updateSite', siteId: site.id, name: site.name, location: site.location, budget: site.budget };
-  rejected(state, command, /Administrator/, { ...admin, role: 'Management' });
+  rejected(state, command, /Administrator/, { ...admin, role: 'Finance' });
   rejected(state, { ...command, siteId: 'missing' }, /not found/);
   rejected(state, { ...command, name: ' ' }, /Complete/);
   rejected(state, { ...command, name: state.sites[1].name.toUpperCase() }, /unique/);

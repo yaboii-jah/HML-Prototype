@@ -84,7 +84,7 @@ test("AI draft metadata survives storage and review cannot be bypassed by omitti
 test("returned AI requests need fresh review while manual requests retain their existing flow", () => {
   let state = execute(seedDemo(), { ...command(), aiAssisted: true, aiReviewed: true });
   const id = state.requests.at(-1).id;
-  state = execute({ ...state, role: "Procurement" }, { type: "reviewRequest", id, decision: "return", reason: "Please correct quantity" });
+  state = execute({ ...state, role: "Project Manager" }, { type: "reviewRequest", id, decision: "return", reason: "Please correct quantity" });
   state = execute({ ...state, role: "Site Personnel" }, { ...command(), id, intent: "draft" });
   assert.equal(state.requests.at(-1).aiReviewedAt, undefined);
   assert.equal(applyCommand(state, { ...command(), id }, context).field, "aiReview");
