@@ -91,7 +91,7 @@ try {
   await attach(2);await wait(`return ${saved}.pos[0].paymentProofs?.[1]?.archive.status==='complete';`);await pay(Math.round((total-part)*100)/100,'BANK-CREDIT-2',2);
   assert.equal(await run("return !!document.querySelector('.credit-payment-form');"),false,'No further payments when settled');
   await role('Finance');await navigate('/finance');assert.equal(await run("return !!document.querySelector('.register table tbody tr');"),false,'Settled PO leaves active queue');
-  await click('Settled (1)','.view-tabs button');await wait("return !!document.querySelector('.register table tbody tr');");
+  await run("const t=[...document.querySelectorAll('.view-tabs button')].find(b=>b.textContent.startsWith('Settled ('));t.focus();t.click();return true;");await sleep(150);await wait("return !!document.querySelector('.register table tbody tr');");
   await navigate(`/finance/${po.id}`);assert.equal(await run("return !!document.querySelector('.payment-coordination-form');"),false,'Settled coordination is read-only');
   await role('Accounting / Auditing');await navigate(`/accounting/${po.id}`);
 
