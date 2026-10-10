@@ -4,6 +4,7 @@ import { useArchive } from "@/src/app-state/ArchiveProvider";
 import type { ArchiveProgressListener } from "@/src/domain/archive-progress";
 import { useState } from "react";
 import { useDemo } from "@/src/app-state/DemoProvider";
+import { useActionFeedback } from "@/src/app-state/action-feedback";
 import { useConfirmedAction } from "@/src/components/ui/useConfirmedAction";
 import { InlineError } from "@/src/components/ui/Primitives";
 import { bidReportReadiness } from "@/src/domain/bid-reports";
@@ -15,6 +16,7 @@ import { archiveBidWorkbook, downloadBidWorkbook, getBidWorkbook } from "./bid-r
 export function BidComparisonReports({ requestId }: { requestId: string }) {
   const { perform } = useArchive();
   const { snapshot, run, beginOperation } = useDemo();
+  const { notify, update } = useActionFeedback();
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
   const [selections, setSelections] = useState<ComparisonSelections>({});
@@ -30,6 +32,8 @@ export function BidComparisonReports({ requestId }: { requestId: string }) {
   const reports = snapshot.bidReports.filter(report => report.requestId === requestId).sort((a, b) => b.version - a.version);
   const process = async (report: BidReport, action: "download" | "generate" | "archive", selectedFormat: "xlsx" | "pdf" = "xlsx") => {
     setBusy(report.id); setError("");
+    const label = `Bid comparison v${report.version}${action === "download" ? ` · ${selectedFormat.toUpperCase()} download` : action === "archive" ? " · archiving to Google Drive" : " · generating"}`;
+    const toast = action === "download" ? "" : notify({ tone: "progress", title: label, detail: "Preparing document" });
     try {
       const needsWrite = action !== "download" || !(selectedFormat === "pdf" ? report.pdf : report)?.sha256;
       const pipeline = needsWrite ? await beginOperation({kind:"report",id:report.id,...(action === "download" ? {format:selectedFormat} : {})}) : undefined;
@@ -38,6 +42,7 @@ export function BidComparisonReports({ requestId }: { requestId: string }) {
         try {
           const artifact = format === "pdf" ? report.pdf! : report;
           const operation = async (progress?: ArchiveProgressListener) => {
+            if (toast) update(toast, { title: label, detail: action === "archive" ? `Uploading ${format.toUpperCase()}` : `Generating ${format.toUpperCase()}` });
             progress?.({ phase: "preparing" });
             const workbook = await getBidWorkbook(report, procurement ? pipeline : undefined, format);
             if (action === "download") downloadBidWorkbook(workbook.blob, artifact.fileName);
@@ -48,8 +53,12 @@ export function BidComparisonReports({ requestId }: { requestId: string }) {
         } catch (cause) { errors.push(`${format.toUpperCase()}: ${cause instanceof Error ? cause.message : "The report could not be processed."}`); }
       }
       if (errors.length) throw new Error(errors.join(" "));
-    } catch (cause) { setError(cause instanceof Error ? cause.message : "The bid report could not be processed."); }
-    finally { setBusy(""); }
+      if (toast) update(toast, { tone: "success", title: action === "archive" ? `Bid comparison v${report.version} archived.` : `Bid comparison v${report.version} ready.`, detail: "PDF and Excel saved" });
+    } catch (cause) {
+      const text = cause instanceof Error ? cause.message : "The bid report could not be processed.";
+      setError(text);
+      if (toast) update(toast, { tone: "error", title: text, detail: `Bid comparison v${report.version}` });
+    } finally { setBusy(""); }
   };
   const generate = async () => {
     if (!currentData) return;

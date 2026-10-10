@@ -71,6 +71,8 @@ try {
   await wait("return !!document.querySelector('.document-gallery-modal[open] canvas:not([hidden])');");
   assert.equal(await run("return document.querySelector('.pdf-document-toolbar [aria-live=polite]').textContent;"),'of 2','Desktop modal renders the full PDF with page controls');
   assert.equal(await run("return document.querySelectorAll('.pdf-document-scroll .page').length;"),2,'All pages share a continuous scrolling viewer');
+  assert.equal(await run("return !document.querySelector('.pdf-document-sidebar');"),true,"Preview starts with fit width and full document space");
+  await click('[aria-label="Toggle thumbnails"]');
   await wait("return document.querySelectorAll('.pdf-document-thumbnail canvas:not([hidden])').length===2;");
   await click('[aria-label="Go to page 2"]');
   await wait("return document.querySelector('[aria-label=\"PDF page number\"]').value==='2'&&document.querySelector('[aria-label=\"Go to page 2\"]').getAttribute('aria-current')==='page';");
@@ -146,7 +148,7 @@ try {
   assert.equal(await run("return window.__opened.at(-1).startsWith('blob:')&&!document.querySelector('.document-gallery-modal[open]');"),true,'Mobile opens a local file before archive');
   request.status='approved';request.archive={status:'complete',approvedAt:'2026-10-07T00:00:00Z',versions:[{version:1,formFileId:'gallery-form',supportFileId:'gallery-support',formUrl:'https://drive.google.com/file/d/gallery-form/view',supportUrl:'https://drive.google.com/file/d/gallery-support/view',archivedAt:'2026-10-07T00:00:00Z'}]};
   await run(`localStorage.setItem('hml-constructsync-demo-v12',${JSON.stringify(JSON.stringify(fixture))});return true;`);await navigate('/requests/m1');
-  await wait("return !document.querySelector('.document-gallery-card').disabled;");
+  await wait("return !!document.querySelector('.document-gallery-card')&&!document.querySelector('.document-gallery-card').disabled;");
   await run("window.__opened=[];window.open=(url)=>{window.__opened.push(url);return null;};return true;");await click('.document-gallery-card');
   assert.equal(await run("return window.__opened.at(-1);"),request.archive.versions[0].supportUrl,'Mobile uses matching Drive document after archive');
   request.correction={status:'requested',scope:'documents',reason:'Replace supporting attachment'};
@@ -159,6 +161,7 @@ try {
   assert.equal(await run("return !!document.querySelector('.document-gallery-navigation');"),false,'Single file has no unnecessary navigation');
   request.documents=[];
   await run(`localStorage.setItem('hml-constructsync-demo-v12',${JSON.stringify(JSON.stringify(fixture))});return true;`);await navigate('/requests/m1');
+  await wait("return !document.querySelector('.document-gallery')&&document.body.textContent.includes('No attachments recorded.');");
   assert.equal(await run("return !document.querySelector('.document-gallery')&&document.body.textContent.includes('No attachments recorded.');"),true,'Empty gallery has a clear state');
   console.log(`Document gallery smoke passed. Screenshots: ${profile}`);
 } finally { ws?.close();browser.kill(); }

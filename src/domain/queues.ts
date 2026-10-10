@@ -1,3 +1,5 @@
+import { coordinatedPOs, coordinationWarning, coordinationStatus } from "./payment-coordination.ts";
+import { deliveryEvidenceStatus, receivedDelivery } from "./delivery-archive.ts";
 import { creditOverdue } from "./credit-terms.ts";
 import { isSiteBatch, legFor, warehouseAvailableFor } from "./delivery-flow.ts";
 import { requiresPMReview, isExternalPayment } from "./full-disbursement.ts";
@@ -26,11 +28,19 @@ export function tasksFor(state: DemoSnapshot): Task[] {
     ...requestTasks, ...state.requests.filter(r => r.archive?.status === "pending").map(r => ({ title: `Archive ${r.ref}`, detail: r.archive?.error || "Upload approved PDFs to Drive", href: `/requests/${r.id}`, siteId: r.siteId, waiting: daysWaiting(r.updatedAt) })),
     ...state.requests.filter(r => procurementReady(r) && r.items.some(item => state.pos.filter(po => po.mrfId === r.id && po.status !== "rejected").reduce((sum, po) => sum + orderedFor(state, po, item.id), 0) < item.quantity)).map(r => ({ title: `Source ${r.ref}`, detail: "Compare supplier quotes and unawarded materials", href: `/requests/${r.id}/quotes`, siteId: r.siteId, waiting: daysWaiting(r.updatedAt) })),
     ...state.pos.filter(p => ["draft", "returned"].includes(p.status)).map(p => ({ title: `Prepare ${p.ref}`, detail: p.status, href: `/purchase-orders/${p.id}`, siteId: requestForPO(state, p)?.siteId, waiting: daysWaiting(p.updatedAt) })),
-  ] : role === "Finance" ? state.paymentRequests.filter(p => !isExternalPayment(state.pos.find(po => po.id === p.poId)) && ["submitted", "hold", "approved"].includes(p.status)).map(p => ({ title: `${p.status === "approved" ? "Disburse" : "Review"} ${p.ref}`, detail: `${p.amount.toLocaleString("en-PH")} / ${p.priority}`, href: `/finance/${p.poId}`, siteId: requestForPO(state, state.pos.find(po => po.id === p.poId)!)?.siteId, waiting: daysWaiting(p.updatedAt) })) : role === "Logistics" ? [
+  ] : role === "Finance" ? [...coordinatedPOs(state).map(po => ({ title: `Coordinate ${po.ref}`, detail: `${po.paymentCoordination?.priority || "Normal"} / ${coordinationWarning(state, po) || coordinationStatus(state, po)}`, href: `/finance/${po.id}`, siteId: requestForPO(state,po)?.siteId, waiting: daysWaiting(po.paymentCoordination?.at || po.issuance!.at) })), ...state.paymentRequests.filter(p => !isExternalPayment(state.pos.find(po => po.id === p.poId)) && ["submitted", "hold", "approved"].includes(p.status)).map(p => ({ title: `${p.status === "approved" ? "Disburse" : "Review"} ${p.ref}`, detail: `${p.amount.toLocaleString("en-PH")} / ${p.priority}`, href: `/finance/${p.poId}`, siteId: requestForPO(state, state.pos.find(po => po.id === p.poId)!)?.siteId, waiting: daysWaiting(p.updatedAt) }))] : role === "Logistics" ? [
     ...state.pos.filter(po => po.status === "released" && requestForPO(state, po)?.items.some(item => outstandingFor(state,po,item.id) > 0)).map(po => ({ title: `Track ${po.ref}`, detail: "Schedule or monitor delivery", href: `/purchase-orders/${po.id}`, siteId: requestForPO(state,po)?.siteId, waiting: daysWaiting(po.updatedAt) })),
     ...state.batches.filter(batch => batch.status === "expected" || legFor(batch) === "supplier-warehouse" && batch.status === "confirmed" && batch.lines.some(line => warehouseAvailableFor(state,batch.id,line.itemId) > 0)).map(batch => ({ title: `${batch.status === "expected" ? "Dispatch" : "Forward"} ${batch.ref}`, detail: batch.destination?.name || "Delivery batch", href: `/deliveries/${batch.id}`, siteId: requestForPO(state,state.pos.find(po => po.id === batch.poId)!)?.siteId, waiting: daysWaiting(batch.updatedAt) })),
   ] : role === "Accounting / Auditing" ? state.pos.filter(p => ["submitted", "hold", "approved", "released"].includes(p.status) && accountingNextAction(state, p) !== "Up to date").map(p => ({ title: `${accountingNextAction(state, p)}: ${p.ref}`, detail: p.reviewReason || siteName(state, requestForPO(state,p)?.siteId || ""), href: `/accounting/${p.id}`, siteId: requestForPO(state,p)?.siteId, waiting: daysWaiting(p.updatedAt) })) : role === "Administrator" ? state.pos.filter(p => (["hold", "returned"].includes(p.status) || creditOverdue(state,p))).map(p => ({ title: `Exception on ${p.ref}`, detail: creditOverdue(state,p) ? `Credit payment overdue / due ${p.paymentDueDate}` : p.reviewReason || p.status, href: `/purchase-orders/${p.id}`, siteId: requestForPO(state,p)?.siteId, waiting: daysWaiting(p.updatedAt) })) : [{ title: "Review workspace settings", detail: "Projects, Drive folders and activity", href: "/admin", waiting: 0 }];
-  return tasks.filter(task => state.siteFilter === "all" || !task.siteId || task.siteId === state.siteFilter);
+  const receiptTasks: Task[] = state.batches.filter(batch => receivedDelivery(batch) && state.role === (isSiteBatch(batch) ? "Site Personnel" : "Procurement")).flatMap(batch => {
+    const status = deliveryEvidenceStatus(state, batch);
+    if (status.generatedArchived && status.signedArchived) return [];
+    const po = state.pos.find(value => value.id === batch.poId);
+    if (!po) return [];
+    const title = !status.signedArchived ? status.signedFailed ? "Retry signed receipt archive" : status.signedPending ? "Finish signed receipt archive" : "Upload signed receipt" : "Archive generated receipt";
+    return [{ title: `${title}: ${batch.ref}`, detail: `${isSiteBatch(batch) ? "Site" : "Warehouse"} delivery${status.version ? ` / receipt v${status.version}` : ""}${!status.generatedArchived && !status.signedArchived ? " / generated receipt also needs archive" : ""}`, href: `/deliveries/${batch.id}#delivery-documents`, siteId: requestForPO(state, po)?.siteId, waiting: daysWaiting(batch.updatedAt) }];
+  });
+  return [...receiptTasks, ...tasks].filter(task => state.siteFilter === "all" || !task.siteId || task.siteId === state.siteFilter);
 }
 export function dashboardMetrics(state: DemoSnapshot) {
   const matches = (siteId?: string) => state.siteFilter === "all" || siteId === state.siteFilter;
@@ -40,6 +50,7 @@ export function dashboardMetrics(state: DemoSnapshot) {
     procurementReviews: requests.filter(r => r.status === "submitted" || r.correction?.status === "submitted").length,
     externalVerifications: pos.filter(p => isExternalPayment(p) && ["approved","released"].includes(p.status) && !!p.issuance && (p.status === "approved" || accountingNextAction(state,p).toLowerCase().includes("payment"))).length,
     accountingReviews: pos.filter(p => ["submitted", "hold"].includes(p.status)).length,
+    financeCoordination: coordinatedPOs(state).filter(po => pos.some(value => value.id === po.id)).length,
     financeReviews: state.paymentRequests.filter(p => !isExternalPayment(state.pos.find(po => po.id === p.poId)) && ["submitted", "hold", "approved"].includes(p.status) && pos.some(po => po.id === p.poId)).length,
     openDeliveryLines: pos.filter(p => p.status === "released").reduce((sum,p) => sum + (requestForPO(state,p)?.items.filter(item => outstandingFor(state,p,item.id) > 0).length || 0), 0),
     commitment: state.sites.filter(s=>matches(s.id)).reduce((sum,s)=>sum+budgetFor(state,s.id).committed,0),

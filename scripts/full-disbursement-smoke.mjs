@@ -59,7 +59,7 @@ try {
   const press=async(label,scope='document')=>{await run(`const b=[...${scope}.querySelectorAll('button')].find(b=>b.checkVisibility()&&b.textContent.trim()===${JSON.stringify(label)});if(!b)throw Error('Missing button '+${JSON.stringify(label)});b.click();return true;`);await sleep(100);};
   const confirmed=async()=>{await wait("return !!document.querySelector('.confirm-dialog[open]');");await click('.confirm-dialog[open] .confirm-actions button:last-child');};
   const saved=`JSON.parse(localStorage.getItem('hml-constructsync-demo-v12'))`;
-  await navigate(`/purchase-orders/${po.id}`);
+  await navigate(`/purchase-orders/${po.id}`);await wait("return !![...document.querySelectorAll('button')].find(b=>b.textContent==='Confirm supplier issuance');");
   await press('Confirm supplier issuance');await wait("return !!document.querySelector('.confirm-dialog[open]');");await click('.confirm-dialog[open] .confirm-actions button:first-child');
   assert.equal(await run(`return !!${saved}.pos[0].issuance;`),false);
   await press('Confirm supplier issuance');await confirmed();await wait(`return !!${saved}.pos[0].issuance;`);
@@ -67,7 +67,7 @@ try {
   await run(`localStorage.setItem('hml-constructsync-session-v2',${JSON.stringify(JSON.stringify({email:accounting.email,role:accounting.role}))});return true;`);
   await navigate(`/accounting/${po.id}`);await wait("return !!document.querySelector('.external-payment-panel');");
   assert.equal(await run("return [...document.querySelectorAll('.external-payment-panel button')].find(b=>b.textContent==='Confirm full payment').disabled;"),true);
-  await run(`window.__proofFail=true;const dt=new DataTransfer();dt.items.add(new File(['%PDF-1.4 payment proof for browser smoke'],'Bank transaction proof.pdf',{type:'application/pdf'}));const el=document.querySelector('.proof-upload input');el.files=dt.files;el.dispatchEvent(new Event('change',{bubbles:true}));return true;`);
+  await run(`window.__proofFail=true;const dt=new DataTransfer();dt.items.add(new File(['%PDF-1.4 payment proof for browser smoke'],'Bank transaction proof.pdf',{type:'application/pdf'}));const el=document.querySelector('.qa-file-upload input');el.files=dt.files;el.dispatchEvent(new Event('change',{bubbles:true}));return true;`);
   await wait(`return !!${saved}.pos[0].paymentProofs?.[0]?.archive.error;`);
   assert.equal(await run("return [...document.querySelectorAll('.external-payment-panel button')].find(b=>b.textContent==='Confirm full payment').disabled;"),true);
   await run('window.__proofFail=false;return true;');await press('Retry archive');await wait(`return ${saved}.pos[0].paymentProofs[0].archive.status==='complete';`);

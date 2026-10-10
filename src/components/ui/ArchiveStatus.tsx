@@ -1,9 +1,13 @@
 "use client";
 import { useArchive } from "@/src/app-state/ArchiveProvider";
+
 export function ArchiveStatus() {
   const { jobs, dismiss } = useArchive();
   if (!jobs.length) return null;
-  return <aside className="archive-activity" aria-label="Document archive activity"><div role="status" aria-live="polite">{jobs.map(job => {
+  const failed = jobs.filter(job => job.error).length, active = jobs.filter(job => !job.error && job.phase !== "complete").length;
+  return <aside className={`archive-activity ${failed ? "has-error" : !active ? "is-complete" : ""}`} aria-label="Document archive activity">
+    <div className="archive-activity-heading"><strong>Document archiving</strong><small>{active ? `${active} in progress` : failed ? `${failed} need${failed === 1 ? "s" : ""} retry` : "Complete"}</small></div>
+    <div role="status" aria-live="polite">{jobs.map(job => {
     const done = job.phase === "complete", measured = !job.error && !done && job.total !== undefined && job.loaded !== undefined;
     return <div className={`archive-job ${job.error ? "has-error" : done ? "is-complete" : ""}`} key={job.id} aria-busy={!done && !job.error}>
       <span className={!done && !job.error ? "archive-spinner" : "archive-state-icon"} aria-hidden="true">{job.error ? "!" : done ? "✓" : ""}</span>

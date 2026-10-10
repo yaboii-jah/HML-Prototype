@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import { CloseButton } from "@/src/components/ui/CloseButton";
 import { PdfDocumentViewer } from "@/src/components/PdfDocumentViewer";
 import type { DocumentRef, MRF } from "@/src/domain/types";
 import { supportingPdf } from "@/src/domain/request-archive";
@@ -84,7 +85,7 @@ function DocumentCard({ document, swiping }: { document: GalleryDocument; swipin
     </button>
     {openError && <p className="field-error" role="alert">{openError}</p>}
     <dialog ref={dialog} className="document-gallery-modal" aria-label={`Preview of ${document.name}`} onClose={() => { setPreviewOpen(false); trigger.current?.focus({ preventScroll: true }); }}>
-      <header><h2>{document.name}</h2><div className="button-row"><a className="button secondary" href={document.driveUrl || source.url} target="_blank" rel="noreferrer">Open document ↗</a><button type="button" className="button secondary" onClick={() => dialog.current?.close()}>Close</button></div></header>
+      <header><h2>{document.name}</h2><div className="button-row"><a className="button secondary" href={document.driveUrl || source.url} target="_blank" rel="noreferrer">Open document ↗</a><CloseButton onClick={() => dialog.current?.close()}/></div></header>
       {previewOpen && (source.kind === "image" && source.url ? <div className="document-gallery-image-viewer"><Image src={source.url} alt={document.name} fill unoptimized/></div> : source.kind === "pdf" && source.blob ? <PdfDocumentViewer blob={source.blob} fileName={document.name} sourceUrl={source.url}/> : document.drivePreviewUrl ? <iframe src={document.drivePreviewUrl} title={document.name} allow="fullscreen"/> : <p className="document-gallery-placeholder">This file type opens in a separate tab. Use Open document to view it.</p>)}
     </dialog>
   </>;

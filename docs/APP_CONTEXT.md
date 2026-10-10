@@ -117,7 +117,7 @@ The domain command layer in `src/domain/commands.ts` is the authority for permis
 - Revised upfront release requires supplier issuance, a verified fixed net payable after EWT with required payment date/method/reference and at least one archived payment-proof PDF/image, then a separate Accounting delivery-clearance confirmation. Proof limits are 12 files, 20 MB per file and 45 MB total. Proof is PO-level and independent of delivery batches. Verification retains actor, time and immutable proof snapshots; before clearance Accounting can reopen with a reason, preserving history and restoring unpaid commitment. After clearance it locks.
 - Before supplier issuance Procurement can reopen an approved revised upfront PO with a reason for costing recheck. Prior approvals and archives remain in history, current approval/commitment/archive readiness reset, and revised costing requires fresh Accounting approval and a numbered PO PDF. Issued POs cannot reopen for direct edits.
 - Existing upfront release requires full recorded Finance disbursement. Credit release needs no payment request, payment approval or disbursement.
-- Revised upfront and external-credit POs are excluded from Finance queues and payment-request/disbursement commands. Their verification contributes to paid/spent projections without creating an in-app Finance payment.
+- Revised upfront and external-credit POs enter Finance payment coordination after supplier issuance while unpaid; they remain excluded from legacy payment-request/disbursement commands. Their verification contributes to paid/spent projections without creating an in-app Finance payment.
 - Payment requests for existing Finance-managed POs are PO-linked records with `draft`, `submitted`, `hold`, `returned`, `rejected`, `approved`, `disbursed` states. Accounting prepares drafts/resubmissions; Finance reviews submitted/held requests. Return goes to Accounting.
 - At most one open request exists per PO; rejected and disbursed requests remain in history. Positive partial amounts are allowed up to the unpaid balance; preparation defaults to that balance.
 - Finance records actual disbursement only against an approved request, for exactly its approved amount, with method/reference/date. Duplicate and excess payments are blocked. Approval alone changes no payment, budget spend or delivery state.
@@ -237,7 +237,7 @@ Any incompatible snapshot change requires a schema-version decision and a migrat
 | `/suppliers` | Supplier directory derived from finalized quotations. |
 | `/purchase-orders`, `/purchase-orders/[id]` | PO register and linked detail. |
 | `/purchase-orders/[id]/edit` | Editable draft or returned PO. |
-| `/finance`, `/finance/[poId]` | Finance payment request queue, decisions and actual disbursement. |
+| `/finance`, `/finance/[poId]` | Finance external payment coordination, with a separate legacy payment request/disbursement tab. |
 | `/deliveries`, `/deliveries/new` | Delivery tracker and batch scheduling. |
 | `/deliveries/[id]` | Receiving confirmation and stock-posting flow. |
 | `/inventory`, `/inventory/[siteId]/[materialId]` | Site inventory and material movement history. |
@@ -394,3 +394,12 @@ Accounting verifies individually identified partial or full payments after issua
 Voiding a payment requires Accounting and a recorded reason. It retains the payment, actor attribution and frozen proof snapshots, restores the unpaid balance, and leaves delivery clearance, receipts and stock movements untouched. A corrected replacement payment uses distinct proof; the voided entry's original proof remains in history. Payment totals exclude voided entries and move project/scope budget value between commitment and paid/spent without releasing budget capacity.
 
 Accounting, PM/Admin exception queues, MRF payment monitoring and Reports show overdue outstanding credit balances using Philippine calendar dates. A balance becomes overdue on the day after its agreed due date; settlement removes the overdue flag. Payment and delivery progress remain separate. The upfront/full-disbursement proof and full-payment gate are unchanged.
+
+
+### Finance payment coordination
+
+Finance now owns an in-app follow-up plan for issued revised upfront and external-credit POs. Actual transfers remain outside the app. The default Finance tab lists active balances, supplier/project, arrangement, Normal/High/Urgent priority, Accounting?s agreed due date, Finance?s next planned date, and coordination status. Search and filters include settled history. Sorting uses urgency, overdue/missed dates, earliest due/planned date, then creation date.
+
+Finance alone edits Pending, Scheduled, Processing, Awaiting Accounting verification or Delayed status and notes. Scheduled requires a valid planned date; Delayed requires a reason. Status changes require confirmation. Awaiting Accounting verification reports an external payment without recording paid value. Revision checks reject stale saves; unchanged saves add no events. Every update retains an immutable actor/time snapshot. Accounting and Reports show read-only coordination, and Finance dashboard tasks include active plans.
+
+Accounting?s partial verification preserves priority and resets the next plan to Pending without a date; full verification derives Settled and removes the active Finance task. Voiding credit payment or reopening eligible upfront verification restores Pending follow-up while retaining all prior plans and verification history. These actions preserve delivery progress. Dates use the Philippine calendar. Coordination never changes financial amounts, proof ownership, agreed credit due date, PO approval, budget spend, or delivery eligibility. Existing revised POs derive defaults without a data migration; existing legacy Finance records keep their request/approval/disbursement flow.

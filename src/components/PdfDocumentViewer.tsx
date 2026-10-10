@@ -59,8 +59,8 @@ export function PdfDocumentViewer({ blob, fileName, sourceUrl }: { blob: Blob; f
   const shell = useRef<HTMLDivElement>(null), sidebar = useRef<HTMLElement>(null), findInput = useRef<HTMLInputElement>(null), printer = useRef<HTMLIFrameElement>(null);
   const container = useRef<HTMLDivElement>(null), pages = useRef<HTMLDivElement>(null), viewer = useRef<PDFViewer | null>(null), events = useRef<EventBus | null>(null);
   const [page, setPage] = useState(1), [count, setCount] = useState(0), [pageInput, setPageInput] = useState("1");
-  const [scale, setScale] = useState("auto"), [ready, setReady] = useState(false), [error, setError] = useState("");
-  const [pdf, setPdf] = useState<PDFDocumentProxy | null>(null), [sidebarOpen, setSidebarOpen] = useState(true), [searchOpen, setSearchOpen] = useState(false), [fullscreen, setFullscreen] = useState(false);
+  const [scale, setScale] = useState("page-width"), [ready, setReady] = useState(false), [error, setError] = useState("");
+  const [pdf, setPdf] = useState<PDFDocumentProxy | null>(null), [sidebarOpen, setSidebarOpen] = useState(false), [searchOpen, setSearchOpen] = useState(false), [fullscreen, setFullscreen] = useState(false);
   const [query, setQuery] = useState(""), [matches, setMatches] = useState({ current: 0, total: 0 }), [searching, setSearching] = useState(false), [printUrl, setPrintUrl] = useState("");
   const printTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
@@ -79,7 +79,7 @@ export function PdfDocumentViewer({ blob, fileName, sourceUrl }: { blob: Blob; f
         viewer.current = instance; events.current = bus; links.setViewer(instance);
         bus.on("pagesinit", () => {
           if (disposed || !instance) return;
-          instance.currentScaleValue = "auto"; setCount(instance.pagesCount); setReady(true);
+          instance.currentScaleValue = "page-width"; setCount(instance.pagesCount); setReady(true);
         });
         bus.on("pagechanging", (event: { pageNumber: number }) => { if (!disposed) { setPage(event.pageNumber); setPageInput(String(event.pageNumber)); } });
         bus.on("scalechanging", (event: { scale: number; presetValue?: string }) => { if (!disposed) setScale(event.presetValue || String(Math.round(event.scale * 100))); });

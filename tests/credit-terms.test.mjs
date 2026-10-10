@@ -5,6 +5,7 @@ import { applyCommand } from '../src/domain/commands.ts';
 import { validBidReport } from '../src/domain/bid-reports.ts';
 import { ACCOUNT_FIXTURES } from '../src/app-state/demo-session.ts';
 import { isExternalCredit } from '../src/domain/full-disbursement.ts';
+import { coordinatedPOs, coordinationStatus, coordinationWarning } from '../src/domain/payment-coordination.ts';
 import { creditOverdue, philippineDate } from '../src/domain/credit-terms.ts';
 import { budgetFor, paidTotal, paymentStatus } from '../src/domain/selectors.ts';
 import { releaseBlocker, accountingNextAction } from '../src/domain/workflow.ts';
@@ -88,7 +89,7 @@ test('partial, final and voided payments preserve proof snapshots, balances, bud
   const original=structuredClone(state.pos[0].creditPayments[0]);
   assert.equal(paidTotal(state,po.id),400);assert.equal(budgetFor(state,siteId).committed,600);assert.equal(budgetFor(state,siteId).spent,400);
   assert.match(accountingNextAction(state,state.pos[0]),/overdue/);
-  assert.equal(tasksFor(as(state,'Finance')).length,0);
+  assert.equal(tasksFor(as(state,'Finance')).length,1, 'Remaining balance requires Finance coordination');
   fail(state,record(state),/already/);
   state=proof(state,2);state=run(state,record(state,600,'BANK-2','credit-payment-2'));
   assert.equal(paymentStatus(state,state.pos[0]),'Paid');assert.equal(creditOverdue(state,state.pos[0]),false);
@@ -132,4 +133,44 @@ test('overdue uses Philippine calendar boundaries, persists payments and never m
     saved.set('hml-constructsync-demo-v12',JSON.stringify(legacy));const before=saved.get('hml-constructsync-demo-v12');
     const existing=await new LocalDemoRepository().load();assert.equal(isExternalCredit(existing.snapshot.pos[0]),false);assert.equal(saved.get('hml-constructsync-demo-v12'),before);
   }finally{globalThis.window=originalWindow;globalThis.localStorage=originalStorage;}
+});
+
+
+test('Finance coordination validates ownership, status, dates and stale updates without changing money or delivery',()=>{
+  let state=as(issued(),'Finance'),po=state.pos[0];
+  const command={type:'savePaymentCoordination',poId:po.id,revision:0,priority:'Urgent',status:'Scheduled',plannedDate:'2026-10-12',note:'Bank processing planned'};
+  const before={budget:budgetFor(state,state.requests[0].siteId),paid:paidTotal(state,po.id),status:po.status,due:po.paymentDueDate};
+  for(const role of ['Administrator','Project Manager','Accounting / Auditing','Procurement','Site Personnel','Logistics'])fail(as(state,role),command,/Finance/);
+  for(const patch of [{status:'Paid'},{priority:'Low'},{plannedDate:'2026-02-30'},{plannedDate:''},{status:'Delayed',note:'x'},{revision:8}])fail(state,{...command,...patch});
+  const unissued=structuredClone(state);delete unissued.pos[0].issuance;fail(unissued,command,/issued/);
+  state=run(state,command);po=state.pos[0];
+  assert.deepEqual({budget:budgetFor(state,state.requests[0].siteId),paid:paidTotal(state,po.id),status:po.status,due:po.paymentDueDate},before);
+  assert.equal(po.paymentCoordination.revision,1);assert.equal(po.coordinationHistory[0].by.role,'Finance');
+  assert.equal(state.activity[0].eventType,'payment.coordination.changed');
+  fail(state,command,/changed/);
+  const unchanged=run(state,{...command,revision:1});assert.equal(unchanged.activity.length,state.activity.length);assert.equal(unchanged.pos[0].coordinationHistory.length,1);
+  assert.ok(tasksFor(state).some(task=>task.href===`/finance/${po.id}`));
+});
+
+test('Finance plans retain immutable history and priority across partial, full and voided verification',()=>{
+  let state=as(issued(),'Finance'),po=state.pos[0];
+  state=run(state,{type:'savePaymentCoordination',poId:po.id,revision:0,priority:'High',status:'Awaiting Accounting verification',plannedDate:'2026-10-10',note:'External transfer reported'});
+  const snapshot=structuredClone(state.pos[0].coordinationHistory[0]);
+  state=proof(as(state,'Accounting / Auditing'));state=run(state,record(state));po=state.pos[0];
+  assert.equal(po.paymentCoordination.priority,'High');assert.equal(po.paymentCoordination.status,'Pending');assert.equal(po.paymentCoordination.plannedDate,'');
+  assert.deepEqual(po.coordinationHistory[0],snapshot);assert.equal(po.coordinationHistory[1].by.role,'Accounting / Auditing');
+  state=proof(state,2);state=run(state,record(state,600,'BANK-2','credit-payment-2'));
+  assert.equal(coordinatedPOs(state).length,0);assert.equal(coordinationStatus(state,state.pos[0]),'Settled');
+  fail(as(state,'Finance'),{type:'savePaymentCoordination',poId:po.id,revision:state.pos[0].paymentCoordination.revision,priority:'High',status:'Pending',plannedDate:'',note:''},/unpaid/);
+  state=run(state,{type:'voidCreditPayment',poId:po.id,paymentId:'credit-payment-2',reason:'Wrong transfer confirmed'});
+  assert.equal(coordinatedPOs(state).length,1);assert.equal(coordinationStatus(state,state.pos[0]),'Pending');assert.equal(state.pos[0].paymentCoordination.priority,'High');assert.equal(state.pos[0].coordinationHistory.length,4);
+});
+
+test('coordination derives defaults, respects Philippine date boundaries and excludes legacy credit',()=>{
+  const state=issued(),po=state.pos[0];
+  assert.equal(coordinationStatus(state,po),'Pending');assert.equal(po.paymentCoordination,undefined);
+  po.paymentDueDate='2026-10-20';po.paymentCoordination={priority:'Normal',status:'Scheduled',plannedDate:'2026-10-09',note:'',revision:1};
+  assert.equal(coordinationWarning(state,po,new Date('2026-10-09T15:59:59Z')),'');
+  assert.match(coordinationWarning(state,po,new Date('2026-10-09T16:00:00Z')),/missed/);
+  delete po.externalCredit;assert.equal(coordinatedPOs(state,true).length,0);
 });

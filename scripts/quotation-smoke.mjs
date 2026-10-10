@@ -68,7 +68,7 @@ try {
     await click("Enter manually using these files");
     await wait("return !!document.querySelector('.quote-review');");
     await click("View documents");
-    await wait("return !!document.querySelector('.quote-documents-dialog[open] .quote-document-preview iframe[src^=blob], .quote-documents-dialog[open] .quote-document-preview img[src^=blob]');");
+    await wait("return !!document.querySelector('.quote-documents-dialog[open] .quote-document-preview .pdf-document-body, .quote-documents-dialog[open] .quote-document-preview iframe[src^=blob], .quote-documents-dialog[open] .quote-document-preview img[src^=blob]');");
     await run("document.querySelector('.quote-documents-dialog [aria-label=\"Close document preview\"]').click();return true;");
     await fillLabel("Supplier name", supplier);
     await fillLabel("Quotation reference", reference);
@@ -119,8 +119,8 @@ try {
   await navigate(`/purchase-orders/${firstPo.id}`);
   await wait("return !!document.querySelector('.po-preview-stamp');");
   await click('Print preview');
-  await wait("return !!document.querySelector('.document-preview-dialog[open] iframe[src^=blob]');");
-  const previewMagic = await runAsync("(async()=>{const response=await fetch(document.querySelector('.document-preview-dialog iframe').src);return (await response.text()).slice(0,5)})()");assert.equal(previewMagic,'%PDF-');
+  await wait("return !!document.querySelector('.document-preview-dialog[open] .pdf-document-body, .document-preview-dialog[open] iframe[src^=blob]');");
+  const previewMagic = await runAsync("(async()=>{const link=document.querySelector('.document-preview-dialog[open] a[download][href^=blob]');if(!link)throw new Error('Preview download link unavailable');return (await (await fetch(link.href)).text()).slice(0,5)})()");assert.equal(previewMagic,'%PDF-');
   await run("document.querySelector('.document-preview-dialog[open] button:last-child').click();return true;");
   await navigate(`/purchase-orders/${firstPo.id}/edit`);
   await fill('input[name="poDocument.terms"]', "30 days after delivery");

@@ -2,6 +2,7 @@
 
 import { useRef, useState, type FormEvent } from "react";
 import { useDemo } from "@/src/app-state/DemoProvider";
+import { useActionFeedback } from "@/src/app-state/action-feedback";
 import { BudgetInput } from "@/src/components/ui/BudgetInput";
 import { Field, InlineError } from "@/src/components/ui/Primitives";
 import { Register } from "@/src/components/ui/Register";
@@ -11,7 +12,8 @@ import { projectScopes, scopeBudgetFor, scopeRemovalReason } from "@/src/domain/
 import { useConfirmation, type ConfirmAction } from "@/src/components/ui/ConfirmDialog";
 
 export function ScopeBudgets({ siteId, editable = false, confirmChange }: { siteId: string; editable?: boolean; confirmChange?: ConfirmAction }) {
-  const { snapshot: state, run } = useDemo();
+  const { snapshot: state } = useDemo();
+  const { runAction } = useActionFeedback();
   const [draft, setDraft] = useState({ id: "", name: "", budget: "" });
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -32,7 +34,7 @@ export function ScopeBudgets({ siteId, editable = false, confirmChange }: { site
     setMessage(""); setError("");
     try {
       if (!await confirm(draft.id ? "Save scope changes?" : "Add scope of work?", `${draft.name.trim()} · ${money(Number(draft.budget))} allocated within ${site.name}.`, "Save scope allocation")) return;
-      const result = await run({ type: "saveProjectScope", id: draft.id || undefined, siteId, name: draft.name, budget: Number(draft.budget) });
+      const result = await runAction({ type: "saveProjectScope", id: draft.id || undefined, siteId, name: draft.name, budget: Number(draft.budget) }, { progress: draft.id ? "Saving scope allocation…" : "Adding scope of work…", success: draft.id ? "Scope allocation saved." : "Scope of work added." });
       if (result.ok) { clear(); setMessage(result.message); } else setError(result.message);
     } catch { setError("The scope allocation could not be saved. Try again."); }
     finally { pending.current = false; setSaving(false); }
@@ -44,7 +46,7 @@ export function ScopeBudgets({ siteId, editable = false, confirmChange }: { site
     pending.current = true; setSaving(true); setError(""); setMessage("");
     try {
       if (!await confirm("Remove unused scope?", `Remove ${scope.name} from ${site.name}? Its ${money(scope.budget)} allocation will become unallocated. The project budget stays unchanged.`, "Remove scope", true)) return;
-      const result = await run({ type: "removeProjectScope", siteId, id: scopeId });
+      const result = await runAction({ type: "removeProjectScope", siteId, id: scopeId }, { progress: "Removing unused scope…", success: `${scope.name} removed.` });
       if (result.ok) { if (draft.id === scopeId) clear(); setMessage(result.message); } else setError(result.message);
     } catch { setError("The scope could not be removed. Try again."); }
     finally { pending.current = false; setSaving(false); }

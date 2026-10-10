@@ -1,4 +1,6 @@
 "use client";
+import { CoordinationQueue } from "@/src/features/finance/PaymentCoordination";
+import { coordinationEligible } from "@/src/domain/payment-coordination";
 import { creditBalance, creditOverdue } from "@/src/domain/credit-terms";
 import { isExternalCredit } from "@/src/domain/full-disbursement";
 import { Register } from "@/src/components/ui/Register";
@@ -84,6 +86,7 @@ export function Reports() {
         </section>
       </div>
 
+      {pos.some(coordinationEligible) && <section className="panel"><h2>Finance payment coordination</h2><CoordinationQueue state={state} rows={pos.filter(coordinationEligible)} readOnly/></section>}
       {!!creditPOs.length && <section className="panel"><div className="panel-heading"><h2>Credit payment balances</h2><Badge>{creditPOs.filter(po => creditOverdue(state,po)).length} overdue</Badge></div><p className="helper-note">External payments verified by Accounting. Receiving and payment progress are independent.</p><Register embedded rows={creditPOs} resetKey={selectedSite+from+to} unit="credit POs" headers={<><th>PO / supplier</th><th>Delivery</th><th>Payment</th><th>Due date</th><th className="numeric">Verified paid</th><th className="numeric">Outstanding</th></>} renderRow={po => <tr key={po.id}><td><Link className="table-primary" href={`/accounting/${po.id}`}>{po.ref}</Link><small>{po.document?.vendorName}</small></td><td>{deliveryStatus(state,po)}</td><td><Badge value={paymentStatus(state,po)}/>{creditOverdue(state,po)&&<small className="field-error">Overdue</small>}</td><td>{dateText(po.paymentDueDate||"")}</td><td className="numeric">{money(paidTotal(state,po.id))}</td><td className="numeric">{money(creditBalance(state,po))}</td></tr>}/></section>}
       {!hasActivity ? <section className="panel report-empty">
         <h2>{from || to || selectedSite !== "all" ? "No activity matches these filters" : "No operational records yet"}</h2>

@@ -1,12 +1,14 @@
 "use client";
 
 import { useDeliveryReceiptArchive } from "./DeliveryReceiptArchive";
+import { COMPANY_WAREHOUSE } from "@/src/domain/company";
 import { Register, ViewTabs } from "@/src/components/ui/Register";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useId, useState, type FormEvent } from "react";
 import { useDemo } from "@/src/app-state/DemoProvider";
+import { useActionFeedback } from "@/src/app-state/action-feedback";
 import { AccountingDocuments } from "@/src/features/accounting/AccountingDocuments";
 import { Badge, Empty, Field, InlineError, PageHeader, RecordHeader, Timeline } from "@/src/components/ui/Primitives";
 import { useConfirmation } from "@/src/components/ui/ConfirmDialog";
@@ -14,7 +16,7 @@ import { MissingRecord } from "@/src/components/ui/States";
 import { DocumentPreview } from "@/src/components/DocumentPreview";
 import { auditTime, actorName } from "@/src/domain/audit";
 import { dateText } from "@/src/domain/format";
-import { batchQuantityLimit, batchStage, deliveryLocations, deliveryPayment, deliveryToday, isReceivedBatch, isSiteBatch, legFor, legLabel, warehouseAvailableFor, warehouseHeldFor } from "@/src/domain/delivery-flow";
+import { batchQuantityLimit, batchStage, deliveryLocations, deliveryPayment, deliveryToday, isReceivedBatch, isSiteBatch, legFor, legLabel, warehouseAvailableFor } from "@/src/domain/delivery-flow";
 import { poItems, outstandingFor, requestForPO, schedulableFor, siteName, stockFor, supplierName } from "@/src/domain/selectors";
 import type { Batch, DeliveryLeg, DeliveryLocation, DemoSnapshot, PO } from "@/src/domain/types";
 
@@ -49,10 +51,11 @@ export function BatchForm({ poId, parentBatchId }: { poId?: string; parentBatchI
 
 function BatchEditor({ state, po, parent }: { state: DemoSnapshot; po: PO; parent?: Batch }) {
   const { run } = useDemo(), router = useRouter(), { confirm, confirmation } = useConfirmation();
+  const { notify, update, dismiss } = useActionFeedback();
   const [error, setError] = useState(""), [saving, setSaving] = useState(false);
   const [leg, setLeg] = useState<DeliveryLeg>(parent ? "warehouse-site" : "supplier-site");
   const baseline = deliveryLocations(state, po);
-  const [destinations, setDestinations] = useState<Record<DeliveryLeg, DeliveryLocation>>({ "supplier-site": baseline.destination, "supplier-warehouse": { name: "Company Warehouse", address: "" }, "warehouse-site": baseline.destination });
+  const [destinations, setDestinations] = useState<Record<DeliveryLeg, DeliveryLocation>>({ "supplier-site": baseline.destination, "supplier-warehouse": { ...COMPANY_WAREHOUSE }, "warehouse-site": baseline.destination });
   const [quantities, setQuantities] = useState<Record<string, string>>({});
   const limit = (itemId: string) => parent ? warehouseAvailableFor(state, parent.id, itemId) : schedulableFor(state, po, itemId);
   const destination = destinations[leg];
@@ -62,8 +65,10 @@ function BatchEditor({ state, po, parent }: { state: DemoSnapshot; po: PO; paren
     setSaving(true);
     try {
       if (!await confirm(`Log a delivery batch for ${po.ref}?`, "Logistics records dispatch when the goods leave. The receiving department then confirms quantities.", "Log batch")) return;
+      const toast = notify({ tone: "progress", title: "Logging the delivery batch…", detail: `${po.ref} · ${leg === "supplier-site" ? "Supplier → Site" : leg === "supplier-warehouse" ? "Supplier → Company Warehouse" : "Company Warehouse → Site"}` });
       const result = await run({ type: "createBatch", poId: po.id, leg, parentBatchId: parent?.id, destination, scheduledDate: String(form.get("date")), evidence: String(form.get("evidence")), delayReason: String(form.get("delay") || ""), expected });
-      if (result.ok) router.push(`/deliveries/${result.recordId}`); else setError(result.message);
+      if (result.ok) { dismiss(toast); router.push(`/deliveries/${result.recordId}`); }
+      else { setError(result.message); update(toast, { tone: "error", title: result.message, detail: po.ref }); }
     } catch { setError("The batch could not be saved. Try again."); } finally { setSaving(false); }
   };
   return <><PageHeader eyebrow={`LOGISTICS · ${po.ref}`} title={parent ? "Schedule warehouse forwarding" : "Log expected batch"} description="Schedule the route and quantities, then record actual dispatch when the delivery leaves."/>
@@ -75,7 +80,7 @@ function BatchEditor({ state, po, parent }: { state: DemoSnapshot; po: PO; paren
       <Field label="Delivery evidence reference"><input name="evidence" required placeholder="Delivery receipt pending"/></Field>
       <Field label="Delay reason, if any"><input name="delay"/></Field>
     </div><p className="helper-note">{deliveryPayment(state, po)}</p></section>
-      <section className="panel"><h2 className="panel-title">Goods to schedule</h2><div className="form-grid">{poItems(state, po).map(item => <Field key={item.id} label={`${item.name} · expected ${item.unit} (max ${limit(item.id)})`}><input name={`expected-${item.id}`} type="number" min="0" max={limit(item.id)} step="any" value={quantities[item.id] ?? String(limit(item.id))} onChange={event => setQuantities(current => ({ ...current, [item.id]: event.target.value }))} required/></Field>)}</div></section>
+      <section className="panel"><h2 className="panel-title">Goods to schedule</h2><div className="qa-bounded-table" tabIndex={0} role="region" aria-label="Goods to schedule"><table><thead><tr><th>Material</th><th>Unit</th><th>Available to schedule</th><th>Expected quantity</th></tr></thead><tbody>{poItems(state, po).map(item => <tr key={item.id}><td><strong>{item.name}</strong></td><td>{item.unit}</td><td>{limit(item.id)}</td><td><Field label={`Expected ${item.name}`}><input name={`expected-${item.id}`} type="number" min="0" max={limit(item.id)} step="any" value={quantities[item.id] ?? String(limit(item.id))} onChange={event => setQuantities(current => ({ ...current, [item.id]: event.target.value }))} required/></Field></td></tr>)}</tbody></table></div></section>
       <InlineError message={error}/><div className="form-actions"><Link className="button secondary" href={parent ? `/deliveries/${parent.id}` : "/deliveries"}>Cancel</Link><button className="button primary" disabled={saving}>{saving ? "Saving…" : "Log batch"}</button></div>
     </form>{confirmation}</>;
 }
@@ -83,6 +88,7 @@ function BatchEditor({ state, po, parent }: { state: DemoSnapshot; po: PO; paren
 export function BatchDetail({ id }: { id: string }) {
   const archiveReceipt = useDeliveryReceiptArchive();
   const { snapshot: state, run } = useDemo(), { confirm: confirmAction, confirmation } = useConfirmation();
+  const { notify, update } = useActionFeedback();
   const [error, setError] = useState(""), [preview, setPreview] = useState<Record<string, number>>({}), [busy, setBusy] = useState(false);
   if (!state) return null;
   const batch = state.batches.find(value => value.id === id);
@@ -94,7 +100,9 @@ export function BatchDetail({ id }: { id: string }) {
   const dispatch = async () => {
     if (busy) return; setBusy(true);
     try { if (!await confirmAction(`Dispatch ${batch.ref}?`, "The shipment will be in transit and its receiving department can confirm quantities.", "Dispatch delivery")) return;
+      const toast = notify({ tone: "progress", title: "Recording dispatch…", detail: batch.ref });
       const result = await run({ type: "dispatchBatch", id }); setError(result.ok ? "" : result.message);
+      update(toast, result.ok ? { tone: "success", title: "Dispatch recorded.", detail: `${batch.ref} · in transit` } : { tone: "error", title: result.message, detail: batch.ref });
     } catch { setError("Dispatch could not be recorded. Try again."); } finally { setBusy(false); }
   };
   const receive = async (event: FormEvent<HTMLFormElement>) => {
@@ -102,8 +110,10 @@ export function BatchDetail({ id }: { id: string }) {
     const form = new FormData(event.currentTarget), lines = Object.fromEntries(batch.lines.map(line => [line.itemId, { accepted: Number(form.get(`accepted-${line.itemId}`)), issue: String(form.get(`issue-${line.itemId}`) || "") }]));
     setBusy(true);
     try { if (!await confirmAction(`Confirm received quantities for ${batch.ref}?`, warehouse ? "Accepted quantities become available for onward delivery to this PO's site." : "Accepted quantities will move to the stock posting review.", "Confirm receipt")) return;
+      const toast = notify({ tone: "progress", title: warehouse ? "Confirming warehouse receipt…" : "Confirming received quantities…", detail: batch.ref });
       const result = await run({ type: "confirmBatch", id, lines }); setError(result.ok ? "" : result.message);
-      if (result.ok) void archiveReceipt(result.snapshot, id).catch(() => {});
+      if (result.ok) { update(toast, { tone: "success", title: warehouse ? "Warehouse receipt confirmed." : "Received quantities confirmed.", detail: `${batch.ref} · archiving delivery receipt` }); void archiveReceipt(result.snapshot, id).catch(() => {}); }
+      else update(toast, { tone: "error", title: result.message, detail: batch.ref });
     } catch { setError("Receipt could not be recorded. Try again."); } finally { setBusy(false); }
   };
   const post = async (event: FormEvent<HTMLFormElement>) => {
@@ -111,8 +121,10 @@ export function BatchDetail({ id }: { id: string }) {
     const form = new FormData(event.currentTarget), accepted = Object.fromEntries(batch.lines.map(line => [line.itemId, Number(form.get(`post-${line.itemId}`))]));
     setBusy(true);
     try { if (!await confirmAction(`Post ${batch.ref} to site stock?`, "This batch can be posted only once. Review accepted quantities before continuing.", "Post to stock")) return;
+      const toast = notify({ tone: "progress", title: "Posting to site stock…", detail: batch.ref });
       const result = await run({ type: "postBatch", id, accepted, reason: String(form.get("reason") || "") }); setError(result.ok ? "" : result.message);
-      if (result.ok) void archiveReceipt(result.snapshot, id).catch(() => {});
+      if (result.ok) { update(toast, { tone: "success", title: "Posted to site stock.", detail: `${batch.ref} · ${siteName(state, request.siteId)}` }); void archiveReceipt(result.snapshot, id).catch(() => {}); }
+      else update(toast, { tone: "error", title: result.message, detail: batch.ref });
     } catch { setError("Stock posting could not be recorded. Try again."); } finally { setBusy(false); }
   };
   return <>
@@ -123,17 +135,15 @@ export function BatchDetail({ id }: { id: string }) {
       <div><span>Scheduled</span><strong>{dateText(batch.scheduledDate)}</strong></div><div><span>Supplier</span><strong>{supplierName(state, po)}</strong></div><div><span>Payment</span><strong>{deliveryPayment(state, po)}</strong></div><div><span>Evidence</span><strong>{batch.evidence}</strong></div><div><span>Delay</span><strong>{batch.delayReason || "None recorded"}</strong></div>
       {parent && <div><span>Warehouse receipt</span><Link href={`/deliveries/${parent.id}`}>{parent.ref}</Link></div>}
       <div><span>Dispatch recorded</span><strong>{auditTime(batch.dispatchedAt)}<small>{actorName("Logistics", batch.dispatchedByIdentity)}</small></strong></div><div><span>Receipt recorded</span><strong>{auditTime(batch.receivedAt)}<small>{actorName(warehouse ? "Procurement" : "Site Personnel", batch.receivedByIdentity)}</small></strong></div>
-    </div><Register embedded rows={batch.lines} unit="materials" headers={<><th>Goods</th><th className="numeric">Expected</th><th className="numeric">Accepted</th><th>Issue</th>{warehouse && <><th className="numeric">Held at warehouse</th><th className="numeric">Available to schedule</th></>}</>} renderRow={line => { const item = request.items.find(value => value.id === line.itemId)!;
-      return <tr key={line.itemId}><td>{item.name}<small>{item.location}</small></td><td className="numeric">{line.expected} {item.unit}</td><td className="numeric">{isReceivedBatch(batch) ? `${line.accepted} ${item.unit}` : "Not recorded"}</td><td>{line.issue || "—"}</td>{warehouse && <><td className="numeric">{warehouseHeldFor(state, batch.id, line.itemId)} {item.unit}</td><td className="numeric">{warehouseAvailableFor(state, batch.id, line.itemId)} {item.unit}</td></>}</tr>;
-    }}/>{batch.postingReason && <p className="helper-note">Posting correction: {batch.postingReason}</p>}</section>
+    </div>{batch.postingReason && <p className="helper-note">Posting correction: {batch.postingReason}</p>}</section>
     <section className="panel"><h2 className="panel-title">{warehouse ? "Warehouse forwarding" : "Open site balance"}</h2>{warehouse ? <>
       <p className="helper-note">Schedule onward deliveries against this warehouse receipt. Dispatched quantities remain allocated when the site records a shortage.</p>
       {state.role === "Logistics" && batch.status === "confirmed" && batch.lines.some(line => warehouseAvailableFor(state, batch.id, line.itemId) > 0) && <Link className="button primary" href={`/deliveries/new?poId=${po.id}&parentBatchId=${batch.id}`}>Schedule onward delivery</Link>}
       {children.map(child => <Link className="data-link" href={`/deliveries/${child.id}`} key={child.id}><strong>{child.ref}</strong><Badge value={child.status}>{batchStage(child)}</Badge></Link>)}{!children.length && <Empty detail="No onward deliveries scheduled yet."/>}
     </> : <div className="data-rows">{poItems(state, po).map(item => <div key={item.id}><span>{item.name}</span><strong>{outstandingFor(state, po, item.id)} {item.unit}</strong></div>)}</div>}
     <Link className="data-link" href={`/purchase-orders/${po.id}`}><strong>{po.ref}</strong><span>Open purchase order →</span></Link>{batch.status === "posted" && <div className="callout good"><strong>Posted to {siteName(state, request.siteId)}</strong><p>{auditTime(batch.postedAt)} · {actorName("Site Personnel", batch.postedByIdentity)}</p></div>}</section></div>
-    {canReceive && <form className="panel form-stack" onSubmit={receive}><h2 className="panel-title">{warehouse ? "Confirm warehouse receipt" : "Confirm received quantities"}</h2><p className="muted">Confirm accepted quantities and explain every shortage or damaged amount.</p>{batch.lines.map(line => { const item = request.items.find(value => value.id === line.itemId)!; return <div className="form-grid" key={line.itemId}><Field label={`${item.name} · accepted ${item.unit}`}><input name={`accepted-${line.itemId}`} type="number" min="0" max={batchQuantityLimit(state, po, batch, line.itemId)} step="any" defaultValue={line.expected} required/></Field><Field label="Shortage / damage note"><input name={`issue-${line.itemId}`} placeholder="Required if accepted is lower"/></Field></div>; })}<button className="button primary" disabled={busy}>{warehouse ? "Confirm warehouse receipt" : "Confirm received quantities"}</button></form>}
-    {!warehouse && state.role === "Site Personnel" && batch.status === "confirmed" && <form className="panel form-stack" onSubmit={post}><span className="eyebrow">POSTING PREVIEW</span><h2 className="panel-title">Increase site stock</h2><p className="muted">Any change to confirmed quantities requires a reason.</p>{batch.lines.map(line => { const item = request.items.find(value => value.id === line.itemId)!, amount = preview[line.itemId] ?? line.accepted; return <div className="posting-preview" key={line.itemId}><div><strong>{item.name}</strong><small>Current stock: {stockFor(state, request.siteId, item.name, item.unit)} {item.unit}</small></div><Field label={`Accepted ${item.unit}`}><input name={`post-${line.itemId}`} type="number" min="0" max={batchQuantityLimit(state, po, batch, line.itemId)} step="any" value={amount} onChange={event => setPreview(current => ({ ...current, [line.itemId]: Number(event.target.value) }))}/></Field><strong>+{amount} {item.unit}</strong></div>; })}<Field label="Reason if quantities changed"><input name="reason" placeholder="Required for a correction"/></Field><button className="button primary" disabled={busy}>Post to site stock</button></form>}
+    {canReceive && <form className="panel form-stack" onSubmit={receive}><h2 className="panel-title">{warehouse ? "Confirm warehouse receipt" : "Confirm received quantities"}</h2><p className="muted">Confirm accepted quantities and explain every shortage or damaged amount.</p><div className="qa-bounded-table" tabIndex={0} role="region" aria-label="Received material quantities"><table><thead><tr><th>Material</th><th>Expected</th><th>Accepted quantity</th><th>Shortage / damage note</th></tr></thead><tbody>{batch.lines.map(line => { const item = request.items.find(value => value.id === line.itemId)!; return <tr key={line.itemId}><td><strong>{item.name}</strong><small>{item.unit}</small></td><td>{line.expected} {item.unit}</td><td><Field label={`Accepted ${item.name}`}><input name={`accepted-${line.itemId}`} type="number" min="0" max={batchQuantityLimit(state, po, batch, line.itemId)} step="any" defaultValue={line.expected} required/></Field></td><td><Field label={`Issue for ${item.name}`}><input name={`issue-${line.itemId}`} placeholder="Required if accepted is lower"/></Field></td></tr>; })}</tbody></table></div><button className="button primary" disabled={busy}>{warehouse ? "Confirm warehouse receipt" : "Confirm received quantities"}</button></form>}
+    {!warehouse && state.role === "Site Personnel" && batch.status === "confirmed" && <form className="panel form-stack" onSubmit={post}><span className="eyebrow">POSTING PREVIEW</span><h2 className="panel-title">Increase site stock</h2><p className="muted">Any change to confirmed quantities requires a reason.</p><div className="qa-bounded-table" tabIndex={0} role="region" aria-label="Site stock posting quantities"><table><thead><tr><th>Material</th><th>Current stock</th><th>Accepted quantity</th><th>Stock after posting</th></tr></thead><tbody>{batch.lines.map(line => { const item = request.items.find(value => value.id === line.itemId)!, amount = preview[line.itemId] ?? line.accepted, current = stockFor(state, request.siteId, item.name, item.unit); return <tr key={line.itemId}><td><strong>{item.name}</strong></td><td>{current} {item.unit}</td><td><Field label={`Accepted ${item.name}`}><input name={`post-${line.itemId}`} type="number" min="0" max={batchQuantityLimit(state, po, batch, line.itemId)} step="any" value={amount} onChange={event => setPreview(current => ({ ...current, [line.itemId]: Number(event.target.value) }))}/></Field></td><td><strong>{current + amount} {item.unit}</strong></td></tr>; })}</tbody></table></div><Field label="Reason if quantities changed"><input name="reason" placeholder="Required for a correction"/></Field><button className="button primary" disabled={busy}>Post to site stock</button></form>}
     {isReceivedBatch(batch) && <AccountingDocuments poId={po.id} batchId={batch.id}/>}
     <InlineError message={error}/>{confirmation}<Timeline state={state} ids={[batch.id]}/>
   </>;

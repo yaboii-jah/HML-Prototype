@@ -40,7 +40,7 @@ export function auditProjectId(state: DemoSnapshot, event: Activity, records = a
   return records.get(event.entity)?.projectId || state.requests.find(request => request.id === event.requestId)?.siteId || state.requests.find(request => request.id === state.pos.find(po => po.id === event.poId)?.mrfId)?.siteId;
 }
 const same = (left: unknown, right: unknown) => JSON.stringify(left) === JSON.stringify(right);
-const labels: Record<string, string> = { ref: "Reference", siteId: "Project", requestDate: "Request date", requestedBy: "Requested by", approvedBy: "Approved by", purchaser: "Purchaser", financeOfficer: "Finance officer", specialInstructions: "Instructions", items: "Materials", documents: "Source documents", supplierId: "Supplier", supplierDetails: "Supplier details", available: "Availability", leadDays: "Lead time", terms: "Payment terms", currency: "Currency", tax: "Tax", freight: "Freight", discount: "Discount", validity: "Validity", quoteDate: "Quotation date", deliveryTerms: "Delivery terms", quoteNotes: "Notes", adjustments: "Charges and deductions", notes: "Notes", document: "Document details", financial: "VAT and EWT settings", lines: "Material lines", paymentMode: "Payment arrangement", amount: "Amount", note: "Note", priority: "Priority", quantity: "Quantity", review: "Document review", invoiceRef: "Invoice reference", receiptRef: "Receipt reference", scopeId: "Scope of work", name: "Scope name", budget: "Scope allocation", scopeDocument: "Scope document" };
+const labels: Record<string, string> = { status: "Coordination status", plannedDate: "Planned payment date", paymentDueDate: "Agreed payment due date", ref: "Reference", siteId: "Project", requestDate: "Request date", requestedBy: "Requested by", approvedBy: "Approved by", purchaser: "Purchaser", financeOfficer: "Finance officer", specialInstructions: "Instructions", items: "Materials", documents: "Source documents", supplierId: "Supplier", supplierDetails: "Supplier details", available: "Availability", leadDays: "Lead time", terms: "Payment terms", currency: "Currency", tax: "Tax", freight: "Freight", discount: "Discount", validity: "Validity", quoteDate: "Quotation date", deliveryTerms: "Delivery terms", quoteNotes: "Notes", adjustments: "Charges and deductions", notes: "Notes", document: "Document details", financial: "VAT and EWT settings", lines: "Material lines", paymentMode: "Payment arrangement", amount: "Amount", note: "Note", priority: "Priority", quantity: "Quantity", review: "Document review", invoiceRef: "Invoice reference", receiptRef: "Receipt reference", scopeId: "Scope of work", name: "Scope name", budget: "Scope allocation", scopeDocument: "Scope document" };
 function fieldsChanged(before: object | undefined, after: object | undefined, keys: string[]): string[] {
   const left = (before || {}) as Record<string, unknown>, right = (after || {}) as Record<string, unknown>;
   return keys.filter(key => !same(left[key], right[key])).map(key => labels[key] || key);
@@ -65,6 +65,7 @@ export function auditChanges(previous: DemoSnapshot, state: DemoSnapshot, comman
     case "saveRequest": return fieldsChanged(previous.requests.find(value => value.id === command.id), state.requests.find(value => value.id === command.id), ["ref", "siteId", "scopeId", "requestDate", "requestedBy", "approvedBy", "purchaser", "financeOfficer", "specialInstructions", "items", "documents", "scopeDocument"]);
     case "savePO": case "saveAccountingPO": return fieldsChanged(previous.pos.find(value => value.id === command.id), state.pos.find(value => value.id === command.id), ["supplierId", "notes", "document", "financial", "lines", "adjustments", "tax", "freight", "discount", "paymentMode", "paymentDueDate"]);
     case "savePaymentRequest": return fieldsChanged(previous.paymentRequests.find(value => value.id === command.id), state.paymentRequests.find(value => value.id === command.id), ["amount", "note"]);
+    case "savePaymentCoordination": return fieldsChanged(previous.pos.find(value => value.id === command.poId)?.paymentCoordination, state.pos.find(value => value.id === command.poId)?.paymentCoordination, ["priority", "status", "plannedDate", "note"]);
     case "setPriority": return fieldsChanged(previous.paymentRequests.find(value => value.id === command.id), state.paymentRequests.find(value => value.id === command.id), ["priority"]);
     case "stageAward": case "replaceMaterialAwards": return ["Supplier allocation quantity"];
     case "saveDocuments": return fieldsChanged(previous.accounting.find(value => value.poId === command.poId), state.accounting.find(value => value.poId === command.poId), ["review", "invoiceRef", "receiptRef", "note"]);
@@ -73,7 +74,9 @@ export function auditChanges(previous: DemoSnapshot, state: DemoSnapshot, comman
 }
 export function auditKind(command: Command, previous: DemoSnapshot): AuditEventType {
   switch (command.type) {
+    case "savePaymentCoordination": return "payment.coordination.changed";
     case "updateSite": return "project.updated";
+    case "removeSite": return "project.removed";
     case "removeProjectScope": return "scope.removed";
     case "saveProjectScope": return "scope.saved";
     case "saveRequest": return "request.saved";
