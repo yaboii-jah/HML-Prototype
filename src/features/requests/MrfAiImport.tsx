@@ -2,11 +2,15 @@
 /* eslint-disable @next/next/no-img-element -- Source previews use temporary browser Blob URLs. */
 
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
+import { CloseButton } from "@/src/components/ui/CloseButton";
+import { PdfDocumentViewer } from "@/src/components/PdfDocumentViewer";
+import { useConfirmation } from "@/src/components/ui/ConfirmDialog";
 import { InlineError } from "@/src/components/ui/Primitives";
 import { mrfSourceError, mrfSourceSignature, parseMrfExtraction, type MrfExtractionResult } from "@/src/domain/mrf-extraction";
 
 type Source = { id: string; file: File; url: string };
 export function MrfAiImport({ disabled, onApply }: { disabled: boolean; onApply: (result: MrfExtractionResult) => Promise<boolean> }) {
+  const { confirm, confirmation } = useConfirmation();
   const inputRef = useRef<HTMLInputElement>(null);
   const controller = useRef<AbortController | null>(null);
   const version = useRef(0);
@@ -43,7 +47,7 @@ export function MrfAiImport({ disabled, onApply }: { disabled: boolean; onApply:
     } catch (cause) { if (currentVersion === version.current) setError(cause instanceof Error ? cause.message : "The files could not be opened."); }
     finally { if (currentVersion === version.current || currentVersion + 1 === version.current) setValidating(false); }
   };
-  const remove = (source: Source) => { invalidate(); URL.revokeObjectURL(source.url); urls.current.delete(source.url); setSources(current => current.filter(value => value.id !== source.id)); };
+  const remove = async (source: Source) => { if (!await confirm("Remove this MRF source?", `${source.file.name} will be removed from the AI import. Entered request values remain unchanged.`, "Remove source", true)) return; invalidate(); URL.revokeObjectURL(source.url); urls.current.delete(source.url); setSources(current => current.filter(value => value.id !== source.id)); };
   const move = (index: number, direction: number) => {
     invalidate(); setSources(current => { const next = [...current]; [next[index], next[index + direction]] = [next[index + direction], next[index]]; return next; });
   };
@@ -71,6 +75,7 @@ export function MrfAiImport({ disabled, onApply }: { disabled: boolean; onApply:
     {!!sources.length && <ol className="mrf-ai-sources" aria-label="MRF source pages">{sources.map((source, index) => <li key={source.id}><div><strong>{source.file.name}</strong><small>{source.file.type === "application/pdf" ? "PDF" : `Page ${index + 1}`} · {(source.file.size / (1024 * 1024)).toFixed(2)} MB</small></div><div className="button-row"><button type="button" className="text-link" onClick={() => setPreviewId(source.id)}>View source</button>{sources.length > 1 && <><button type="button" className="button secondary" aria-label={`Move page ${index + 1} up`} disabled={locked || index === 0} onClick={() => move(index, -1)}>↑</button><button type="button" className="button secondary" aria-label={`Move page ${index + 1} down`} disabled={locked || index === sources.length - 1} onClick={() => move(index, 1)}>↓</button></>}<button type="button" className="text-link" disabled={locked} aria-label={`Remove MRF source ${index + 1}`} onClick={() => remove(source)}>Remove</button></div></li>)}</ol>}
     <InlineError message={error}/>
     {result && <div className="mrf-ai-result" aria-live="polite"><strong>{result.extraction.items.length} {result.extraction.items.length === 1 ? "material" : "materials"} extracted{result.extraction.details.ref ? ` · ${result.extraction.details.ref}` : ""}</strong>{result.extraction.details.projectName && <p>Project on document: <strong>{result.extraction.details.projectName}</strong>. Select the correct project in the form.</p>}{result.warnings.length > 0 && <details><summary>Check {result.warnings.length} extraction {result.warnings.length === 1 ? "note" : "notes"}</summary><ul>{result.warnings.map(warning => <li key={warning}>{warning}</li>)}</ul></details>}<button type="button" className="button primary" disabled={locked || applied} onClick={async () => { setApplying(true); try { if (await onApply(result)) setApplied(true); } finally { setApplying(false); } }}>{applied ? "Results applied" : "Apply to form"}</button>{applied && <p role="status">Check the request details below and the materials in Step 2. Missing values need manual entry.</p>}</div>}
+    {confirmation}
     {previewId && <MrfSourcePreview sources={sources} initialId={previewId} onClose={() => setPreviewId(null)}/>}
   </section>;
 }
@@ -81,7 +86,7 @@ function MrfSourcePreview({ sources, initialId, onClose }: { sources: Source[]; 
   const selected = sources.find(source => source.id === selectedId) || sources[0];
   useEffect(() => { const dialog = dialogRef.current; dialog?.showModal(); return () => { if (dialog?.open) dialog.close(); }; }, []);
   return <dialog ref={dialogRef} className="quote-documents-dialog mrf-source-preview" aria-labelledby="mrf-source-title" onCancel={event => { event.preventDefault(); onClose(); }}>
-    <div className="quote-documents-heading"><div><span className="eyebrow">MRF EXTRACTION SOURCE</span><h2 id="mrf-source-title">Check the hardcopy</h2></div><button type="button" className="icon-button" aria-label="Close MRF source preview" onClick={onClose}>×</button></div>
-    <div className="quote-documents-layout"><nav className="quote-documents-list" aria-label="MRF source documents">{sources.map((source, index) => <button type="button" key={source.id} aria-current={source.id === selected.id ? "true" : undefined} className={source.id === selected.id ? "active" : ""} onClick={() => setSelectedId(source.id)}><span>{index + 1}</span><strong>{source.file.name}</strong></button>)}</nav><div className="quote-document-preview">{selected.file.type === "application/pdf" ? <iframe title={selected.file.name} src={selected.url}/> : <img src={selected.url} alt={`MRF source ${selected.file.name}`}/>}</div></div>
+    <div className="quote-documents-heading"><div><span className="eyebrow">MRF EXTRACTION SOURCE</span><h2 id="mrf-source-title">Check the hardcopy</h2></div><CloseButton aria-label="Close MRF source preview" onClick={onClose}/></div>
+    <div className="quote-documents-layout"><nav className="quote-documents-list" aria-label="MRF source documents">{sources.map((source, index) => <button type="button" key={source.id} aria-current={source.id === selected.id ? "true" : undefined} className={source.id === selected.id ? "active" : ""} onClick={() => setSelectedId(source.id)}><span>{index + 1}</span><strong>{source.file.name}</strong></button>)}</nav><div className="quote-document-preview">{selected.file.type === "application/pdf" ? <PdfDocumentViewer key={selected.id} blob={selected.file} fileName={selected.file.name} sourceUrl={selected.url}/> : <img src={selected.url} alt={`MRF source ${selected.file.name}`}/>}</div></div>
   </dialog>;
 }

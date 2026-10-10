@@ -3,9 +3,10 @@
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
 import { useDemo } from "@/src/app-state/DemoProvider";
+import { useActionFeedback } from "@/src/app-state/action-feedback";
 import { useConfirmation } from "@/src/components/ui/ConfirmDialog";
 import { Badge, Field, InlineError, RecordHeader, Timeline } from "@/src/components/ui/Primitives";
-import { Register } from "@/src/components/ui/Register";
+import { Register, ViewTabs } from "@/src/components/ui/Register";
 import { COORDINATION_STATUSES, coordinatedPOs, coordinationBalance, coordinationEligible, coordinationStatus, coordinationWarning } from "@/src/domain/payment-coordination";
 import { dateText, money } from "@/src/domain/format";
 import { paidTotal, poTotal, requestForPO, siteName, supplierName } from "@/src/domain/selectors";
@@ -17,22 +18,26 @@ export function CoordinationSummary({ state, po }: { state: DemoSnapshot; po: PO
     <div className="data-rows"><div><span>Priority</span><strong>{plan?.priority || "Normal"}</strong></div><div><span>Agreed credit due date</span><strong>{po.paymentDueDate ? dateText(po.paymentDueDate) : "Not applicable"}</strong></div><div><span>Next planned payment</span><strong>{plan?.plannedDate ? dateText(plan.plannedDate) : "Not scheduled"}</strong></div></div>
     {plan?.note && <p className="helper-note">{plan.note}</p>}{warning && <p className="field-error">{warning}</p>}
     <p className="helper-note">Finance coordinates external payment. Accounting verifies the proof and amount. Coordination does not confirm payment or clear delivery.</p>
-    {!!po.coordinationHistory?.length && <details><summary>Coordination history · {po.coordinationHistory.length}</summary><div className="data-rows">{[...po.coordinationHistory].reverse().map(entry => <div key={entry.revision}><span>{entry.status} · {entry.priority}{entry.plannedDate && ` · ${dateText(entry.plannedDate)}`}<small>{entry.reason}{entry.note && ` · ${entry.note}`}</small></span><strong>{entry.by.name}<small>{new Date(entry.at).toLocaleString("en-PH", { timeZone: "Asia/Manila" })}</small></strong></div>)}</div></details>}
+    {!!po.coordinationHistory?.length && <details><summary>Coordination history · {po.coordinationHistory.length}</summary><div className="data-rows">{[...po.coordinationHistory].reverse().map(entry => <div key={entry.revision}><span>{entry.outcome || entry.status} · {entry.priority}{entry.plannedDate && ` · ${dateText(entry.plannedDate)}`}<small>{entry.reason}{entry.note && ` · ${entry.note}`}</small></span><strong>{entry.by.name}<small>{new Date(entry.at).toLocaleString("en-PH", { timeZone: "Asia/Manila" })}</small></strong></div>)}</div></details>}
   </section>;
 }
 
 export function CoordinationQueue({ state, rows: supplied, readOnly = false }: { state: DemoSnapshot; rows?: PO[]; readOnly?: boolean }) {
   const [search, setSearch] = useState(""), [priority, setPriority] = useState("all"), [status, setStatus] = useState("active");
-  const rows = (supplied || coordinatedPOs(state, status !== "active")).filter(po =>
+  const [view, setView] = useState(0);
+  const all = (supplied || coordinatedPOs(state, true)).filter(po => state.siteFilter === "all" || requestForPO(state, po)?.siteId === state.siteFilter);
+  const viewsId = readOnly ? "accounting-coordination-records" : "finance-coordination-records";
+  const activeCount = all.filter(po => coordinationStatus(state, po) !== "Settled").length;
+  const rows = all.filter(po =>
     (state.siteFilter === "all" || requestForPO(state, po)?.siteId === state.siteFilter) &&
     (priority === "all" || (po.paymentCoordination?.priority || "Normal") === priority) &&
-    (status === "all" || status === "active" && coordinationStatus(state, po) !== "Settled" || coordinationStatus(state, po) === status) &&
+    (view === 1 ? coordinationStatus(state, po) === "Settled" : coordinationStatus(state, po) !== "Settled" && (status === "active" || status === "all" || coordinationStatus(state, po) === status)) &&
     `${po.ref} ${supplierName(state, po)} ${siteName(state, requestForPO(state, po)?.siteId || "")}`.toLowerCase().includes(search.toLowerCase()));
-  return <Register embedded={readOnly} rows={rows} unit="purchase orders" resetKey={search+priority+status+state.siteFilter}
-    filters={<><input type="search" aria-label="Search payment coordination" placeholder="Search PO, supplier or project" value={search} onChange={e => setSearch(e.target.value)}/><select aria-label="Coordination priority" value={priority} onChange={e => setPriority(e.target.value)}><option value="all">All priorities</option>{["Normal", "High", "Urgent"].map(value => <option key={value}>{value}</option>)}</select><select aria-label="Coordination status" value={status} onChange={e => setStatus(e.target.value)}><option value="active">Active payments</option><option value="all">All payments</option>{[...COORDINATION_STATUSES, "Settled"].map(value => <option key={value}>{value}</option>)}</select></>}
+  return <><ViewTabs id={viewsId} labels={[`Active (${activeCount})`, `Settled (${all.length - activeCount})`]} active={view} onChange={value => { setView(value); setStatus("active"); }}/><div role="tabpanel" id={`${viewsId}-panel-${view}`} aria-labelledby={`${viewsId}-tab-${view}`}>{view === 1 && <p className="helper-note">Fully paid records and coordination history remain available here. Accounting owns payment verification.</p>}<Register embedded={readOnly} rows={rows} unit="purchase orders" resetKey={search+priority+status+view+state.siteFilter}
+    filters={<><input type="search" aria-label="Search payment coordination" placeholder="Search PO, supplier or project" value={search} onChange={e => setSearch(e.target.value)}/><select aria-label="Coordination priority" value={priority} onChange={e => setPriority(e.target.value)}><option value="all">All priorities</option>{["Normal", "High", "Urgent"].map(value => <option key={value}>{value}</option>)}</select>{view === 0 && <select aria-label="Coordination status" value={status} onChange={e => setStatus(e.target.value)}><option value="active">All active statuses</option>{COORDINATION_STATUSES.map(value => <option key={value}>{value}</option>)}</select>}</>}
     headers={<><th>PO / supplier</th><th>Project</th><th>Arrangement</th><th className="numeric">Balance</th><th>Priority</th><th>Agreed due date</th><th>Planned payment</th><th>Status</th></>}
-    empty="No issued purchase orders match this payment view."
-    renderRow={po => <tr key={po.id}><td><Link className="table-primary" href={readOnly ? `/accounting/${po.id}` : `/finance/${po.id}`}>{po.ref}</Link><small>{supplierName(state, po)}</small></td><td>{siteName(state, requestForPO(state, po)?.siteId || "")}</td><td>{po.paymentMode === "credit" ? "Credit / terms" : "Upfront"}</td><td className="numeric">{money(coordinationBalance(state, po))}</td><td><Badge value={po.paymentCoordination?.priority || "Normal"}/></td><td>{po.paymentDueDate ? dateText(po.paymentDueDate) : "—"}</td><td>{po.paymentCoordination?.plannedDate ? dateText(po.paymentCoordination.plannedDate) : "Not scheduled"}</td><td><Badge value={coordinationStatus(state, po)}/>{coordinationWarning(state, po) && <small className="field-error">{coordinationWarning(state, po)}</small>}</td></tr>}/>;
+    empty={view === 1 ? "No settled purchase orders match these filters." : "No active purchase orders match these filters."}
+    renderRow={po => <tr key={po.id}><td><Link className="table-primary" href={readOnly ? `/accounting/${po.id}` : `/finance/${po.id}`}>{po.ref}</Link><small>{supplierName(state, po)}</small></td><td>{siteName(state, requestForPO(state, po)?.siteId || "")}</td><td>{po.paymentMode === "credit" ? "Credit / terms" : "Upfront"}</td><td className="numeric">{money(coordinationBalance(state, po))}</td><td><Badge value={po.paymentCoordination?.priority || "Normal"}/></td><td>{po.paymentDueDate ? dateText(po.paymentDueDate) : "—"}</td><td>{po.paymentCoordination?.plannedDate ? dateText(po.paymentCoordination.plannedDate) : "Not scheduled"}</td><td><Badge value={coordinationStatus(state, po)}/>{coordinationWarning(state, po) && <small className="field-error">{coordinationWarning(state, po)}</small>}</td></tr>}/></div></>;
 }
 
 export function CoordinationReview({ po, state }: { po: PO; state: DemoSnapshot }) {
@@ -46,6 +51,7 @@ export function CoordinationReview({ po, state }: { po: PO; state: DemoSnapshot 
 
 function CoordinationForm({ po }: { po: PO }) {
   const { run } = useDemo(), { confirm, confirmation } = useConfirmation();
+  const { notify, update } = useActionFeedback();
   const [status, setStatus] = useState<PaymentCoordination["status"]>(po.paymentCoordination?.status || "Pending");
   const [error, setError] = useState(""), [busy, setBusy] = useState(false);
   const save = async (event: FormEvent<HTMLFormElement>) => {
@@ -55,8 +61,10 @@ function CoordinationForm({ po }: { po: PO }) {
     setBusy(true);
     try {
       if (status !== (po.paymentCoordination?.status || "Pending") && !await confirm("Update payment status?", status === "Awaiting Accounting verification" ? "This reports an external payment for Accounting to verify. No paid amount or delivery clearance will change." : `Finance coordination will change to ${status}. Payment verification remains with Accounting.`, "Update status")) return;
+      const toast = notify({ tone: "progress", title: "Saving the payment coordination plan…", detail: po.ref });
       const result = await run({ type: "savePaymentCoordination", poId: po.id, revision: po.paymentCoordination?.revision || 0, priority: String(data.get("priority")) as PaymentCoordination["priority"], status, plannedDate: String(data.get("date") || ""), note: String(data.get("note") || "") });
       setError(result.ok ? "" : result.message);
+      update(toast, result.ok ? { tone: status === "Delayed" ? "warning" : "success", title: result.message, detail: `${po.ref} · ${status}` } : { tone: "error", title: result.message, detail: po.ref });
     } finally { setBusy(false); }
   };
   return <section className="panel"><h2>Update coordination</h2><form className="form-stack payment-coordination-form" onSubmit={save}><div className="form-grid"><Field label="Priority"><select name="priority" defaultValue={po.paymentCoordination?.priority || "Normal"}><option>Normal</option><option>High</option><option>Urgent</option></select></Field><Field label="Coordination status"><select name="status" value={status} onChange={e => setStatus(e.target.value as PaymentCoordination["status"])}>{COORDINATION_STATUSES.map(value => <option key={value}>{value}</option>)}</select></Field><Field label="Next planned payment date" hint="Does not change Accounting’s agreed due date."><input name="date" type="date" required={status === "Scheduled"} defaultValue={po.paymentCoordination?.plannedDate || ""}/></Field></div><Field label={status === "Delayed" ? "Delay reason" : "Coordination notes"}><textarea name="note" required={status === "Delayed"} minLength={status === "Delayed" ? 5 : undefined} maxLength={2000} defaultValue={po.paymentCoordination?.note || ""}/></Field><InlineError message={error}/><button className="button primary" disabled={busy}>Save coordination</button></form>{confirmation}</section>;

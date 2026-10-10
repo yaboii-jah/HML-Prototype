@@ -7,6 +7,7 @@
 @import "../src/styles/references.css";
 @import "../src/styles/procurement.css";
 @import "../src/styles/consistency.css";
+@import "../src/styles/toasts.css";
 
 @import "../src/styles/workflow-enhancements.css";
 @import "../src/styles/registers.css";
@@ -14,3 +15,4 @@
 @import "../src/styles/supplier-upload.css";
 @import "../src/styles/quotation-editor.css";
 @import "../src/styles/compare-allocate.css";
+@import "../src/styles/qa-improvements.css";

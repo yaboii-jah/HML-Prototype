@@ -76,6 +76,7 @@ export function auditKind(command: Command, previous: DemoSnapshot): AuditEventT
   switch (command.type) {
     case "savePaymentCoordination": return "payment.coordination.changed";
     case "updateSite": return "project.updated";
+    case "removeSite": return "project.removed";
     case "removeProjectScope": return "scope.removed";
     case "saveProjectScope": return "scope.saved";
     case "saveRequest": return "request.saved";

@@ -1,4 +1,5 @@
 import { coordinationEligible, coordinationBalance, coordinationError, saveCoordination, resetCoordination } from "./payment-coordination.ts";
+import { projectRemovalReason } from "./project-removal.ts";
 import type { PaymentCoordination } from "./types.ts";
 import { philippineDate, validPaymentDate } from "./credit-terms.ts";
 import { canAttachDelivery, canArchiveAccounting, deliveryReceiptVersion, deliveryDocumentIssues, receivedDelivery } from "./delivery-archive.ts";
@@ -42,6 +43,8 @@ export type Command =
   | { type: "reopenPaymentVerification"; poId: string; reason: string }
 
   | { type: "replaceMaterialAwards"; requestId: string; itemId: string; awards: { quoteId: string; quoteLineId: string; quantity: number }[] }
+  | { type: "replaceMaterialAwardBatch"; requestId: string; materials: { itemId: string; awards: { quoteId: string; quoteLineId: string; quantity: number }[] }[] }
+  | { type: "removeSite"; siteId: string }
   | { type: "updateSite"; siteId: string; name: string; location: string; budget: number }
   | { type: "removeProjectScope"; siteId: string; id: string }
   | { type: "saveProjectScope"; id?: string; siteId: string; name: string; budget: number }
@@ -156,6 +159,28 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
   const initializePo = (po: PO, request: MRF, quote: Quote) => { initializePoDocument(po, request, quote, state.sites.find(value => value.id === request.siteId)!, at); po.document!.vendorName ||= state.suppliers.find(value => value.id === quote.supplierId)?.name || ""; };
 
   switch (command.type) {
+    case "removeSite": {
+      if (!permit("Administrator", "Project Manager")) return fail("Sign in as Administrator or Project Manager to delete a project.");
+      const reason = projectRemovalReason(state, command.siteId, Date.parse(at));
+      if (reason) return fail(reason);
+      const site = state.sites.find(value => value.id === command.siteId)!;
+      state.scopes = state.scopes.filter(value => value.siteId !== site.id);
+      state.sites = state.sites.filter(value => value.id !== site.id);
+      if (state.siteFilter === site.id) state.siteFilter = "all";
+      log(site.id, "Unused project deleted", site.driveFolderId ? `Drive folder retained: ${site.driveFolderId}` : undefined);
+      return done("Project deleted. Existing Drive folders are retained.");
+    }
+    case "replaceMaterialAwardBatch": {
+      if (!permit("Procurement")) return fail("Sign in as Procurement to allocate materials.");
+      if (!command.materials.length || new Set(command.materials.map(value => value.itemId)).size !== command.materials.length) return fail("Choose unique materials to apply.");
+      let next = state;
+      for (const material of command.materials) {
+        const result = applyCommand(next, { type: "replaceMaterialAwards", requestId: command.requestId, ...material }, ctx);
+        if (!result.ok) return result;
+        next = result.snapshot;
+      }
+      return { ok: true, snapshot: next, message: `Allocations applied for ${command.materials.length} materials.` };
+    }
     case "savePaymentCoordination": {
       if (!permit("Finance") || !identity) return fail("Sign in as Finance to coordinate payments.");
       const po = state.pos.find(value => value.id === command.poId);

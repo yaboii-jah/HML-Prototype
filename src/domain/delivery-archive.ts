@@ -27,12 +27,21 @@ export function deliveryReceiptVersion(state: DemoSnapshot, batch: Batch, id: st
 export function deliveryDocumentIssues(state: DemoSnapshot, poId: string): string[] {
   const documents = state.accounting.find(value => value.poId === poId)?.documents || [];
   const issues = state.batches.filter(batch => batch.poId === poId && receivedDelivery(batch)).flatMap(batch => {
-    const current = batch.receiptVersions?.at(-1);
+    const status = deliveryEvidenceStatus(state, batch);
     const issues: string[] = [];
-    if (!current || current.archive.status !== "complete" || !current.archive.fileId || !current.archive.url) issues.push(`${batch.ref}: archive the current generated receipt.`);
-    if (!documents.some(document => document.batchId === batch.id && document.kind === "Signed delivery receipt" && document.receiptVersion === current?.version && document.archive.status === "complete" && document.archive.fileId && document.archive.url)) issues.push(`${batch.ref}: upload and archive a signed delivery receipt for the current quantities.`);
+    if (!status.generatedArchived) issues.push(`${batch.ref}: archive the current generated receipt.`);
+    if (!status.signedArchived) issues.push(`${batch.ref}: upload and archive a signed delivery receipt for the current quantities.`);
     return issues;
   });
   if (documents.some(document => document.archive.status !== "complete" || !document.archive.fileId || !document.archive.url)) issues.push("Archive all uploaded accounting documents before completing review.");
   return issues;
+}
+
+/** Current-version evidence is shared by Accounting checks, document badges and role tasks. */
+export function deliveryEvidenceStatus(state: DemoSnapshot, batch: Batch) {
+  const current = batch.receiptVersions?.at(-1);
+  const signed = (state.accounting.find(value => value.poId === batch.poId)?.documents || []).filter(document => document.batchId === batch.id && document.kind === "Signed delivery receipt" && !!current && document.receiptVersion === current.version);
+  const generatedArchived = !!(current?.archive.status === "complete" && current.archive.fileId && current.archive.url);
+  const signedArchived = signed.some(document => document.archive.status === "complete" && !!document.archive.fileId && !!document.archive.url);
+  return { version: current?.version, generatedArchived, signedArchived, signedPending: !signedArchived && signed.length > 0, signedFailed: !signedArchived && signed.some(document => !!document.archive.error) };
 }

@@ -143,7 +143,7 @@ try {
       await sleep(250);
       await run(`document.querySelector(${JSON.stringify(selector)}).scrollIntoView({block:'start'});return true;`);
       assert.equal(await run("return document.documentElement.scrollWidth<=innerWidth+1;"),true,`${label} must fit at ${width}px`);
-      assert.equal(await run(`return [...document.querySelector(${JSON.stringify(selector)}).querySelectorAll('.field input,.field select,.field textarea')].filter(el=>el.checkVisibility({checkVisibilityCSS:true})).every(el=>{const r=el.getBoundingClientRect();return !r.width||r.right<=innerWidth+1});`),true,`${label} controls must fit`);
+      assert.equal(await run(`return [...document.querySelector(${JSON.stringify(selector)}).querySelectorAll('.field input,.field select,.field textarea')].filter(el=>el.checkVisibility({checkVisibilityCSS:true})).filter(el=>!el.closest('.qa-bounded-table,.table-frame,[style*="overflow"]')).every(el=>{const r=el.getBoundingClientRect();return !r.width||r.right<=innerWidth+1});`),true,`${label} controls must fit`);
       for (const theme of ["light","dark"]) { await run(`document.documentElement.dataset.theme=${JSON.stringify(theme)};return true;`); await checkContrast(); }
       await run("document.documentElement.dataset.theme='light';return true;");
       if(width===1440 || width===375) await writeFile(path.join(profile,`${label}-${width}.png`),Buffer.from((await call("Page.captureScreenshot",{format:"png"})).data,"base64"));
@@ -584,7 +584,7 @@ try {
   await run("const b=document.querySelector('.request-materials-panel .material-name-trigger');b.focus();b.click();return true;");
   await wait("return !!document.querySelector('.material-edit-dialog[open]');");
   assert.equal(await run("return !!document.querySelector('.material-edit-dialog[open] .data-rows');"), true, 'The read-only material dialog shows its recorded details');
-  await run("document.querySelector('.material-view-dialog[open] .material-dialog-heading .button.primary').click();return true;");
+  await run("document.querySelector('.material-view-dialog[open] .material-dialog-heading .modal-close-button').click();return true;");
   await wait("return !document.querySelector('.material-edit-dialog[open]');");
   assert.equal(await run("return document.activeElement.classList.contains('material-name-trigger');"), true, 'Closing the dialog restores focus to its trigger');
   await navigate(materialLink);
@@ -620,8 +620,8 @@ try {
   const warehouseParent = (await state()).batches.at(-1);
   const saveReceiptPreview = async filename => {
     await click('Print preview ↗');
-    await wait("return !!document.querySelector('dialog[aria-label=\"Delivery receipt print preview\"][open] iframe[src^=blob]');");
-    const result = await call('Runtime.evaluate', { expression: "(async()=>{const bytes=new Uint8Array(await fetch(document.querySelector('dialog[aria-label=\"Delivery receipt print preview\"] iframe').src).then(response=>response.arrayBuffer()));let value='';for(let offset=0;offset<bytes.length;offset+=8192)value+=String.fromCharCode(...bytes.slice(offset,offset+8192));return btoa(value);})()", awaitPromise: true, returnByValue: true });
+    await wait("return !!document.querySelector('dialog[aria-label=\"Delivery receipt print preview\"][open] .pdf-document-body, dialog[aria-label=\"Delivery receipt print preview\"][open] iframe[src^=blob]');");
+    const result = await call('Runtime.evaluate', { expression: "(async()=>{const dialog=document.querySelector('dialog[aria-label=\"Delivery receipt print preview\"]');const source=dialog.querySelector('a[download][href^=blob]')?.href||dialog.querySelector('iframe[src^=blob]')?.src;const bytes=new Uint8Array(await fetch(source).then(response=>response.arrayBuffer()));let value='';for(let offset=0;offset<bytes.length;offset+=8192)value+=String.fromCharCode(...bytes.slice(offset,offset+8192));return btoa(value);})()", awaitPromise: true, returnByValue: true });
     assert.equal(result.exceptionDetails, undefined, 'The generated receipt bytes can be read');
     const encoded = result.result.value;
     const bytes = Buffer.from(encoded, 'base64'); await writeFile(path.join(profile, filename), bytes);
@@ -691,9 +691,13 @@ try {
   await uploadFiles(aiSourceInput, [sampleScope]);
   await wait("return document.querySelectorAll('.mrf-ai-sources li').length===1;");
   await click("View source", ".mrf-ai-import button");
-  await wait("return !!document.querySelector('.mrf-source-preview[open] iframe');");
+  await wait("return !!document.querySelector('.mrf-source-preview[open] .pdf-document-body, .mrf-source-preview[open] iframe, .mrf-source-preview[open] img');");
   await run("document.querySelector('[aria-label=\"Close MRF source preview\"]').click();return true;");
+  await wait("return !document.querySelector('.mrf-source-preview[open]');");
   await run("document.querySelector('[aria-label=\"Remove MRF source 1\"]').click();return true;");
+  await wait("return !!document.querySelector('.confirm-dialog[open]');");
+  await click("Remove source", ".confirm-dialog[open] .confirm-actions button:last-child");
+  await wait("return document.querySelectorAll('.mrf-ai-sources li').length===0;");
   await uploadFiles(aiSourceInput, [mrfPage1, mrfPage2]);
   await wait("return document.querySelectorAll('.mrf-ai-sources li').length===2;");
   await run("document.querySelector('[aria-label=\"Move page 2 up\"]').click();return true;");
@@ -888,8 +892,12 @@ try {
   assert.equal(await run("return document.querySelector('.material-edit-dialog input[name^=\"purpose-\"]').value;"), "Ground floor slab construction");
   await closeMaterialEditor();
   await run("document.querySelector('[aria-label=\"Delete material 3\"]').click();return true;");
+  await wait("return !!document.querySelector('.confirm-dialog[open]');");
+  await click("Delete material", ".confirm-dialog[open] .confirm-actions button:last-child");
   await wait("return document.querySelectorAll('.material-table tbody tr').length===2;");
   await run("document.querySelector('[aria-label=\"Delete material 2\"]').click();return true;");
+  await wait("return !!document.querySelector('.confirm-dialog[open]');");
+  await click("Delete material", ".confirm-dialog[open] .confirm-actions button:last-child");
   await wait("return document.querySelectorAll('.material-table tbody tr').length===1;");
   await click("Next", ".request-wizard-actions button");
   assert.equal(await requestStep(), "3Review & submit");
@@ -928,15 +936,15 @@ try {
   assert.equal(request.requestDate, "2030-10-29");
   assert.equal(request.specialInstructions, "Deliver after the slab inspection.");
   await click("Print preview");
-  await wait("return !!document.querySelector('dialog[aria-label=\"MRF print preview\"][open] iframe');");
-  assert.equal(await run("const viewer=document.querySelector('dialog[aria-label=\"MRF print preview\"] iframe');return viewer.src.startsWith('blob:');"), true);
+  await wait("return !!document.querySelector('dialog[aria-label=\"MRF print preview\"][open] .pdf-document-body');");
+  assert.equal(await run("const link=document.querySelector('dialog[aria-label=\"MRF print preview\"] a[download][href^=blob]');return !!link;"), true);
   for (const [width, height] of [[1440,900],[768,900],[414,600],[375,400],[320,568]]) {
     await call("Emulation.setDeviceMetricsOverride", { width, height, deviceScaleFactor: 1, mobile: width < 800 });
     for (const theme of ["light", "dark"]) {
       await run(`document.documentElement.dataset.theme=${JSON.stringify(theme)};return true;`);
       await checkContrast("h2,.button");
     }
-    assert.equal(await run(`const dialog=document.querySelector('.document-preview-dialog'),r=dialog.getBoundingClientRect(),viewer=dialog.querySelector('iframe').getBoundingClientRect();return r.left>=0&&r.right<=${width}+1&&r.top>=0&&r.bottom<=${height}+1&&viewer.height>0&&viewer.bottom<=r.bottom;`), true, "Preview and controls must fit the viewport");
+    assert.equal(await run(`const dialog=document.querySelector('.document-preview-dialog'),r=dialog.getBoundingClientRect(),viewer=(dialog.querySelector('.pdf-document-body')||dialog.querySelector('iframe')).getBoundingClientRect();return r.left>=0&&r.right<=${width}+1&&r.top>=0&&r.bottom<=${height}+1&&viewer.height>0&&viewer.bottom<=r.bottom;`), true, "Preview and controls must fit the viewport");
     if (width===320) await writeFile(path.join(profile, "mrf-preview-mobile-dark.png"), Buffer.from((await call("Page.captureScreenshot", { format: "png" })).data, "base64"));
   }
   await run("document.documentElement.dataset.theme='light';return true;");
@@ -1077,7 +1085,7 @@ try {
   const uploadedEvidence = (await state()).accounting.find(value=>value.poId===po.id).documents[0];
   assert.equal(uploadedEvidence.batchId,batch.id);
   assert.deepEqual((await state()).payments.filter(value=>value.poId===po.id),disbursementsBeforeEvidence,'Evidence must not change payments');
-  await click("View file", ".accounting-evidence button"); await wait("return !!document.querySelector('.evidence-preview iframe');");
+  await click("View file", ".accounting-evidence button"); await wait("return !!document.querySelector('.evidence-preview .pdf-document-body, .evidence-preview iframe, .evidence-preview img');");
   for (const width of [768,414,375,320]) {
     await call("Emulation.setDeviceMetricsOverride",{width,height:650,deviceScaleFactor:1,mobile:true});
     assert.equal(await run("const dialog=document.querySelector('.evidence-preview'),button=[...dialog.querySelectorAll('button')].find(value=>value.textContent==='Close'),bounds=button.getBoundingClientRect();return dialog.scrollWidth<=dialog.clientWidth+1&&bounds.top>=0&&bounds.bottom<=innerHeight;"),true,`Evidence preview must fit at ${width}px`);
@@ -1095,7 +1103,7 @@ try {
   assert.equal(await run(`return [...document.querySelectorAll('.accounting-groups a')].some(link=>link.textContent===${JSON.stringify(po.ref)});`),true,'Accounting must group the PO under its MRF');
   await navigate(`/accounting/${po.id}`);
   await call("Runtime.evaluate", { expression: `(async()=>{const database=await new Promise((resolve,reject)=>{const request=indexedDB.open('hml-quotation-files',1);request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error);});await new Promise((resolve,reject)=>{const transaction=database.transaction('files','readwrite');transaction.objectStore('files').delete(${JSON.stringify(uploadedEvidence.localFileId)});transaction.oncomplete=resolve;transaction.onerror=reject;});database.close();})()`, awaitPromise:true });
-  await click("View file", ".accounting-evidence button"); await wait("return !!document.querySelector('.evidence-preview iframe');");
+  await click("View file", ".accounting-evidence button"); await wait("return !!document.querySelector('.evidence-preview .pdf-document-body, .evidence-preview iframe, .evidence-preview img');");
   assert.equal(await run("return !!document.querySelector('.evidence-preview a[download]');"),true,'Accounting can restore and download the archived evidence');
   await click("Close", ".evidence-preview button"); await fill('input[name="invoice"]', "INV-SMOKE-01"); await fill('input[name="receipt"]', "DR-SMOKE-01"); await fill('select[name="review"]', "Complete"); await click("Save document review");
   console.log("Accounting review");

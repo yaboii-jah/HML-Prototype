@@ -5,6 +5,7 @@ import { useId, useRef, useState } from "react";
 export type QuotationUploadGroup = { id: string; files: File[]; status: "ready" | "processing" | "failed" | "completed"; error?: string };
 type Props = {
   groups: QuotationUploadGroup[]; locked: boolean; extracting: boolean;
+  progress?: { current: number; total: number; label: string; completed: number; failed: number } | null;
   onAdd: () => string; onFiles: (group: QuotationUploadGroup, files: File[]) => void;
   onOrder: (group: QuotationUploadGroup, files: File[]) => void;
   onRemove: (group: QuotationUploadGroup, position: number) => Promise<void>;
@@ -23,7 +24,7 @@ function Arrow({ down = false, horizontal = false }: { down?: boolean; horizonta
   return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={path}/></svg>;
 }
 
-export function SupplierQuotationUploads({ groups, locked, extracting, onAdd, onFiles, onOrder, onRemove, onRemoveFile, onManual, onExtract }: Props) {
+export function SupplierQuotationUploads({ groups, locked, extracting, progress, onAdd, onFiles, onOrder, onRemove, onRemoveFile, onManual, onExtract }: Props) {
   const detailId = useId();
   const [selectedId, setSelectedId] = useState(""), [search, setSearch] = useState(""), [filter, setFilter] = useState("all"), [page, setPage] = useState(1), [pageSize, setPageSize] = useState(10), [detailsOpen, setDetailsOpen] = useState(false), [dragActive, setDragActive] = useState(false);
   const dragDepth = useRef(0), detailHeading = useRef<HTMLHeadingElement>(null), searchInput = useRef<HTMLInputElement>(null);
@@ -46,6 +47,7 @@ export function SupplierQuotationUploads({ groups, locked, extracting, onAdd, on
   const movePage = (value: number) => { setPage(value); setSelectedId(""); setDetailsOpen(false); };
   return <section className="panel supplier-upload-section">
     <div className="panel-heading"><div><h2>Add supplier quotations</h2><p className="helper-note">Keep each supplier’s files together. Select a group to add and arrange its pages.</p></div><div className="button-row"><button type="button" className="button secondary" disabled={locked} onClick={add}>+ Supplier quotation group</button><button type="button" className="button secondary" disabled={locked} onClick={() => void onManual()}>Enter manually</button></div></div>
+    {progress && <div className="qa-extraction-progress" role="status" aria-live="polite"><span className="qa-spinner" aria-hidden="true"/><div><strong>Extracting supplier group {progress.current} of {progress.total}</strong><small>{progress.label}</small><small>{progress.completed} completed · {progress.failed} failed. AI is reading the files; this may take a moment.</small></div></div>}
     <div className={`supplier-upload-workbench${detailsOpen && active ? " is-detail-open" : ""}`}>
       <div className="supplier-upload-queue">
         <div className="supplier-queue-tools"><input ref={searchInput} type="search" aria-label="Search supplier quotation groups" placeholder="Search groups or filenames" value={search} disabled={locked} onChange={event => { setSearch(event.target.value); setPage(1); setSelectedId(""); setDetailsOpen(false); }}/><select aria-label="Filter upload group status" value={filter} disabled={locked} onChange={event => changeFilter(event.target.value)}><option value="all">All statuses</option>{Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></div>

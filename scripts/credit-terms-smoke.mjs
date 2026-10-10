@@ -82,7 +82,7 @@ try {
   await press('Confirm delivery clearance');await confirmed();await wait(`return ${saved}.pos[0].status==='released';`);
   assert.equal(await run(`return ${saved}.pos[0].creditPayments?.length||0;`),0,'Unpaid credit PO is cleared');
   const stored=await run(`return ${saved};`),total=poTotal(stored,stored.pos[0]),part=Math.round(total*.4*100)/100;
-  const attach=async index=>{await run(`const dt=new DataTransfer();dt.items.add(new File(['%PDF-1.4 distinct credit payment proof '+${index}],'Credit proof '+${index}+'.pdf',{type:'application/pdf'}));const el=document.querySelector('.credit-payment-panel .proof-upload input');el.files=dt.files;el.dispatchEvent(new Event('change',{bubbles:true}));return true;`);};
+  const attach=async index=>{await wait("return !!document.querySelector('.credit-payment-panel .qa-file-upload input[type=file], .credit-payment-panel .proof-upload input[type=file]');");await run(`const dt=new DataTransfer();dt.items.add(new File(['%PDF-1.4 distinct credit payment proof '+${index}],'Credit proof '+${index}+'.pdf',{type:'application/pdf'}));const el=document.querySelector('.credit-payment-panel .qa-file-upload input[type=file], .credit-payment-panel .proof-upload input[type=file]');el.files=dt.files;el.dispatchEvent(new Event('change',{bubbles:true}));return true;`);};
   await run('window.__proofFail=true;return true;');await attach(1);await wait(`return !!${saved}.pos[0].paymentProofs?.[0]?.archive.error;`);
   assert.equal(await run("return document.querySelector('.credit-payment-form button').disabled;"),true);
   await run('window.__proofFail=false;return true;');await press('Retry archive');await wait(`return ${saved}.pos[0].paymentProofs[0].archive.status==='complete';`);
@@ -91,7 +91,7 @@ try {
   await attach(2);await wait(`return ${saved}.pos[0].paymentProofs?.[1]?.archive.status==='complete';`);await pay(Math.round((total-part)*100)/100,'BANK-CREDIT-2',2);
   assert.equal(await run("return !!document.querySelector('.credit-payment-form');"),false,'No further payments when settled');
   await role('Finance');await navigate('/finance');assert.equal(await run("return !!document.querySelector('.register table tbody tr');"),false,'Settled PO leaves active queue');
-  await fill('select[aria-label="Coordination status"]','Settled');await wait("return !!document.querySelector('.register table tbody tr');");
+  await click('Settled (1)','.view-tabs button');await wait("return !!document.querySelector('.register table tbody tr');");
   await navigate(`/finance/${po.id}`);assert.equal(await run("return !!document.querySelector('.payment-coordination-form');"),false,'Settled coordination is read-only');
   await role('Accounting / Auditing');await navigate(`/accounting/${po.id}`);
 

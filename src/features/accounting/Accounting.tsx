@@ -4,7 +4,7 @@ import { CoordinationSummary } from "@/src/features/finance/PaymentCoordination"
 import { CreditPaymentVerification } from "./CreditPaymentVerification";
 import { deliveryDocumentIssues } from "@/src/domain/delivery-archive";
 import { Register } from "@/src/components/ui/Register";
-import { Fragment } from "react";
+import { CollapsibleSection } from "@/src/components/ui/CollapsibleSection";
 
 import { batchStage } from "@/src/domain/delivery-flow";
 
@@ -26,13 +26,41 @@ import { paidTotal, paymentStatus, poTotal, requestForPO, siteName, supplierName
 import type { DocumentStatus } from "@/src/domain/types";
 
 export function Accounting() {
-  const { snapshot: state }=useDemo(); const [search,setSearch]=useState(""); if(!state)return null;
-  const groups=accountingGroups(state,search);
-  return <><PageHeader title="Accounting queue" description="MRF-grouped POs, financial review, payment preparation and release."/>
-    <Register rows={groups} resetKey={search+state.siteFilter} unit="MRFs" className="accounting-groups" filters={<input type="search" aria-label="Search accounting" placeholder="Search MRF, PO or supplier" value={search} onChange={event=>setSearch(event.target.value)}/>} empty={state.pos.length?"No purchase orders match this view.":"No purchase orders are linked to an MRF yet."} headers={<><th>PO</th><th>Supplier</th><th>PO status</th><th>Documents</th><th>Payment</th><th className="numeric">Balance</th><th>Next action</th></>} renderRow={({request,pos,totalCount})=>{
-      const eligible=pos.filter(po=>["approved","released"].includes(po.status)),balance=eligible.reduce((sum,po)=>sum+poTotal(state,po)-paidTotal(state,po.id),0);
-      return <Fragment key={request.id}><tr className="accounting-group"><td colSpan={7} className="register-group-cell"><div><div><Link className="table-primary" href={`/requests/${request.id}`}>{request.ref||"Unnumbered MRF"}</Link><small>{siteName(state,request.siteId)} / {pos.length===totalCount?`${totalCount} purchase orders`:`${pos.length} of ${totalCount} purchase orders match`} / {eligible.length} approved</small></div><div><small>Approved outstanding balance</small><strong>{money(balance)}</strong></div></div></td></tr>{pos.map(po=>{const ready=["approved","released"].includes(po.status);return <tr key={po.id}><td><Link className="table-primary" href={`/accounting/${po.id}`}>{po.ref}</Link></td><td><span className="table-text" title={supplierName(state,po)}>{supplierName(state,po)}</span></td><td><Badge value={po.status}>{poStatusLabel(po.status)}</Badge></td><td>{ready?<Badge value={state.accounting.find(value=>value.poId===po.id)?.review||"Incomplete"}/>:po.status==="rejected"?"Closed":"Awaiting approval"}</td><td>{ready?<><Badge value={paymentStatus(state,po)}/>{creditOverdue(state,po)&&<small className="field-error">Overdue / {dateText(po.paymentDueDate || "")}</small>}</>:"--"}</td><td className="numeric">{ready?money(poTotal(state,po)-paidTotal(state,po.id)):"--"}</td><td>{accountingNextAction(state,po)}</td></tr>;})}</Fragment>;
-    }}/>
+  const { snapshot: state } = useDemo();
+  const [search, setSearch] = useState("");
+  if (!state) return null;
+  const groups = accountingGroups(state, search);
+  return <><PageHeader title="Accounting queue" description="Expand an MRF to review its purchase orders, documents and payment status."/>
+    <Register rows={groups} resetKey={search + state.siteFilter} unit="MRFs" className="accounting-groups" tableClassName="accounting-group-list"
+      filters={<input type="search" aria-label="Search accounting" placeholder="Search MRF, PO or supplier" value={search} onChange={event => setSearch(event.target.value)}/>}
+      empty={state.pos.length ? "No purchase orders match this view." : "No purchase orders are linked to an MRF yet."}
+      headers={<th>Material requests</th>}
+      renderRow={({ request, pos, totalCount }) => {
+        const eligible = pos.filter(po => ["approved", "released"].includes(po.status));
+        const balance = eligible.reduce((sum, po) => sum + poTotal(state, po) - paidTotal(state, po.id), 0);
+        const count = pos.length === totalCount ? `${totalCount} purchase order${totalCount === 1 ? "" : "s"}` : `${pos.length} of ${totalCount} purchase orders match`;
+        return <tr key={request.id} className="accounting-group"><td>
+          <CollapsibleSection key={`${request.id}-${search.trim()}-${state.siteFilter}`} title={request.ref || "Unnumbered MRF"} defaultOpen={!!search.trim()} stickyHeading={false} className="accounting-mrf"
+            summary={<span className="accounting-mrf-summary"><span>{siteName(state, request.siteId)} · {count} · {eligible.length} approved</span><span>Approved outstanding balance <strong>{money(balance)}</strong></span></span>}>
+            <div className="accounting-mrf-heading"><Link className="text-link" href={`/requests/${request.id}`}>View MRF →</Link></div>
+            <div className="accounting-po-scroll" role="region" aria-label={`Purchase orders for ${request.ref || "unnumbered MRF"}`} tabIndex={0}>
+              <table className="accounting-po-list"><caption>Purchase orders for {request.ref || "unnumbered MRF"}</caption>
+                <thead><tr><th>PO</th><th>Supplier</th><th>PO status</th><th>Documents</th><th>Payment</th><th className="numeric">Balance</th><th>Next action</th></tr></thead>
+                <tbody>{pos.map(po => {
+                  const ready = ["approved", "released"].includes(po.status);
+                  return <tr key={po.id}><td><Link className="table-primary" href={`/accounting/${po.id}`}>{po.ref}</Link></td>
+                    <td><span className="table-text" title={supplierName(state, po)}>{supplierName(state, po)}</span></td>
+                    <td><Badge value={po.status}>{poStatusLabel(po.status)}</Badge></td>
+                    <td>{ready ? <Badge value={state.accounting.find(value => value.poId === po.id)?.review || "Incomplete"}/> : po.status === "rejected" ? "Closed" : "Awaiting approval"}</td>
+                    <td>{ready ? <><Badge value={paymentStatus(state, po)}/>{creditOverdue(state, po) && <small className="field-error">Overdue / {dateText(po.paymentDueDate || "")}</small>}</> : "--"}</td>
+                    <td className="numeric">{ready ? money(poTotal(state, po) - paidTotal(state, po.id)) : "--"}</td><td>{accountingNextAction(state, po)}</td>
+                  </tr>;
+                })}</tbody>
+              </table>
+            </div>
+          </CollapsibleSection>
+        </td></tr>;
+      }}/>
   </>;
 }
 

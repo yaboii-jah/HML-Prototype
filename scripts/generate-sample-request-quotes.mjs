@@ -8,7 +8,9 @@ import { PDFDocument, rgb } from 'pdf-lib';
 import { generateMrfPdf } from '../src/server/template-mrf-pdf.ts';
 import { documentDate, documentMoney, wrapText } from '../src/server/document-template.ts';
 
-const outputDirectory = 'sample-data';
+const outputIndex = process.argv.indexOf('--output');
+const outputDirectory = outputIndex >= 0 ? process.argv[outputIndex + 1] : 'sample-data';
+if (!outputDirectory) throw new Error('--output requires a directory');
 const assets = path.join(process.cwd(), 'src/server/document-assets');
 const combinedFile = 'MRF 372 - Material Request and Key Plan.pdf';
 
@@ -54,163 +56,29 @@ const mrf = {
   })),
 };
 
-const suppliers = [
-  {
-    file: '372 Q01 Meridian Doors and Fittings.pdf',
-    ref: 'MDF-Q-2411',
-    name: 'MERIDIAN DOORS AND FITTINGS, INC.',
-    address: 'Unit 12, Marina Industrial Park, Mabolo, Las Piñas City',
-    tin: '000-874-221-00000',
-    email: 'sales@meridiandoors.ph',
-    phone: '(02) 8842-1177',
-    contact: 'MS. LINA CRUZ - ACCOUNT EXECUTIVE',
-    date: '2026-10-06',
-    validity: '30 days from date of quotation',
-    terms: '30 days net from delivery date',
-    leadTime: '21 calendar days from confirmed order',
-    deliveryTerms: 'DELIVERED, SITE, PASAY CITY (FREIGHT PREPAID)',
-    vatStatus: 'VAT',
-    priceBasis: 'exclusive',
-    vatRate: 12,
-    accent: [0.09, 0.3, 0.55],
-    style: 'band',
-    freight: { label: 'FREIGHT AND HANDLING', value: 18500 },
-    discount: { label: 'TRADE DISCOUNT', value: 3 },
-    notes: [
-      'ALL PRICES ARE VAT EXCLUSIVE AND SUBJECT TO 12% VAT.',
-      'PRICES HOLD FOR THE VALIDITY PERIOD AND ARE SUBJECT TO STOCK AVAILABILITY.',
-      'GLASS PANELS ARE DELIVERED IN VERTICAL CRATES; UNLOADING IS BY THE BUYER.',
-      'PROVIDES 10-YEAR WARRANTY ON FRAMELESS HARDWARE AND 5-YEAR WARRANTY ON TEMPERED PANELS.',
-      'SHOWER PARTITION PANELS ARE AVAILABLE WITH 8mm THICKNESS ONLY.',
-    ],
-    offers: [
-      { id: 'i1', price: 4850, brand: 'MERIDIAN TG-10' },
-      { id: 'i2', price: 4320, brand: 'MERIDIAN TG-10' },
-      { id: 'i3', price: 6750, brand: 'MERIDIAN FH-TS' },
-      { id: 'i4', price: 2980, brand: 'MERIDIAN PH-1000' },
-      { id: 'i5', price: 3890, brand: 'MERIDIAN TG-8' },
-      { id: 'i6', price: 415, brand: 'MERIDIAN SEAL-N' },
-      { id: 'i7', price: 385, brand: 'MERIDIAN GC-4H' },
-      { id: 'i8', price: 11200, brand: 'MERIDIAN ABF-04' },
-    ],
-  },
-  {
-    file: '372 Q02 Apex Architectural Hardware Corp.pdf',
-    ref: 'AAH-2026-8842',
-    name: 'APEX ARCHITECTURAL HARDWARE CORP.',
-    address: '129 Rizal Avenue Extension, Carmona, Makati City',
-    tin: '006-412-908-00000',
-    email: 'quotes@apexhardware.ph',
-    phone: '(02) 8953-6620',
-    contact: 'MR. RONNIE DELA CRUZ - SALES MANAGER',
-    date: '2026-10-07',
-    validity: '15 days from date of quotation',
-    terms: '50% down payment, balance on delivery',
-    leadTime: '35 calendar days, permanent plant order',
-    deliveryTerms: 'DELIVERED, SITE, PASAY CITY',
-    vatStatus: 'VAT',
-    priceBasis: 'inclusive',
-    vatRate: 12,
-    accent: [0.36, 0.15, 0.44],
-    style: 'boxed',
-    freight: { label: 'DELIVERY CHARGE', value: 22000 },
-    discount: null,
-    notes: [
-      'ALL PRICES ARE VAT INCLUSIVE AND INCLUDE STANDARD PACKAGING.',
-      'DOORS AND PARTITION PANELS ARE MANUFACTURED TO ORDER; LEAD TIME IS INDICATIVE.',
-      'THIS QUOTATION DOES NOT COVER SHOWER PARTITION PANELS; SEPARATE QUOTATION FOLLOWS ON REQUEST.',
-      '50% DOWN PAYMENT IS REQUIRED TO RELEASE THE ORDER TO THE FACTORY.',
-      'ESTIMATED DELIVERY WINDOW IS 35 CALENDAR DAYS AFTER ORDER CONFIRMATION AND DOWN PAYMENT.',
-      'INSTALLED PRICING IS AVAILABLE UPON REQUEST AND IS NOT INCLUDED HERE.',
-    ],
-    offers: [
-      { id: 'i1', price: 5210, brand: 'APEX TG-CLEAR' },
-      { id: 'i2', price: 4640, brand: 'APEX TG-CLEAR' },
-      { id: 'i3', price: 6990, brand: 'APEX TOPLINE TS' },
-      { id: 'i4', price: 2860, brand: 'APEX BRUSH-1000' },
-      { id: 'i6', price: 452, brand: 'APEX NEUTRAL SEAL' },
-      { id: 'i7', price: 348, brand: 'APEX GLASSCLIP-4' },
-      { id: 'i8', price: 11850, brand: 'APEX SAFEFILM-04' },
-    ],
-  },
-  {
-    file: '372 Q03 Kestrel Glass Systems Co.pdf',
-    ref: 'KGS-Q-0917',
-    name: 'KESTREL GLASS SYSTEMS CO.',
-    address: 'Km. 22 SLEX, Canlubang, Lemery, Batangas',
-    tin: '010-556-733-00000',
-    email: 'bids@kestrelglass.ph',
-    phone: '(049) 501-2233',
-    contact: 'ENGR. NOEL SANTIAGO - PROJECT HEAD',
-    date: '2026-10-05',
-    validity: '45 days from date of quotation',
-    terms: '20% advance, 80% against delivery and acceptance',
-    leadTime: '14 calendar days for stocked items',
-    deliveryTerms: 'DELIVERED, SITE, PASAY CITY (2 TRIPS)',
-    vatStatus: 'VAT',
-    priceBasis: 'exclusive',
-    vatRate: 12,
-    accent: [0.04, 0.42, 0.4],
-    style: 'band',
-    freight: { label: 'FREIGHT, TWO TRIPS', value: 24000 },
-    discount: { label: 'EARLY PAYMENT DISCOUNT', value: 2 },
-    // Printed totals on supplier quotes are transcription evidence; a transposed figure is a real review case.
-    printedTotals: { 1: 54080 },
-    notes: [
-      'ALL PRICES ARE VAT EXCLUSIVE.',
-      'QUOTED PRICES FOR TEMPERED PANELS ARE BATCH-BASED AND CONFIRMED AT ORDER ACCEPTANCE.',
-      'AN ADVANCE PAYMENT OF 20% IS REQUIRED; THE BALANCE IS PAYABLE AFTER SITE ACCEPTANCE.',
-      'THIS QUOTATION IS SUBJECT TO STOCK AVAILABILITY AT THE TIME OF ORDER CONFIRMATION.',
-      'CERTIFIED TEMPERED GLASS WITH SAFETY LABELS PER ASTM C1048 IS SUPPLIED FOR ALL PANELS.',
-      'SITE MEASUREMENT IS AVAILABLE ON REQUEST AND IS NOT INCLUDED IN THIS PRICE.',
-    ],
-    offers: [
-      { id: 'i1', price: 4590, brand: 'KESTREL KTG10' },
-      { id: 'i2', price: 4095, brand: 'KESTREL KTG10' },
-      { id: 'i3', price: 6420, brand: 'KESTREL KTS-HW' },
-      { id: 'i4', price: 2760, brand: 'KESTREL KPH-10' },
-      { id: 'i5', price: 3610, brand: 'KESTREL KTG8' },
-      { id: 'i6', price: 398, brand: 'KESTREL KSEAL-300' },
-      { id: 'i7', price: 372, brand: 'KESTREL KCL-4' },
-      { id: 'i8', price: 10800, brand: 'KESTREL KABF-04' },
-    ],
-  },
-  {
-    file: '372 Q04 Summit Building Supply Trading.pdf',
-    ref: 'SBST-552-26',
-    name: 'SUMMIT BUILDING SUPPLY TRADING',
-    address: '58 Aurora Street, Caloocan City',
-    tin: '009-338-470-00000',
-    email: 'summit.trading@gmail.com',
-    phone: '0917 442 8890',
-    contact: 'MR. DANTE PEREZ - PROPRIETOR',
-    date: '2026-10-08',
-    validity: '20 days from date of quotation',
-    terms: 'Cash on delivery against company account',
-    leadTime: '7 calendar days',
-    deliveryTerms: 'DELIVERED, SITE, PASAY CITY (TRUCK)',
-    vatStatus: 'NON-VAT',
-    priceBasis: 'exclusive',
-    vatRate: 0,
-    accent: [0.53, 0.28, 0.05],
-    style: 'boxed',
-    freight: { label: 'TRUCK DELIVERY', value: 12000 },
-    discount: null,
-    notes: [
-      'NON-VAT REGISTERED SUPPLIER. PRICES ARE EXCLUSIVE OF VAT.',
-      'OFFER COVERS DOOR PANELS AND ACCESSORIES ONLY; SEALANT AND CLAMPS ARE NOT STOCKED.',
-      'PAYMENT IS BY CASH OR BANK TRANSFER AGAINST THE COMPANY ACCOUNT.',
-      'STOCK IS LIMITED AND RESERVED ONLY UPON RECEIPT OF THE PURCHASE ORDER.',
-      'QUOTATION IS VOID AFTER THE VALIDITY PERIOD OR WITHOUT THE SUPPLIER SIGNATURE.',
-    ],
-    offers: [
-      { id: 'i1', price: 4720, brand: 'SUMMIT ST-10' },
-      { id: 'i2', price: 4210, brand: 'SUMMIT ST-10' },
-      { id: 'i3', price: 6580, brand: 'SUMMIT SH-TS' },
-      { id: 'i4', price: 2890, brand: 'SUMMIT PH-1000' },
-    ],
-  },
+const definitions = [
+  ['Q01', 'Meridian Doors and Fittings', 'MERIDIAN DOORS AND FITTINGS, INC.', 'MDF-Q-2411', [4850,4320,6750,2980,3890,415,385,11200], [0.09,0.3,0.55]],
+  ['Q02', 'Apex Architectural Hardware Corp', 'APEX ARCHITECTURAL HARDWARE CORP.', 'AAH-2026-8842', [5210,4640,6990,2860,4050,452,348,11850], [0.36,0.15,0.44]],
+  ['Q03', 'Summit Building Supply Trading', 'SUMMIT BUILDING SUPPLY TRADING', 'SBST-552-26', [4720,4210,6580,2890,3750,405,360,11000], [0.53,0.28,0.05]],
+  ['Q04', 'Kestrel Glass Systems Co', 'KESTREL GLASS SYSTEMS CO.', 'KGS-Q-0917', [4590,4095,6420,2760,3610,398,372,10800], [0.04,0.42,0.4]],
 ];
+const suppliers = definitions.map(([number, filename, name, ref, prices, accent], index) => ({
+  file: `372 ${number} ${filename}.pdf`, ref, name,
+  address: 'Sample supplier office, Metro Manila', tin: 'SAMPLE ONLY',
+  email: `supplier${index + 1}@example.com`, phone: 'SAMPLE CONTACT', contact: 'SAMPLE SALES REPRESENTATIVE',
+  date: '2026-10-10', validity: '30 days from date of quotation', terms: '30 days net from delivery date',
+  leadTime: '10 calendar days from confirmed order', deliveryTerms: 'DELIVERED TO SITE; DELIVERY INCLUDED IN UNIT PRICES',
+  vatStatus: 'VAT', priceBasis: 'inclusive', vatRate: 12, accent, style: index % 2 ? 'boxed' : 'band',
+  freight: { label: 'DELIVERY INCLUDED', value: 0 }, discount: null,
+  notes: [
+    'ALL UNIT PRICES AND LINE AMOUNTS INCLUDE 12% VAT. DO NOT ADD VAT AGAIN.',
+    'NO DISCOUNT, ADDITIONAL FREIGHT OR OTHER CHARGES APPLY.',
+    'ALL EIGHT MATERIALS ARE QUOTED IN THE QUANTITIES AND UNITS REQUESTED IN MRF-372.',
+    'CONFIRM OPENING SIZES ON SITE BEFORE ORDER ACCEPTANCE.',
+    'FICTIONAL SAMPLE QUOTATION FOR APP TESTING ONLY; NOT A COMMERCIAL OFFER.',
+  ],
+  offers: requestLines.map((line, i) => ({ id: line.id, price: prices[i], brand: `${filename.split(' ')[0].toUpperCase()} STANDARD` })),
+}));
 
 const round = (value) => Math.round(value * 100) / 100;
 const peso = (value) => `PHP ${documentMoney(round(value))}`;
@@ -383,7 +251,7 @@ function buildKeyPlan(pdf, regular, bold) {
 async function buildQuotation(supplier, pdf, regular, bold) {
   const pageWidth = 595.28, pageHeight = 841.89, margin = 36;
   const accent = rgb(...supplier.accent);
-  const { lines, gross, discount, freight, vat, vatInclusiveGross, total, uncovered } = quoteTotals(supplier);
+  const { lines, gross, discount, freight, vat, total, uncovered } = quoteTotals(supplier);
   let page = pdf.addPage([pageWidth, pageHeight]);
   let y = pageHeight - margin;
 
@@ -413,16 +281,16 @@ async function buildQuotation(supplier, pdf, regular, bold) {
   const header = () => {
     if (supplier.style === 'band') {
       page.drawRectangle({ x: 0, y: pageHeight - 108, width: pageWidth, height: 108, color: accent });
-      write(supplier.name, margin, pageHeight - 46, { size: 15.5, bold: true, color: rgb(1, 1, 1) });
+      write(supplier.name, margin, pageHeight - 34, { size: 12, bold: true, color: rgb(1, 1, 1) });
       write(supplier.address, margin, pageHeight - 62, { size: 8.5, color: rgb(1, 1, 1), opacity: 0.92 });
       write(`TIN ${supplier.tin}  |  ${supplier.phone}  |  ${supplier.email}`, margin, pageHeight - 75, { size: 8.5, color: rgb(1, 1, 1), opacity: 0.92 });
-      write('QUOTATION', pageWidth - margin - 118, pageHeight - 46, { size: 15.5, bold: true, color: rgb(1, 1, 1) });
-      write(`NO. ${supplier.ref}`, pageWidth - margin - 118, pageHeight - 62, { size: 8.5, color: rgb(1, 1, 1), opacity: 0.92 });
-      write(`DATE ${documentDate(supplier.date)}`, pageWidth - margin - 118, pageHeight - 75, { size: 8.5, color: rgb(1, 1, 1), opacity: 0.92 });
+      write('QUOTATION', pageWidth - margin - 150, pageHeight - 46, { size: 15.5, bold: true, color: rgb(1, 1, 1) });
+      write(`NO. ${supplier.ref}`, pageWidth - margin - 150, pageHeight - 62, { size: 8.5, color: rgb(1, 1, 1), opacity: 0.92 });
+      write(`DATE ${documentDate(supplier.date)}`, pageWidth - margin - 150, pageHeight - 75, { size: 8.5, color: rgb(1, 1, 1), opacity: 0.92 });
     } else {
       page.drawRectangle({ x: margin - 10, y: pageHeight - 114, width: pageWidth - 2 * margin + 20, height: 96, borderColor: accent, borderWidth: 1.4 });
       page.drawRectangle({ x: margin - 10, y: pageHeight - 114, width: 5, height: 96, color: accent });
-      write(supplier.name, margin + 6, pageHeight - 40, { size: 14, bold: true, color: accent });
+      write(supplier.name, margin + 6, pageHeight - 40, { size: 12, bold: true, color: accent });
       write(supplier.address, margin + 6, pageHeight - 55, { size: 8.5 });
       write(`TIN ${supplier.tin}  |  ${supplier.phone}  |  ${supplier.email}`, margin + 6, pageHeight - 68, { size: 8.5 });
       write('QUOTATION', pageWidth - margin - 150, pageHeight - 40, { size: 14.5, bold: true, color: accent });
@@ -445,14 +313,16 @@ async function buildQuotation(supplier, pdf, regular, bold) {
     ['PRICE BASIS', `${supplier.vatStatus}${supplier.vatRate ? ` ${supplier.vatRate}%` : ''}, PRICES ${supplier.priceBasis === 'inclusive' ? 'INCLUSIVE' : 'EXCLUSIVE'} OF VAT, IN PHILIPPINE PESO`],
   ];
   const columnWidth = (pageWidth - 2 * margin) / 2;
-  for (let index = 0; index < metaPairs.length; index++) {
-    const column = index % 2, row = Math.floor(index / 2);
-    const x = margin + column * columnWidth;
-    const rowY = y - row * 26;
-    write(metaPairs[index][0], x, rowY - 9, { size: 6.5, bold: true, color: accent });
-    wrapText(metaPairs[index][1], regular, 8, columnWidth - 12).forEach((line, n) => write(line, x, rowY - 19 - n * 9.5, { size: 8 }));
+  for (let index = 0; index < metaPairs.length; index += 2) {
+    const entries = metaPairs.slice(index, index + 2).map(([label, text]) => ({ label, lines: wrapText(text, regular, 8, columnWidth - 12) }));
+    entries.forEach((entry, column) => {
+      const x = margin + column * columnWidth;
+      write(entry.label, x, y - 9, { size: 6.5, bold: true, color: accent });
+      entry.lines.forEach((line, n) => write(line, x, y - 19 - n * 9.5, { size: 8 }));
+    });
+    y -= 22 + Math.max(...entries.map(entry => entry.lines.length)) * 9.5;
   }
-  y -= Math.ceil(metaPairs.length / 2) * 26 + 6;
+  y -= 8;
 
   const columns = [
     { label: 'ITEM NO', x: margin, width: 34, align: 'left' },
@@ -500,14 +370,14 @@ async function buildQuotation(supplier, pdf, regular, bold) {
   const totals = [
     ['SUBTOTAL', peso(gross)],
     ...(discount ? [[supplier.discount.label, `- ${peso(discount)}`]] : []),
-    [supplier.freight.label, peso(freight)],
-    ...(supplier.priceBasis === 'inclusive' ? [['VAT INCLUDED IN PRICES (12%)', peso(vatInclusiveGross)]] : []),
+    ...(freight ? [[supplier.freight.label, peso(freight)]] : []),
+
     ...(vat ? [['VAT 12%', peso(vat)]] : []),
     ['TOTAL', peso(total)],
   ];
   for (const [label, value] of totals) {
     const isTotal = label === 'TOTAL';
-    if (isTotal) page.drawRectangle({ x: margin + 300, y: y - 4, width: pageWidth - margin - 300, height: 18, color: accent, opacity: 0.12 });
+    if (isTotal) page.drawRectangle({ x: margin + 300, y: y - 4, width: pageWidth - 2 * margin - 300, height: 18, color: accent, opacity: 0.12 });
     write(label, margin + 310, y, { size: isTotal ? 9 : 8.5, bold: isTotal, color: isTotal ? accent : rgb(0.2, 0.2, 0.2) });
     const text = value.replace('- ', '');
     const textWidth = (isTotal ? bold : regular).widthOfTextAtSize(text, isTotal ? 9 : 8.5);
@@ -624,6 +494,15 @@ const put = (value, x, y, options = {}) => page.drawText(value, { x, y, size: op
   page.drawText(`SCOPE OF WORK CP-04  |  ${project.name}  |  Page 3 of 3`, { x: 40, y: 34, size: 7, font: regular, color: faint });
 }
 
+function sampleNotice(pdf, regular) {
+  for (const page of pdf.getPages()) page.drawText('FICTIONAL SAMPLE - FOR APP TESTING ONLY', { x: 36, y: 18, size: 7, font: regular, color: rgb(.55,.15,.15) });
+}
+for (const supplier of suppliers) {
+  const totals = quoteTotals(supplier);
+  if (totals.lines.length !== 8 || totals.total !== totals.gross || totals.vat !== 0 || totals.discount !== 0 || totals.freight !== 0) throw new Error('Invalid sample totals');
+  const mismatches = totals.lines.filter((line, i) => (supplier.printedTotals?.[i + 1] ?? line.amount) !== line.amount);
+  if (mismatches.length !== 0) throw new Error('Unexpected printed discrepancies');
+}
 fs.mkdirSync(outputDirectory, { recursive: true });
 {
   const combined = await PDFDocument.create();
@@ -636,6 +515,7 @@ fs.mkdirSync(outputDirectory, { recursive: true });
   buildWorkScope(combined, regular, bold);
   combined.setTitle(`${mrf.ref} material request, key plan and scope of work`);
   combined.setSubject(`${project.name} - 3rd floor east wing glass doors and partition panels`);
+  sampleNotice(combined, regular);
   fs.writeFileSync(path.join(outputDirectory, combinedFile), await combined.save());
   console.log(`${combinedFile}: MRF hardcopy, key plan CP-04 and scope of work (${requestLines.length} material lines)`);
 }
@@ -648,7 +528,23 @@ for (const supplier of suppliers) {
   await buildQuotation(supplier, pdf, regular, bold);
   pdf.setTitle(`${supplier.ref} quotation for ${mrf.ref}`);
   pdf.setSubject(`${supplier.vatStatus} ${supplier.priceBasis} quotation for ${project.name}`);
+  sampleNotice(pdf, regular);
   fs.writeFileSync(path.join(outputDirectory, supplier.file), await pdf.save());
   const { total, lines, uncovered } = quoteTotals(supplier);
   console.log(`${supplier.ref} ${supplier.name}: ${lines.length} lines, ${uncovered.length} unquoted, total ${peso(total)}`);
 }
+fs.writeFileSync(path.join(outputDirectory, '372 README.md'), `# MRF 372 Sample Pack
+
+All four quotations cover the same eight MRF materials. Prices include 12% VAT; do not add VAT again. No discounts or additional freight apply. Fictional sample documents only.
+
+| Quotation | Expected total | Review result |
+|---|---:|---|
+${suppliers.map(supplier => `| ${supplier.file} | ${peso(quoteTotals(supplier).total)} | Correct |`).join('\n')}
+
+Q04: 12 PCS x PHP 4,590 = PHP 55,080. The first printed amount is corrected to PHP 55,080; the subtotal and grand total remain PHP 414,242. All four quotations have consistent line amounts and totals.
+
+The combined MRF contains the request, illustrative key plan and work scope. The material schedule governs quantities; the key plan is not a complete quantity takeoff.
+
+Regenerate: node --experimental-strip-types scripts/generate-sample-request-quotes.mjs
+Use --output <directory> to generate a staging copy before replacing files.
+`);

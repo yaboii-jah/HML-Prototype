@@ -1,6 +1,7 @@
 "use client";
 
 import { ArchiveProvider } from "./ArchiveProvider";
+import { ToastProvider, useToasts } from "./ToastProvider";
 import { createContext, useContext, useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
 import { demoRepository, serverRepositoryView, type RepositoryView } from "@/src/mock/repository";
 import { demoSession, accountForCredentials, serverSessionView, type DemoSessionView } from "./demo-session";
@@ -21,8 +22,6 @@ type DemoContextValue = RepositoryView & {
   switchRole: (role: Role) => { ok: boolean; message: string };
   signOut: () => void;
   reset: () => Promise<void>;
-  notice: string;
-  clearNotice: () => void;
 };
 const DemoContext = createContext<DemoContextValue | null>(null);
 const subscribe = (listener: () => void) => demoRepository.subscribe(listener);
@@ -36,12 +35,12 @@ const identityFor = (account: DemoSessionView): AuditIdentity | undefined => {
   return user ? { name: user.name, email: user.email, role: user.role, userId: user.id, sessionRevision: user.revision } : undefined;
 };
 
-export function DemoProvider({ children }: { children: ReactNode }) {
+function DemoSessionProvider({ children }: { children: ReactNode }) {
+  const { notify, clear } = useToasts();
   const view = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
   const session = useSyncExternalStore(subscribeSession, getSession, getServerSession);
   const directory = useSyncExternalStore(listener => userDirectory.subscribe(listener), () => userDirectory.getSnapshot(), () => serverUserDirectory);
   useEffect(() => { void userDirectory.load(); }, []);
-  const [notice, setNotice] = useState("");
   const [signedOut, setSignedOut] = useState(false);
   const snapshotRole = view.snapshot?.role;
   useEffect(() => {
@@ -52,7 +51,7 @@ export function DemoProvider({ children }: { children: ReactNode }) {
   const gateway = bindAccountCommands(demoRepository, identityFor(session), () => identityFor(demoSession.read()));
   const run = async (command: Command) => {
     const result = await gateway.run(command);
-    if (result.ok && ["completeRequestArchive", "completeQuoteArchive", "completePOArchive", "completeBidArchive"].includes(command.type)) setNotice(result.message);
+    if (result.ok && ["completeRequestArchive", "completeQuoteArchive", "completePOArchive", "completeBidArchive"].includes(command.type)) notify({ tone: "success", title: result.message });
     return result;
   };
   const signIn = async (email: string, password: string) => {
@@ -67,28 +66,32 @@ export function DemoProvider({ children }: { children: ReactNode }) {
     if (!result.ok) return { ok: false, message: result.message };
     demoSession.select(account);
     setSignedOut(false);
-    setNotice("");
+    clear();
     return { ok: true, message: "Signed in." };
   };
-  const signOut = () => { setSignedOut(true); demoSession.clear(); setNotice(""); };
+  const signOut = () => { setSignedOut(true); demoSession.clear(); clear(); };
   const switchRole = (role: Role) => {
     const active = demoSession.read();
     if (!view.snapshot || active.email !== session.email || active.role !== session.role || !demoSession.switchRole(role)) return { ok: false, message: "Sign in before changing departments." };
-    setNotice("");
+    clear();
     return { ok: true, message: "Department changed." };
   };
   const switchAccount = (id: string) => {
     const active = demoSession.read();
     if (!view.snapshot || active.userId !== session.userId || active.revision !== session.revision || !demoSession.switchAccount(id)) return { ok: false, message: "Sign in before switching accounts." };
-    setNotice(""); return { ok: true, message: "Account changed." };
+    clear(); return { ok: true, message: "Account changed." };
   };
   const manageUser = async (change: UserChange) => {
     const actor = identityFor(demoSession.read());
     if (!actor || actor.role !== "Administrator" || actor.userId !== session.userId || actor.sessionRevision !== session.revision) return { ok: false, message: "Your account changed. Sign in as Administrator to manage users." };
     return userDirectory.change(actor, change);
   };
-  const reset = async () => { if (demoSession.read().role !== "Administrator") throw new Error("Workspace reset requires an Administrator."); await demoRepository.reset(); setNotice("Workspace cleared. Start by adding a project."); };
-  return <ArchiveProvider><DemoContext.Provider value={{ ...view, run, beginOperation: gateway.beginOperation, session, signedOut, directory, manageUser, signIn, switchRole, switchAccount, signOut, reset, notice, clearNotice: () => setNotice("") }}>{children}</DemoContext.Provider></ArchiveProvider>;
+  const reset = async () => { if (demoSession.read().role !== "Administrator") throw new Error("Workspace reset requires an Administrator."); await demoRepository.reset(); notify({ tone: "success", title: "Workspace cleared. Start by adding a project." }); };
+  return <ArchiveProvider><DemoContext.Provider value={{ ...view, run, beginOperation: gateway.beginOperation, session, signedOut, directory, manageUser, signIn, switchRole, switchAccount, signOut, reset }}>{children}</DemoContext.Provider></ArchiveProvider>;
+}
+
+export function DemoProvider({ children }: { children: ReactNode }) {
+  return <ToastProvider><DemoSessionProvider>{children}</DemoSessionProvider></ToastProvider>;
 }
 
 export function useDemo() {

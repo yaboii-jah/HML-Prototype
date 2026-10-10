@@ -1,4 +1,5 @@
 import { coordinatedPOs, coordinationWarning, coordinationStatus } from "./payment-coordination.ts";
+import { deliveryEvidenceStatus, receivedDelivery } from "./delivery-archive.ts";
 import { creditOverdue } from "./credit-terms.ts";
 import { isSiteBatch, legFor, warehouseAvailableFor } from "./delivery-flow.ts";
 import { requiresPMReview, isExternalPayment } from "./full-disbursement.ts";
@@ -31,7 +32,15 @@ export function tasksFor(state: DemoSnapshot): Task[] {
     ...state.pos.filter(po => po.status === "released" && requestForPO(state, po)?.items.some(item => outstandingFor(state,po,item.id) > 0)).map(po => ({ title: `Track ${po.ref}`, detail: "Schedule or monitor delivery", href: `/purchase-orders/${po.id}`, siteId: requestForPO(state,po)?.siteId, waiting: daysWaiting(po.updatedAt) })),
     ...state.batches.filter(batch => batch.status === "expected" || legFor(batch) === "supplier-warehouse" && batch.status === "confirmed" && batch.lines.some(line => warehouseAvailableFor(state,batch.id,line.itemId) > 0)).map(batch => ({ title: `${batch.status === "expected" ? "Dispatch" : "Forward"} ${batch.ref}`, detail: batch.destination?.name || "Delivery batch", href: `/deliveries/${batch.id}`, siteId: requestForPO(state,state.pos.find(po => po.id === batch.poId)!)?.siteId, waiting: daysWaiting(batch.updatedAt) })),
   ] : role === "Accounting / Auditing" ? state.pos.filter(p => ["submitted", "hold", "approved", "released"].includes(p.status) && accountingNextAction(state, p) !== "Up to date").map(p => ({ title: `${accountingNextAction(state, p)}: ${p.ref}`, detail: p.reviewReason || siteName(state, requestForPO(state,p)?.siteId || ""), href: `/accounting/${p.id}`, siteId: requestForPO(state,p)?.siteId, waiting: daysWaiting(p.updatedAt) })) : role === "Administrator" ? state.pos.filter(p => (["hold", "returned"].includes(p.status) || creditOverdue(state,p))).map(p => ({ title: `Exception on ${p.ref}`, detail: creditOverdue(state,p) ? `Credit payment overdue / due ${p.paymentDueDate}` : p.reviewReason || p.status, href: `/purchase-orders/${p.id}`, siteId: requestForPO(state,p)?.siteId, waiting: daysWaiting(p.updatedAt) })) : [{ title: "Review workspace settings", detail: "Projects, Drive folders and activity", href: "/admin", waiting: 0 }];
-  return tasks.filter(task => state.siteFilter === "all" || !task.siteId || task.siteId === state.siteFilter);
+  const receiptTasks: Task[] = state.batches.filter(batch => receivedDelivery(batch) && state.role === (isSiteBatch(batch) ? "Site Personnel" : "Procurement")).flatMap(batch => {
+    const status = deliveryEvidenceStatus(state, batch);
+    if (status.generatedArchived && status.signedArchived) return [];
+    const po = state.pos.find(value => value.id === batch.poId);
+    if (!po) return [];
+    const title = !status.signedArchived ? status.signedFailed ? "Retry signed receipt archive" : status.signedPending ? "Finish signed receipt archive" : "Upload signed receipt" : "Archive generated receipt";
+    return [{ title: `${title}: ${batch.ref}`, detail: `${isSiteBatch(batch) ? "Site" : "Warehouse"} delivery${status.version ? ` / receipt v${status.version}` : ""}${!status.generatedArchived && !status.signedArchived ? " / generated receipt also needs archive" : ""}`, href: `/deliveries/${batch.id}#delivery-documents`, siteId: requestForPO(state, po)?.siteId, waiting: daysWaiting(batch.updatedAt) }];
+  });
+  return [...receiptTasks, ...tasks].filter(task => state.siteFilter === "all" || !task.siteId || task.siteId === state.siteFilter);
 }
 export function dashboardMetrics(state: DemoSnapshot) {
   const matches = (siteId?: string) => state.siteFilter === "all" || siteId === state.siteFilter;

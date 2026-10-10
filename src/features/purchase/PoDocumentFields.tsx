@@ -13,20 +13,20 @@ export function readPoDocument(form: FormData): PODocument {
 export function readPoFinancial(form: FormData): POFinancial {
   return { vatStatus: form.get("vatStatus") === "NON-VAT" ? "NON-VAT" : "VAT", priceBasis: form.get("priceBasis") === "exclusive" ? "exclusive" : "inclusive", vatRate: Number(form.get("vatRate")), ewtGoods: Number(form.get("ewtGoods")), ewtServices: Number(form.get("ewtServices")), ewtMode: form.get("ewtMode") === "manual" ? "manual" : form.get("ewtMode") === "automatic" ? "automatic" : undefined, ewtGoodsManual: form.get("ewtGoodsManual") === "true", ewtServicesManual: form.get("ewtServicesManual") === "true", reviewed: form.get("financialReviewed") === "on" };
 }
-type FinancialProps = { financial: POFinancial; reviewed: boolean; onReview: (value: boolean) => void; onFinancialChange: (value: POFinancial) => void; breakdown?: ReturnType<typeof poFinancialBreakdown>; allowOverride?: boolean };
-export function PoDocumentFields({ document, ...financialProps }: FinancialProps & { document: PODocument }) {
-  return <section className="panel"><CollapsibleSection title="Purchase order document">
+type FinancialProps = { financial: POFinancial; reviewed: boolean; onReview: (value: boolean) => void; onFinancialChange: (value: POFinancial) => void; breakdown?: ReturnType<typeof poFinancialBreakdown>; allowOverride?: boolean; initialCollapsed?: boolean };
+export function PoDocumentFields({ document, initialCollapsed = false, ...financialProps }: FinancialProps & { document: PODocument }) {
+  return <section className="panel"><CollapsibleSection title="Purchase order document" defaultOpen={!initialCollapsed}>
     <div className="form-grid">{fields.filter(([key]) => !key.startsWith("bank")).map(([key, label]) => <Field key={key} label={label}><input name={`poDocument.${key}`} type={key === "date" ? "date" : "text"} defaultValue={document[key]} /></Field>)}</div>
     <CollapsibleSection title="Bank details" defaultOpen={false}><div className="form-grid">{fields.filter(([key]) => key.startsWith("bank")).map(([key, label]) => <Field key={key} label={label}><input name={`poDocument.${key}`} defaultValue={document[key]}/></Field>)}</div></CollapsibleSection></CollapsibleSection>
-    <PoFinancialFields {...financialProps}/>
+    <PoFinancialFields {...financialProps} initialCollapsed={initialCollapsed}/>
   </section>;
 }
 
-export function PoFinancialFields({ financial, reviewed, onReview, onFinancialChange, breakdown, allowOverride = false }: FinancialProps) {
+export function PoFinancialFields({ financial, reviewed, onReview, onFinancialChange, breakdown, allowOverride = false, initialCollapsed = false }: FinancialProps) {
   const update = (patch: Partial<POFinancial>) => { onReview(false); onFinancialChange({ ...financial, ...patch, reviewed: false }); };
   const manual = financial.ewtMode === "manual";
   const nonVat = financial.vatStatus === "NON-VAT";
-  return <CollapsibleSection title="VAT and withholding">
+  return <CollapsibleSection title="VAT and withholding" defaultOpen={!initialCollapsed}>
     <p className="helper-note">Accounting confirms the price basis and deductions before approval. This VAT setting replaces source line taxes and tax adjustments. Payments use the net total after EWT.</p>
     <div className="form-grid">
       <Field label="VAT / NON VAT"><select name="vatStatus" value={financial.vatStatus} onChange={event => update({ vatStatus: event.target.value as POFinancial["vatStatus"], ...(event.target.value === "NON-VAT" ? { ewtMode: "automatic", ewtGoods: 0, ewtServices: 0, ewtGoodsManual: false, ewtServicesManual: false } : {}) })}><option value="VAT">VAT</option><option value="NON-VAT">NON VAT</option></select></Field>

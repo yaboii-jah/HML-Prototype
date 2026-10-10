@@ -15,7 +15,7 @@ import { money } from "@/src/domain/format";
 
 export function Admin() {
   const {snapshot:state,directory}=useDemo();const id=useId(),lastProject=useRef<string|null>(null);
-  const [creating,setCreating]=useState(false),[selected,setSelected]=useState<string|null>(null),[search,setSearch]=useState(""),[view,setView]=useState(0),[tabs,setTabs]=useState<Record<string,number>>({}),[message,setMessage]=useState("");
+  const [creating,setCreating]=useState(false),[selected,setSelected]=useState<string|null>(null),[search,setSearch]=useState(""),[view,setView]=useState(0),[tabs,setTabs]=useState<Record<string,number>>({});
   const {confirm,confirmation}=useConfirmation();if(!state)return null;
   if(state.role!=="Administrator")return <><PageHeader title="Access unavailable" description="User administration requires an Administrator account."/><Link href="/projects" className="button secondary">Open projects</Link></>;
   const rows=state.sites.filter(site=>`${site.name} ${site.location}`.toLowerCase().includes(search.trim().toLowerCase()));
@@ -24,8 +24,7 @@ export function Admin() {
   return <><PageHeader title="Administration" description="Projects, user access and recorded workspace changes." actions={state.role==="Administrator"&&<><Link href="/admin/maintenance" className="button danger-outline">Clear workspace</Link><button className="button primary" type="button" disabled={creating} onClick={()=>{setView(0);setCreating(true);}}>Add project</button></>}/>
     <ViewTabs id={id} labels={["Projects","Activity","Users"]} active={view} onChange={setView}/>
     <div role="tabpanel" id={`${id}-panel-0`} aria-labelledby={`${id}-tab-0`} hidden={view!==0}>
-      {creating&&<ProjectCreation confirm={confirm} onCancel={()=>setCreating(false)} onCreated={key=>{setCreating(false);setSearch("");setTabs(current=>({...current,[key]:1}));select(key);setMessage("Project saved. Review its folder status and configure scopes.");}}/>}
-      {message&&<p className="admin-feedback success" role="status">{message}</p>}
+      {creating&&<ProjectCreation confirm={confirm} onCancel={()=>setCreating(false)} onCreated={key=>{setCreating(false);setSearch("");setTabs(current=>({...current,[key]:1}));select(key);}}/>}
       <div className="admin-projects"><Register rows={rows} unit="projects" resetKey={search} filters={<input type="search" aria-label="Search projects" placeholder="Search project or location" value={search} onChange={event=>setSearch(event.target.value)}/>} empty={state.sites.length?"No projects match this search.":"No projects yet. Add a project to configure its folder and scopes."} headers={<><th>Project</th><th>Location</th><th className="numeric">Budget</th><th className="numeric">Scopes</th><th>Drive</th><th>Details</th></>} renderRow={site=><tr key={site.id} data-project-row={site.id}><td><strong className="table-primary" title={site.name}>{site.name}</strong></td><td><span className="table-text" title={site.location}>{site.location}</span></td><td className="numeric">{money(site.budget)}</td><td className="numeric">{projectScopes(state,site.id).length}</td><td><span className={`badge ${site.driveFolderId?"good":"warn"}`}>{site.driveFolderId?"Folder ready":"Setup pending"}</span></td><td className="register-actions"><button id={`project-details-${site.id}`} type="button" className="button secondary" aria-haspopup="dialog" aria-label={`Details for ${site.name}`} onClick={()=>select(site.id)}>Details</button></td></tr>}/></div>
     </div>
     <div role="tabpanel" id={`${id}-panel-1`} aria-labelledby={`${id}-tab-1`} hidden={view!==1}><AdminActivity state={{...state,activity:[...state.activity,...directory.activity].sort((a,b)=>b.at.localeCompare(a.at))}}/></div>

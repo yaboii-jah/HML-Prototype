@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRef, useState } from "react";
 import { useDemo } from "@/src/app-state/DemoProvider";
+import { useActionFeedback } from "@/src/app-state/action-feedback";
 import { CollapsibleSection } from "@/src/components/ui/CollapsibleSection";
 import { RecordModal } from "@/src/components/ui/RecordModal";
 import { Badge, Empty, Field, InlineError } from "@/src/components/ui/Primitives";
@@ -25,6 +26,7 @@ export function CompareAllocate({ state, request, initialMaterialId, canEdit, wo
   confirmAction: ConfirmedAction; onGenerated: () => void; onPreview: (quote: Quote) => void; onReview: (quote: Quote) => void;
 }) {
   const { run } = useDemo();
+  const { notify, update } = useActionFeedback();
   const [selectedId, setSelectedId] = useState(initialMaterialId || request.items[0]?.id || "");
   const [search, setSearch] = useState(""), [filter, setFilter] = useState("all"), [mobileDetail, setMobileDetail] = useState(!!initialMaterialId);
   const [edits, setEdits] = useState<Record<string, string>>({}), [errors, setErrors] = useState<Record<string, string>>({});
@@ -74,18 +76,43 @@ export function CompareAllocate({ state, request, initialMaterialId, canEdit, wo
     if (offers.reduce((sum, offer) => sum + Number(value(offer.line.id)), 0) + ordered(selected.id) > selected.quantity + 0.000001) { setError("Awarded quantities exceed the remaining MRF quantity. Reduce an allocation before applying."); return; }
     const changed = offers.filter(offer => dirty(offer.line.id));
     await confirmAction(`Apply allocations for ${selected.name}?`, changed.map(({ quote, line }) => `${supplier(state, quote)} · ${quote.ref}: ${saved(line.id)} → ${value(line.id)} ${selected.unit}`).join("\n") + "\nPurchase orders are generated separately.", "Apply allocations", async () => {
+      const toast = notify({ tone: "progress", title: `Applying allocations for ${selected.name}…`, detail: `${changed.length} supplier line${changed.length === 1 ? "" : "s"} changed` });
       const result = await run({ type: "replaceMaterialAwards", requestId: request.id, itemId: selected.id, awards: offers.filter(offer => Number(value(offer.line.id)) > 0).map(({ quote, line }) => ({ quoteId: quote.id, quoteLineId: line.id, quantity: Number(value(line.id)) })) });
-      if (result.ok) reset(selected.id); else setError(result.message);
+      if (result.ok) { reset(selected.id); update(toast, { tone: "success", title: "Allocations applied.", detail: selected.name }); } else { setError(result.message); update(toast, { tone: "error", title: result.message, detail: selected.name }); }
     });
   };
   const generate = async () => {
     if (!canEdit || editedCount || !staged.length || pending.current || working) return;
     pending.current = true; setGenerating(true); setError("");
+    const toast = notify({ tone: "progress", title: "Generating supplier PO drafts…", detail: `${staged.length} saved award${staged.length === 1 ? "" : "s"}` });
     try {
       const result = await run({ type: "generateAwardPOs", requestId: request.id, reasons });
-      if (result.ok) { setReviewOpen(false); onGenerated(); } else setError(result.message);
-    } catch (cause) { setError(cause instanceof Error ? cause.message : "PO drafts could not be generated. Try again."); }
+      if (result.ok) { update(toast, { tone: "success", title: result.message, detail: request.ref }); setReviewOpen(false); onGenerated(); }
+      else { setError(result.message); update(toast, { tone: "error", title: result.message, detail: request.ref }); }
+    } catch (cause) { const text = cause instanceof Error ? cause.message : "PO drafts could not be generated. Try again."; setError(text); update(toast, { tone: "error", title: text, detail: request.ref }); }
     finally { pending.current = false; setGenerating(false); }
+  };
+  const applyAll = async () => {
+    if (!canEdit || blocked || !editedCount) return;
+    const materials = request.items.filter(item => materialEdited(item.id));
+    const invalid: Record<string, string> = {};
+    for (const item of materials) {
+      const rows = materialLines(item.id);
+      for (const offer of rows) {
+        const raw = value(offer.line.id), quantity = Number(raw);
+        if (!raw.trim() || !Number.isFinite(quantity) || quantity < 0 || quantity > capacity(offer) + 0.000001) invalid[offer.line.id] = `Enter a quantity between 0 and ${capacity(offer)}.`;
+        else if (quantity > 0 && eligibility(offer.quote)) invalid[offer.line.id] = eligibility(offer.quote);
+      }
+      if (rows.reduce((sum, row) => sum + Number(value(row.line.id)), 0) + ordered(item.id) > item.quantity + 0.000001) { choose(item.id); setError(`Allocations exceed the requested quantity for ${item.name}.`); return; }
+    }
+    setErrors(invalid);
+    if (Object.keys(invalid).length) { const first = materials.find(item => materialLines(item.id).some(row => invalid[row.line.id])); if (first) choose(first.id); setError("Correct the highlighted quantities before applying all edits."); return; }
+    const batch = materials.map(item => ({ itemId: item.id, awards: materialLines(item.id).filter(row => Number(value(row.line.id)) > 0).map(({ quote, line }) => ({ quoteId: quote.id, quoteLineId: line.id, quantity: Number(value(line.id)) })) }));
+    await confirmAction(`Apply edits for ${materials.length} materials?`, `${materials.map(item => item.name).join(" · ")}\nAll edits are saved together. Partial purchasing is allowed; POs are generated separately.`, "Apply all edits", async () => {
+      const result = await run({ type: "replaceMaterialAwardBatch", requestId: request.id, materials: batch });
+      if (result.ok) { setEdits({}); setErrors({}); setError(""); notify({ tone: "success", title: result.message }); }
+      else { setError(result.message); notify({ tone: "error", title: result.message }); }
+    });
   };
   const visibleMaterials = request.items.filter(item => (!search.trim() || `${item.name} ${item.unit}`.toLowerCase().includes(search.trim().toLowerCase())) && (filter === "all" || filter === "remaining" && remaining(item.id) > 0 || filter === "edited" && materialEdited(item.id)));
   const next = selected && [...request.items.slice(request.items.indexOf(selected) + 1), ...request.items.slice(0, request.items.indexOf(selected))].find(item => remaining(item.id) > 0);
@@ -120,7 +147,7 @@ export function CompareAllocate({ state, request, initialMaterialId, canEdit, wo
           </> : <Empty detail="This request has no materials."/>}
         </div>
       </div>
-      <footer className="allocation-footer"><div><strong>{request.items.filter(item => remaining(item.id) === 0).length} of {request.items.length} materials covered</strong><small>{staged.length} saved awards · {editedCount} materials with unapplied edits</small><small>Applied allocations survive refresh. Unapplied edits last while this workspace is open.</small></div><button ref={reviewTrigger} type="button" className="button secondary" disabled={!staged.length || blocked} onClick={() => { setError(""); setReviewOpen(true); }}>Review allocations</button></footer>
+      <footer className="allocation-footer"><div><strong>{request.items.filter(item => remaining(item.id) === 0).length} of {request.items.length} materials covered</strong><small>{staged.length} saved awards · {editedCount} materials with unapplied edits</small><small>Applied allocations survive refresh. Unapplied edits last while this workspace is open.</small></div><div className="button-row">{canEdit && editedCount > 0 && <button type="button" className="button primary" disabled={blocked} onClick={() => void applyAll()}>Apply all edits ({editedCount})</button>}<button ref={reviewTrigger} type="button" className="button secondary" disabled={!staged.length || blocked} onClick={() => { setError(""); setReviewOpen(true); }}>Review allocations</button></div></footer>
     </section>
     <CollapsibleSection title="Quotation financial summaries" defaultOpen={false}>{finalized.map(quote => <section className="panel" key={quote.id}><h3>{supplier(state, quote)} · {quote.ref}</h3><QuotationFinancialSummary quote={quote}/><button type="button" className="button secondary" onClick={() => onReview(quote)}>Review VAT / NON VAT</button></section>)}</CollapsibleSection>
     <CollapsibleSection title="Comparison reports" summary="PDF / Excel exports and saved versions" defaultOpen={false}><BidComparisonReports requestId={request.id}/></CollapsibleSection>

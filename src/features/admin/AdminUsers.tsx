@@ -2,6 +2,7 @@
 
 import { useRef, useState, type FormEvent } from "react";
 import { useDemo } from "@/src/app-state/DemoProvider";
+import { useActionFeedback } from "@/src/app-state/action-feedback";
 import type { ManagedUser } from "@/src/app-state/user-directory";
 import { ROLES } from "@/src/domain/types";
 import type { Role } from "@/src/domain/types";
@@ -13,6 +14,7 @@ import { useConfirmation } from "@/src/components/ui/ConfirmDialog";
 
 export function AdminUsers() {
   const { directory, session, manageUser } = useDemo();
+  const { notify, update } = useActionFeedback();
   const [search, setSearch] = useState(""), [role, setRole] = useState("all"), [status, setStatus] = useState("all");
   const [editor, setEditor] = useState<ManagedUser | "new" | null>(null), [passwordUser, setPasswordUser] = useState<ManagedUser | null>(null);
   const [busy, setBusy] = useState(false), [error, setError] = useState(""), [message, setMessage] = useState("");
@@ -25,7 +27,9 @@ export function AdminUsers() {
     submitting.current = true; setBusy(true); setError(""); setMessage("");
     try {
       if (!await confirm(editor === "new" ? "Add user?" : "Save user changes?", `${name.trim()} / ${email.trim()} / ${role}. Role or email changes end this user's existing sessions.`, editor === "new" ? "Add user" : "Save changes")) return;
+      const toast = notify({ tone: "progress", title: editor === "new" ? "Adding user…" : "Saving user changes…" });
       const result = await manageUser(editor === "new" ? { type: "add", name, email, role, password: String(form.get("password") || "") } : { type: "edit", id: editor.id, revision: editor.revision, name, email, role });
+      update(toast, result.ok ? { tone: "success", title: result.message, detail: name.trim() } : { tone: "error", title: result.message });
       if (result.ok) { setEditor(null); setMessage(result.message); } else setError(result.message);
     } finally { submitting.current = false; setBusy(false); }
   };
@@ -35,7 +39,9 @@ export function AdminUsers() {
     submitting.current = true; setBusy(true); setError("");
     try {
       if (!await confirm("Reset user password?", `Existing sessions for ${passwordUser.name} will end. Share the replacement password outside the app.`, "Reset password", true)) return;
+      const toast = notify({ tone: "progress", title: "Resetting password…", detail: passwordUser.name });
       const result = await manageUser({ type: "password", id: passwordUser.id, revision: passwordUser.revision, password });
+      update(toast, result.ok ? { tone: "success", title: result.message, detail: passwordUser.name } : { tone: "error", title: result.message });
       if (result.ok) { setPasswordUser(null); setMessage(result.message); } else setError(result.message);
     } finally { submitting.current = false; setBusy(false); }
   };
@@ -43,7 +49,9 @@ export function AdminUsers() {
     if (submitting.current) return; submitting.current = true; setBusy(true); setError(""); setMessage("");
     try {
       if (!await confirm(user.active ? "Deactivate user?" : "Reactivate user?", user.active ? `${user.name} will lose sign-in access and be removed from presenter switching. Existing records retain their original attribution.` : `${user.name} will regain access with their assigned role and existing password.`, user.active ? "Deactivate" : "Reactivate", user.active)) return;
+      const toast = notify({ tone: "progress", title: user.active ? "Deactivating user…" : "Reactivating user…", detail: user.name });
       const result = await manageUser({ type: "status", id: user.id, revision: user.revision, active: !user.active });
+      update(toast, result.ok ? { tone: user.active ? "warning" : "success", title: result.message, detail: user.name } : { tone: "error", title: result.message });
       if (result.ok) setMessage(result.message); else setError(result.message);
     } finally { submitting.current = false; setBusy(false); }
   };
