@@ -10,7 +10,7 @@ function workspace() {
   let snapshot = seedDemo(), active = admin;
   const repository = { getSnapshot: () => ({ snapshot }), execute: async (command, actor) => { const result = applyCommand(snapshot, command, context(actor)); if (result.ok) snapshot = result.snapshot; return result; } };
   const gateway = bindAccountCommands(repository, admin, () => active);
-  return { gateway, repository, get: () => snapshot, change: value => { active = value; }, add: () => repository.execute({ type: "addSite", name: `Folder project ${seq}`, location: "Pasig", budget: 100 }, admin) };
+  return { gateway, repository, get: () => snapshot, change: value => { active = value; }, add: () => repository.execute({ type: "addSite", documentCode: "FOLDER-" + seq, name: `Folder project ${seq}`, location: "Pasig", budget: 100 }, admin) };
 }
 test("project folder setup persists failures and clears them after automatic or manual mapping", async () => {
   const work = workspace(), created = await work.add(), id = created.recordId;

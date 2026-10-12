@@ -16,7 +16,7 @@ export async function POST(request: Request) {
     const document = Number.isInteger(index) ? quote?.documents[index!] : undefined;
     if (!quote || quote.reviewStatus !== "finalized" || quote.archive?.status !== "pending" || !mrf || mrf.id !== quote.mrfId || mrf.status !== "approved" || !body.projectFolderId || !document?.fileId || !document.name || !allowed.has(document.type) || !Number.isInteger(index) || index! < 0 || index! >= 12 || !Number.isInteger(size) || size! < 5 || size! > 20 * 1024 * 1024 || quote.documents.length > 12) return Response.json({ error: "The supplier quotation file is invalid." }, { status: 400 });
     const supplier = quote.supplierDetails?.name || "Supplier";
-    const prepared = await prepareQuoteFile(body.projectFolderId, mrf.id, mrf.ref, quote.id, quote.supplierId, supplier, quote.version || 1, index!, document.name, document.type, size!);
+    const prepared = await prepareQuoteFile(body.projectFolderId, mrf.id, mrf.ref, quote.id, quote.supplierId, supplier, quote.version || 1, index!, document.name, document.type, size!, document.archiveName);
     if ("driveFileId" in prepared) return Response.json(prepared);
     return Response.json({ ticket: sealQuoteUploadTicket({ quoteId: quote.id, fileIndex: index!, total: size!, mime: document.type, sessionUri: prepared.sessionUri }), offset: 0 });
   } catch (cause) { return Response.json({ error: driveError(cause) }, { status: 502 }); }

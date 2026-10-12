@@ -7,7 +7,7 @@ import { ACCOUNT_FIXTURES } from '../src/app-state/demo-session.ts';
 import { isExternalCredit } from '../src/domain/full-disbursement.ts';
 import { coordinatedPOs, coordinationStatus, coordinationWarning } from '../src/domain/payment-coordination.ts';
 import { creditOverdue, philippineDate } from '../src/domain/credit-terms.ts';
-import { budgetFor, paidTotal, paymentStatus } from '../src/domain/selectors.ts';
+import { budgetFor, paidTotal, paymentStatus, poTotal } from '../src/domain/selectors.ts';
 import { releaseBlocker, accountingNextAction } from '../src/domain/workflow.ts';
 import { tasksFor } from '../src/domain/queues.ts';
 import { requestMonitoring } from '../src/domain/request-monitoring.ts';
@@ -20,7 +20,7 @@ const as=(state,role)=>run(state,{type:'setRole',role});
 const fail=(state,command,pattern)=>{const before=structuredClone(state);const result=applyCommand(state,command,{...context,actor:ACCOUNT_FIXTURES.find(account=>account.role===state.role)});assert.equal(result.ok,false);if(pattern)assert.match(result.message,pattern);assert.deepEqual(state,before);};
 function submittedPO() {
   let state = as(blankWorkspace(), 'Administrator');
-  state = run(state, { type: 'addSite', name: 'Client project', location: 'Pasig', budget: 10000 });
+  state = run(state, { type: 'addSite', documentCode: 'CLIENT-PROJECT', name: 'Client project', location: 'Pasig', budget: 10000 });
   const siteId = state.sites[0].id;
   state = run(state, { type: 'setProjectDriveFolder', siteId, folderId: 'project-folder' });
   state = run(state, { type: 'saveProjectScope', siteId, name: 'Structural', budget: 10000 });
@@ -55,6 +55,22 @@ function proof(state,index=1,archive=true) {
   state=run(state,{type:'attachPaymentProofs',poId:state.pos[0].id,documents:[{name:`Proof-${index}.pdf`,mime:'application/pdf',size:20,localFileId:`proof-local-${index}`,sha256:index.toString(16).padStart(64,'0')}]});
   return archive?run(state,{type:'completePaymentProofArchive',poId:state.pos[0].id,documentId:state.pos[0].paymentProofs.at(-1).id,fileId:`credit-proof-${index}`,url:`https://drive.google.com/file/d/credit-proof-${index}/view`}):state;
 }
+
+test('partial payments use net payable cents and stale amounts above the remaining balance are rejected', () => {
+  let state = proof(issued());
+  state.pos[0].financial = { ...state.pos[0].financial, vatStatus: 'VAT', priceBasis: 'inclusive', ewtMode: 'manual', ewtGoodsManual: true, ewtGoods: 19.99 };
+  assert.equal(poTotal(state, state.pos[0]), 980.01);
+  state = run(state, record(state, 400));
+  assert.equal(paidTotal(state, state.pos[0].id), 400);
+  assert.equal(coordinationStatus(state, state.pos[0]), 'Pending');
+  const first = structuredClone(state.pos[0].creditPayments[0]);
+  state = proof(state, 2);
+  fail(state, record(state, 980.01, 'STALE', 'stale-payment'), /unpaid balance/);
+  state = run(state, record(state, 580.01, 'REMAINDER', 'remainder-payment'));
+  assert.equal(paidTotal(state, state.pos[0].id), 980.01);
+  assert.equal(coordinationStatus(state, state.pos[0]), 'Settled');
+  assert.deepEqual(state.pos[0].creditPayments[0], first);
+});
 
 test('new credit approvals require an agreed valid due date and enable external credit only on approval',()=>{
   let state=submittedPO(),po=state.pos[0];

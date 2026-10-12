@@ -18,7 +18,7 @@ export async function POST(request: Request) {
     const supportSize = body.supportSize;
     if (!data || data.status !== "approved" || data.archive?.status !== "pending" || !data.id || !data.ref || !data.items?.length || !supportingPdf(data) || !body.projectFolderId || !Number.isInteger(supportSize) || supportSize! < 5 || supportSize! > MAX) return Response.json({ error: "The approved MRF or combined PDF is invalid." }, { status: 400 });
     const version = data.archive.versions.length + 1;
-    const prepared = await prepareRequestArchive(body.projectFolderId, data.id, data.ref, version, supportUrl => generateMrfPdf(data, body.projectName || "", body.projectLocation || "", supportUrl), supportSize!);
+    const prepared = await prepareRequestArchive(body.projectFolderId, data.id, data.ref, version, supportUrl => generateMrfPdf(data, body.projectName || "", body.projectLocation || "", supportUrl), supportSize!, data.archive.fileRef);
     if ("supportFileId" in prepared) return Response.json(prepared);
     const ticket = sealDriveUploadTicket({ requestId: data.id, version, total: supportSize!, sessionUri: prepared.sessionUri, formFileId: prepared.formFileId, formUrl: prepared.formUrl });
     return Response.json({ ticket, offset: 0 });

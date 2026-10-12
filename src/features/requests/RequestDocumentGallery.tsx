@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Image from "next/image";
+import { DocumentLoading } from "@/src/components/ui/Skeleton";
+import { LoadingImage } from "@/src/components/ui/LoadingImage";
 import { CloseButton } from "@/src/components/ui/CloseButton";
 import { PdfDocumentViewer } from "@/src/components/PdfDocumentViewer";
 import type { DocumentRef, MRF } from "@/src/domain/types";
@@ -47,7 +48,7 @@ function PdfPage({ blob, pageNumber = 1, onPageCount }: { blob: Blob; pageNumber
     })();
     return () => { disposed = true; rendering?.cancel(); void loading?.destroy(); };
   }, [blob, pageNumber, onPageCount]);
-  return <>{status === "loading" && <span className="document-gallery-placeholder" role="status">Preparing preview…</span>}{status === "error" && <span className="document-gallery-placeholder">Page preview unavailable. Open the document to view it.</span>}<canvas ref={canvas} className="document-gallery-page" hidden={status !== "ready"} aria-label={`Page ${pageNumber} of the attached PDF`}/></>;
+  return <>{status === "loading" && <DocumentLoading inline/>}{status === "error" && <span className="document-gallery-placeholder">Page preview unavailable. Open the document to view it.</span>}<canvas ref={canvas} className="document-gallery-page" hidden={status !== "ready"} aria-label={`Page ${pageNumber} of the attached PDF`}/></>;
 }
 
 function DocumentCard({ document, swiping }: { document: GalleryDocument; swiping: React.RefObject<boolean> }) {
@@ -80,13 +81,13 @@ function DocumentCard({ document, swiping }: { document: GalleryDocument; swipin
   };
   return <>
     <button ref={trigger} type="button" className="document-gallery-card" aria-label={`Open ${document.name}`} disabled={!canOpen} aria-busy={source.loading} onClick={event => open(event.detail === 0)}>
-      {source.loading ? <span className="document-gallery-placeholder" role="status">Loading document…</span> : source.kind === "pdf" && source.blob ? <PdfPage blob={source.blob}/> : source.kind === "image" && !openError ? <span className="document-gallery-image"><Image src={source.url} alt={`Preview of ${document.name}`} fill unoptimized onError={() => setOpenError("Image preview unavailable. Open the document to view it.")}/></span> : <span className="document-gallery-placeholder"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="M14 2H6v20h12V6zM14 2v5h4M8 12h8M8 16h8"/></svg>{openError || source.error || "Preview not available for this file type."}</span>}
+      {source.loading ? <DocumentLoading inline/> : source.kind === "pdf" && source.blob ? <PdfPage blob={source.blob}/> : source.kind === "image" && !openError ? <LoadingImage key={source.url} src={source.url} alt={`Preview of ${document.name}`}/> : <span className="document-gallery-placeholder"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="M14 2H6v20h12V6zM14 2v5h4M8 12h8M8 16h8"/></svg>{openError || source.error || "Preview not available for this file type."}</span>}
       {canOpen && <span className="document-gallery-open">Open document ↗</span>}
     </button>
     {openError && <p className="field-error" role="alert">{openError}</p>}
     <dialog ref={dialog} className="document-gallery-modal" aria-label={`Preview of ${document.name}`} onClose={() => { setPreviewOpen(false); trigger.current?.focus({ preventScroll: true }); }}>
       <header><h2>{document.name}</h2><div className="button-row"><a className="button secondary" href={document.driveUrl || source.url} target="_blank" rel="noreferrer">Open document ↗</a><CloseButton onClick={() => dialog.current?.close()}/></div></header>
-      {previewOpen && (source.kind === "image" && source.url ? <div className="document-gallery-image-viewer"><Image src={source.url} alt={document.name} fill unoptimized/></div> : source.kind === "pdf" && source.blob ? <PdfDocumentViewer blob={source.blob} fileName={document.name} sourceUrl={source.url}/> : document.drivePreviewUrl ? <iframe src={document.drivePreviewUrl} title={document.name} allow="fullscreen"/> : <p className="document-gallery-placeholder">This file type opens in a separate tab. Use Open document to view it.</p>)}
+      {previewOpen && (source.kind === "image" && source.url ? <div className="document-gallery-image-viewer"><LoadingImage key={source.url} src={source.url} alt={document.name}/></div> : source.kind === "pdf" && source.blob ? <PdfDocumentViewer key={source.url} blob={source.blob} fileName={document.name} sourceUrl={source.url}/> : document.drivePreviewUrl ? <iframe src={document.drivePreviewUrl} title={document.name} allow="fullscreen"/> : <p className="document-gallery-placeholder">This file type opens in a separate tab. Use Open document to view it.</p>)}
     </dialog>
   </>;
 }

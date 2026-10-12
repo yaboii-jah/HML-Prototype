@@ -118,6 +118,7 @@ export function CompareAllocate({ state, request, initialMaterialId, canEdit, wo
   const next = selected && [...request.items.slice(request.items.indexOf(selected) + 1), ...request.items.slice(0, request.items.indexOf(selected))].find(item => remaining(item.id) > 0);
   const grouped = quotes.filter(quote => staged.some(award => award.quoteId === quote.id));
   return <>
+    <CollapsibleSection title="Comparison reports" summary="PDF / Excel exports and saved versions" defaultOpen><BidComparisonReports requestId={request.id}/></CollapsibleSection>
     <section className={`panel compare-allocate ${mobileDetail ? "is-detail" : "is-list"}`} aria-label="Compare and allocate materials">
       <div className="panel-heading"><div><h2>Compare &amp; allocate</h2><p className="helper-note">Choose offers and apply allocations one material at a time.</p></div><Badge>{request.items.length} materials</Badge></div>
       <div className="allocation-workspace">
@@ -150,7 +151,6 @@ export function CompareAllocate({ state, request, initialMaterialId, canEdit, wo
       <footer className="allocation-footer"><div><strong>{request.items.filter(item => remaining(item.id) === 0).length} of {request.items.length} materials covered</strong><small>{staged.length} saved awards · {editedCount} materials with unapplied edits</small><small>Applied allocations survive refresh. Unapplied edits last while this workspace is open.</small></div><div className="button-row">{canEdit && editedCount > 0 && <button type="button" className="button primary" disabled={blocked} onClick={() => void applyAll()}>Apply all edits ({editedCount})</button>}<button ref={reviewTrigger} type="button" className="button secondary" disabled={!staged.length || blocked} onClick={() => { setError(""); setReviewOpen(true); }}>Review allocations</button></div></footer>
     </section>
     <CollapsibleSection title="Quotation financial summaries" defaultOpen={false}>{finalized.map(quote => <section className="panel" key={quote.id}><h3>{supplier(state, quote)} · {quote.ref}</h3><QuotationFinancialSummary quote={quote}/><button type="button" className="button secondary" onClick={() => onReview(quote)}>Review VAT / NON VAT</button></section>)}</CollapsibleSection>
-    <CollapsibleSection title="Comparison reports" summary="PDF / Excel exports and saved versions" defaultOpen={false}><BidComparisonReports requestId={request.id}/></CollapsibleSection>
     <RecordModal open={reviewOpen} title="Review supplier allocations" onClose={() => { if (!generating) setReviewOpen(false); }} returnFocus={() => reviewTrigger.current}>
       <div className="allocation-review"><p>These saved awards will become supplier PO drafts. Partial purchasing is allowed; taxes, discounts and charges are reviewed during PO preparation.</p>
         {editedCount > 0 && <div className="callout warn">Apply or reset edits for {editedCount} materials before generating PO drafts.</div>}

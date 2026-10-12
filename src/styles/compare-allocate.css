@@ -18,3 +18,11 @@
   .allocation-offer-table .numeric{text-align:left}.allocation-offer-table input{width:100%}
 }
 .procurement-steps{grid-template-columns:repeat(3,minmax(0,1fr))}
+.bid-report-preview{width:min(1280px,calc(100vw - 32px));height:calc(100dvh - 48px);max-width:none;max-height:none;margin:auto;padding:18px;border:1px solid var(--line);border-radius:16px;background:var(--surface);color:var(--ink);overflow:hidden}
+.bid-report-preview[open]{display:flex;flex-direction:column;gap:14px}
+.bid-report-preview::backdrop{background:var(--color-modal-backdrop-surface)}
+.bid-report-preview>header{display:flex;align-items:center;justify-content:space-between;gap:16px;flex:none}
+.bid-report-preview h2{margin:0;font-size:20px}
+.bid-report-preview-content{flex:1;min-height:0;min-width:0;overflow:hidden;display:flex;flex-direction:column}
+.bid-report-preview-content>.pdf-document-viewer{flex:1;min-height:0}
+@media(max-width:640px){.bid-report-preview{width:calc(100vw - 12px);height:calc(100dvh - 12px);padding:10px;border-radius:10px}.bid-report-preview h2{font-size:17px}}

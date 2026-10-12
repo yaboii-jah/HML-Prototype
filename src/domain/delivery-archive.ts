@@ -1,5 +1,6 @@
 import type { Batch, DemoSnapshot, DeliveryReceiptVersion, Role } from "./types.ts";
 import { isSiteBatch } from "./delivery-flow.ts";
+import { archiveFileName, lockProjectCode, prefixedReference } from "./document-numbering.ts";
 
 export const receivedDelivery = (batch: Batch) => ["confirmed", "posted"].includes(batch.status);
 export function canAttachDelivery(state: DemoSnapshot, poId: string, batchId: string | undefined, role: Role) {
@@ -20,9 +21,12 @@ export function deliveryReceiptVersion(state: DemoSnapshot, batch: Batch, id: st
   const po = state.pos.find(value => value.id === batch.poId)!;
   const request = state.requests.find(value => value.id === po.mrfId)!;
   const project = state.sites.find(value => value.id === request.siteId)!;
+  const version = (batch.receiptVersions?.length || 0) + 1;
+  const fileName = project.documentCode ? archiveFileName(prefixedReference(project.documentCode, batch.ref), "receipt", `v${version}`, ".pdf") : undefined;
+  if (fileName) lockProjectCode(project, at);
   const snapshot = (value: Batch) => { const copy = structuredClone(value); delete copy.receiptVersions; return copy; };
   const parent = state.batches.find(value => value.id === batch.parentBatchId);
-  return { id, version: (batch.receiptVersions?.length || 0) + 1, createdAt: at, archive: { status: "pending" }, data: { kind: "delivery", batch: snapshot(batch), po: structuredClone(po), request: structuredClone(request), project: structuredClone(project), ...(parent ? { parentBatch: snapshot(parent) } : {}) } };
+  return { id, version, fileName, createdAt: at, archive: { status: "pending" }, data: { kind: "delivery", batch: snapshot(batch), po: structuredClone(po), request: structuredClone(request), project: structuredClone(project), ...(parent ? { parentBatch: snapshot(parent) } : {}) } };
 }
 export function deliveryDocumentIssues(state: DemoSnapshot, poId: string): string[] {
   const documents = state.accounting.find(value => value.poId === poId)?.documents || [];

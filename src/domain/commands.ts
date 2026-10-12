@@ -21,10 +21,11 @@ import type { ComparisonSelections } from "./types.ts";
 import type { PO, MRF } from "./types.ts";
 import { calculatedPoFinancial, defaultQuotationFinancial, poFinancialError, roundMoney } from "./pricing.ts";
 import { directPoError } from "./po-review.ts";
-import { newId, nextRef } from "./ids.ts";
+import { newId } from "./ids.ts";
+import { archiveFileName, freezeUploadNames, hasNewFiles, issueDocumentReference, lockProjectCode, nextDocumentReference, normalizeProjectCode, prefixedReference, projectCodeLocked, projectCodeRequired, projectCodeValidation } from "./document-numbering.ts";
 import { bidReportReadiness, captureBidReport } from "./bid-reports.ts";
 import { budgetFor, inventoryFor, orderedFor, paidTotal, poItems, poSupplierId, poTotal, requestForPO, schedulableFor, stockFor } from "./selectors.ts";
-import { hasFinalizedSuccessor, isFinalizedQuote, latestFinalizedQuotes, quoteReviewIssues } from "./procurement.ts";
+import { hasFinalizedSuccessor, isFinalizedQuote, latestFinalizedQuotes, quotationCurrency, quoteReviewIssues } from "./procurement.ts";
 import { poLineTotal } from "./pricing.ts";
 import { procurementReady, supportingPdf } from "./request-archive.ts";
 import { ROLES, type ArchivedQuoteFile, type DemoSnapshot, type DocumentRef, type DocumentStatus, type Item, type POAdjustment, type POLine, type Priority, type Quote, type Role } from "./types.ts";
@@ -45,7 +46,7 @@ export type Command =
   | { type: "replaceMaterialAwards"; requestId: string; itemId: string; awards: { quoteId: string; quoteLineId: string; quantity: number }[] }
   | { type: "replaceMaterialAwardBatch"; requestId: string; materials: { itemId: string; awards: { quoteId: string; quoteLineId: string; quantity: number }[] }[] }
   | { type: "removeSite"; siteId: string }
-  | { type: "updateSite"; siteId: string; name: string; location: string; budget: number }
+  | { type: "updateSite"; documentCode?: string; siteId: string; name: string; location: string; budget: number }
   | { type: "removeProjectScope"; siteId: string; id: string }
   | { type: "saveProjectScope"; id?: string; siteId: string; name: string; budget: number }
   | { type: "startOperation"; target: OperationTarget }
@@ -59,7 +60,7 @@ export type Command =
   | { type: "failBidArchive"; format?: "xlsx" | "pdf"; id: string; error: string }
   | { type: "setRole"; role: Role }
   | { type: "setSiteFilter"; siteId: string }
-  | { type: "saveRequest"; aiAssisted?: boolean; aiReviewed?: boolean; specialInstructions?: string; signatoryTitles?: string[]; id?: string; intent: "draft" | "submit"; siteId: string; scopeId?: string; ref: string; requestDate: string; scopeDocument?: DocumentRef; requestedBy: string; approvedBy: string; purchaser: string; financeOfficer: string; items: Item[]; documents: DocumentRef[] }
+  | { type: "saveRequest"; sourceRef?: string; aiAssisted?: boolean; aiReviewed?: boolean; specialInstructions?: string; signatoryTitles?: string[]; id?: string; intent: "draft" | "submit"; siteId: string; scopeId?: string; ref: string; requestDate: string; scopeDocument?: DocumentRef; requestedBy: string; approvedBy: string; purchaser: string; financeOfficer: string; items: Item[]; documents: DocumentRef[] }
   | { type: "reviewRequest"; id: string; decision: "approve" | "return" | "reject"; reason?: string }
   | { type: "reopenApprovedRequest"; id: string; reason: string }
   | { type: "completeRequestArchive"; id: string; formFileId: string; supportFileId: string; formUrl: string; supportUrl: string }
@@ -98,7 +99,7 @@ export type Command =
   | { type: "classifyAccountingDocument"; poId: string; documentId: string; kind: AccountingDocument["kind"]; batchId?: string }
   | { type: "saveDocuments"; poId: string; invoiceRef: string; receiptRef: string; review: DocumentStatus; note: string }
   | { type: "recordPayment"; paymentRequestId: string; method: "Cash" | "Bank" | "Check" | "Other"; reference: string; date: string }
-  | { type: "addSite"; name: string; location: string; budget: number }
+  | { type: "addSite"; documentCode?: string; name: string; location: string; budget: number }
   | { type: "addSupplierFromQuote"; name: string };
 
 export type CommandContext = { now: () => string; id: (prefix: string) => string; actor?: AuditIdentity };
@@ -205,8 +206,11 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       if (!nonnegative(command.budget) || !Number.isFinite(budget)) return fail("Enter a valid budget of zero or more.", "budget");
       if (state.sites.some(value => value.id !== site.id && value.name.trim().toLowerCase() === name.toLowerCase())) return fail("Enter a unique project name.", "name");
       if (budget < projectMinimumBudget(state, site.id)) return fail("Project budget cannot be below its scope allocations or committed and spent funds.", "budget");
-      if (site.name === name && site.location === location && site.budget === budget) return done("Project details unchanged.", site.id);
-      Object.assign(site, { name, location, budget });
+      const documentCode = command.documentCode === undefined ? site.documentCode : normalizeProjectCode(command.documentCode);
+      if (command.documentCode !== undefined) { const error = projectCodeValidation(state, documentCode!, site.id); if (error) return fail(error, "documentCode"); }
+      if (documentCode !== site.documentCode && projectCodeLocked(site)) return fail("The project code is locked because it has already been used.", "documentCode");
+      if (site.name === name && site.location === location && site.budget === budget && site.documentCode === documentCode) return done("Project details unchanged.", site.id);
+      Object.assign(site, { name, location, budget, documentCode });
       log(site.id, "Project details updated");
       return done("Project details saved.", site.id);
     }
@@ -254,14 +258,19 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       if (!permit("Procurement")) return fail("Sign in as Procurement to generate a bid comparison.");
       const error = bidReportReadiness(state, command.requestId);
       if (error) return fail(error);
+      const request = state.requests.find(value => value.id === command.requestId)!;
+      const codeError = projectCodeRequired(state, request.siteId);
+      if (codeError) return fail(codeError);
+      const project = state.sites.find(value => value.id === request.siteId)!;
+      lockProjectCode(project, at);
       const data = captureBidReport(state, command.requestId, true);
       let comparisonSelections: ComparisonSelections;
       try { comparisonSelections = resolveComparisonSelections(data, command.comparisonSelections); }
       catch (cause) { return fail(cause instanceof Error ? cause.message : "Review the comparison alternatives."); }
       const version = Math.max(0, ...state.bidReports.filter(report => report.requestId === command.requestId).map(report => report.version)) + 1;
       const reportId = id("bid");
-      const ref = data.request.ref.replace(/[^A-Za-z0-9_-]/g, "_").slice(0, 100) || "MRF";
-      state.bidReports.push({ id: reportId, requestId: command.requestId, version, comparisonRevision: 3, comparisonSelections, generatedAt: at, fileName: `${ref}-bid-comparison-v${version}.xlsx`, data, pdf: { fileName: `${ref}-bid-comparison-v${version}.pdf`, archive: { status: "pending" } }, archive: { status: "pending" } });
+      const ref = prefixedReference(project.documentCode!, data.request.ref);
+      state.bidReports.push({ id: reportId, requestId: command.requestId, version, comparisonRevision: 3, comparisonSelections, generatedAt: at, fileName: archiveFileName(ref, "bid-comparison", "v" + version, ".xlsx"), data, pdf: { fileName: archiveFileName(ref, "bid-comparison", "v" + version, ".pdf"), archive: { status: "pending" } }, archive: { status: "pending" } });
       log(reportId, `Bid comparison v${version} captured`);
       return done("Bid comparison captured. Generating Excel and PDF…", reportId);
     }
@@ -308,7 +317,10 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       const correcting = original?.status === "approved" && original.correction?.status === "requested";
       if (original && !["draft", "returned"].includes(original.status) && !correcting) return fail("Only draft, returned, or reopened MRFs can be edited.");
       const aiAssisted = original?.aiAssisted === true || command.aiAssisted === true;
-      const ref = (command.ref || "").trim();
+      if (!original) { const error = projectCodeRequired(state, command.siteId); if (error) return fail(error, "siteId"); }
+      if (original?.numbering && original.siteId !== command.siteId) return fail("A numbered MRF cannot move to another project.", "siteId");
+      const assigned = original ? undefined : nextDocumentReference(state, command.siteId, "MRF");
+      const ref = original?.numbering ? original.ref : assigned?.ref || (command.ref || "").trim();
       const requestDate = (command.requestDate || "").trim();
       const scopeId = command.scopeId?.trim() || undefined;
       if (scopeId && scopeValidationError(state, command.siteId, scopeId, false)) return fail("Choose a scope of work belonging to this project.", "scopeId");
@@ -324,11 +336,16 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       }
       const aiReview = aiAssisted ? { aiAssisted: true, aiReviewedAt: command.intent === "submit" ? at : undefined, aiReviewedBy: command.intent === "submit" ? actor : undefined, aiReviewedByIdentity: command.intent === "submit" ? copyIdentity(identity) : undefined } : {};
       const items = command.items.map(i => ({ ...i, name: i.name.trim(), unit: i.unit.trim(), id: i.id || id("item"), neededDate: i.neededDate.trim(), purpose: i.purpose.trim(), location: i.location.trim(), remarks: i.remarks.trim() }));
-      const fields = { specialInstructions: command.specialInstructions?.trim() || "", signatoryTitles: command.signatoryTitles?.slice(0, 4).map(value => value.trim()) || [], ref, requestDate, siteId: command.siteId, scopeId, category: original?.category || "", scope: original?.scope || "", scopeDocument: command.scopeDocument, requestedBy: command.requestedBy.trim(), approvedBy: command.approvedBy.trim(), purchaser: command.purchaser.trim(), financeOfficer: command.financeOfficer.trim(), items, documents: command.documents.filter(d => d.name.trim()), status: command.intent === "submit" ? "submitted" as const : "draft" as const, reason: undefined, updatedAt: at };
+      const newFiles = hasNewFiles(command.documents, original?.documents);
+      if (newFiles) { const error = projectCodeRequired(state, command.siteId); if (error) return fail(error, "siteId"); }
+      const documents = freezeUploadNames(state, command.siteId, ref, command.documents, original?.documents || [], at);
+      const archiveRef = newFiles ? prefixedReference(state.sites.find(site => site.id === command.siteId)!.documentCode!, ref) : original?.archiveRef;
+      const fields = { sourceRef: command.sourceRef === undefined ? original?.sourceRef || "" : command.sourceRef.trim(), archiveRef, specialInstructions: command.specialInstructions?.trim() || "", signatoryTitles: command.signatoryTitles?.slice(0, 4).map(value => value.trim()) || [], ref, requestDate, siteId: command.siteId, scopeId, category: original?.category || "", scope: original?.scope || "", scopeDocument: command.scopeDocument, requestedBy: command.requestedBy.trim(), approvedBy: command.approvedBy.trim(), purchaser: command.purchaser.trim(), financeOfficer: command.financeOfficer.trim(), items, documents: documents.filter(d => d.name.trim()), status: command.intent === "submit" ? "submitted" as const : "draft" as const, reason: undefined, updatedAt: at };
       if (original) {
         if (correcting) {
           if (original.correction?.scope === "documents" && (scopeId !== original.scopeId || ref !== original.ref || requestDate !== original.requestDate || command.siteId !== original.siteId || JSON.stringify(items) !== JSON.stringify(original.items) || fields.requestedBy !== original.requestedBy || fields.approvedBy !== original.approvedBy || fields.purchaser !== original.purchaser || fields.financeOfficer !== original.financeOfficer || fields.specialInstructions !== (original.specialInstructions || "") || JSON.stringify(fields.signatoryTitles) !== JSON.stringify(original.signatoryTitles || []))) return fail("Only the supporting PDF can change after procurement has started.");
           original.documents = fields.documents;
+          original.archiveRef = fields.archiveRef;
           if (original.correction?.scope === "full") Object.assign(original, { ...fields, status: "approved" });
           if (command.intent === "submit") original.correction = { ...original.correction!, status: "submitted" };
           original.updatedAt = at;
@@ -338,7 +355,7 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
         return done(command.intent === "submit" ? `MRF submitted to ${requiresPMReview(original) ? "Project Manager" : "Procurement"}.` : "MRF draft saved.", original.id);
       }
       const requestId = id("mrf");
-      state.requests.push({ id: requestId, workflow: "pm-external-v1", createdAt: at, ...fields, ...aiReview });
+      state.requests.push({ id: requestId, ...issueDocumentReference(state, command.siteId, "MRF", at), workflow: "pm-external-v1", createdAt: at, ...fields, ...aiReview });
       log(requestId, command.intent === "submit" ? "MRF submitted" : "MRF draft saved");
       return done(command.intent === "submit" ? "MRF submitted to Project Manager." : "MRF draft saved.", requestId);
     }
@@ -354,13 +371,13 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       if (request.correction) {
         if (command.decision === "reject") return fail("Return the correction to Site Personnel instead.");
         if (command.decision === "return") request.correction = { ...request.correction, status: "requested", reason: command.reason!.trim() };
-        else { request.correction = undefined; request.archive = { status: "pending", approvedAt: at, versions: request.archive?.versions || [] }; }
+        else { request.correction = undefined; request.archive = { status: "pending", approvedAt: at, fileRef: request.archiveRef || request.ref, versions: request.archive?.versions || [] }; }
         request.updatedAt = at;
         log(request.id, command.decision === "approve" ? "MRF correction approved; Drive archive pending" : "MRF correction returned", command.reason);
         return done(command.decision === "approve" ? "MRF correction approved. Archiving to Drive." : "MRF correction returned.");
       }
       request.status = command.decision === "approve" ? "approved" : command.decision === "return" ? "returned" : "rejected";
-      if (command.decision === "approve") request.archive = { status: "pending", approvedAt: at, versions: [] };
+      if (command.decision === "approve") request.archive = { status: "pending", approvedAt: at, fileRef: request.archiveRef || request.ref, versions: [] };
       request.reason = command.decision === "approve" ? undefined : command.reason?.trim();
       request.updatedAt = at;
       log(request.id, `MRF ${request.status}`, request.reason);
@@ -415,7 +432,9 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       if (incoming.supersedesId && !previousQuote) return fail("Choose a finalized quotation to revise.");
       if (!existing && state.quotes.some(value => value.id === incoming.id)) return fail("Quotation ID already exists.");
       if (!existing && incoming.supersedesId && state.quotes.some(value => value.supersedesId === incoming.supersedesId && value.reviewStatus === "draft")) return fail("A draft revision already exists for this quotation.");
-      const draft: Quote = { ...incoming, financial: incoming.financial || (existing ? existing.financial : defaultQuotationFinancial()), reviewStatus: "draft", prices: {}, version: existing?.version || (previousQuote?.version || 0) + 1, documents: incoming.documents, archive: undefined, reviewedAt: undefined };
+      if (hasNewFiles(incoming.documents, existing?.documents)) { const error = projectCodeRequired(state, request!.siteId); if (error) return fail(error); }
+      const documents = freezeUploadNames(state, request!.siteId, request!.ref, incoming.documents, existing?.documents || [], at, incoming.id);
+      const draft: Quote = { ...incoming, currency: quotationCurrency(incoming.currency), financial: incoming.financial || (existing ? existing.financial : defaultQuotationFinancial()), reviewStatus: "draft", prices: {}, version: existing?.version || (previousQuote?.version || 0) + 1, documents, archive: undefined, reviewedAt: undefined };
       if (existing) Object.assign(existing, draft);
       else state.quotes.push(draft);
       return done(existing ? "Quotation draft saved." : "Quotation draft created.", draft.id);
@@ -437,6 +456,7 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       if (!procurementReady(state.requests.find(value => value.id === quote.mrfId))) return fail("Procurement is paused until the MRF archive is ready.");
       const issues = quoteReviewIssues(state, quote);
       if (issues.length) return fail(issues[0]);
+      quote.currency = quotationCurrency(quote.currency);
       const supplierName = quote.supplierDetails?.name.trim() || state.suppliers.find(value => value.id === quote.supplierId)?.name || "";
       const supplier = state.suppliers.find(value => value.name.trim().toLowerCase() === supplierName.toLowerCase());
       const supplierId = supplier?.id || id("supplier");
@@ -527,6 +547,8 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
     }
     case "generateAwardPOs": {
       if (!permit("Procurement")) return fail("Sign in as Procurement to prepare POs.");
+      const codeError = projectCodeRequired(state, state.requests.find(value => value.id === command.requestId)?.siteId || "");
+      if (codeError) return fail(codeError);
       if (!procurementReady(state.requests.find(value => value.id === command.requestId))) return fail("Procurement is paused until the MRF archive is ready.");
       const pending = state.pendingAwards.filter(value => value.requestId === command.requestId);
       if (!pending.length) return fail("Stage at least one supplier award.");
@@ -557,7 +579,7 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
           ...(quote.discount ? [{ id: id("adjustment"), label: "Discount", kind: "discount" as const, calculation: "fixed" as const, value: quote.discount }] : []),
         ]).map(value => ({ ...value, included: true, confirmed: false }));
         const poId = id("po");
-        state.pos.push({ id: poId, ref: nextRef("PO-2026", state.pos), mrfId: command.requestId, quoteId, lines, adjustments, status: "draft", priority: "Normal", notes: "", selectionReason, createdAt: at, updatedAt: at });
+        state.pos.push({ id: poId, ...issueDocumentReference(state, state.requests.find(value => value.id === command.requestId)!.siteId, "PO", at), mrfId: command.requestId, quoteId, lines, adjustments, status: "draft", priority: "Normal", notes: "", selectionReason, createdAt: at, updatedAt: at });
         initializePo(state.pos[state.pos.length - 1], state.requests.find(value => value.id === command.requestId)!, quote);
         firstId ||= poId;
         log(poId, "PO drafted from staged supplier award", selectionReason || undefined);
@@ -578,7 +600,10 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       const current = state.quotes.filter(q => q.mrfId === request.id && q.supplierId === command.supplierId && !state.quotes.some(later => later.supersedesId === q.id));
       if (current.length && (!prior || !current.some(q => q.id === prior.id))) return fail("Choose the current supplier quotation as the revision being replaced.");
       const quoteId = id("quote");
-      state.quotes.push({ id: quoteId, mrfId: request.id, supplierId: command.supplierId, ref: command.ref.trim(), prices: {}, available: command.available.trim(), leadDays: command.leadDays, terms: command.terms.trim(), documents: command.documents, archive: { status: "pending", files: [] }, reviewStatus: "finalized", lines: command.lines.map(line => ({ ...line, id: line.id || id("offer"), description: line.description.trim(), unit: line.unit.trim(), brand: line.brand.trim(), specification: line.specification.trim(), varianceReason: line.varianceReason.trim() })), version: (prior?.version || 0) + 1, supersedesId: prior?.id, currency: "PHP", tax: command.tax, freight: command.freight, discount: command.discount, validity: command.validity.trim(), extraction: command.extraction });
+      const codeError = projectCodeRequired(state, request.siteId);
+      if (codeError) return fail(codeError);
+      const documents = freezeUploadNames(state, request.siteId, request.ref, command.documents, [], at, quoteId);
+      state.quotes.push({ id: quoteId, mrfId: request.id, supplierId: command.supplierId, ref: command.ref.trim(), prices: {}, available: command.available.trim(), leadDays: command.leadDays, terms: command.terms.trim(), documents, archive: { status: "pending", files: [] }, reviewStatus: "finalized", lines: command.lines.map(line => ({ ...line, id: line.id || id("offer"), description: line.description.trim(), unit: line.unit.trim(), brand: line.brand.trim(), specification: line.specification.trim(), varianceReason: line.varianceReason.trim() })), version: (prior?.version || 0) + 1, supersedesId: prior?.id, currency: "PHP", tax: command.tax, freight: command.freight, discount: command.discount, validity: command.validity.trim(), extraction: command.extraction });
       log(quoteId, "Supplier quotation reviewed");
       return done("Quotation saved for comparison.", quoteId);
     }
@@ -589,8 +614,10 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       const error = awardError(state, command.requestId, quote, command.lines, command.tax, command.freight, command.discount);
       if (error) return fail(error);
       if (!reasonOK(command.reason)) return fail("Explain the supplier choice in at least five characters.");
+      const codeError = projectCodeRequired(state, state.requests.find(value => value.id === command.requestId)!.siteId);
+      if (codeError) return fail(codeError);
       const poId = id("po");
-      state.pos.push({ id: poId, ref: nextRef("PO-2026", state.pos), mrfId: command.requestId, quoteId: quote.id, lines: command.lines, tax: command.tax, freight: command.freight, discount: command.discount, status: "draft", priority: "Normal", notes: command.notes.trim(), selectionReason: command.reason.trim(), createdAt: at, updatedAt: at });
+      state.pos.push({ id: poId, ...issueDocumentReference(state, state.requests.find(value => value.id === command.requestId)!.siteId, "PO", at), mrfId: command.requestId, quoteId: quote.id, lines: command.lines, tax: command.tax, freight: command.freight, discount: command.discount, status: "draft", priority: "Normal", notes: command.notes.trim(), selectionReason: command.reason.trim(), createdAt: at, updatedAt: at });
       initializePo(state.pos[state.pos.length - 1], state.requests.find(value => value.id === command.requestId)!, quote!);
       log(poId, "PO drafted from awarded quotation", command.reason);
       return done("PO draft created.", poId);
@@ -604,8 +631,10 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       if (quote.archive && quote.archive.status !== "complete") return fail("Archive the supplier quotation before creating a PO.");
       if (state.pos.some(p => p.mrfId === request.id && p.status !== "rejected")) return fail("Use the material award flow to create another PO for this MRF.");
       if (!reasonOK(command.reason)) return fail("Explain the supplier choice in at least five characters.", "reason");
+      const codeError = projectCodeRequired(state, state.requests.find(value => value.id === command.requestId)!.siteId);
+      if (codeError) return fail(codeError);
       const poId = id("po");
-      state.pos.push({ id: poId, ref: nextRef("PO-2026", state.pos), mrfId: request.id, quoteId: quote.id, status: "draft", priority: "Normal", notes: command.notes.trim(), selectionReason: command.reason.trim(), createdAt: at, updatedAt: at });
+      state.pos.push({ id: poId, ...issueDocumentReference(state, state.requests.find(value => value.id === command.requestId)!.siteId, "PO", at), mrfId: request.id, quoteId: quote.id, status: "draft", priority: "Normal", notes: command.notes.trim(), selectionReason: command.reason.trim(), createdAt: at, updatedAt: at });
       initializePo(state.pos[state.pos.length - 1], request, quote);
       log(poId, "PO drafted", command.reason);
       return done("PO draft created.", poId);
@@ -727,6 +756,8 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
           if (!po.paymentDueDate || !validPaymentDate(po.paymentDueDate)) return fail("Enter the agreed payment due date before approving credit terms.", "paymentDueDate");
           po.externalCredit = true;
         }
+        const project = state.sites.find(value => value.id === request.siteId)!;
+        if (project.documentCode) { po.archiveRef = prefixedReference(project.documentCode, po.ref); lockProjectCode(project, at); }
         po.status = "approved"; po.reviewReason = undefined; po.updatedAt = at; po.reviewedAt = at; po.reviewedBy = actor; po.reviewedByIdentity = copyIdentity(identity); po.archive = { status: "pending" };
         log(po.id, "PO approved by Accounting; budget committed"); return done("PO approved. Archive its PDF before release to Logistics.");
       }
@@ -762,7 +793,10 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       if (!command.documents.length || command.documents.length + pending.length > 12 || command.documents.some(value => !validAccountingDocument({ ...value, kind: "Payment receipt" })) || [...pending, ...command.documents].reduce((n, value) => n + value.size, 0) > MAX_ACCOUNTING_BATCH) return fail("Use up to 12 PDF/image proof files, 20 MB each and 45 MB total.");
       if (new Set([...documents, ...command.documents].map(value => value.localFileId)).size !== documents.length + command.documents.length) return fail("This proof file is already attached.");
       if (isExternalCredit(po) && (command.documents.some(value => documents.some(proof => proof.sha256 === value.sha256)) || new Set(command.documents.map(value => value.sha256)).size !== command.documents.length)) return fail("This proof content is already attached. Use a distinct proof for each payment.");
-      po.paymentProofs = [...documents, ...command.documents.map(value => ({ ...value, id: id("proof"), uploadedAt: at, uploadedBy: actor, uploadedByIdentity: identity, archive: { status: "pending" as const } }))];
+      const project = state.sites.find(value => value.id === state.requests.find(request => request.id === po.mrfId)!.siteId)!;
+      const codeError = projectCodeRequired(state, project.id); if (codeError) return fail(codeError);
+      lockProjectCode(project, at);
+      po.paymentProofs = [...documents, ...command.documents.map(value => { const proofId = id("proof"); return ({ ...value, id: proofId, archiveName: archiveFileName(prefixedReference(project.documentCode!, po.ref), value.name, proofId), uploadedAt: at, uploadedBy: actor, uploadedByIdentity: identity, archive: { status: "pending" as const } }); })];
       log(po.id, "Payment proof attached"); return done("Proof attached. Archive it before verification.");
     }
     case "removePaymentProof": {
@@ -796,7 +830,7 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       if (po.creditPayments?.some(value => !value.voided && value.reference.toLowerCase() === command.reference.trim().toLowerCase())) return fail("This payment reference is already recorded for the PO.");
       const proofs = command.proofIds.map(proofId => po.paymentProofs?.find(proof => proof.id === proofId));
       if (!proofs.length || new Set(command.proofIds).size !== proofs.length || proofs.some(proof => !proof || !archivedProof(proof) || proofAssigned(po, proof.id))) return fail("Select unused archived proof for this payment.");
-      po.creditPayments = [...(po.creditPayments || []), { id: command.paymentId, amount: command.amount, method: command.method, reference: command.reference.trim(), date: command.date, verifiedAt: at, verifiedBy: identity, proofs: structuredClone(proofs.filter((proof): proof is PaymentProof => !!proof)) }];
+      po.creditPayments = [...(po.creditPayments || []), { id: command.paymentId, amount: roundMoney(command.amount), method: command.method, reference: command.reference.trim(), date: command.date, verifiedAt: at, verifiedBy: identity, proofs: structuredClone(proofs.filter((proof): proof is PaymentProof => !!proof)) }];
       resetCoordination(po, at, identity, coordinationBalance(state, po) > 0 ? "Accounting verified a credit payment; remaining balance requires a new plan" : "Accounting verified full credit payment", coordinationBalance(state, po) === 0);
       po.updatedAt = at; log(po.id, `External credit payment verified: ${command.amount}`, command.reference);
       return done("Payment verified. Delivery status is unchanged.", command.paymentId);
@@ -843,7 +877,8 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       const open = openPaymentRequest(state, po.id);
       if (open && open.id !== existing?.id) return fail("Complete the open payment request before creating another.");
       if (!positive(command.amount) || !close(command.amount, Math.round(command.amount * 100) / 100) || command.amount > poTotal(state, po) - paidTotal(state, po.id) + 0.000001) return fail("Request a positive amount within the unpaid PO balance.", "amount");
-      const payment = existing || { id: id("payment-request"), ref: nextRef("PAY-2026", state.paymentRequests), poId: po.id, amount: command.amount, note: "", status: "draft" as const, priority: po.priority, createdAt: at, updatedAt: at, createdBy: actor, createdByIdentity: copyIdentity(identity) };
+      if (!existing) { const error = projectCodeRequired(state, state.requests.find(value => value.id === po.mrfId)!.siteId); if (error) return fail(error); }
+      const payment = existing || { id: id("payment-request"), ...issueDocumentReference(state, state.requests.find(value => value.id === po.mrfId)!.siteId, "PAY", at), poId: po.id, amount: command.amount, note: "", status: "draft" as const, priority: po.priority, createdAt: at, updatedAt: at, createdBy: actor, createdByIdentity: copyIdentity(identity) };
       Object.assign(payment, { amount: command.amount, note: command.note.trim(), status: command.submit ? "submitted" : "draft", reason: undefined, updatedAt: at, reviewedAt: undefined, reviewedBy: undefined });
       if (!existing) state.paymentRequests.push(payment);
       log(payment.id, command.submit ? "Payment request submitted to Finance" : "Payment request draft saved", payment.ref); return done(command.submit ? "Payment request sent to Finance." : "Payment request draft saved.", payment.id);
@@ -902,8 +937,10 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       const lines = poItems(state, po).map(item => ({ itemId: item.id, expected: command.expected[item.id] ?? 0, accepted: 0, issue: "" })).filter(line => line.expected !== 0);
       const limit = (itemId: string) => leg === "warehouse-site" ? warehouseAvailableFor(state, parent!.id, itemId) : schedulableFor(state, po, itemId);
       if (!lines.length || lines.some(line => !nonnegative(line.expected) || line.expected > limit(line.itemId))) return fail("Expected quantities must fit the available supplier or warehouse balance.", "expected");
+      const codeError = projectCodeRequired(state, state.requests.find(value => value.id === po.mrfId)!.siteId);
+      if (codeError) return fail(codeError);
       const batchId = id("batch");
-      state.batches.push({ id: batchId, ref: nextRef("DEL-2026", state.batches), poId: po.id, leg, parentBatchId: parent?.id, origin: structuredClone(leg === "warehouse-site" ? parent!.destination! : locations.origin), destination: { name: destination.name.trim(), address: destination.address.trim() }, scheduledDate: command.scheduledDate, evidence: command.evidence.trim(), delayReason: command.delayReason.trim(), lines, status: "expected", createdAt: at, updatedAt: at, createdByIdentity: copyIdentity(identity) });
+      state.batches.push({ id: batchId, ...issueDocumentReference(state, state.requests.find(value => value.id === po.mrfId)!.siteId, "DEL", at), poId: po.id, leg, parentBatchId: parent?.id, origin: structuredClone(leg === "warehouse-site" ? parent!.destination! : locations.origin), destination: { name: destination.name.trim(), address: destination.address.trim() }, scheduledDate: command.scheduledDate, evidence: command.evidence.trim(), delayReason: command.delayReason.trim(), lines, status: "expected", createdAt: at, updatedAt: at, createdByIdentity: copyIdentity(identity) });
       reopenDocumentReview(po.id, "New delivery scheduled");
       log(batchId, leg === "warehouse-site" ? "Warehouse onward delivery scheduled" : "Delivery batch scheduled", command.delayReason);
       return done("Delivery scheduled. Logistics records dispatch when it leaves.", batchId);
@@ -979,8 +1016,11 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       if (!command.documents.length || command.documents.some(value => !validAccountingDocument(value)) || existing.length + command.documents.length > 12 || [...existing, ...command.documents].reduce((total, value) => total + value.size, 0) > MAX_ACCOUNTING_BATCH) return fail("Use up to 12 PDF or image files, at most 20 MB each and 45 MB per batch.");
       const fileIds = [...(record?.documents || []).map(value => value.localFileId), ...command.documents.map(value => value.localFileId)];
       if (new Set(fileIds).size !== fileIds.length) return fail("This document is already attached.");
+      const project = state.sites.find(value => value.id === state.requests.find(request => request.id === po.mrfId)!.siteId)!;
+      const codeError = projectCodeRequired(state, project.id); if (codeError) return fail(codeError);
+      lockProjectCode(project, at);
       if (!record) { record = { poId: po.id, invoiceRef: "", receiptRef: "", review: "Incomplete", note: "", documents: [] }; state.accounting.push(record); }
-      record.documents = [...(record.documents || []), ...command.documents.map(value => ({ ...value, id: id("account-doc"), batchId: command.batchId, receiptVersion: value.kind === "Signed delivery receipt" ? batch?.receiptVersions?.at(-1)?.version : undefined, uploadedAt: at, uploadedBy: actor, uploadedByIdentity: copyIdentity(identity), archive: { status: "pending" as const } }))];
+      record.documents = [...(record.documents || []), ...command.documents.map(value => { const documentId = id("account-doc"); return ({ ...value, id: documentId, archiveName: archiveFileName(prefixedReference(project.documentCode!, batch?.ref || po.ref), value.name, documentId), batchId: command.batchId, receiptVersion: value.kind === "Signed delivery receipt" ? batch?.receiptVersions?.at(-1)?.version : undefined, uploadedAt: at, uploadedBy: actor, uploadedByIdentity: copyIdentity(identity), archive: { status: "pending" as const } }); })];
       reopenDocumentReview(po.id, "New evidence attached");
       log(batch?.id || po.id, `Accounting evidence attached for ${batch?.ref || po.ref}`);
       return done("Accounting documents saved. Archiving to Google Drive…");
@@ -1089,8 +1129,11 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       if (!name || !command.location.trim()) return fail("Complete the project name and location.");
       if (!nonnegative(command.budget)) return fail("Enter a valid budget of zero or more.", "budget");
       if (state.sites.some(site => site.name.toLowerCase() === name.toLowerCase())) return fail("Enter a unique project name.", "name");
+      const documentCode = normalizeProjectCode(command.documentCode);
+      const codeError = projectCodeValidation(state, documentCode);
+      if (codeError) return fail(codeError, "documentCode");
       const siteId = id("site");
-      state.sites.push({ id: siteId, name, location: command.location.trim(), budget: command.budget, personnel: "", driveFolderSetup: { status: "pending" } });
+      state.sites.push({ id: siteId, documentCode, name, location: command.location.trim(), budget: command.budget, personnel: "", driveFolderSetup: { status: "pending" } });
       log(siteId, "Project added");
       return done("Project added. Site Personnel can now create an MRF.", siteId);
     }

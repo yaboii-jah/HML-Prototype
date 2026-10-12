@@ -1,6 +1,6 @@
 # ConstructSync Workflow
 
-Last updated: 2026-10-10
+Last updated: 2026-10-12
 
 > Keep this document updated in the same change whenever the workflow, role responsibilities, payment rules, delivery rules or required documents change. It describes the current app behavior; implementation details belong in [APP_CONTEXT.md](APP_CONTEXT.md).
 
@@ -18,8 +18,8 @@ Last updated: 2026-10-10
 
 ## Shared Purchasing Flow
 
-1. **Administrator / Project Manager:** Create the project, budget and scopes. Project creation sets up its Google Drive folder. Administrators and Project Managers can delete unused projects after confirmation; existing Drive folders are retained.
-2. **Site Personnel:** Create the MRF, attach the combined supporting PDF, review any AI-extracted information and submit.
+1. **Administrator / Project Manager:** Create the project with a unique document code, budget and scopes. Project creation sets up its Google Drive folder. Assign a code to existing projects before creating new documents. Administrators and Project Managers can delete unused projects after confirmation; existing Drive folders are retained.
+2. **Site Personnel:** Create the MRF, attach the combined supporting PDF, review any AI-extracted information and submit. The first draft save or submission assigns its permanent number; the original paper number is kept separately as Source MRF number.
 3. **Project Manager:** Approve, return or reject the MRF. Approved MRF documents are archived to Drive.
 4. **Procurement:** Review and finalize supplier quotations, archive them, prepare the comparative bid, allocate materials and submit POs. Use Finalize ready drafts for reviewed quotations and Apply all edits for pending allocations. Partial sourcing is allowed; unapplied edits must be applied or reset before generating POs.
 5. **Accounting:** Review prices, VAT/EWT, adjustments and budget. Approve upfront or credit/terms payment and archive the PO. Credit requires an agreed due date.
@@ -37,8 +37,9 @@ Last updated: 2026-10-10
 After supplier issuance, delivery and payment proceed independently:
 
 - **Delivery:** Accounting clears delivery → Logistics schedules and dispatches → Receiving personnel confirm quantities.
-- **Payment:** Finance coordinates external payment → Accounting archives proof and verifies partial or full payments against the outstanding balance.
-- Delivery can proceed while unpaid or partly paid. Outstanding amounts become overdue after the agreed due date.
+- **Payment:** Finance coordinates external payment → Accounting archives proof and verifies partial or full payments against the outstanding net balance.
+- Partial payments reduce the balance; full settlement marks the PO Paid. Each payment retains its own proof and history.
+- Delivery can proceed while payment is outstanding. Outstanding amounts become overdue after the agreed due date.
 
 ## Finance Follow-up
 
@@ -53,7 +54,7 @@ After supplier issuance, delivery and payment proceed independently:
 
 - **Supplier → Site:** Site Personnel confirm quantities and shortages/damage, then post accepted materials into site inventory.
 - **Supplier → Warehouse → Site:** Procurement confirms warehouse receipt; Logistics dispatches onward; Site Personnel receive and post site inventory.
-- New supplier-to-warehouse deliveries default to the company address; Logistics can edit the destination before saving.
+- New supplier-to-warehouse deliveries default to **155 M. Paterno St., San Juan City**; Logistics can edit the destination before saving. Recorded warehouse addresses and onward-delivery origins remain unchanged.
 - Generated delivery receipts must be archived to Drive. Receiving teams upload signed receipts; Accounting can upload missing documents. Procurement gets warehouse receipt reminders and Site Personnel gets site receipt reminders on the dashboard and notification menu. Reminders clear once the current generated and signed receipts are archived; corrected quantities require current-version evidence.
 - Accounting completes document review after checking invoice/receipt references and archived evidence, including generated and signed receipts for each received batch.
 - Payment, delivery, inventory posting and document completion are separate milestones. There is no single automatic MRF closure rule.
@@ -61,3 +62,9 @@ After supplier issuance, delivery and payment proceed independently:
 ## Existing Records
 
 Older MRFs retain Procurement review. Older Finance-managed POs retain Accounting payment requests → Finance approval → Finance disbursement under **Legacy payment requests**.
+
+Older credit payment requests can cover a partial amount or the full outstanding balance. Previously recorded payments and approved requests remain intact.
+
+## Document references
+
+Projects use separate continuous numbers such as HML-MRF-0001, HML-PO-0001 and HML-DEL-0001. There is no yearly reset. A saved numbered MRF cannot change projects. Delivery receipts share the delivery number with a version suffix; bid comparison files inherit the MRF number. New archive copies carry the project prefix while original upload names, supplier references and bank references are retained. Existing saved references, report versions and completed archives are unchanged.

@@ -53,10 +53,10 @@ try {
   assert.equal(await run("return document.querySelectorAll('[role=tab]').length;"),25);
   assert.equal(await run("return !!document.querySelector('.quotation-summary-table');"),false,'Old queue table is replaced');
   assert.equal(await run("return document.querySelectorAll('.quote-editor-lines tbody tr').length;"),10);
-  assert.equal(await run("return [...document.querySelectorAll('.quote-review button')].find(b=>b.textContent==='Finalize quotation').disabled;"),true,'Off-page invalid material and currency block finalization');
+  assert.equal(await run("return [...document.querySelectorAll('.quote-review button')].find(b=>b.textContent==='Finalize quotation').disabled;"),true,'Off-page invalid material blocks finalization');
   await click('.quote-review-trigger');
   await wait("return document.querySelector('.quote-editor-issues').matches(':popover-open');");
-  assert.equal(await run("return document.querySelector('.quote-review-trigger').textContent;"),'2 review items');
+  assert.equal(await run("return document.querySelector('.quote-review-trigger').textContent;"),'1 review item');
   await call('Input.dispatchKeyEvent',{type:'keyDown',key:'Escape',code:'Escape',windowsVirtualKeyCode:27});
   await call('Input.dispatchKeyEvent',{type:'keyUp',key:'Escape',code:'Escape',windowsVirtualKeyCode:27});
   await wait("return !document.querySelector('.quote-editor-issues').matches(':popover-open');");
@@ -70,7 +70,7 @@ try {
   assert.equal(await run("return !document.querySelector('.quote-editor-issues').matches(':popover-open');"),true,'Issue navigation closes the popover');
   assert.equal(await run("return document.querySelector('.quote-editor-lines tbody tr').dataset.lineId;"),'sheet-0-line-61');
   assert.equal(await run("return document.activeElement.id;"),'quote-sheet-0-sheet-0-line-61-quantity','Issue link reveals and focuses the correct material page');
-  await fillAny('#quote-sheet-0-sheet-0-line-61-quantity','20');await sleep(100);await fillAny('#quote-sheet-0-currency','PHP');await sleep(100);
+  await fillAny('#quote-sheet-0-sheet-0-line-61-quantity','20');await sleep(100);assert.equal(await run("return document.querySelectorAll('input[id$=currency]').length;"),0,'Currency is not editable');
   assert.equal(await run("return [...document.querySelectorAll('.quote-review button')].find(b=>b.textContent==='Finalize quotation').disabled;"),false,'Full quotation validation updates after correcting hidden-page errors');
   assert.equal(await run("return !document.querySelector('.quote-review-trigger');"),true,'Resolved quotations have no review-count button');
   await fillAny('[aria-label="Search materials in QUOTE-0"]','Offered material 20');await sleep(100);

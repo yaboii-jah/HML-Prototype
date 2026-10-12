@@ -6,8 +6,8 @@ export function seedDemo(): DemoSnapshot {
   const day = (offset: number) => { const d = new Date(); d.setDate(d.getDate() + offset); return d.toISOString().slice(0, 10); };
   const at = (offset: number) => `${day(offset)}T08:00:00.000Z`;
   const sites: Site[] = [
-    { id: "site-a", name: "Harbor Residences · Site A", location: "Pasay City", budget: 750000, personnel: "Joel Reyes" },
-    { id: "site-b", name: "Northline Warehouse · Site B", location: "Quezon City", budget: 520000, personnel: "Ina Garcia" },
+    { id: "site-a", documentCode: "HBR", name: "Harbor Residences · Site A", location: "Pasay City", budget: 750000, personnel: "Joel Reyes" },
+    { id: "site-b", documentCode: "NWL", name: "Northline Warehouse · Site B", location: "Quezon City", budget: 520000, personnel: "Ina Garcia" },
   ];
   const suppliers: Supplier[] = [
     { id: "sup-1", name: "MetroBuild Materials", location: "Makati City", contact: "Lina Cruz · Sales", accreditation: "HML-ACC-014" },

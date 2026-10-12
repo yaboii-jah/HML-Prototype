@@ -21,7 +21,7 @@ const context = actor => ({ actor, now: () => "2026-10-07T03:00:00Z", id: prefix
 const run = (state, command, actor = actors.admin) => { const result = applyCommand(state, command, context(actor)); assert.equal(result.ok, true, result.message); return result.snapshot; };
 const reject = (state, command, actor, pattern) => { const before = structuredClone(state), result = applyCommand(state, command, context(actor)); assert.equal(result.ok, false); if (pattern) assert.match(result.message, pattern); assert.deepEqual(state, before); };
 function workspace() {
-  let state = run(blankWorkspace(), { type: "addSite", name: "Tower", location: "Pasig", budget: 1000 });
+  let state = run(blankWorkspace(), { type: "addSite", documentCode: "TOWER", name: "Tower", location: "Pasig", budget: 1000 });
   state = run(state, { type: "saveProjectScope", siteId: state.sites[0].id, name: "Structural", budget: 600 });
   return state;
 }
@@ -55,7 +55,7 @@ test("Administrator maintains unique scope allocations within a project cap and 
 test("MRFs require a funded scope in their project while drafts and competing unpriced requests reserve nothing", () => {
   let state = workspace(), command = requestCommand(state);
   reject(state, { ...command, scopeId: undefined }, actors.site, /Choose a scope/);
-  state = run(state, { type: "addSite", name: "Other", location: "Manila", budget: 100 });
+  state = run(state, { type: "addSite", documentCode: "OTHER", name: "Other", location: "Manila", budget: 100 });
   state = run(state, { type: "saveProjectScope", siteId: state.sites[1].id, name: "Civil", budget: 100 });
   reject(state, { ...command, scopeId: state.scopes[1].id }, actors.site, /belonging/);
   state = run(state, { ...command, intent: "draft", scopeId: undefined, ref: "" }, actors.site);

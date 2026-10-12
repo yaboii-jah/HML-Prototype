@@ -31,13 +31,13 @@ test('seven active roles can sign in while removed assignment commands remain re
   assert.equal(retiredAssignment.ok, false); assert.match(retiredAssignment.message, /Unknown command/);
 });
 
-test('project creation needs only name, location and budget', () => {
+test('project creation requires name, document code, location and budget', () => {
   const state = { ...blankWorkspace(), role: 'Administrator' };
-  const result = applyCommand(state, { type: 'addSite', name: 'Client project', location: 'Pasig', budget: 10000 });
+  const result = applyCommand(state, { type: 'addSite', documentCode: 'CLIENT-PROJECT', name: 'Client project', location: 'Pasig', budget: 10000 });
   assert.equal(result.ok, true, result.message);
   const site = result.snapshot.sites[0];
   assert.equal(site.name, 'Client project'); assert.equal(site.budget, 10000); assert.equal(Object.hasOwn(site, 'manager'), false);
-  for (const patch of [{ name: '' }, { location: '' }, { budget: -1 }]) assert.equal(applyCommand(state, { type: 'addSite', name: 'Client project', location: 'Pasig', budget: 10000, ...patch }).ok, false);
+  for (const patch of [{ name: '' }, { location: '' }, { budget: -1 }]) assert.equal(applyCommand(state, { type: 'addSite', documentCode: 'CLIENT-PROJECT', name: 'Client project', location: 'Pasig', budget: 10000, ...patch }).ok, false);
 });
 
 test('old role-only sessions require sign-in and preserve workspace records', async () => {
@@ -111,11 +111,11 @@ test('department switches change new audit actors and reject commands captured b
     assert.equal((await procurement.run({ type: 'reviewRequest', id: 'm6', decision: 'approve' })).ok, false);
     assert.deepEqual(repository.getSnapshot().snapshot, beforeStale);
     const admin = bindAccountCommands(repository, active(), active);
-    assert.equal((await admin.run({ type: 'addSite', name: 'New project', location: 'Pasig', budget: 1000 })).ok, true);
+    assert.equal((await admin.run({ type: 'addSite', documentCode: 'NEW-PROJECT', name: 'New project', location: 'Pasig', budget: 1000 })).ok, true);
     assert.equal(repository.getSnapshot().snapshot.activity[0].actorIdentity.name, 'Daniel Garcia');
     assert.deepEqual(repository.getSnapshot().snapshot.activity.find(event => event.id === originalEvent.id), originalEvent);
     session.clear();
-    assert.equal((await admin.run({ type: 'addSite', name: 'Signed-out project', location: 'Pasig', budget: 1000 })).ok, false);
+    assert.equal((await admin.run({ type: 'addSite', documentCode: 'SIGNED-OUT-PROJECT', name: 'Signed-out project', location: 'Pasig', budget: 1000 })).ok, false);
   });
 });
 

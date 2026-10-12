@@ -11,6 +11,10 @@ _Avoid_: Demo role, role picker
 
 **Project budget:** The total allocation available to a project. Its cap covers scope allocations and existing committed/spent funds.
 
+**Project document code:** A unique uppercase prefix chosen by Administrator or Project Manager. New document references use `CODE-TYPE-0001`, with separate continuous sequences for MRFs, POs and deliveries. The code locks when first used on a saved record or archived-copy identity. Existing references remain unchanged.
+
+**Source MRF number:** The original number printed on an imported or manually entered paper MRF. It is separate from ConstructSync's automatic reference and does not control its sequence.
+
 **Scope of work:** A named work package within one project, such as Structural or Civil. Each MRF belongs to one scope; the supporting scope document is separate.
 
 **Unused scope:** A scope with no MRF referencing it, including drafts, returned and rejected requests. Removing it returns its allocation to unallocated project funds without changing the project budget.
@@ -20,6 +24,8 @@ _Avoid_: Demo role, role picker
 **Available scope budget:** The scope allocation remaining after approved commitments and recorded spending. An unpriced MRF does not reserve these funds.
 
 **Goods:** Requested materials and supplier material offers that can be ordered and received.
+
+**PHP quotation:** A supplier quotation priced in Philippine pesos. Missing currency defaults to PHP; an explicitly detected foreign currency must be replaced with a PHP quotation or corrected by re-extraction before finalization. Existing finalized records retain their recorded currency.
 
 **Services:** Non-material fees, such as delivery or installation charges. Taxes and discounts remain financial adjustments.
 
@@ -37,7 +43,7 @@ _Avoid_: Demo role, role picker
 
 **Started operation:** File preparation or archiving initiated by an authorized account. Its recorded responsibility stays with the initiating account; a later retry is a new action.
 
-**MRF review:** Procurement's decision to accept, return or reject a material request from Site Personnel.
+**MRF review:** The Project Manager's decision to approve, return or reject a material request from Site Personnel in the revised workflow. Procurement review applies to older requests using the legacy workflow.
 
 **PO review:** Accounting's review of a purchase order, including its taxes, charges, payment mode and project budget.
 _Avoid_: Finance PO approval
@@ -48,10 +54,10 @@ _Avoid_: Finance PO approval
 
 **Effective PO supplier:** The supplier currently named on the purchase order, which may differ from the original quotation's supplier following Accounting review.
 
-**Payment request:** Accounting's request for Finance to approve and disburse a specified amount against a PO using the earlier Finance-managed payment flow.
+**Payment request:** Accounting's legacy request for Finance to approve and disburse a specified amount against a PO. It belongs to the earlier Finance-managed payment flow.
 _Avoid_: Payment, receipt
 
-**Disbursement:** A payment recorded by Finance against an approved payment request. Approval alone is not disbursement.
+**Disbursement:** A legacy payment recorded by Finance against an approved payment request. Approval alone is not disbursement; revised workflows use external payment verification.
 
 **Release to Logistics:** Accounting's authorization for delivery scheduling after PO review and required payment conditions are satisfied.
 _Avoid_: Serve PO
@@ -63,6 +69,16 @@ _Avoid_: Serve PO
 **External payment verification:** Accounting's confirmation of a supplier payment processed outside ConstructSync by Finance, supported by archived proof. A credit payment can settle part or all of the outstanding balance.
 
 **Payment due date:** The agreed date for settling the outstanding supplier balance. A remaining credit balance becomes overdue on the following Philippine calendar day, independently of delivery progress.
+
+**Payment coordination:** Finance's prioritization and follow-up of supplier payments processed outside ConstructSync. A scheduled or processing payment is distinct from an Accounting-verified payment.
+
+**Planned payment date:** Finance's intended date for the next external payment. It is separate from Accounting's agreed payment due date and does not establish that payment occurred.
+
+**Inventory movement:** A project stock receipt, usage or adjustment. The inventory balance is the accumulated effect of these movements.
+
+**Pooled project stock:** The balance of a material and unit within one project, shared across scopes of work. Selecting a scope shows materials received for that scope while retaining their full project balance; it does not attribute usage to a scope.
+
+**Shared material identity:** A proposed production identity for the same material across requests and inventory movements. Its displayed name alone does not establish uniqueness.
 
 **Voided payment:** A recorded payment corrected with a reason, excluded from the paid balance while its original details and evidence remain in history. Voiding does not revoke delivery clearance or change receiving records.
 

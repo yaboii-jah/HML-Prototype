@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type RefObject } from "react";
 import type { PDFDocumentLoadingTask, PDFDocumentProxy, RenderTask } from "pdfjs-dist";
 import type { PDFViewer, EventBus } from "pdfjs-dist/web/pdf_viewer.mjs";
 import "pdfjs-dist/web/pdf_viewer.css";
+import { DocumentLoading, Skeleton } from "./ui/Skeleton";
 
 const scales = [50, 75, 100, 125, 150, 200, 300];
 type ToolIcon = "sidebar" | "search" | "previous" | "next" | "minus" | "plus" | "print" | "download" | "fullscreen" | "rotate";
@@ -52,7 +53,7 @@ function Thumbnail({ pdf, number, active, root, onSelect }: { pdf: PDFDocumentPr
     if (item.top < box.top) root.current.scrollBy({ top: item.top - box.top });
     else if (item.bottom > box.bottom) root.current.scrollBy({ top: item.bottom - box.bottom });
   }, [active, root]);
-  return <button ref={button} type="button" className="pdf-document-thumbnail" aria-label={`Go to page ${number}`} aria-current={active ? "page" : undefined} onClick={onSelect}><span className="pdf-document-thumbnail-paper"><canvas ref={canvas} hidden={status !== "ready"}/>{status !== "ready" && <span>{status === "error" ? "Preview unavailable" : `Page ${number}`}</span>}</span><span>{number}</span></button>;
+  return <button ref={button} type="button" className="pdf-document-thumbnail" aria-label={`Go to page ${number}`} aria-current={active ? "page" : undefined} onClick={onSelect}><span className="pdf-document-thumbnail-paper"><canvas ref={canvas} hidden={status !== "ready"}/>{status === "loading" && <span className="loading-visual"><Skeleton height="100%"/></span>}{status === "error" && <span>Preview unavailable</span>}</span><span>{number}</span></button>;
 }
 
 export function PdfDocumentViewer({ blob, fileName, sourceUrl }: { blob: Blob; fileName: string; sourceUrl: string }) {
@@ -60,6 +61,7 @@ export function PdfDocumentViewer({ blob, fileName, sourceUrl }: { blob: Blob; f
   const container = useRef<HTMLDivElement>(null), pages = useRef<HTMLDivElement>(null), viewer = useRef<PDFViewer | null>(null), events = useRef<EventBus | null>(null);
   const [page, setPage] = useState(1), [count, setCount] = useState(0), [pageInput, setPageInput] = useState("1");
   const [scale, setScale] = useState("page-width"), [ready, setReady] = useState(false), [error, setError] = useState("");
+  const [rendered, setRendered] = useState(false);
   const [pdf, setPdf] = useState<PDFDocumentProxy | null>(null), [sidebarOpen, setSidebarOpen] = useState(false), [searchOpen, setSearchOpen] = useState(false), [fullscreen, setFullscreen] = useState(false);
   const [query, setQuery] = useState(""), [matches, setMatches] = useState({ current: 0, total: 0 }), [searching, setSearching] = useState(false), [printUrl, setPrintUrl] = useState("");
   const printTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -83,7 +85,11 @@ export function PdfDocumentViewer({ blob, fileName, sourceUrl }: { blob: Blob; f
         });
         bus.on("pagechanging", (event: { pageNumber: number }) => { if (!disposed) { setPage(event.pageNumber); setPageInput(String(event.pageNumber)); } });
         bus.on("scalechanging", (event: { scale: number; presetValue?: string }) => { if (!disposed) setScale(event.presetValue || String(Math.round(event.scale * 100))); });
-        bus.on("pagerendered", (event: { error?: unknown }) => { if (!disposed && event.error) setError("This page could not be displayed. Use Open document to view the original file."); });
+        bus.on("pagerendered", (event: { error?: unknown; pageNumber: number }) => {
+          if (disposed) return;
+          if (event.error) setError("This page could not be displayed. Use Open document to view the original file.");
+          else if (event.pageNumber === instance?.currentPageNumber) setRendered(true);
+        });
         bus.on("updatefindmatchescount", (event: { matchesCount: { current: number; total: number } }) => { if (!disposed) setMatches(event.matchesCount); });
         bus.on("updatefindcontrolstate", (event: { state: number; matchesCount: { current: number; total: number } }) => { if (!disposed) { setSearching(event.state === FindState.PENDING); setMatches(event.matchesCount); } });
         const bytes = new Uint8Array(await blob.arrayBuffer());
@@ -144,7 +150,7 @@ export function PdfDocumentViewer({ blob, fileName, sourceUrl }: { blob: Blob; f
     </div>
     {searchOpen && <div className="pdf-document-findbar"><input ref={findInput} type="search" aria-label="Search PDF text" placeholder="Find in document…" value={query} onChange={event => { setQuery(event.target.value); setMatches({ current: 0, total: 0 }); setSearching(!!event.target.value); search(event.target.value); }} onKeyDown={event => { if (event.key === "Enter") { event.preventDefault(); search(query, event.shiftKey, true); } }}/><PdfTool icon="previous" label="Previous match" disabled={!query} onClick={() => search(query, true, true)}/><PdfTool icon="next" label="Next match" disabled={!query} onClick={() => search(query, false, true)}/><span role="status">{query ? searching ? "Searching…" : matches.total ? `${matches.current} of ${matches.total} matches` : "No matches" : ""}</span></div>}
     {error && <p className="field-error" role="alert">{error}</p>}
-    <div className="pdf-document-body">{sidebarOpen && <aside ref={sidebar} className="pdf-document-sidebar" aria-label="Page thumbnails"><div className="pdf-document-sidebar-heading">Thumbnails</div>{pdf && ready && Array.from({ length: count }, (_, index) => <Thumbnail key={index + 1} pdf={pdf} number={index + 1} active={page === index + 1} root={sidebar} onSelect={() => go(index + 1)}/>)}</aside>}<div className="pdf-document-stage">{!ready && !error && <p className="pdf-document-loading" role="status">Loading PDF…</p>}<div ref={container} className="pdf-document-scroll" tabIndex={0} role="region" aria-label="PDF document pages"><div ref={pages} className="pdfViewer"/></div></div></div>
+    <div className="pdf-document-body">{sidebarOpen && <aside ref={sidebar} className="pdf-document-sidebar" aria-label="Page thumbnails"><div className="pdf-document-sidebar-heading">Thumbnails</div>{pdf && ready && Array.from({ length: count }, (_, index) => <Thumbnail key={index + 1} pdf={pdf} number={index + 1} active={page === index + 1} root={sidebar} onSelect={() => go(index + 1)}/>)}</aside>}<div className="pdf-document-stage">{!rendered && !error && <DocumentLoading/>}<div ref={container} className="pdf-document-scroll" tabIndex={0} role="region" aria-label="PDF document pages" aria-busy={!rendered && !error}><div ref={pages} className="pdfViewer"/></div></div></div>
     {printUrl && <iframe ref={printer} className="pdf-document-print-frame" tabIndex={-1} aria-hidden="true" src={printUrl} title="PDF print document" onLoad={() => { printTimer.current = setTimeout(() => { try { printer.current?.contentWindow?.focus(); printer.current?.contentWindow?.print(); } catch { setError("Printing is unavailable here. Use Open document to print the original file."); } }, 500); }}/>}
   </div>;
 }

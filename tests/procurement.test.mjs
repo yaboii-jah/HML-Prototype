@@ -21,6 +21,34 @@ const setup = () => {
 const draft = (requestId, supplier, price, suffix) => ({ financial: { vatStatus: "NON-VAT", priceBasis: "inclusive", vatRate: 12, reviewed: true }, id: `draft-${suffix}`, mrfId: requestId, supplierId: "", ref: `Q-${suffix}`, prices: {}, available: "In stock", leadDays: 3, terms: "30 days", documents: [{ name: `supplier-${suffix}.pdf`, type: "application/pdf", fileId: `source-${suffix}` }], lines: [{ id: `line-${suffix}`, description: "Plywood", quantity: 10, unit: "sheet", unitPrice: price, brand: "", specification: "", requestItemId: "procurement-item", conversionFactor: 1, varianceReason: "", matchConfidence: "medium", matchConfirmed: false, discountType: "fixed", discountValue: 100, taxRate: 0, printedTotal: 10 * price - 90, discrepancyReason: "" }], currency: "PHP", extraction: "manual", reviewStatus: "draft", supplierDetails: { name: supplier, address: "", tin: "", contactName: "", email: "", phone: "" }, adjustments: [{ id: `shipping-${suffix}`, label: "Freight", kind: "shipping", calculation: "fixed", value: 50 }] });
 const archive = (state, quoteId) => { const quote = state.quotes.find(value => value.id === quoteId); return execute(state, { type: "completeQuoteArchive", id: quoteId, files: quote.documents.map(document => ({ localFileId: document.fileId, driveFileId: `drive-${document.fileId}`, url: `https://drive.google.com/file/d/drive-${document.fileId}/view`, name: document.name })) }); };
 
+test("Missing quotation currency defaults to PHP and can finalize without a currency input", () => {
+  let { state, request } = setup();
+  const quote = draft(request.id, "PHP supplier", 700, "php-default");
+  quote.currency = " ";
+  quote.lines[0].matchConfirmed = true;
+  quote.lines[0].printedTotal = null;
+  state = execute(state, { type: "saveQuoteDraft", quote });
+  assert.equal(state.quotes.find(value => value.id === quote.id).currency, "PHP");
+  state = execute(state, { type: "finalizeQuote", id: quote.id });
+  assert.equal(state.quotes.find(value => value.id === quote.id).reviewStatus, "finalized");
+});
+
+test("Explicit foreign currency is preserved in drafts and blocks finalization without changing historical offers", () => {
+  let { state, request } = setup();
+  const historical = structuredClone(state.quotes);
+  const quote = draft(request.id, "Foreign supplier", 700, "foreign");
+  quote.currency = " usd ";
+  quote.lines[0].matchConfirmed = true;
+  quote.lines[0].printedTotal = null;
+  state = execute(state, { type: "saveQuoteDraft", quote });
+  assert.equal(state.quotes.find(value => value.id === quote.id).currency, "USD");
+  const result = applyCommand(state, { type: "finalizeQuote", id: quote.id }, context);
+  assert.equal(result.ok, false);
+  assert.match(result.message, /Only PHP quotations/);
+  assert.equal(state.quotes.find(value => value.id === quote.id).archive, undefined);
+  assert.deepEqual(state.quotes.filter(value => value.id !== quote.id), historical);
+});
+
 test("Procurement can remove an unfinalized quotation draft without changing finalized offers", () => {
   let { state, request } = setup();
   const quote = draft(request.id, "Supplier A", 700, "delete");

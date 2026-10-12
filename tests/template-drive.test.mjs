@@ -7,7 +7,7 @@ registerHooks({ resolve(specifier, context, nextResolve) {
   if (specifier === 'google-auth-library') return { url: 'data:text/javascript,' + encodeURIComponent('export class OAuth2Client { setCredentials() {} async getAccessToken() { return {token:"test-only-token"}; } } export class GoogleAuth {}'), shortCircuit: true };
   return nextResolve(specifier, context);
 } });
-const { prepareRequestArchive, prepareBidFile, prepareAccountingFile, downloadAccountingFile, preparePaymentProof, downloadPaymentProof, archivePurchaseOrder, archiveDeliveryReceipt } = await import('../src/server/drive.ts');
+const { prepareRequestArchive, prepareQuoteFile, prepareBidFile, prepareAccountingFile, downloadAccountingFile, preparePaymentProof, downloadPaymentProof, archivePurchaseOrder, archiveDeliveryReceipt } = await import('../src/server/drive.ts');
 
 function driveFixture(t) {
   const previousFetch = globalThis.fetch, previousEnv = { ...process.env };
@@ -32,6 +32,43 @@ function driveFixture(t) {
   };
   return {files,sessions,events};
 }
+
+test('New MRF archive filenames can be prefixed while retaining the original request folder and reference', async t => {
+  const { files, sessions } = driveFixture(t);
+  const saved = await prepareRequestArchive('project-folder-12345', 'legacy-mrf', 'MRF-001', 2, Buffer.from('%PDF-numbered'), 100, 'HML-MRF-001');
+  assert.equal(files.get(saved.formFileId).name, 'HML-MRF-001-v2.pdf');
+  const session = sessions.get(new URL(saved.sessionUri).searchParams.get('upload_id'));
+  assert.equal(session.file.name, 'HML-MRF-001-support-v2.pdf');
+  assert.ok([...files.values()].some(file => file.name === 'MRF-001' && file.mimeType === 'application/vnd.google-apps.folder'));
+});
+
+test('New proof and evidence uploads use frozen filenames without changing the original names or hashes', async t => {
+  const { sessions } = driveFixture(t);
+  const mrf = { id: 'mrf', ref: 'MRF-001' }, po = { id: 'po', ref: 'PO-001' };
+  const proof = { id: 'proof', name: 'Original bank receipt.pdf', archiveName: 'HML-PO-001-bank-proof.pdf', mime: 'application/pdf', size: 100, sha256: 'a'.repeat(64) };
+  const savedProof = await preparePaymentProof('project-folder-12345', mrf, po, proof);
+  assert.equal(sessions.get(new URL(savedProof.sessionUri).searchParams.get('upload_id')).file.name, proof.archiveName);
+  const evidence = { ...proof, id: 'evidence', name: 'Supplier signed receipt.pdf', archiveName: 'HML-PO-001-signed-receipt.pdf' };
+  const savedEvidence = await prepareAccountingFile('project-folder-12345', mrf, po, undefined, evidence);
+  const file = sessions.get(new URL(savedEvidence.sessionUri).searchParams.get('upload_id')).file;
+  assert.equal(file.name, evidence.archiveName);
+  assert.equal(file.appProperties.hmlSha256, evidence.sha256);
+  assert.equal(evidence.name, 'Supplier signed receipt.pdf');
+  assert.equal(proof.name, 'Original bank receipt.pdf');
+});
+
+test('Quotation retries reuse stable tags even when the attempted archive filename changes', async t => {
+  const { files, sessions, events } = driveFixture(t);
+  const args = ['project-folder-12345', 'mrf', 'MRF-001', 'quote', 'supplier', 'Supplier', 1, 0, 'Original quote.pdf', 'application/pdf', 100];
+  const first = await prepareQuoteFile(...args);
+  const session = sessions.get(new URL(first.sessionUri).searchParams.get('upload_id'));
+  files.set(session.file.id, { ...session.file, size: '100' });
+  const starts = events.filter(event => event.url.includes('/upload/')).length;
+  const retried = await prepareQuoteFile(...args, 'HML-MRF-001-new-frozen-name.pdf');
+  assert.equal(retried.driveFileId, session.file.id);
+  assert.equal(events.filter(event => event.url.includes('/upload/')).length, starts);
+  assert.equal(files.get(session.file.id).name, session.file.name, 'An existing archived file is never renamed');
+});
 
 test('MRF reserves its supporting file before generating the linked form and reuses its ID on retry',async t=>{
   const {files,sessions,events}=driveFixture(t);let linkedId;

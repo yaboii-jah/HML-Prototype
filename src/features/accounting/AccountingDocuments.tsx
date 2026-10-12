@@ -1,5 +1,6 @@
 "use client";
-/* eslint-disable @next/next/no-img-element -- These previews use browser-local, verified Blob URLs. */
+import { DocumentLoading } from "@/src/components/ui/Skeleton";
+import { LoadingImage } from "@/src/components/ui/LoadingImage";
 import { useEffect, useRef, useState } from "react";
 import { useDemo } from "@/src/app-state/DemoProvider";
 import { useActionFeedback } from "@/src/app-state/action-feedback";
@@ -88,12 +89,14 @@ export function AccountingDocuments({ poId, batchId }: { poId: string; batchId?:
 }
 function EvidencePreview({ state, poId, document, onClose }: { state: DemoSnapshot; poId: string; document: AccountingDocument; onClose: () => void }) {
   const [blob, setBlob] = useState<Blob | null>(null);
+  // A preview reads one document snapshot; unrelated workspace updates don't restart it.
+  const [source] = useState({ state, poId, document });
   const ref = useRef<HTMLDialogElement>(null), [url, setUrl] = useState(""), [error, setError] = useState("");
   useEffect(() => { const dialog = ref.current; dialog?.showModal(); return () => { if (dialog?.open) dialog.close(); }; }, []);
   useEffect(() => {
     let active = true, objectUrl = "";
-    readAccountingDocument(state, poId, document).then(blob => { if (!active) return; objectUrl = URL.createObjectURL(blob); setUrl(objectUrl); setBlob(blob); }).catch(cause => { if (active) setError(cause instanceof Error ? cause.message : "Preview unavailable."); });
+    readAccountingDocument(source.state, source.poId, source.document).then(blob => { if (!active) return; objectUrl = URL.createObjectURL(blob); setUrl(objectUrl); setBlob(blob); }).catch(cause => { if (active) setError(cause instanceof Error ? cause.message : "Preview unavailable."); });
     return () => { active = false; if (objectUrl) URL.revokeObjectURL(objectUrl); };
-  }, [state, poId, document]);
-  return <dialog ref={ref} className="document-preview-dialog evidence-preview" aria-labelledby="evidence-preview-title" onCancel={event => { event.preventDefault(); onClose(); }}><div className="panel-heading"><h2 id="evidence-preview-title">{document.name}</h2><div className="button-row">{url && <a className="button secondary" href={url} download={document.name}>Download</a>}<CloseButton onClick={onClose}/></div></div>{error ? <InlineError message={error}/> : !url ? <p role="status">Loading verified document…</p> : document.mime === "application/pdf" ? blob && <PdfDocumentViewer blob={blob} fileName={document.name} sourceUrl={url}/> : <img src={url} alt={document.name}/>}</dialog>;
+  }, [source]);
+  return <dialog ref={ref} className="document-preview-dialog evidence-preview" aria-labelledby="evidence-preview-title" onCancel={event => { event.preventDefault(); onClose(); }}><div className="panel-heading"><h2 id="evidence-preview-title">{document.name}</h2><div className="button-row">{url && <a className="button secondary" href={url} download={document.name}>Download</a>}<CloseButton onClick={onClose}/></div></div>{error ? <InlineError message={error}/> : !url ? <DocumentLoading/> : document.mime === "application/pdf" ? blob && <PdfDocumentViewer key={url} blob={blob} fileName={document.name} sourceUrl={url}/> : <LoadingImage key={url} src={url} alt={document.name}/>}</dialog>;
 }

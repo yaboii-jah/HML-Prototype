@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
 import { useDemo } from "@/src/app-state/DemoProvider";
 import { useConfirmation } from "@/src/components/ui/ConfirmDialog";
+import { SignInSkeleton } from "@/src/components/ui/PageSkeleton";
 
 const WORKFLOW_STAGES = [
   { name: "Request", title: "Start with a clear request.", description: "Capture the materials a site needs and keep the handoff visible to everyone involved.", card: "Material request", detail: "Ready for review" },
@@ -66,8 +67,8 @@ export function DemoSignIn() {
     finally { setBusy(false); }
   };
 
-  if (status === "loading" || session.status === "loading") return <div className="state-screen"><div className="state-card"><span className="eyebrow">HML ConstructSync</span><h1>Opening sign-in</h1><p>Preparing your workspace…</p></div></div>;
   if (directory.status === "recovery") return <div className="state-screen"><div className="state-card"><h1>Saved user accounts need attention</h1><p>{directory.error}</p><p>Restore the saved user directory in browser storage before continuing.</p></div></div>;
+  if (status === "loading" || session.status === "loading") return <SignInSkeleton/>;
   if (status === "recovery" || !snapshot) return <><div className="state-screen"><div className="state-card"><span className="eyebrow">WORKSPACE RECOVERY</span><h1>Saved data needs attention</h1><p>{message}</p>{session.role === "Administrator" ? <button className="button primary" onClick={() => void (async () => { if (await confirm("Restore this workspace?", "Saved operational records and uploaded files will be removed. User accounts and their management history are preserved.", "Restore workspace", true)) await reset(); })()}>Restore workspace</button> : <form className="signin-form" onSubmit={event => void submit(event)}><p>Sign in as Administrator to restore the workspace.</p><label>Email<input type="email" required value={email} onChange={event => setEmail(event.target.value)} autoComplete="username"/></label><label>Password<input type="password" required value={password} onChange={event => setPassword(event.target.value)} autoComplete="current-password"/></label><button className="button primary" disabled={busy}>Verify Administrator</button>{error && <p role="alert">{error}</p>}</form>}</div></div>{confirmation}</>;
 
 
