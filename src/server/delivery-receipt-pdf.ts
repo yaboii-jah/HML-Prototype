@@ -4,13 +4,34 @@ import { batchStage, isReceivedBatch, isSiteBatch, legLabel } from "../domain/de
 import type { DeliveryReceiptData } from "../domain/delivery-document.ts";
 import { documentDate, documentTemplate, wrapText } from "./document-template.ts";
 
+export type ReceiptRenderData = { title: string; ref: string; stage: string; received: boolean; fields: { label: string; value: unknown }[]; materials: { name: string; unit: string; expected: number; accepted: number; issue: string }[]; footerFields: { label: string; value: unknown }[]; signatureLabels: readonly [string, string] };
 export async function generateDeliveryReceiptPdf(data: DeliveryReceiptData) {
   const { batch, po, request, project, parentBatch } = data;
-  const template = await documentTemplate("po"), { pdf, regular, bold } = template;
-  const blue = rgb(0, .36, .68), edge = rgb(.75, .78, .82), pale = rgb(.94, .96, .98), left = 36, width = 540, size = 8, leading = 11;
   const received = isReceivedBatch(batch), warehouse = !isSiteBatch(batch);
   const origin = batch.origin || { name: po.document?.vendorName || "Supplier", address: po.document?.vendorAddress || "" };
   const destination = batch.destination || { name: po.document?.shipToName || project.name, address: po.document?.shipToAddress || project.location };
+  return renderReceiptPdf({
+    title: "DELIVERY RECEIPT", ref: batch.ref, stage: received ? batchStage(batch) : "PENDING RECEIPT", received,
+    fields: [
+      { label: "P.O. # / MRF #", value: po.ref + " / " + request.ref },
+      ...(parentBatch ? [{ label: "WAREHOUSE RECEIPT", value: parentBatch.ref }] : []),
+      { label: "PROJECT / ROUTE", value: project.name + " / " + legLabel(batch) },
+      { label: "FROM", value: origin.name + "\n" + (origin.address || "Address not recorded") },
+      { label: "DELIVERY LOCATION", value: destination.name + "\n" + (destination.address || "Address not recorded") },
+      { label: "SCHEDULED DATE", value: documentDate(batch.scheduledDate) },
+      { label: "DISPATCH RECORDED", value: auditTime(batch.dispatchedAt) + " / " + actorName("Logistics", batch.dispatchedByIdentity) },
+      { label: "RECEIPT RECORDED", value: received ? auditTime(batch.receivedAt) + " / " + actorName(warehouse ? "Procurement" : "Site Personnel", batch.receivedByIdentity) : "Awaiting receiving confirmation" },
+      { label: "EVIDENCE / DELAY", value: (batch.evidence || "Not recorded") + (batch.delayReason ? "\n" + batch.delayReason : "") }
+    ],
+    materials: batch.lines.filter(line => line.expected > 0 || line.accepted > 0).map(line => { const item = request.items.find(item => item.id === line.itemId)!; return { name: item.name, unit: item.unit, expected: line.expected, accepted: line.accepted, issue: line.issue }; }),
+    footerFields: [...(batch.postingReason ? [{ label: "POSTING CORRECTION", value: batch.postingReason }] : []), ...(batch.status === "posted" ? [{ label: "STOCK POSTED", value: auditTime(batch.postedAt) + " / " + actorName("Site Personnel", batch.postedByIdentity) }] : [])],
+    signatureLabels: ["Prepared / dispatched by", warehouse ? "Received at company warehouse by" : "Received at site by"]
+  });
+}
+export async function renderReceiptPdf(data: ReceiptRenderData) {
+  const template = await documentTemplate("po"), { pdf, regular, bold } = template;
+  const blue = rgb(0, .36, .68), edge = rgb(.75, .78, .82), pale = rgb(.94, .96, .98), left = 36, width = 540, size = 8, leading = 11;
+  const { received } = data;
   const wrap = (value: unknown, cellWidth: number, strong = false) => wrapText(value, strong ? bold : regular, size, cellWidth - 10);
   let page!: PDFPage, top = 0;
   const draw = (lines: string[], x: number, y: number, strong = false, color = rgb(0, 0, 0)) => lines.forEach((line, index) => { if (line) page.drawText(line, { x, y: 792 - y - size - index * leading, size, font: strong ? bold : regular, color }); });
@@ -20,9 +41,9 @@ export async function generateDeliveryReceiptPdf(data: DeliveryReceiptData) {
     // Keep the exact PO company artwork/address while replacing its title and body.
     page.drawRectangle({ x: 350, y: 642, width: 262, height: 150, color: rgb(1, 1, 1) });
     page.drawRectangle({ x: 0, y: 0, width: 612, height: 642, color: rgb(1, 1, 1) });
-    page.drawText("DELIVERY RECEIPT", { x: 368, y: 730, size: 16, font: bold, color: blue });
-    draw(wrap(batch.ref, 202, true), 368, 72, true, blue);
-    draw(wrap(received ? batchStage(batch) : "PENDING RECEIPT", 202, true), 368, 108, true, blue);
+    page.drawText(data.title, { x: 368, y: 730, size: data.title.length > 20 ? 12 : 16, font: bold, color: blue });
+    draw(wrap(data.ref, 202, true), 368, 72, true, blue);
+    draw(wrap(data.stage, 202, true), 368, 108, true, blue);
     top = 156;
   };
   const ensure = (height: number) => { if (top + height > 736) newPage(); };
@@ -36,15 +57,7 @@ export async function generateDeliveryReceiptPdf(data: DeliveryReceiptData) {
     } while (remaining.length);
   };
   newPage();
-  field("P.O. # / MRF #", `${po.ref} / ${request.ref}`);
-  if (parentBatch) field("WAREHOUSE RECEIPT", parentBatch.ref);
-  field("PROJECT / ROUTE", `${project.name} · ${legLabel(batch)}`);
-  field("FROM", `${origin.name}\n${origin.address || "Address not recorded"}`);
-  field("DELIVERY LOCATION", `${destination.name}\n${destination.address || "Address not recorded"}`);
-  field("SCHEDULED DATE", documentDate(batch.scheduledDate));
-  field("DISPATCH RECORDED", `${auditTime(batch.dispatchedAt)} · ${actorName("Logistics", batch.dispatchedByIdentity)}`);
-  field("RECEIPT RECORDED", received ? `${auditTime(batch.receivedAt)} · ${actorName(warehouse ? "Procurement" : "Site Personnel", batch.receivedByIdentity)}` : "Awaiting receiving confirmation");
-  field("EVIDENCE / DELAY", `${batch.evidence || "Not recorded"}${batch.delayReason ? `\n${batch.delayReason}` : ""}`);
+  for (const entry of data.fields) field(entry.label, entry.value);
   const columns = [24, 190, 40, 62, 62, 162], headers = ["#", "GOODS / DESCRIPTION", "UNIT", "EXPECTED", "ACCEPTED", "ISSUE / REMARKS"];
   const row = (values: string[][], height: number, heading = false) => {
     let x = left;
@@ -52,9 +65,8 @@ export async function generateDeliveryReceiptPdf(data: DeliveryReceiptData) {
   };
   const tableHeader = () => row(headers.map((label, index) => wrap(label, columns[index], true)), 32, true);
   ensure(70); tableHeader();
-  for (const [index, line] of batch.lines.filter(value => value.expected > 0 || value.accepted > 0).entries()) {
-    const item = request.items.find(value => value.id === line.itemId)!;
-    const cells = [String(index + 1), item.name, item.unit, String(line.expected), received ? String(line.accepted) : "Pending", line.issue || "—"].map((value, column) => wrap(value, columns[column]));
+  for (const [index, line] of data.materials.entries()) {
+    const cells = [String(index + 1), line.name, line.unit, String(line.expected), received ? String(line.accepted) : "Pending", line.issue || "—"].map((value, column) => wrap(value, columns[column]));
     let offset = 0;
     const total = Math.max(...cells.map(lines => lines.length));
     while (offset < total) {
@@ -65,11 +77,10 @@ export async function generateDeliveryReceiptPdf(data: DeliveryReceiptData) {
     }
   }
   top += 12;
-  if (batch.postingReason) field("POSTING CORRECTION", batch.postingReason);
-  if (batch.status === "posted") field("STOCK POSTED", `${auditTime(batch.postedAt)} · ${actorName("Site Personnel", batch.postedByIdentity)}`);
+  for (const entry of data.footerFields) field(entry.label, entry.value);
   ensure(92);
-  draw(["Prepared / dispatched by"], left + 5, top, true, blue);
-  draw([warehouse ? "Received at company warehouse by" : "Received at site by"], left + 295, top, true, blue);
+  draw([data.signatureLabels[0]], left + 5, top, true, blue);
+  draw([data.signatureLabels[1]], left + 295, top, true, blue);
   // Handwritten signature spaces remain separate from recorded account attribution.
   top += 25;
   page.drawLine({ start: { x: left, y: 792 - top }, end: { x: left + 245, y: 792 - top }, thickness: .6, color: edge });

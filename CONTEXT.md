@@ -39,7 +39,7 @@ _Avoid_: Demo role, role picker
 
 **MRF lifecycle:** The connected history and current progress of a material request, its quotations, purchasing, payments and deliveries. Credit payment and delivery progress are independent.
 
-**Served MRF:** A request whose complete material quantities are covered by purchase orders released to Logistics.
+**Served MRF:** A request whose complete material quantities are covered by purchase orders released to Logistics and source-approved site stock transfers, adjusted for transfer shortages.
 
 **Delivered MRF:** A request whose complete material quantities have been accepted at the project site. Warehouse receipt is an intermediate stage; stock posting and payment are separate milestones.
 
@@ -89,6 +89,18 @@ _Avoid_: Serve PO
 **Planned payment date:** Finance's intended date for the next external payment. It is separate from Accounting's agreed payment due date and does not establish that payment occurred.
 
 **Inventory movement:** A project stock receipt, usage or adjustment. The inventory balance is the accumulated effect of these movements.
+
+**Stock transfer:** A Procurement proposal to fulfill an approved MRF using materials held at another project site. Source Site Personnel confirm the quantities that may be released; one transfer may use several delivery trips.
+
+**Stock reservation:** Undispatched stock held for a proposed or approved transfer. It remains physically on hand but cannot be used or allocated to another transfer until released.
+
+**Available site stock:** Posted project stock remaining after transfer reservations. Materials in transit and receipts awaiting stock posting are excluded.
+
+**Transfer delivery:** One scheduled trip from a source project to the MRF's destination project. Dispatch reduces source stock; destination receiving and posting are separate actions.
+
+**Sourcing coverage:** Requested quantities committed to stock transfers, supplier awards, or purchase orders. Coverage prevents duplicate sourcing; it does not mean the goods have arrived.
+
+**Site assignment:** An Administrator's association of a Site Personnel account with one or more projects, authorizing that account's site actions.
 
 **Pooled project stock:** The balance of a material and unit within one project, shared across scopes of work. Selecting a scope shows materials received for that scope while retaining their full project balance; it does not attribute usage to a scope.
 

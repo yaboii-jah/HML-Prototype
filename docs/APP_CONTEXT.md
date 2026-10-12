@@ -2,7 +2,7 @@
 
 > **Living document:** This is the canonical, implementation-aligned context for the application. Update this file in the same change whenever a major implementation changes the product scope, business workflow, domain model, permissions, routes, persistence, seeded walkthrough, architecture, or verification strategy. Do not record small visual polish, copy edits, or isolated bug fixes unless they change one of those areas.
 
-**Last verified:** 2026-10-11
+**Last verified:** 2026-10-12
 **Application version:** Prototype (`package.json` 0.1.0)
 **State schema:** `DemoSnapshot` version 12
 
@@ -52,15 +52,25 @@ For newly created MRFs, upfront purchases require Procurement supplier issuance 
 
 | Role | Main implemented responsibilities |
 | --- | --- |
-| Site Personnel | Create/save/submit MRFs with one support PDF; revise returned or reopened requests; confirm receiving; post accepted stock; record usage and stock adjustments. |
+| Site Personnel | On Administrator-assigned projects, confirm source stock releases and destination transfer receiving/posting; create/save/submit MRFs with one support PDF; revise returned or reopened requests; confirm receiving; post accepted stock; record usage and stock adjustments. |
 | Project Manager | Review/return/reject new MRFs and all corrections; approval starts the MRF archive. Reviews all projects without manager assignments. Adds/edits projects, budgets, scopes and Drive settings through Projects, and views Reports and exceptions. |
-| Procurement | Review/return/reject existing MRFs and corrections, retry approved MRF archives, review/archive quotations, generate comparisons and submit POs; confirm supplier issuance for revised upfront purchases; confirm company warehouse receipt. |
+| Procurement | Propose suitable stock transfers from other sites and purchase only remaining demand. Review/return/reject existing MRFs and corrections, retry approved MRF archives, review/archive quotations, generate comparisons and submit POs; confirm supplier issuance for revised upfront purchases; confirm company warehouse receipt. |
 | Finance | Process revised upfront and external-credit payments outside the app. For existing Finance-managed POs, prioritize and approve/hold/return/reject payment requests; separately record actual disbursements for approved requests. Returns go to Accounting. |
-| Logistics | Schedule and dispatch supplier/site or supplier/warehouse batches; forward confirmed warehouse quantities in multiple batches to their original PO/site. |
+| Logistics | Schedule and dispatch source-approved site transfers without a PO/payment gate. Schedule and dispatch supplier/site or supplier/warehouse batches; forward confirmed warehouse quantities in multiple batches to their original PO/site. |
 | Accounting / Auditing | Review PO finances and payment arrangement, approve within budget or return to Procurement, archive approved POs, attach/archive PO-level payment proof and verify full external payment for revised upfront POs; verify partial/full external-credit payments with proof and a due date; prepare payment requests for existing Finance-managed POs and release eligible POs to Logistics. Review delivery evidence separately; make justified stock adjustments. |
-| Administrator | Manage named users, access status and password resets; view Reports and exceptions; add/edit projects, maintain scope allocations and remove unused scopes, confirm and save validated Drive mappings, inspect filtered activity, retry archives, and reset browser workspace data through the unlinked maintenance page. |
+| Administrator | Manage named users, Site Personnel project assignments, access status and password resets; view Reports and exceptions; add/edit projects, maintain scope allocations and remove unused scopes, confirm and save validated Drive mappings, inspect filtered activity, retry archives, and reset browser workspace data through the unlinked maintenance page. |
 
 The domain command layer in `src/domain/commands.ts` is the authority for permissions and transition validation. Hiding an action in the UI is not sufficient authorization.
+
+## MRF sourcing from other project sites
+
+The first procurement step on `/requests/[id]/quotes` is **Check site stock**. Procurement manually chooses suitable materials in the same normalized unit from another site, then submits one proposal per source project. Proposals reserve stock and requested quantities; existing supplier awards and POs share the demand limit. Source-assigned Site Personnel approve full or reduced release or reject. Logistics schedules multiple trips and records dispatch, which debits source inventory once. Destination-assigned Site Personnel record accepted quantities and separately post destination stock once. Missing/damaged quantities reopen sourcing without restoring source stock. Procurement can cancel only undispatched allocation with a reason; individual trip cancellation preserves the approved allocation for rescheduling.
+
+Transfers use destination-project TRF references and separately numbered DEL trips. No financial value, budget charge, supplier invoice or payment approval is attached. Generated versioned receipts and uploaded signed/supporting evidence archive under the destination MRF in Drive; failures retain the business record and permit retries. Accounting reviews transfer documents separately from purchase orders. Queues, inventory reservations, material coverage and audit links include both project endpoints. New revision-5 comparison PDFs/XLSX files freeze quantities remaining to buy and a requested/transfer/ordered breakdown; earlier frozen revisions keep their rendering basis.
+
+Administrator user management assigns Site Personnel to projects. Existing accounts start with no assignments and receive setup guidance. Assignments guard MRF editing, receiving, posting, inventory writes and archive-operation startup as well as transfer release/receipt; unrelated-project records remain readable. Other department permissions remain unchanged. Assignment changes revise sessions. Stock transfers and trips are optional additive arrays in the existing v12 snapshot, preserving older workspace records.
+
+This remains a single-browser prototype: it provides command validation and local reservation consistency, not shared cross-user transactional locking. Production rollout requires authenticated server authorization, database transactions/locking, authoritative stock ledgers and idempotent external workers. See `docs/adr/0003-mixed-mrf-stock-fulfillment.md`.
 
 ## Workflow states and invariants
 

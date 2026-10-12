@@ -3,7 +3,7 @@ import type { DemoSnapshot, DocumentNumbering, DocumentRef, DocumentSeries, Site
 export const normalizeProjectCode = (value?: string) => value?.trim().toUpperCase() || "";
 export const validProjectCode = (value: string) => value.length <= 20 && /^[A-Z0-9]+(?:-[A-Z0-9]+)*$/.test(value);
 export function validDocumentNumberingState(state: DemoSnapshot): boolean {
-  const series: DocumentSeries[] = ["MRF", "PO", "DEL", "PAY"];
+  const series: DocumentSeries[] = ["MRF", "PO", "DEL", "PAY", "TRF"];
   const codes = state.sites.map(site => site.documentCode).filter((value): value is string => value !== undefined);
   if (codes.some(code => typeof code !== "string" || !validProjectCode(code)) || new Set(codes).size !== codes.length) return false;
   if (state.sites.some(site => site.codeLockedAt !== undefined && (typeof site.codeLockedAt !== "string" || !Number.isFinite(Date.parse(site.codeLockedAt))) || site.documentCounters !== undefined && (!site.documentCounters || typeof site.documentCounters !== "object" || Array.isArray(site.documentCounters) || Object.entries(site.documentCounters).some(([key, value]) => !series.includes(key as DocumentSeries) || !Number.isSafeInteger(value) || value < 0)))) return false;
@@ -13,7 +13,7 @@ export function validDocumentNumberingState(state: DemoSnapshot): boolean {
     const n = record.numbering;
     if (!n) return true;
     const site = state.sites.find(value => value.id === n.projectId);
-    const owner = type === "MRF" ? requestProjects.get(record.id) : type === "PO" ? orderProjects.get(record.id) : "poId" in record ? orderProjects.get(record.poId) : undefined;
+    const owner = type === "MRF" ? requestProjects.get(record.id) : type === "PO" ? orderProjects.get(record.id) : "destinationSiteId" in record ? record.destinationSiteId : "transferId" in record ? state.stockTransfers?.find(value => value.id === record.transferId)?.destinationSiteId : "poId" in record ? orderProjects.get(record.poId) : undefined;
     return !!site && projectCodeLocked(site) && owner === n.projectId && site.documentCode === n.projectCode && n.type === type && Number.isSafeInteger(n.sequence) && n.sequence > 0 && record.ref === `${n.projectCode}-${type}-${String(n.sequence).padStart(4, "0")}`;
   }));
 }
@@ -30,7 +30,7 @@ export function projectCodeLocked(site: Site): boolean {
 export function lockProjectCode(site: Site, at: string) { site.codeLockedAt ||= at; }
 
 function seriesRecords(state: DemoSnapshot, type: DocumentSeries) {
-  return type === "MRF" ? state.requests : type === "PO" ? state.pos : type === "DEL" ? state.batches : state.paymentRequests;
+  return type === "MRF" ? state.requests : type === "PO" ? state.pos : type === "TRF" ? state.stockTransfers || [] : type === "DEL" ? [...state.batches, ...(state.transferDeliveries || [])] : state.paymentRequests;
 }
 export function nextDocumentReference(state: DemoSnapshot, siteId: string, type: DocumentSeries): { ref: string; numbering: DocumentNumbering } {
   const site = state.sites.find(value => value.id === siteId)!;

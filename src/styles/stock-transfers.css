@@ -1,0 +1,16 @@
+.stock-sourcing-table{min-width:1180px;table-layout:auto}
+.stock-sourcing-table th,.stock-sourcing-table td{vertical-align:top}
+.stock-sourcing-table td:first-child{min-width:220px;max-width:300px}
+.stock-sourcing-table select{min-width:240px;max-width:340px}
+.stock-sourcing-table input[type="number"]{width:110px}
+.stock-sourcing-table .text-link{display:block;margin-top:6px}
+.stock-sourcing-table .check-row{white-space:nowrap}
+.transfer-review-table{min-width:680px}
+.transfer-review-table input[type="number"]{width:110px}
+.transfer-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.transfer-trip{margin-top:18px}
+.transfer-assignment-note{padding:14px;border:1px solid var(--line);border-left:3px solid var(--warn);background:var(--paper);border-radius:var(--radius-md)}
+
+.stock-sourcing-table small,.transfer-review-table small,.transfer-trip td small,.transfer-summary small{display:block;margin-top:4px;font-weight:400;color:var(--muted)}
+.transfer-summary strong{text-align:right}
+.transfer-review-table{margin-bottom:12px}

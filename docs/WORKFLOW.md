@@ -18,12 +18,21 @@ Last updated: 2026-10-12
 
 ## Shared Purchasing Flow
 
-1. **Administrator / Project Manager:** Create the project with a unique document code, budget and scopes. Project creation sets up its Google Drive folder. Assign a code to existing projects before creating new documents. Administrators and Project Managers can delete unused projects after confirmation; existing Drive folders are retained.
+1. **Administrator / Project Manager:** Create the project with a unique document code, budget and scopes. Project creation sets up its Google Drive folder. Assign a code to existing projects before creating new documents. Administrators assign Site Personnel accounts to their projects; site actions require the relevant assignment. Administrators and Project Managers can delete unused projects after confirmation; existing Drive folders are retained.
 2. **Site Personnel:** Create the MRF, attach the combined supporting PDF, review any AI-extracted information and submit. The first draft save or submission assigns its permanent number; the original paper number is kept separately as Source MRF number.
 3. **Project Manager:** Approve, return or reject the MRF. Approved MRF documents are archived to Drive.
-4. **Procurement:** Review, finalize and archive supplier quotations. Compare all materials side by side, select suppliers per material, split quantities or preview awards to one supplier. Review and save awards together, then create supplier PO drafts separately and submit them. Comparison prices include item discounts and VAT where applicable; quotation-level charges and EWT remain separate. Partial sourcing is allowed; save or discard unsaved choices before creating POs.
+4. **Procurement:** Check other project sites for available stock. Propose suitable same-unit transfers for some or all MRF quantities; source Site Personnel confirm release and Logistics handles delivery. Buy the uncovered quantities through the normal supplier process. Review, finalize and archive supplier quotations. Compare all materials side by side, select suppliers per material, split quantities or preview awards to one supplier. Review and save awards together, then create supplier PO drafts separately and submit them. Comparison prices include item discounts and VAT where applicable; quotation-level charges and EWT remain separate. Partial sourcing is allowed; save or discard unsaved choices before creating POs.
 5. **Accounting:** Review prices, VAT/EWT, adjustments and budget. Approve upfront or credit/terms payment and archive the PO. Credit requires an agreed due date.
 6. **Procurement:** Send the approved PO to the supplier and confirm issuance. The PO becomes **Served** and enters Finance coordination while unpaid.
+
+## Site Stock Transfers
+
+**Procurement checks stock and confirms suitability → source Site Personnel approve release → Logistics schedules and dispatches trips → destination Site Personnel receive and post accepted stock.**
+
+- Proposals reserve source stock and MRF demand immediately. Source personnel can reduce or reject release; Procurement can cancel undispatched quantities with a reason. Cancelling a scheduled trip keeps its allocation for rescheduling.
+- Dispatch removes stock from the source once. Receiving records accepted quantities; posting adds destination stock once. Shortages reopen sourcing without restoring the source balance.
+- A material may combine stock from several sites and supplier purchases. New comparisons and supplier awards use the remaining purchase quantity. Earlier frozen reports retain their original quantities.
+- Transfers need no supplier PO, payment approval or budget charge. Accounting separately reviews archived generated receipts, current signed receipts and supporting evidence. Drive failure can be retried without undoing delivery.
 
 ## Full Disbursement / Upfront
 
@@ -67,4 +76,4 @@ Older credit payment requests can cover a partial amount or the full outstanding
 
 ## Document references
 
-Projects use separate continuous numbers such as HML-MRF-0001, HML-PO-0001 and HML-DEL-0001. There is no yearly reset. A saved numbered MRF cannot change projects. Delivery receipts share the delivery number with a version suffix; bid comparison files inherit the MRF number. New archive copies carry the project prefix while original upload names, supplier references and bank references are retained. Existing saved references, report versions and completed archives are unchanged.
+Projects use separate continuous numbers such as HML-MRF-0001, HML-PO-0001, HML-TRF-0001 and HML-DEL-0001. There is no yearly reset. A saved numbered MRF cannot change projects. Delivery receipts share the delivery number with a version suffix; bid comparison files inherit the MRF number. New archive copies carry the project prefix while original upload names, supplier references and bank references are retained. Existing saved references, report versions and completed archives are unchanged.

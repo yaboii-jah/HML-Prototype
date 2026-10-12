@@ -1,19 +1,19 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { Batch, MRF, PO, Quote, Site } from "@/src/domain/types";
+import type { Batch, MRF, PO, Quote, Site, TransferReceiptData } from "@/src/domain/types";
 import { PdfDocumentViewer } from "./PdfDocumentViewer";
 import { CloseButton } from "./ui/CloseButton";
 import { archiveFileName, prefixedReference } from "@/src/domain/document-numbering";
 import { DocumentLoading } from "./ui/Skeleton";
 
-export function DocumentPreview({ kind, request, po, quote, project, batch, parentBatch }: { kind: "mrf" | "po" | "delivery"; request: MRF; po?: PO; quote?: Quote; project: Site; batch?: Batch; parentBatch?: Batch }) {
+export function DocumentPreview({ kind, request, po, quote, project, batch, parentBatch, transferData }: { kind: "mrf" | "po" | "delivery" | "transfer"; transferData?: TransferReceiptData; request: MRF; po?: PO; quote?: Quote; project: Site; batch?: Batch; parentBatch?: Batch }) {
   const [url, setUrl] = useState(""), [busy, setBusy] = useState(false), [error, setError] = useState("");
   const dialog = useRef<HTMLDialogElement>(null), invoker = useRef<HTMLButtonElement>(null);
   const [blob, setBlob] = useState<Blob | null>(null);
   const pending = useRef<AbortController | null>(null);
-  const title = kind === "delivery" ? "Delivery receipt" : kind.toUpperCase(), ref = batch?.ref || po?.ref || request.ref;
-  const fileName = kind === "delivery" ? batch?.receiptVersions?.at(-1)?.fileName || (project.documentCode ? archiveFileName(prefixedReference(project.documentCode, ref), "receipt", "v1", ".pdf") : ref + ".pdf") : kind === "po" ? (po?.archiveRef || ref) + ".pdf" : (request.archiveRef || ref) + ".pdf";
+  const title = kind === "transfer" ? "Stock transfer receipt" : kind === "delivery" ? "Delivery receipt" : kind.toUpperCase(), ref = transferData?.delivery.ref || batch?.ref || po?.ref || request.ref;
+  const fileName = kind === "transfer" ? ref + "-Stock-Transfer-Receipt-v" + (transferData?.receiptVersion || 1) + ".pdf" : kind === "delivery" ? batch?.receiptVersions?.at(-1)?.fileName || (project.documentCode ? archiveFileName(prefixedReference(project.documentCode, ref), "receipt", "v1", ".pdf") : ref + ".pdf") : kind === "po" ? (po?.archiveRef || ref) + ".pdf" : (request.archiveRef || ref) + ".pdf";
   useEffect(() => () => { if (url) URL.revokeObjectURL(url); }, [url]);
   useEffect(() => () => pending.current?.abort(), []);
   const open = async () => {
@@ -23,7 +23,7 @@ export function DocumentPreview({ kind, request, po, quote, project, batch, pare
     setBusy(true); setError("");
     if (!dialog.current?.open) dialog.current?.showModal();
     try {
-      const response = await fetch("/api/documents/preview", { method: "POST", signal: controller.signal, headers: { "Content-Type": "application/json" }, body: JSON.stringify({ kind, request, po, quote, project, batch, parentBatch }) });
+      const response = await fetch("/api/documents/preview", { method: "POST", signal: controller.signal, headers: { "Content-Type": "application/json" }, body: JSON.stringify(transferData || { kind, request, po, quote, project, batch, parentBatch }) });
       if (!response.ok) throw new Error((await response.json()).error || "The document could not be generated.");
       const file = await response.blob();
       if (controller.signal.aborted) return;

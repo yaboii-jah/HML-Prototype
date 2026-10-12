@@ -1,3 +1,5 @@
+import { applyTransferCommand, isTransferCommand, requestSourcing, sourceStockAvailable, transferQuantityFor, transfersForRequest, type TransferCommand } from "./stock-transfers.ts";
+import { siteActionProject } from "./site-access.ts";
 import { coordinationEligible, coordinationBalance, coordinationError, saveCoordination, resetCoordination } from "./payment-coordination.ts";
 import { projectRemovalReason } from "./project-removal.ts";
 import type { PaymentCoordination } from "./types.ts";
@@ -31,7 +33,7 @@ import { poLineTotal } from "./pricing.ts";
 import { procurementReady, supportingPdf } from "./request-archive.ts";
 import { ROLES, type ArchivedQuoteFile, type DemoSnapshot, type DocumentRef, type DocumentStatus, type Item, type POAdjustment, type POLine, type Priority, type Quote, type Role } from "./types.ts";
 
-export type Command =
+export type Command = TransferCommand
   | { type: "savePaymentCoordination"; poId: string; revision: number; priority: PaymentCoordination["priority"]; status: PaymentCoordination["status"]; plannedDate: string; note: string }
   | { type: "recordCreditPayment"; poId: string; paymentId: string; amount: number; method: Payment["method"]; reference: string; date: string; proofIds: string[] }
   | { type: "voidCreditPayment"; poId: string; paymentId: string; reason: string }
@@ -103,7 +105,7 @@ export type Command =
   | { type: "addSite"; documentCode?: string; name: string; location: string; budget: number }
   | { type: "addSupplierFromQuote"; name: string };
 
-export type CommandContext = { now: () => string; id: (prefix: string) => string; actor?: AuditIdentity };
+export type CommandContext = { now: () => string; id: (prefix: string) => string; actor?: AuditIdentity; siteIds?: readonly string[] };
 export type CommandResult = { ok: true; snapshot: DemoSnapshot; recordId?: string; message: string } | { ok: false; message: string; field?: string };
 const defaultContext: CommandContext = { now: () => new Date().toISOString(), id: newId };
 const fail = (message: string, field?: string): CommandResult => ({ ok: false, message, field });
@@ -113,7 +115,7 @@ const reasonOK = (s?: string) => (s?.trim().length ?? 0) >= 5;
 const close = (left: number, right: number) => Math.abs(left - right) < 0.000001;
 const validRequestDate = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(`${value}T00:00:00Z`)) && new Date(`${value}T00:00:00Z`).toISOString().slice(0, 10) === value;
 
-function awardError(state: DemoSnapshot, requestId: string, quote: Quote, lines: POLine[], tax: number, freight: number, discount: number, excludingPoId?: string) {
+function awardError(state: DemoSnapshot, requestId: string, quote: Quote, lines: POLine[], tax: number, freight: number, discount: number, excludingPoId?: string, convertingAwards: readonly string[] = []) {
   const request = state.requests.find(r => r.id === requestId);
   if (!procurementReady(request) || quote.mrfId !== requestId || !quote.lines?.length) return "Choose a reviewed quotation for an approved MRF.";
   if (!isFinalizedQuote(quote) || quote.currency && quote.currency !== "PHP") return "Only finalized PHP quotations can be awarded.";
@@ -133,7 +135,11 @@ function awardError(state: DemoSnapshot, requestId: string, quote: Quote, lines:
     for (const item of request.items) awarded.set(item.id, (awarded.get(item.id) || 0) + orderedFor(state, po, item.id));
     if (po.quoteId === quote.id) for (const line of po.lines || []) usedOffers.set(line.quoteLineId, (usedOffers.get(line.quoteLineId) || 0) + line.quantity);
   }
-  if (request.items.some(item => (awarded.get(item.id) || 0) > item.quantity + 0.000001)) return "Awarded quantities exceed the MRF request.";
+  for (const award of state.pendingAwards.filter(value => value.requestId === requestId && !convertingAwards.includes(value.id))) {
+    awarded.set(award.itemId, (awarded.get(award.itemId) || 0) + award.quantity);
+    if (award.quoteId === quote.id) usedOffers.set(award.quoteLineId, (usedOffers.get(award.quoteLineId) || 0) + award.quantity);
+  }
+  if (request.items.some(item => (awarded.get(item.id) || 0) + transferQuantityFor(state, requestId, item.id) > item.quantity + 0.000001)) return "Awarded quantities exceed the MRF request or overlap stock transfers.";
   if (quote.lines.some(offer => (usedOffers.get(offer.id) || 0) > offer.quantity * offer.conversionFactor + 0.000001)) return "Awarded quantity exceeds the supplier's quoted quantity.";
   const subtotal = lines.reduce((sum, line) => sum + poLineTotal(line), 0);
   if (discount > subtotal + tax + freight) return "Discount exceeds the PO amount.";
@@ -146,6 +152,11 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
   if (ctx.actor && (!validIdentity(ctx.actor) || !ROLES.includes(ctx.actor.role))) return fail("The acting account is invalid.");
   const actor = ctx.actor?.role || state.role;
   const identity = copyIdentity(ctx.actor);
+  if (actor === "Site Personnel" && ctx.siteIds !== undefined) {
+    const siteId = siteActionProject(state, command);
+    if (siteId && !ctx.siteIds.includes(siteId)) return fail("Ask an Administrator to assign your account to this project before performing site actions.");
+  }
+  if (isTransferCommand(command)) return applyTransferCommand(state, command, ctx);
   const reopenDocumentReview = (poId: string, reason: string) => {
     const record = state.accounting.find(value => value.poId === poId);
     if (record?.review !== "Complete") return;
@@ -266,7 +277,7 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       lockProjectCode(project, at);
       const data = captureBidReport(state, command.requestId, true);
       let comparisonSelections: ComparisonSelections;
-      try { comparisonSelections = resolveComparisonSelections(data, command.comparisonSelections); }
+      try { comparisonSelections = resolveComparisonSelections(data, command.comparisonSelections, true); }
       catch (cause) { return fail(cause instanceof Error ? cause.message : "Review the comparison alternatives."); }
       for (const offer of data.offers.filter(value => value.source !== "PO source")) for (const item of data.request.items) {
         const line = bidLines(data, offer.quote).find(value => value.id === comparisonSelections[offer.quote.id]?.[item.id]);
@@ -275,7 +286,7 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       const version = Math.max(0, ...state.bidReports.filter(report => report.requestId === command.requestId).map(report => report.version)) + 1;
       const reportId = id("bid");
       const ref = prefixedReference(project.documentCode!, data.request.ref);
-      state.bidReports.push({ id: reportId, requestId: command.requestId, version, comparisonRevision: 4, comparisonSelections, generatedAt: at, fileName: archiveFileName(ref, "bid-comparison", "v" + version, ".xlsx"), data, pdf: { fileName: archiveFileName(ref, "bid-comparison", "v" + version, ".pdf"), archive: { status: "pending" } }, archive: { status: "pending" } });
+      state.bidReports.push({ id: reportId, requestId: command.requestId, version, comparisonRevision: 5, comparisonSelections, generatedAt: at, fileName: archiveFileName(ref, "bid-comparison", "v" + version, ".xlsx"), data, pdf: { fileName: archiveFileName(ref, "bid-comparison", "v" + version, ".pdf"), archive: { status: "pending" } }, archive: { status: "pending" } });
       log(reportId, `Bid comparison v${version} captured`);
       return done("Bid comparison captured. Generating Excel and PDF…", reportId);
     }
@@ -393,7 +404,7 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       const request = state.requests.find(value => value.id === command.id);
       if (!request || request.status !== "approved" || request.correction || request.archive?.status !== "complete") return fail("Only an archived approved MRF can be reopened.");
       if (!reasonOK(command.reason)) return fail("Explain the correction in at least five characters.");
-      const hasPurchasing = state.quotes.some(value => value.mrfId === request.id) || state.pos.some(value => value.mrfId === request.id);
+      const hasPurchasing = state.quotes.some(value => value.mrfId === request.id) || state.pos.some(value => value.mrfId === request.id) || transfersForRequest(state, request.id).length > 0;
       request.correction = { status: "requested", scope: hasPurchasing ? "documents" : "full", reason: command.reason.trim() };
       request.updatedAt = at;
       log(request.id, "MRF reopened for correction", command.reason);
@@ -520,7 +531,7 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
         if (award.quantity + used > offer.quantity * offer.conversionFactor + 0.000001) return fail("Awarded quantity exceeds the supplier's quoted quantity.");
         candidates.push({ id: prior.find(value => value.quoteLineId === offer.id)?.id || id("award"), requestId: request.id, itemId: item.id, quoteId: quote.id, quoteLineId: offer.id, quantity: award.quantity });
       }
-      const ordered = state.pos.filter(po => po.mrfId === request.id && po.status !== "rejected").reduce((sum, po) => sum + orderedFor(state, po, item.id), 0);
+      const ordered = requestSourcing(state, request, item).ordered + transferQuantityFor(state, request.id, item.id);
       if (ordered + candidates.reduce((sum, value) => sum + value.quantity, 0) > item.quantity + 0.000001) return fail("Awarded quantities exceed the MRF request.");
       state.pendingAwards = [...state.pendingAwards.filter(value => value.requestId !== request.id || value.itemId !== item.id), ...candidates];
       for (const award of [...prior, ...candidates.filter(value => !prior.some(old => old.id === value.id))]) {
@@ -544,7 +555,7 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       const usedRequest = state.pos.filter(value => value.mrfId === request.id && value.status !== "rejected").reduce((sum, po) => sum + orderedFor(state, po, offer.requestItemId), 0) + otherPending.filter(value => value.itemId === offer.requestItemId).reduce((sum, value) => sum + value.quantity, 0);
       const usedOffer = state.pos.filter(value => value.quoteId === quote.id && value.status !== "rejected").reduce((sum, po) => sum + (po.lines || []).filter(value => value.quoteLineId === offer.id).reduce((total, value) => total + value.quantity, 0), 0);
       const requested = request.items.find(value => value.id === offer.requestItemId);
-      if (!requested || command.quantity + usedRequest > requested.quantity + 0.000001) return fail("Awarded quantities exceed the MRF request.");
+      if (!requested || command.quantity + usedRequest + transferQuantityFor(state, request.id, requested.id) > requested.quantity + 0.000001) return fail("Awarded quantities exceed the MRF request or overlap stock transfers.");
       if (command.quantity + usedOffer > offer.quantity * offer.conversionFactor + 0.000001) return fail("Awarded quantity exceeds the supplier's quoted quantity.");
       if (existing) state.pendingAwards = state.pendingAwards.filter(value => value.id !== existing.id);
       if (command.quantity > 0) state.pendingAwards.push({ id: existing?.id || id("award"), requestId: request.id, quoteId: quote.id, quoteLineId: offer.id, itemId: offer.requestItemId, quantity: command.quantity });
@@ -576,7 +587,7 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
           const fullOffer = Math.abs(award.quantity - offer.quantity * offer.conversionFactor) < 0.000001;
           return { itemId: award.itemId, quoteLineId: offer.id, quantity: award.quantity, unitPrice: offer.unitPrice / offer.conversionFactor, discountType: offer.discountType || "none", discountValue: offer.discountType === "fixed" && !fullOffer ? 0 : offer.discountValue || 0, taxRate: offer.taxRate || 0, fixedDiscountConfirmed: offer.discountType !== "fixed" };
         });
-        const error = awardError(state, command.requestId, quote, lines, 0, 0, 0);
+        const error = awardError(state, command.requestId, quote, lines, 0, 0, 0, undefined, awards.map(value => value.id));
         if (error) return fail(error);
         const adjustments = (quote.adjustments || [
           ...(quote.tax ? [{ id: id("adjustment"), label: "Tax", kind: "tax" as const, calculation: "fixed" as const, value: quote.tax }] : []),
@@ -586,6 +597,7 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
         const poId = id("po");
         state.pos.push({ id: poId, ...issueDocumentReference(state, state.requests.find(value => value.id === command.requestId)!.siteId, "PO", at), mrfId: command.requestId, quoteId, lines, adjustments, status: "draft", priority: "Normal", notes: "", selectionReason, createdAt: at, updatedAt: at });
         initializePo(state.pos[state.pos.length - 1], state.requests.find(value => value.id === command.requestId)!, quote);
+        state.pendingAwards = state.pendingAwards.filter(value => !awards.some(award => award.id === value.id));
         firstId ||= poId;
         log(poId, "PO drafted from staged supplier award", selectionReason || undefined);
       }
@@ -635,6 +647,8 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       if (!isFinalizedQuote(quote) || quote.currency && quote.currency !== "PHP") return fail("Only finalized PHP quotations can be awarded.");
       if (quote.archive && quote.archive.status !== "complete") return fail("Archive the supplier quotation before creating a PO.");
       if (state.pos.some(p => p.mrfId === request.id && p.status !== "rejected")) return fail("Use the material award flow to create another PO for this MRF.");
+      if (state.pendingAwards.some(value => value.requestId === request.id)) return fail("Use Compare & award to create POs from saved supplier awards.");
+      if (transfersForRequest(state, request.id).some(value => value.status === "pending" || value.status === "approved")) return fail("Use Compare & award to purchase only the quantities remaining after stock transfers.");
       if (!reasonOK(command.reason)) return fail("Explain the supplier choice in at least five characters.", "reason");
       const codeError = projectCodeRequired(state, state.requests.find(value => value.id === command.requestId)!.siteId);
       if (codeError) return fail(codeError);
@@ -999,6 +1013,7 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       return done("Accepted quantities posted to site stock.");
     }
     case "recordMovement": {
+      if (!["usage", "adjustment"].includes(command.kind)) return fail("Use receiving or dispatch to record transfer movements.");
       if (command.kind === "usage" && !permit("Site Personnel")) return fail("Sign in as Site Personnel to record usage.");
       if (command.kind === "adjustment" && !permit("Site Personnel", "Accounting / Auditing")) return fail("This role cannot correct stock.");
       if (!state.sites.some(s => s.id === command.siteId) || !inventoryFor(state, command.siteId).some(item => item.name.toLowerCase() === command.itemName.trim().toLowerCase() && item.unit.toLowerCase() === command.unit.trim().toLowerCase())) return fail("Choose an existing site material.");
@@ -1006,6 +1021,7 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       if (!Number.isFinite(command.quantity) || command.quantity === 0 || (command.kind === "usage" && command.quantity < 0)) return fail("Enter a valid nonzero quantity.", "quantity");
       const signed = command.kind === "usage" ? -command.quantity : command.quantity;
       if (stockFor(state, command.siteId, command.itemName, command.unit) + signed < 0) return fail("This movement would create negative stock.", "quantity");
+      if (signed < 0 && -signed > sourceStockAvailable(state, command.siteId, command.itemName, command.unit) + .000001) return fail("This stock is reserved for a transfer. Cancel or reduce the transfer before consuming it.", "quantity");
       const movementId = id("movement");
       state.movements.push({ id: movementId, siteId: command.siteId, itemName: command.itemName, unit: command.unit, quantity: signed, kind: command.kind, reason: command.reason.trim(), actor, actorIdentity: copyIdentity(identity), at });
       log(movementId, `${command.kind} recorded`, command.reason);

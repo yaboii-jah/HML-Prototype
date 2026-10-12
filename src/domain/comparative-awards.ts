@@ -1,6 +1,7 @@
 import { normalizedQuantity } from "./delivery-flow.ts";
 import { latestFinalizedQuotes } from "./procurement.ts";
 import { orderedFor, poSupplierId } from "./selectors.ts";
+import { requestSourcing } from "./stock-transfers.ts";
 import type { ComparisonSelections, DemoSnapshot, Item, MRF, Quote, QuoteLine } from "./types.ts";
 
 export type ComparisonOffer = { quote: Quote; line: QuoteLine };
@@ -32,7 +33,8 @@ export function materialAwardStatus(state: DemoSnapshot, request: MRF, item: Ite
   const ordered = normalizedQuantity(state.pos.filter(po => po.mrfId === request.id && po.status !== "rejected").reduce((sum, po) => sum + orderedFor(state, po, item.id), 0));
   const saved = normalizedQuantity(state.pendingAwards.filter(award => award.requestId === request.id && award.itemId === item.id).reduce((sum, award) => sum + award.quantity, 0));
   const proposed = normalizedQuantity(materialAwardOffers(state, request.id, item.id).reduce((sum, { line }) => sum + Math.max(0, Number(awardInputValue(state, request.id, line.id, edits)) || 0), 0));
-  return { ordered, saved, proposed, remainingToOrder: Math.max(0, normalizedQuantity(item.quantity - ordered)), unassigned: Math.max(0, normalizedQuantity(item.quantity - ordered - proposed)), edited: materialAwardOffers(state, request.id, item.id).some(({ line }) => awardInputDirty(state, request.id, line.id, edits)) };
+  const sourcing = requestSourcing(state, request, item);
+  return { ordered, saved, proposed, transfers: sourcing.transfers, remainingToOrder: sourcing.purchase, unassigned: Math.max(0, normalizedQuantity(sourcing.purchase - proposed)), edited: materialAwardOffers(state, request.id, item.id).some(({ line }) => awardInputDirty(state, request.id, line.id, edits)) };
 }
 export function selectedMaterialOffer(quote: Quote, itemId: string, selections: ComparisonSelections): QuoteLine | undefined {
   const lines = (quote.lines || []).filter(line => line.requestItemId === itemId);

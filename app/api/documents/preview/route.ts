@@ -1,3 +1,5 @@
+import { validTransferReceipt } from "@/src/domain/transfer-document";
+import { generateTransferReceiptPdf } from "@/src/server/transfer-receipt-pdf";
 import { sameOriginError, driveError } from "@/src/server/local-drive";
 import { generateMrfPdf } from "@/src/server/mrf-pdf";
 import { generatePoPdf } from "@/src/server/po-pdf";
@@ -13,7 +15,9 @@ export async function POST(request: Request) {
   try {
     const raw = await request.text();
     if (raw.length > 2 * 1024 * 1024) return Response.json({ error: "The document input is too large." }, { status: 413 });
-    const body = JSON.parse(raw) as { kind: "mrf" | "po" | "delivery"; request: MRF; po?: PO; quote?: Quote; project: Site };
+    const parsed: unknown = JSON.parse(raw);
+    if (validTransferReceipt(parsed)) { const bytes = await generateTransferReceiptPdf(parsed); return new Response(Buffer.from(bytes), { headers: { "Content-Type": "application/pdf", "Cache-Control": "no-store" } }); }
+    const body = parsed as { kind: "mrf" | "po" | "delivery"; request: MRF; po?: PO; quote?: Quote; project: Site };
     if (body.kind === "delivery") {
       if (!validDeliveryReceipt(body)) return Response.json({ error: "The linked delivery receipt data is invalid." }, { status: 400 });
       const bytes = await generateDeliveryReceiptPdf(body);

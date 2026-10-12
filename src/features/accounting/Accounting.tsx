@@ -15,6 +15,7 @@ import { PaymentRequests } from "./PaymentRequests";
 import { accountingNextAction, poStatusLabel } from "@/src/domain/workflow";
 import { AccountingDocuments } from "./AccountingDocuments";
 import { accountingGroups } from "@/src/domain/accounting-documents";
+import { StockTransferRegister } from "@/src/features/transfers/StockTransfers";
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
 import { useDemo } from "@/src/app-state/DemoProvider";
@@ -30,7 +31,7 @@ export function Accounting() {
   const [search, setSearch] = useState("");
   if (!state) return null;
   const groups = accountingGroups(state, search);
-  return <><PageHeader title="Accounting queue" description="Expand an MRF to review its purchase orders, documents and payment status."/>
+  return <><PageHeader title="Accounting queue" description="Expand an MRF to review its purchase orders, documents and payment status."/><StockTransferRegister accounting/>
     <Register rows={groups} resetKey={search + state.siteFilter} unit="MRFs" className="accounting-groups" tableClassName="accounting-group-list"
       filters={<input type="search" aria-label="Search accounting" placeholder="Search MRF, PO or supplier" value={search} onChange={event => setSearch(event.target.value)}/>}
       empty={state.pos.length ? "No purchase orders match this view." : "No purchase orders are linked to an MRF yet."}

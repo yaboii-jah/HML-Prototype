@@ -7,7 +7,7 @@ import { generateBidWorkbook } from '../src/server/bid-workbook.ts';
 
 test('an acknowledged spreadsheet archive completes and retry preserves its identity', async () => {
   let state = seedDemo();
-  state.role = 'Procurement';
+  state.role = 'Procurement'; state.pos = [];
   state.sites[0].driveFolderId = 'bid-project-folder';
   for (const quote of state.quotes) quote.financial = { vatStatus: 'VAT', priceBasis: 'exclusive', vatRate: 12, reviewed: true };
   const run = async command => {

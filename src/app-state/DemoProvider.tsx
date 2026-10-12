@@ -17,6 +17,7 @@ type DemoContextValue = RepositoryView & {
   signedOut: boolean;
   signIn: (email: string, password: string) => Promise<{ ok: boolean; message: string }>;
   directory: UserDirectoryView;
+  siteIds: readonly string[];
   manageUser: (change: UserChange) => Promise<{ ok: boolean; message: string }>;
   switchAccount: (id: string) => { ok: boolean; message: string };
   switchRole: (role: Role) => { ok: boolean; message: string };
@@ -48,7 +49,8 @@ function DemoSessionProvider({ children }: { children: ReactNode }) {
       void demoRepository.execute({ type: "setRole", role: session.role });
     }
   }, [session.role, snapshotRole]);
-  const gateway = bindAccountCommands(demoRepository, identityFor(session), () => identityFor(demoSession.read()));
+  const siteIds = directory.users.find(user => user.id === session.userId)?.siteIds || [];
+  const gateway = bindAccountCommands(demoRepository, identityFor(session), () => identityFor(demoSession.read()), () => userDirectory.getSnapshot().users.find(user => user.id === demoSession.read().userId)?.siteIds || []);
   const run = async (command: Command) => {
     const result = await gateway.run(command);
     if (result.ok && ["completeRequestArchive", "completeQuoteArchive", "completePOArchive", "completeBidArchive"].includes(command.type)) notify({ tone: "success", title: result.message });
@@ -84,10 +86,11 @@ function DemoSessionProvider({ children }: { children: ReactNode }) {
   const manageUser = async (change: UserChange) => {
     const actor = identityFor(demoSession.read());
     if (!actor || actor.role !== "Administrator" || actor.userId !== session.userId || actor.sessionRevision !== session.revision) return { ok: false, message: "Your account changed. Sign in as Administrator to manage users." };
+    if ((change.type === "add" || change.type === "edit") && change.siteIds?.some(id => !view.snapshot?.sites.some(site => site.id === id))) return { ok: false, message: "Choose projects from the current workspace." };
     return userDirectory.change(actor, change);
   };
   const reset = async () => { if (demoSession.read().role !== "Administrator") throw new Error("Workspace reset requires an Administrator."); await demoRepository.reset(); notify({ tone: "success", title: "Workspace cleared. Start by adding a project." }); };
-  return <ArchiveProvider><DemoContext.Provider value={{ ...view, run, beginOperation: gateway.beginOperation, session, signedOut, directory, manageUser, signIn, switchRole, switchAccount, signOut, reset }}>{children}</DemoContext.Provider></ArchiveProvider>;
+  return <ArchiveProvider><DemoContext.Provider value={{ ...view, run, beginOperation: gateway.beginOperation, session, signedOut, directory, siteIds, manageUser, signIn, switchRole, switchAccount, signOut, reset }}>{children}</DemoContext.Provider></ArchiveProvider>;
 }
 
 export function DemoProvider({ children }: { children: ReactNode }) {
