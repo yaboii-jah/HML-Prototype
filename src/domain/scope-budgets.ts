@@ -2,6 +2,19 @@ import { roundMoney } from "./pricing.ts";
 import { budgetFor, paidTotal, poTotal, requestForPO } from "./selectors.ts";
 import type { DemoSnapshot } from "./types.ts";
 
+export const SCOPE_OF_WORK_OPTIONS = [
+  "General Requirement",
+  "Structural Works",
+  "Civil Works",
+  "Architectural",
+  "Mechanical",
+  "Electrical",
+  "Plumbing & Sanitary",
+  "Fire Protection",
+  "Medical Gas",
+  "Variation Order",
+] as const;
+
 export const projectScopes = (state: DemoSnapshot, siteId: string) => (state.scopes || []).filter(scope => scope.siteId === siteId);
 export const scopeName = (state: DemoSnapshot, scopeId?: string) => state.scopes?.find(scope => scope.id === scopeId)?.name || "Scope not assigned";
 export function projectMinimumBudget(state: DemoSnapshot, siteId: string) {

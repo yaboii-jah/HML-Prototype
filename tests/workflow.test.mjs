@@ -17,7 +17,7 @@ const fail = (state, command, pattern) => { const original = structuredClone(sta
 
 function submittedPO() {
   let state = as(blankWorkspace(), 'Administrator');
-  state = run(state, { type: 'addSite', name: 'Client project', location: 'Pasig', budget: 10000 });
+  state = run(state, { type: 'addSite', documentCode: 'CLIENT-PROJECT', name: 'Client project', location: 'Pasig', budget: 10000 });
   const siteId = state.sites[0].id;
   state = run(state, { type: 'setProjectDriveFolder', siteId, folderId: 'project-folder' });
   state = run(state, { type: 'saveProjectScope', siteId, name: 'Structural', budget: 10000 });
@@ -90,6 +90,21 @@ test('credit releases with no payment request and Finance can pay after delivery
   state = run(as(state, 'Logistics'), { type: 'createBatch', poId: id, scheduledDate: '2026-10-06', evidence: 'DR-credit', delayReason: '', expected: { cement: 10 } });
   state = pay(requestPayment(state));
   assert.equal(state.pos[0].status, 'released'); assert.equal(state.batches[0].status, 'expected'); assert.equal(paidTotal(state, id), 1000);
+});
+
+test('credit accepts partial payment requests and preserves history when the remaining balance is paid', () => {
+  let state = archive(approve(submittedPO(), 'credit'));
+  const id = state.pos[0].id;
+  state = run(state, { type: 'releasePO', id });
+  state = pay(requestPayment(state, 400));
+  const first = structuredClone({ request: state.paymentRequests[0], payment: state.payments[0] });
+  assert.equal(paidTotal(state, id), 400);
+  assert.equal(state.pos[0].status, 'released');
+  state = pay(requestPayment(state, 600));
+  assert.equal(paidTotal(state, id), 1000);
+  assert.deepEqual(state.paymentRequests[0], first.request);
+  assert.deepEqual(state.payments[0], first.payment);
+  assert.equal(state.pos[0].status, 'released');
 });
 
 test('partial payment requests retain history and upfront release waits for the balance', () => {

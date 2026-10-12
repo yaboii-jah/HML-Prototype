@@ -9,7 +9,7 @@ import { Badge, Field } from "@/src/components/ui/Primitives";
 import { money } from "@/src/domain/format";
 import { newId } from "@/src/domain/ids";
 import type { ConfirmedAction } from "@/src/components/ui/useConfirmedAction";
-import { quoteReviewIssues } from "@/src/domain/procurement";
+import { foreignQuotationMessage, quotationCurrency, quoteReviewIssues } from "@/src/domain/procurement";
 import { quotationLineAmount } from "@/src/domain/pricing";
 import { quoteTotal } from "@/src/domain/selectors";
 import { QuotationFinancialFields } from "./QuotationFinancialFields";
@@ -40,7 +40,7 @@ export function QuoteDraftEditor({ state, request, quote, onSave, onFinalize, on
       else if (message.includes("select a valid MRF")) field = "requestItemId";
       else if (message.includes("confirm the suggested")) field = "matchConfirmed";
       else { secondary = true; field = message.includes("unit conversion") ? "conversionFactor" : message.includes("unit difference") ? "varianceReason" : message.includes("discount") ? "discountValue" : message.includes("tax rate") ? "taxRate" : "discrepancyReason"; }
-    } else field = message.includes("VAT") ? "financial" : message.includes("supplier name") ? "supplierName" : message.includes("quotation reference") ? "ref" : message.includes("supplier quotation PDF") ? "documents" : message.includes("currency") ? "currency" : message.includes("offered line") ? "materials" : message.includes("adjustment") ? "adjustments" : "total";
+    } else field = message.includes("VAT") ? "financial" : message.includes("supplier name") ? "supplierName" : message.includes("quotation reference") ? "ref" : message.includes("supplier quotation PDF") ? "documents" : message.includes("Only PHP") ? "currency" : message.includes("offered line") ? "materials" : message.includes("adjustment") ? "adjustments" : "total";
     return { message, offer, field, secondary };
   });
   const reviewIds = new Set(locations.flatMap(location => location.offer ? [location.offer.id] : []));
@@ -105,10 +105,10 @@ export function QuoteDraftEditor({ state, request, quote, onSave, onFinalize, on
         if (event.newState === "open") navigatingIssue.current = false;
         else if (!navigatingIssue.current) issuesTrigger.current?.focus({ preventScroll: true });
       }} onToggle={event => setIssuesOpen(event.newState === "open")}><strong id={issuesId + "-title"}>{issues.length} review {issues.length === 1 ? "item" : "items"} before finalizing</strong><ul>{locations.map((location, index) => <li key={location.message + "-" + index}><button type="button" className="text-link" onClick={() => jump(location)}>{location.message}</button></li>)}</ul></div>}
+      {quotationCurrency(quote.currency) !== "PHP" && <p id={fieldId("currency")} tabIndex={-1} className="callout bad" role={readOnly ? undefined : "alert"}>{readOnly ? `Recorded currency: ${quote.currency}. This historical quotation is read-only.` : `${foreignQuotationMessage} Detected currency: ${quote.currency}.`}</p>}
       <CollapsibleSection key={`${quote.id}-${compact}`} title="Supplier and quotation details" defaultOpen={!compact}><fieldset className="quotation-operation-fields" disabled={!editable}><div className="quote-editor-field-grid">
         {headerField("supplierName", "Supplier name", quote.supplierDetails?.name || state.suppliers.find(value => value.id === quote.supplierId)?.name || "", value => supplier({ name: value }))}
         {headerField("ref", "Quotation reference", quote.ref, value => patch({ ref: value }))}
-        {headerField("currency", "Currency", quote.currency || "", value => patch({ currency: value.toUpperCase() }))}
         {headerField("quoteDate", "Quote date", quote.quoteDate || "", value => patch({ quoteDate: value }), "date")}
         {headerField("validity", "Valid until", quote.validity || "", value => patch({ validity: value }), "date")}
         {headerField("available", "Availability", quote.available, value => patch({ available: value }))}

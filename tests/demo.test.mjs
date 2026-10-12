@@ -32,22 +32,23 @@ test("v8 browser records migrate without forcing old quotations and POs into new
 test("a blank workspace can be configured before its first MRF", () => {
   let state = blankWorkspace();
   for (const key of ["sites", "suppliers", "categories", "requests", "quotes", "pendingAwards", "pos", "batches", "movements", "payments", "accounting", "activity"]) assert.equal(state[key].length, 0, key);
-  assert.equal(applyCommand(state, { type: "addSite", name: "My project", location: "Site", budget: 100000, personnel: "Site" }, context).ok, false);
+  assert.equal(applyCommand(state, { type: "addSite", documentCode: "MY-PROJECT", name: "My project", location: "Site", budget: 100000, personnel: "Site" }, context).ok, false);
   state = execute(state, { type: "setRole", role: "Administrator" });
-  state = execute(state, { type: "addSite", name: "My project", location: "Site", budget: 100000, personnel: "Site" });
+  state = execute(state, { type: "addSite", documentCode: "MY-PROJECT", name: "My project", location: "Site", budget: 100000, personnel: "Site" });
   assert.equal(state.sites.length, 1);
   state = execute(state, { type: "saveProjectScope", siteId: state.sites[0].id, name: "Structural", budget: 100000 });
   state = execute(state, { type: "setRole", role: "Site Personnel" });
   state = execute(state, { type: "saveRequest", intent: "submit", siteId: state.sites[0].id, scopeId: state.scopes[0].id, ref: "HML-MRF-01", requestDate: "2026-10-01", requestedBy: "Site", approvedBy: "Signatory", purchaser: "Buyer", financeOfficer: "Finance", items: [{ id: "item-1", name: "Cement", unit: "bag", quantity: 100, neededDate: "2026-10-01", purpose: "", location: "Site", remarks: "" }], documents: [{ name: "Combined.pdf", type: "Supporting PDF", fileId: "mrf-1" }] });
-  assert.equal(state.requests[0].ref, "HML-MRF-01");
+  assert.equal(state.requests[0].ref, "MY-PROJECT-MRF-0001");
   assert.equal(state.requests[0].requestDate, "2026-10-01");
   assert.equal(state.requests[0].status, "submitted");
 });
 
-test("MRF numbers are manual, required on submission, and unique across projects", () => {
+test("Legacy MRFs retain manual references required on submission and unique across projects", () => {
   let state = seedDemo();
   const command = { type: "saveRequest", intent: "draft", siteId: "site-a", scopeId: "site-a-scope", ref: "", requestDate: "", requestedBy: "Site", approvedBy: "Signatory", purchaser: "Buyer", financeOfficer: "Finance", items: [{ id: "manual-item", name: "Cement", unit: "bag", quantity: 1, neededDate: "2026-10-01", purpose: "", location: "Site", remarks: "" }], documents: [{ name: "Combined.pdf", type: "Supporting PDF", fileId: "mrf-manual" }] };
-  state = execute(state, command);
+  state.requests.push({ ...structuredClone(state.requests[0]), ...command, id: "legacy-manual", status: "draft", archive: undefined });
+  state = execute(state, { ...command, id: "legacy-manual" });
   const draft = state.requests.at(-1);
   assert.equal(draft.ref, "");
   assert.equal(applyCommand(state, { ...command, id: draft.id, intent: "submit" }, context).field, "ref");
@@ -55,7 +56,8 @@ test("MRF numbers are manual, required on submission, and unique across projects
   state = execute(state, { ...command, id: draft.id, intent: "submit", ref: " HML-01 ", requestDate: "2030-01-02" });
   assert.equal(state.requests.at(-1).ref, "HML-01");
   assert.equal(state.requests.at(-1).requestDate, "2030-01-02");
-  assert.equal(applyCommand(state, { ...command, siteId: "site-b", scopeId: "site-b-scope", intent: "submit", ref: " hml-01 ", requestDate: "2026-09-28" }, context).field, "ref");
+  state.requests.push({ ...structuredClone(state.requests.at(-1)), id: "legacy-other", siteId: "site-b", ref: "", status: "draft" });
+  assert.equal(applyCommand(state, { ...command, id: "legacy-other", siteId: "site-b", scopeId: "site-b-scope", intent: "submit", ref: " hml-01 ", requestDate: "2026-09-28" }, context).field, "ref");
 });
 
 test("seeded cement transaction has consistent purchasing, delivery, stock, and budget values", () => {
@@ -188,7 +190,7 @@ test("v5 workspace migrates without losing legacy request or linked purchasing r
 test("MRF Drive archive gates Procurement and retains versions after a document correction", () => {
   let state = blankWorkspace();
   state = execute(state, { type: "setRole", role: "Administrator" });
-  state = execute(state, { type: "addSite", name: "Test project", location: "Site", budget: 100000 });
+  state = execute(state, { type: "addSite", documentCode: "TEST-PROJECT", name: "Test project", location: "Site", budget: 100000 });
   const siteId = state.sites[0].id;
   state = execute(state, { type: "saveProjectScope", siteId, name: "Structural", budget: 100000 });
   state = execute(state, { type: "setRole", role: "Site Personnel" });

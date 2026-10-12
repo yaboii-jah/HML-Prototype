@@ -7,6 +7,7 @@ import { ROLES, type AuditIdentity, type DemoSnapshot, type LegacySnapshot } fro
 import { clearQuoteFiles } from "../features/requests/quote-files.ts";
 import { validBidReport } from "../domain/bid-reports.ts";
 import { validDeliveryReceipt } from "../domain/delivery-document.ts";
+import { validDocumentNumberingState } from "../domain/document-numbering.ts";
 
 const CURRENT_KEY = "hml-constructsync-demo-v12";
 const PREVIOUS_KEYS = ["hml-constructsync-demo-v11", "hml-constructsync-demo-v10", "hml-constructsync-demo-v9", "hml-constructsync-demo-v8", "hml-constructsync-demo-v7", "hml-constructsync-demo-v6", "hml-constructsync-demo-v5", "hml-constructsync-demo-v4", "hml-constructsync-demo-v3", "hml-constructsync-demo-v2", "hml-buildsync-demo-v2", "hml-buildsync-demo-v1"] as const;
@@ -70,6 +71,7 @@ const parseCurrent = (raw: string): DemoSnapshot | null => {
   const parsed = isRecord(saved) && saved.role === "Management" ? { ...saved, role: "Project Manager" } : saved;
   if (!isSnapshotShape(parsed) || parsed.version !== 12 || !Array.isArray(parsed.paymentRequests) || !Array.isArray(parsed.pendingAwards) || !Array.isArray(parsed.bidReports)) return null;
   const state = parsed as DemoSnapshot;
+  if (!validDocumentNumberingState(state)) return null;
   if (!state.pos.every(po => ["draft", "submitted", "hold", "returned", "rejected", "approved", "released"].includes(po.status))) return null;
   if (!state.paymentRequests.every(value => ["draft", "submitted", "hold", "returned", "rejected", "approved", "disbursed"].includes(value.status) && Number.isFinite(value.amount) && value.amount > 0 && state.pos.some(po => po.id === value.poId))) return null;
   if (!state.payments.every(value => state.paymentRequests.some(request => request.id === value.paymentRequestId && request.poId === value.poId && request.status === "disbursed" && request.amount === value.amount))) return null;

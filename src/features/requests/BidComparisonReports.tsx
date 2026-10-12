@@ -12,6 +12,7 @@ import { captureBidReport } from "@/src/domain/bid-reports";
 import { comparisonOffers, materialOffers, resolveComparisonSelections } from "@/src/domain/comparison-report";
 import type { BidReport, ComparisonSelections } from "@/src/domain/types";
 import { archiveBidWorkbook, downloadBidWorkbook, getBidWorkbook } from "./bid-report-files";
+import { BidReportPreview } from "./BidReportPreview";
 
 export function BidComparisonReports({ requestId }: { requestId: string }) {
   const { perform } = useArchive();
@@ -19,6 +20,7 @@ export function BidComparisonReports({ requestId }: { requestId: string }) {
   const { notify, update } = useActionFeedback();
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
+  const [preview, setPreview] = useState<BidReport | null>(null);
   const [selections, setSelections] = useState<ComparisonSelections>({});
   const { confirmAction, working, confirmation } = useConfirmedAction(setError);
   if (!snapshot) return null;
@@ -95,6 +97,7 @@ export function BidComparisonReports({ requestId }: { requestId: string }) {
         {report.pdf && <><small>{report.pdf.sha256 ? report.pdf.archive.status === "complete" ? "PDF archived to Google Drive" : "PDF ready · Drive archive pending" : "PDF generation pending"}</small>{(report.pdf.generationError || report.pdf.archive.error) && <p className="field-error">{report.pdf.generationError || report.pdf.archive.error}</p>}</>}
       </div>
       <div className="button-row">
+        {report.pdf?.sha256 && <button className="button secondary" type="button" onClick={() => setPreview(report)}>Preview PDF</button>}
         {report.sha256 && <button className="button secondary" type="button" disabled={!!busy} onClick={() => void process(report, "download")}>Download Excel</button>}
         {report.pdf?.sha256 && <button className="button secondary" type="button" disabled={!!busy} onClick={() => void process(report, "download", "pdf")}>Download PDF</button>}
         {procurement && (!report.sha256 || report.pdf && !report.pdf.sha256) && <button className="button secondary" type="button" disabled={!!busy} onClick={() => void retry(report, "generate")}>Retry generation</button>}
@@ -104,6 +107,6 @@ export function BidComparisonReports({ requestId }: { requestId: string }) {
         {busy === report.id && <span role="status">Processing report…</span>}
       </div>
     </article>)}
-    <InlineError message={error}/></fieldset>{confirmation}
+    <InlineError message={error}/></fieldset>{confirmation}{preview && <BidReportPreview key={preview.id} report={preview} onClose={() => setPreview(null)}/>}
   </section>;
 }

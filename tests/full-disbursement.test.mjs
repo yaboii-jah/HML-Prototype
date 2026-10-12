@@ -19,7 +19,7 @@ const fail = (state, command, pattern) => { const original = structuredClone(sta
 
 function submittedPO() {
   let state = as(blankWorkspace(), 'Administrator');
-  state = run(state, { type: 'addSite', name: 'Client project', location: 'Pasig', budget: 10000 });
+  state = run(state, { type: 'addSite', documentCode: 'CLIENT-PROJECT', name: 'Client project', location: 'Pasig', budget: 10000 });
   const siteId = state.sites[0].id;
   state = run(state, { type: 'setProjectDriveFolder', siteId, folderId: 'project-folder' });
   state = run(state, { type: 'saveProjectScope', siteId, name: 'Structural', budget: 10000 });

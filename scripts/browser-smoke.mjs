@@ -264,6 +264,7 @@ try {
   await writeFile(path.join(profile, "admin-empty.png"), Buffer.from((await call("Page.captureScreenshot", { format: "png" })).data, "base64"));
   await click('Add project','.page-header button');
   await fill('form:has(input[name="budget"]) input[name="name"]', "Smoke project");
+  await fill('form:has(input[name="budget"]) input[name="documentCode"]', "SMOKE");
   await fill('form:has(input[name="budget"]) input[name="location"]', "Test site");
   await fill('form:has(input[name="budget"]) input[name="budget"]', 100000);
   assert.equal(await run("return !!document.querySelector('input[name=manager]');"), false, "Project setup has no PM assignment");
@@ -271,7 +272,8 @@ try {
   await wait("return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).sites.length===1;");
   await wait("return !!document.querySelector('.record-dialog[open]');");
   await click('Scopes','.record-dialog[open] [role=tab]');
-  await fill('.scope-budget-form input[name="scopeName"]', 'Structural');
+  assert.deepEqual(await run("return [...document.querySelector('select[name=scopeName]').options].filter(option=>option.value).map(option=>option.textContent);"), ['General Requirement','Structural Works','Civil Works','Architectural','Mechanical','Electrical','Plumbing & Sanitary','Fire Protection','Medical Gas','Variation Order']);
+  await fill('.scope-budget-form select[name="scopeName"]', 'Structural Works');
   await fill('.scope-budget-form input[name="scopeBudget"]', 100001);
   await submit('.scope-budget-form');
   await wait("return document.querySelector('.scope-budget-form .inline-error')?.textContent.includes('project budget');");
@@ -279,7 +281,7 @@ try {
   await submit('.scope-budget-form');
   await wait("return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).scopes.length===1;");
   assert.equal((await state()).activity[0].actorIdentity.name, 'Daniel Garcia');
-  await fill('.scope-budget-form input[name="scopeName"]', 'Civil');
+  await fill('.scope-budget-form select[name="scopeName"]', 'Civil Works');
   await fill('.scope-budget-form input[name="scopeBudget"]', 40000);
   await submit('.scope-budget-form');
   await wait("return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).scopes.length===2;");
@@ -297,10 +299,10 @@ try {
   await submit('.admin-edit-project');
   await wait("return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).sites[0].name==='Smoke project edited';");
   await click('Scopes','.record-dialog[open] [role=tab]');
-  await fill('.scope-budget-form input[name=scopeName]','Unused scope smoke');
+  await fill('.scope-budget-form select[name=scopeName]','Variation Order');
   await fill('.scope-budget-form input[name=scopeBudget]',1000); await submit('.scope-budget-form');
   await wait("return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).scopes.length===3;");
-  await click('Remove scope','button[aria-label="Remove scope Unused scope smoke"]');
+  await click('Remove scope','button[aria-label="Remove scope Variation Order"]');
   await wait("return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).scopes.length===2;");
   assert.equal((await state()).activity[0].eventType,'scope.removed');
   await click('Drive folder','.record-dialog[open] [role=tab]');
@@ -346,6 +348,9 @@ try {
   assert.equal(await run("return !document.querySelector('.scope-budget-form') && document.querySelector('.scope-budgets').textContent.includes('Structural');"), true, 'Site Personnel reads allocations without editing');
   await navigate("/requests/new");
   assert.equal(await run("return !!document.querySelector('select[name=site]') && !document.querySelector('select[name=category]');"), true);
+  await fill('select[name=site]', (await state()).sites[0].id);
+  await wait("return document.querySelector('select[name=scopeId]').options.length===3;");
+  assert.equal(await run("return [...document.querySelector('select[name=scopeId]').options].some(option=>option.textContent.startsWith('Structural Works')) && [...document.querySelector('select[name=scopeId]').options].some(option=>option.textContent.startsWith('Civil Works'));"), true, 'Allocated dropdown choices are available to new material requests');
   await installFixture();
   await navigate("/dashboard");
   await wait("return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).sites.length === 2;");
@@ -365,6 +370,12 @@ try {
   assert.equal(await run("return document.querySelector('[data-admin-project=site-a] .admin-edit-project .field:first-child input').value;"),'Unsaved project draft','Reopening project settings retains drafts');
   await click('Scopes','.record-dialog[open] [role=tab]');
   assert.equal(await run("return document.querySelector('[data-admin-project=site-a] .scope-actions button:last-child').disabled;"),true,'Used scopes cannot be removed');
+  await click('Edit allocation','[data-admin-project=site-a] .scope-actions button:first-child');
+  assert.equal(await run("return document.querySelector('select[name=scopeName]').value;"), 'Structural', 'Existing custom scope names remain selected for editing');
+  await fill('select[name=scopeName]', 'Structural Works');
+  await fill('select[name=scopeName]', 'Structural');
+  assert.equal(await run("return document.querySelector('select[name=scopeName]').value;"), 'Structural', 'The existing name remains available after choosing another option');
+  await click('Cancel editing','.scope-budget-form button');
   await click('Close','.record-dialog[open] .record-dialog-heading button');
   await click('Activity','.workspace-content > .view-tabs [role=tab]');
   await wait("return document.querySelectorAll('[data-admin-activity-event]').length===10;");
@@ -672,7 +683,7 @@ try {
   await wait("return !!document.querySelector('.record-header');");
   const incompleteDraft = (await state()).requests.at(-1);
   assert.equal(incompleteDraft.status, "draft");
-  assert.equal(incompleteDraft.ref, "");
+  assert.equal(incompleteDraft.ref, "HBR-MRF-0001");
   assert.equal(await run("return !document.querySelector('.toast');"), true, "Saving a draft must not show a redundant toast");
   await navigate(`/requests/${incompleteDraft.id}/edit`);
   assert.equal(await requestStep(), "1Request details");
@@ -811,7 +822,7 @@ try {
   await fill('#siteId', 'site-a');
   await fill('#scopeId', 'site-a-scope');
   await click("Next", ".request-wizard-actions button");
-  assert.equal(await run("return document.activeElement.id;"), "ref");
+  assert.equal(await run("return document.activeElement.name;"), "requestedBy");
   assert.equal(await run("return !!document.querySelector('button[value=submit]');"), false, "Submit is only available on the final step");
   await call("Emulation.setDeviceMetricsOverride", { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false });
   await writeFile(path.join(profile, "request-form.png"), Buffer.from((await call("Page.captureScreenshot", { format: "png" })).data, "base64"));
@@ -822,7 +833,7 @@ try {
     if (width === 375) await writeFile(path.join(profile, "request-form-mobile.png"), Buffer.from((await call("Page.captureScreenshot", { format: "png" })).data, "base64"));
   }
   await call("Emulation.clearDeviceMetricsOverride");
-  await fill('input[name="ref"]', "MRF-SMOKE-01");
+  await fill('input[name="sourceRef"]', "MRF-SMOKE-01");
   await fill('input[name="requestDate"]', "");
   await click("Next", ".request-wizard-actions button");
   assert.equal(await run("return document.activeElement.id;"), "requestDate");
@@ -932,7 +943,8 @@ try {
   await writeFile(path.join(profile, "request-detail.png"), Buffer.from((await call("Page.captureScreenshot", { format: "png" })).data, "base64"));
   await call("Emulation.clearDeviceMetricsOverride");
   let snapshot = await state(); const request = snapshot.requests.at(-1); assert.equal(request.status, "submitted"); assert.equal(request.requestedBy, "Joel Reyes"); assert.equal(request.items[0].purpose, "Ground floor slab construction"); assert.equal(request.items[0].location, "Tower 2 staging area"); assert.deepEqual(request.documents.map(document => document.name), ["Signed smoke MRF.pdf"]); assert.equal(request.documents[0].type, "Supporting PDF"); assert.equal(request.documents.every(document => !!document.fileId), true, "Uploaded documents should be reopenable");
-  assert.equal(request.ref, "MRF-SMOKE-01");
+  assert.equal(request.ref, "HBR-MRF-0001");
+  assert.equal(request.sourceRef, "MRF-SMOKE-01");
   assert.equal(request.requestDate, "2030-10-29");
   assert.equal(request.specialInstructions, "Deliver after the slab inspection.");
   await click("Print preview");

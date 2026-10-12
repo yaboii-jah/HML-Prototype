@@ -2,6 +2,8 @@ import { quoteFinancialBreakdown, quotationFinancialError, quotationLineAmount, 
 import type { DemoSnapshot, Quote } from "./types.ts";
 
 export const isFinalizedQuote = (quote: Quote) => quote.reviewStatus !== "draft";
+export const quotationCurrency = (value?: string) => value?.trim().toUpperCase() || "PHP";
+export const foreignQuotationMessage = "Only PHP quotations are accepted. Replace the supplier quotation with a PHP quotation, or re-extract if the currency was read incorrectly.";
 export const hasFinalizedSuccessor = (state: DemoSnapshot, quoteId: string) => state.quotes.some(candidate => candidate.supersedesId === quoteId && isFinalizedQuote(candidate));
 export const latestFinalizedQuotes = (state: DemoSnapshot, requestId: string) => state.quotes.filter(quote => quote.mrfId === requestId && isFinalizedQuote(quote) && !hasFinalizedSuccessor(state, quote.id));
 
@@ -30,7 +32,7 @@ export function quoteReviewIssues(state: DemoSnapshot, quote: Quote): string[] {
   if (!(quote.supplierDetails?.name || state.suppliers.find(value => value.id === quote.supplierId)?.name)?.trim()) issues.push("Enter a supplier name.");
   if (!quote.ref.trim()) issues.push("Enter the quotation reference.");
   if (!quote.documents.length || quote.documents.some(document => !document.fileId || !["application/pdf", "image/jpeg", "image/png", "image/webp"].includes(document.type))) issues.push("Attach the supplier quotation PDF or image before finalizing.");
-  if (!quote.currency?.trim()) issues.push("Enter the quotation currency.");
+  if (quotationCurrency(quote.currency) !== "PHP") issues.push(foreignQuotationMessage);
   if (!quote.lines?.length) issues.push("Add at least one offered line.");
   for (const [index, line] of (quote.lines || []).entries()) {
     const label = `Line ${index + 1}`;

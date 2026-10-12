@@ -73,7 +73,7 @@ try {
   await navigate('/projects');await add('PM-created project');
   assert.equal(await run("return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).sites[0].driveFolderId;"),'automatic-project-folder');
   await press('Project');await press('Edit project');await fill('.record-dialog[open] .admin-edit-project .field:last-child input','125000.50');await press('Save project');await accept();await wait("return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).sites[0].budget===125000.5;");
-  await press('Scopes');await fill('input[name=scopeName]','PM scope');await fill('input[name=scopeBudget]','50000');await press('Save scope allocation');await accept();await wait("return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).scopes[0]?.budget===50000;");await click('.record-dialog[open] .record-modal-close');
+  await press('Scopes');await fill('select[name=scopeName]','General Requirement');await fill('input[name=scopeBudget]','50000');await press('Save scope allocation');await accept();await wait("return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).scopes[0]?.budget===50000;");await click('.record-dialog[open] .record-modal-close');
   await navigate('/reports');assert.equal(await run("return document.querySelector('h1').textContent;"),'Operations report');
   await navigate('/admin');assert.equal(await run("return document.querySelector('h1').textContent;"),'Access unavailable');assert.equal(await run("return !!document.querySelector('.admin-users');"),false);
   await navigate('/admin/maintenance');assert.equal(await run("return document.querySelector('h1').textContent;"),'Access unavailable');

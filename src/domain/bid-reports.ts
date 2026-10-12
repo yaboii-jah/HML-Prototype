@@ -1,6 +1,7 @@
 import { isFinalizedQuote, latestFinalizedQuotes } from "./procurement.ts";
 import { resolveComparisonSelections } from "./comparison-report.ts";
 import { procurementReady } from "./request-archive.ts";
+import { projectCodeRequired } from "./document-numbering.ts";
 import type { BidReport, BidReportData, DemoSnapshot, Quote, QuoteAdjustment, QuoteLine } from "./types.ts";
 import { poFinancialBreakdown, poFinancialError, poLineTotal, quoteLineTotal, totalWithAdjustments } from "./pricing.ts";
 import type { PO, POLine } from "./types.ts";
@@ -11,6 +12,8 @@ export const MAX_BID_FILE = 50 * 1024 * 1024;
 export function bidReportReadiness(state: DemoSnapshot, requestId: string): string {
   const request = state.requests.find(value => value.id === requestId);
   if (!procurementReady(request)) return "The MRF must be approved, with no correction or pending archive.";
+  const codeError = projectCodeRequired(state, request!.siteId);
+  if (codeError) return codeError;
   if (!state.sites.some(site => site.id === request?.siteId && site.driveFolderId)) return "Map the project's Google Drive folder before generating a report.";
   const quotes = latestFinalizedQuotes(state, requestId).filter(quote => !quote.currency || quote.currency === "PHP");
   if (!quotes.length) return "Finalize a PHP supplier quotation before generating a comparison.";

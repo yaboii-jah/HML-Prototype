@@ -77,7 +77,7 @@ test('directory changes invalidate sessions and captured commands; presenter swi
     const gateway = bindAccountCommands(repository, active(), active);
     await directory.change(actor(admin), { type: 'password', id: user.id, revision: 1, password: 'ResetPassword123!' });
     assert.equal(session.read().role, null); assert.equal(storage.getItem(SESSION_STORAGE_KEY), null);
-    assert.equal((await gateway.run({ type: 'addSite', name: 'Stale project', location: 'Pasig', budget: 1 })).ok, false);
+    assert.equal((await gateway.run({ type: 'addSite', documentCode: 'STALE-PROJECT', name: 'Stale project', location: 'Pasig', budget: 1 })).ok, false);
     session.select({ email: user.email, role: user.role, userId: user.id, revision: current(user.id).revision }); assert.equal(session.switchAccount(admin.id), true);
     await directory.change(actor(admin), { type: 'status', id: user.id, revision: current(user.id).revision, active: false });
     assert.equal(session.switchAccount(user.id), false);
@@ -106,7 +106,7 @@ test('workspace reset preserves users and retired Management history without rea
 
 test('Project Manager can create, edit, map and allocate projects while other departments cannot', () => {
   let state = { ...blankWorkspace(), role: 'Project Manager' };
-  for (const command of [{ type: 'addSite', name: 'PM project', location: 'Pasig', budget: 10000 }]) {
+  for (const command of [{ type: 'addSite', documentCode: 'PM-PROJECT', name: 'PM project', location: 'Pasig', budget: 10000 }]) {
     const result = applyCommand(state, command); assert.equal(result.ok, true, result.message); state = result.snapshot;
   }
   const id = state.sites[0].id;

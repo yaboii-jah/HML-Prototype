@@ -16,9 +16,10 @@ import { CloseButton } from "@/src/components/ui/CloseButton";
 import { useConfirmation } from "@/src/components/ui/ConfirmDialog";
 import { MissingRecord } from "@/src/components/ui/States";
 import { dateText, money } from "@/src/domain/format";
+import { nextDocumentReference, projectCodeRequired } from "@/src/domain/document-numbering";
 import { newId } from "@/src/domain/ids";
 import { earliestNeededDate, posForRequest, poTotal, siteName, stockFor, supplierName } from "@/src/domain/selectors";
-import { projectScopes, scopeBudgetFor, scopeName, scopeValidationError } from "@/src/domain/scope-budgets";
+import { projectScopes, scopeName, scopeValidationError } from "@/src/domain/scope-budgets";
 import type { DemoSnapshot, DocumentRef, Item } from "@/src/domain/types";
 import { DocumentPreview } from "@/src/components/DocumentPreview";
 import { deleteLocalFile, saveRequestFile } from "./quote-files";
@@ -45,7 +46,7 @@ const REQUEST_DETAIL_FIELDS = [
   { name: "purchaser", label: "Purchaser/Procurement Officer" },
   { name: "financeOfficer", label: "Finance Officer" },
 ] as const;
-type RequestDetails = { siteId: string; scopeId: string; ref: string; requestDate: string; requestedBy: string; approvedBy: string; purchaser: string; financeOfficer: string; specialInstructions: string };
+type RequestDetails = { sourceRef: string; siteId: string; scopeId: string; ref: string; requestDate: string; requestedBy: string; approvedBy: string; purchaser: string; financeOfficer: string; specialInstructions: string };
 type RequestStep = 1 | 2 | 3;
 
 export function Requests() {
@@ -75,7 +76,7 @@ export function RequestForm({ id }: { id?: string }) {
   const [details, setDetails] = useState<RequestDetails>(() => ({
     siteId: original?.siteId || (state?.siteFilter !== "all" ? state?.siteFilter : "") || state?.sites[0]?.id || "",
     scopeId: original?.scopeId || "",
-    ref: original?.ref || "", requestDate: original?.requestDate || todayLocal(),
+    sourceRef: original?.sourceRef || "", ref: original?.ref || "", requestDate: original?.requestDate || todayLocal(),
     requestedBy: original?.requestedBy || "", approvedBy: original?.approvedBy || "",
     purchaser: original?.purchaser || "", financeOfficer: original?.financeOfficer || "",
     specialInstructions: original?.specialInstructions || "",
@@ -210,7 +211,7 @@ export function RequestForm({ id }: { id?: string }) {
   const applyImport = async ({ extraction }: MrfExtractionResult) => {
     if (manuallyEdited.current && !await confirm("Replace entered details and materials?", "The extracted values will replace this form's request details and material list. The supporting PDF stays separate.", "Apply extracted values")) return false;
     const found = extraction.details;
-    setDetails({ siteId: "", scopeId: "", ref: found.ref, requestDate: found.requestDate, requestedBy: found.requestedBy, approvedBy: found.approvedBy, purchaser: found.purchaser, financeOfficer: found.financeOfficer, specialInstructions: found.specialInstructions });
+    setDetails({ siteId: "", scopeId: "", sourceRef: found.ref, ref: "", requestDate: found.requestDate, requestedBy: found.requestedBy, approvedBy: found.approvedBy, purchaser: found.purchaser, financeOfficer: found.financeOfficer, specialInstructions: found.specialInstructions });
     const imported = mrfImportedItems(extraction, () => newId("item"));
     setItems(imported); closeMaterialEditor(); setMaterialSearch(""); setInvalidItemId(null);
     setImportedWithAI(true); setAiReviewed(false); setAiReviewError(""); setFormFieldError(null); setError(""); setStep(1);
@@ -228,8 +229,9 @@ export function RequestForm({ id }: { id?: string }) {
     if (!state.sites.some(site => site.id === details.siteId)) return detailError("siteId", "Choose a valid project.");
     const scopeError = scopeValidationError(state, details.siteId, details.scopeId);
     if (scopeError) return detailError("scopeId", scopeError);
-    if (!details.ref.trim()) return detailError("ref", "Enter the M.R.F No.");
-    if (state.requests.some(request => request.id !== id && request.ref.trim().toLocaleLowerCase() === details.ref.trim().toLocaleLowerCase())) return detailError("ref", "This M.R.F No. is already in use.");
+    if (!original) { const codeError = projectCodeRequired(state, details.siteId); if (codeError) return detailError("siteId", codeError); }
+    if (original && !original.numbering && !details.ref.trim()) return detailError("ref", "Enter the M.R.F No.");
+    if (original && !original.numbering && state.requests.some(request => request.id !== id && request.ref.trim().toLocaleLowerCase() === details.ref.trim().toLocaleLowerCase())) return detailError("ref", "This M.R.F No. is already in use.");
     const date = details.requestDate;
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || Number.isNaN(Date.parse(`${date}T00:00:00Z`)) || new Date(`${date}T00:00:00Z`).toISOString().slice(0, 10) !== date) return detailError("requestDate", "Enter a valid Request Date.");
     for (const field of REQUEST_DETAIL_FIELDS) if (!details[field.name].trim()) return detailError(field.name, `Enter ${field.label.toLowerCase()}.`);
@@ -294,6 +296,8 @@ export function RequestForm({ id }: { id?: string }) {
     <section className="panel"><p>Ask an Administrator to add a project, then create the material request.</p><Link className="button primary" href="/admin">Open administration</Link></section>
   </>;
 
+  const codeError = !original ? projectCodeRequired(state, details.siteId) : "";
+  const reference = original ? original.ref : !codeError ? nextDocumentReference(state, details.siteId, "MRF").ref : "Assigned on save";
   return <>
     <PageHeader eyebrow={original ? "REVISE MATERIAL REQUEST" : "NEW MATERIAL REQUEST"} title={original ? `Edit ${original.ref || "unnumbered draft"}` : "Create MRF"} description="Enter request details, add materials, then review and submit."/>
     <form className="form-stack request-wizard" noValidate onSubmit={save} onKeyDown={event => {
@@ -303,6 +307,7 @@ export function RequestForm({ id }: { id?: string }) {
       }
     }}>
       {original?.correction && <div className="callout warn"><strong>Procurement requested a correction</strong><p>{original.correction.reason}</p><p>{documentsOnly ? "Only the supporting PDF can be replaced because purchasing has started." : "Update the request and supporting PDF, then resubmit."}</p></div>}
+      {codeError && details.siteId && <div className="callout warn"><p>{codeError}</p><Link className="text-link" href="/admin">Open project settings</Link></div>}
       <nav aria-label="Request steps"><ol className="request-steps">{REQUEST_STEPS.map((label, index) => <li key={label}><button type="button" aria-current={step === index + 1 ? "step" : undefined} disabled={documentsOnly || index + 1 >= step || saving || savingPdf} onClick={() => changeStep((index + 1) as RequestStep)}><span className="request-step-number" aria-hidden="true">{index + 1}</span><span>{label}</span></button></li>)}</ol></nav>
       <div className="request-step-heading"><span className="eyebrow">STEP {step} OF 3</span><h2 ref={stepHeadingRef} tabIndex={-1}>{REQUEST_STEPS[step - 1]}</h2><p>{step === 1 ? "Choose the project and enter the names shown on the MRF." : step === 2 ? "List the materials the site needs. Purpose and remarks are optional." : "Attach the supporting PDF and check your request before sending it for review."}</p></div>
       {!id && state.role === "Site Personnel" && <div hidden={step !== 1}><MrfAiImport disabled={saving || savingPdf} onApply={applyImport}/></div>}
@@ -310,9 +315,9 @@ export function RequestForm({ id }: { id?: string }) {
       <section className="panel" hidden={step !== 1}>
         <CollapsibleSection title="General information">
         <div className="form-grid">
-          <Field label="Project / site" error={formFieldError?.field === "siteId" ? formFieldError.message : undefined}><select id="siteId" name="site" value={details.siteId} aria-invalid={formFieldError?.field === "siteId"} onChange={event => updateDetails("siteId", event.target.value)}><option value="">Choose a project</option>{state.sites.map(site => <option key={site.id} value={site.id}>{site.name}</option>)}</select></Field>
-          <Field label="Scope of work" error={formFieldError?.field === "scopeId" ? formFieldError.message : undefined}><select id="scopeId" name="scopeId" value={details.scopeId} aria-invalid={formFieldError?.field === "scopeId"} onChange={event => updateDetails("scopeId", event.target.value)}><option value="">Choose a scope</option>{projectScopes(state, details.siteId).map(scope => <option key={scope.id} value={scope.id}>{scope.name} · {money(scopeBudgetFor(state, scope.id).available)} available</option>)}</select><small>{projectScopes(state, details.siteId).length ? "The priced PO is checked by Accounting. Requests do not reserve funds." : "Ask an Administrator to set up this project's scope allocations."}</small></Field>
-          <Field label="M.R.F No." error={formFieldError?.field === "ref" ? formFieldError.message : undefined}><input id="ref" name="ref" value={details.ref} placeholder="Enter the company reference" autoComplete="off" aria-invalid={formFieldError?.field === "ref"} onChange={event => updateDetails("ref", event.target.value)}/></Field>
+          <Field label="Project / site" error={formFieldError?.field === "siteId" ? formFieldError.message : undefined}><select id="siteId" name="site" disabled={!!original?.numbering} value={details.siteId} aria-invalid={formFieldError?.field === "siteId"} onChange={event => updateDetails("siteId", event.target.value)}><option value="">Choose a project</option>{state.sites.map(site => <option key={site.id} value={site.id}>{site.name}</option>)}</select></Field>
+          <Field label="Scope of work" error={formFieldError?.field === "scopeId" ? formFieldError.message : undefined}><select id="scopeId" name="scopeId" value={details.scopeId} aria-invalid={formFieldError?.field === "scopeId"} onChange={event => updateDetails("scopeId", event.target.value)}><option value="">Choose a scope</option>{projectScopes(state, details.siteId).map(scope => <option key={scope.id} value={scope.id}>{scope.name}</option>)}</select><small>{projectScopes(state, details.siteId).length ? "The priced PO is checked by Accounting. Requests do not reserve funds." : "Ask an Administrator to set up this project's scope allocations."}</small></Field>
+          <Field label="M.R.F No." error={formFieldError?.field === "ref" ? formFieldError.message : undefined}><input id="ref" name="ref" readOnly={!original || !!original.numbering} value={original && !original.numbering ? details.ref : reference} placeholder="Enter the company reference" autoComplete="off" aria-invalid={formFieldError?.field === "ref"} onChange={event => updateDetails("ref", event.target.value)}/>{(!original || original.numbering) && <small>{original ? "Assigned reference; this MRF stays linked to its project." : "Preview only. The permanent number is assigned on save."}</small>}</Field><Field label="Source MRF number (optional)"><input id="sourceRef" name="sourceRef" value={details.sourceRef} placeholder="Number on the paper MRF" onChange={event => updateDetails("sourceRef", event.target.value)}/></Field>
           <Field label="Request Date" error={formFieldError?.field === "requestDate" ? formFieldError.message : undefined}><input id="requestDate" name="requestDate" type="date" value={details.requestDate} aria-invalid={formFieldError?.field === "requestDate"} onChange={event => updateDetails("requestDate", event.target.value)}/></Field>
           {REQUEST_DETAIL_FIELDS.map(field => <Field key={field.name} label={field.label} error={formFieldError?.field === field.name ? formFieldError.message : undefined}><input id={field.name} name={field.name} value={details[field.name]} aria-invalid={formFieldError?.field === field.name} onChange={event => updateDetails(field.name, event.target.value)}/></Field>)}
           <div className="material-card-wide"><CollapsibleSection title="Comments / special instructions" defaultOpen={false}><Field label="Comments / special instructions (optional)"><textarea name="specialInstructions" value={details.specialInstructions} onChange={event => updateDetails("specialInstructions", event.target.value)}/></Field></CollapsibleSection></div>
@@ -379,7 +384,7 @@ export function RequestForm({ id }: { id?: string }) {
       {step === 3 && <>
         <section className="panel request-review" aria-label="Request summary">
           <div className="panel-heading"><h2>Request summary</h2>{!documentsOnly && <button type="button" className="text-link" disabled={saving || savingPdf} onClick={() => changeStep(1)}>Edit details</button>}</div>
-          <div className="request-review-group"><h3>Request information</h3><dl className="request-review-details"><div><dt>Project / site</dt><dd>{siteName(state, details.siteId)}</dd></div><div><dt>Scope of work</dt><dd>{scopeName(state, details.scopeId)}</dd></div><div><dt>M.R.F No.</dt><dd>{details.ref || "—"}</dd></div><div><dt>Request date</dt><dd>{details.requestDate ? dateText(details.requestDate) : "—"}</dd></div></dl></div>
+          <div className="request-review-group"><h3>Request information</h3><dl className="request-review-details"><div><dt>Project / site</dt><dd>{siteName(state, details.siteId)}</dd></div><div><dt>Scope of work</dt><dd>{scopeName(state, details.scopeId)}</dd></div><div><dt>M.R.F No.</dt><dd>{original && !original.numbering ? details.ref || "—" : reference}</dd></div>{details.sourceRef && <div><dt>Source MRF number</dt><dd>{details.sourceRef}</dd></div>}<div><dt>Request date</dt><dd>{details.requestDate ? dateText(details.requestDate) : "—"}</dd></div></dl></div>
           <div className="request-review-group"><h3>Signatories</h3><dl className="request-review-details">{REQUEST_DETAIL_FIELDS.map(field => <div key={field.name}><dt>{field.label}</dt><dd>{details[field.name] || "—"}</dd></div>)}</dl></div>
           {details.specialInstructions && <div className="request-review-group"><h3>Comments / special instructions</h3><p className="request-review-instructions">{details.specialInstructions}</p></div>}
         </section>
@@ -501,7 +506,7 @@ export function RequestDetail({ id }: { id: string }) {
   const decide=async(choice:"approve"|"return"|"reject",reason?:string)=>{if(!await confirm(`${choice === "approve" ? "Approve" : choice === "return" ? "Return" : "Reject"} ${request.ref}?`,choice === "approve" ? "The approved MRF and supporting PDF will be archived to Google Drive before Procurement begins." : choice === "return" ? "Site Personnel will revise this request." : "This request will close.",`${choice === "approve" ? "Approve" : choice === "return" ? "Return" : "Reject"} request`,choice === "reject"))return;const toast=notify({tone:"progress",title:choice==="approve"?`Approving ${request.ref}…`:choice==="return"?`Returning ${request.ref}…`:`Rejecting ${request.ref}…`,detail:choice==="approve"?"Archiving the approved MRF and supporting PDF to Google Drive":undefined});const result=await run({type:"reviewRequest",id,decision:choice,reason});if(!result.ok){setError(result.message);update(toast,{tone:"error",title:result.message,detail:request.ref});}else{setDecision(null);setError("");if(choice==="approve"){dismiss(toast);await archive(result.snapshot);}else update(toast,{tone:choice==="reject"?"warning":"success",title:result.message,detail:request.ref});}};
   return <><RecordHeader backHref="/requests" backLabel="Material requests" eyebrow={siteName(state,request.siteId)} title={request.ref || "Unnumbered draft"} badges={<><Badge value={request.status}/>{po&&<Badge value={po.status}>{poStatusLabel(po.status)}</Badge>}</>}/>
     <RequestLifecycle key={request.id} state={state} requestId={id}/>
-    <div className="request-detail-layout"><div className="request-detail-overview"><section className="panel"><div className="panel-heading request-general-heading"><h2>General information</h2><DocumentPreview kind="mrf" request={request} project={state.sites.find(site => site.id === request.siteId)!}/></div><div className="data-rows"><div><span>Scope of work</span><strong>{scopeName(state, request.scopeId)}</strong></div><div><span>M.R.F No.</span><strong>{request.ref || "—"}</strong></div><div><span>Request Date</span><strong>{request.requestDate ? dateText(request.requestDate) : "—"}</strong></div><div><span>Requested by</span><strong>{request.requestedBy || "—"}</strong></div><div><span>Approved by</span><strong>{request.approvedBy || "—"}</strong></div><div><span>Purchaser/Procurement Officer</span><strong>{request.purchaser || "—"}</strong></div><div><span>Finance Officer</span><strong>{request.financeOfficer || "—"}</strong></div></div>{request.scope && !request.scopeDocument && <p className="helper-note">Legacy scope note: {request.scope}</p>}{request.reason&&<div className="callout warn"><strong>Review reason</strong><p>{request.reason}</p></div>}</section>
+    <div className="request-detail-layout"><div className="request-detail-overview"><section className="panel"><div className="panel-heading request-general-heading"><h2>General information</h2><DocumentPreview kind="mrf" request={request} project={state.sites.find(site => site.id === request.siteId)!}/></div><div className="data-rows"><div><span>Scope of work</span><strong>{scopeName(state, request.scopeId)}</strong></div><div><span>M.R.F No.</span><strong>{request.ref || "—"}</strong></div>{request.sourceRef && <div><span>Source MRF number</span><strong>{request.sourceRef}</strong></div>}<div><span>Request Date</span><strong>{request.requestDate ? dateText(request.requestDate) : "—"}</strong></div><div><span>Requested by</span><strong>{request.requestedBy || "—"}</strong></div><div><span>Approved by</span><strong>{request.approvedBy || "—"}</strong></div><div><span>Purchaser/Procurement Officer</span><strong>{request.purchaser || "—"}</strong></div><div><span>Finance Officer</span><strong>{request.financeOfficer || "—"}</strong></div></div>{request.scope && !request.scopeDocument && <p className="helper-note">Legacy scope note: {request.scope}</p>}{request.reason&&<div className="callout warn"><strong>Review reason</strong><p>{request.reason}</p></div>}</section>
     <section className="panel"><h2 className="panel-title">Documents and links</h2><RequestDocumentGallery key={request.id} request={request}/>{pos.length > 0 && <div className="request-document-links">{pos.map(linked => <Link className="data-link" href={`/purchase-orders/${linked.id}`} key={linked.id}><div><strong>{linked.ref}</strong><small>{supplierName(state,linked)} · {money(poTotal(state,linked))}</small></div><Badge value={linked.status}/></Link>)}</div>}</section></div>
     <RequestMaterialList key={request.id} requestId={request.id} state={state} siteId={request.siteId} items={request.items}/>
     {state.role==="Site Personnel"&&(["draft","returned"].includes(request.status)||request.correction?.status==="requested")&&<section className="action-bar"><div><strong>{request.correction?.status==="requested"||request.status==="returned"?"Revision requested":"Draft request"}</strong><p>{request.correction?.scope==="documents"?"Replace the supporting PDF and resubmit it for MRF review.":"Update the MRF before submitting it for MRF review."}</p></div><Link className="button primary" href={`/requests/${id}/edit`}>Edit MRF</Link></section>}

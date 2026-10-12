@@ -88,7 +88,7 @@ try {
   // Warehouse default remains editable. Every scheduling row stays in FormData.
   const logistics=structuredClone(many);logistics.role='Logistics';logistics.pos.find(p=>p.id==='po1').status='released';logistics.batches=[];logistics.movements=[];
   await load(logistics,'/deliveries/new?poId=po1');await wait("return !!document.querySelector('[name=destinationAddress]');");
-  await fill('[name=leg]','supplier-warehouse');assert.match(await run("return document.querySelector('[name=destinationAddress]').value;"),/Regalia Park Tower/);
+  await fill('[name=leg]','supplier-warehouse');assert.equal(await run("return document.querySelector('[name=destinationAddress]').value;"),"155 M. Paterno St., San Juan City");
   await fill('[name=destinationAddress]','QA edited warehouse address');await fill('[name=leg]','supplier-site');await fill('[name=leg]','supplier-warehouse');
   assert.equal(await run("return document.querySelector('[name=destinationAddress]').value;"),'QA edited warehouse address');
   assert.equal(await run("return [...new FormData(document.querySelector('form')).keys()].filter(k=>k.startsWith('expected-')).length;"),50);

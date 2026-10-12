@@ -12,7 +12,7 @@ import { openQuoteFile } from "@/src/features/requests/quote-files";
 import { useState } from "react";
 import type { ReactNode } from "react";
 
-const tone = (s: string) => /rejected|discrepancy|overdue/i.test(s) ? "bad" : /returned|hold|partly|review|incomplete|unpaid|low stock|pending/i.test(s) ? "warn" : /approved|released|disbursed|^posted$|^complete$|^paid$|fully accepted|stock posted|in stock|active/i.test(s) ? "good" : "neutral";
+const tone = (s: string) => /rejected|discrepancy|overdue/i.test(s) ? "bad" : /returned|hold|partly|review|incomplete|unpaid|low stock|out of stock|pending/i.test(s) ? "warn" : /approved|released|disbursed|^posted$|^complete$|^paid$|fully accepted|stock posted|in stock|active/i.test(s) ? "good" : "neutral";
 export function Badge({ value, children }: { value?: string; children?: ReactNode }) { const text = value || String(children); return <span className={`badge ${tone(text)}`}>{children || statusLabel(text)}</span>; }
 export function PageHeader({ eyebrow, title, description, actions }: { eyebrow?: string; title: string; description?: string; actions?: ReactNode }) { return <header className="page-header"><div>{eyebrow && <span className="eyebrow">{eyebrow}</span>}<h1>{title}</h1>{description && <p>{description}</p>}</div>{actions && <div className="header-actions">{actions}</div>}</header>; }
 export function RecordHeader({ backHref, backLabel, eyebrow, title, badges }: { backHref: string; backLabel: string; eyebrow: string; title: string; badges: ReactNode }) { return <><Link className="back-link" href={backHref}>← {backLabel}</Link><header className="record-header"><div><span className="eyebrow">{eyebrow}</span><h1>{title}</h1><div className="badge-row">{badges}</div></div></header></>; }

@@ -15,7 +15,7 @@ const run = (state, command, role) => { const result = execute(state, command, r
 
 test("unused project deletion retains Drive references in audit, removes scopes and clears its filter", () => {
   for (const role of ["Administrator", "Project Manager"]) {
-    let state = run(blankWorkspace(), { type: "addSite", name: "Accidental project", location: "Pasig", budget: 100 }, role);
+    let state = run(blankWorkspace(), { type: "addSite", documentCode: "ACCIDENTAL-PROJECT", name: "Accidental project", location: "Pasig", budget: 100 }, role);
     const siteId = state.sites[0].id;
     state = run(state, { type: "setProjectDriveFolder", siteId, folderId: "retained-drive-folder" }, role);
     state = run(state, { type: "saveProjectScope", siteId, name: "Unused scope", budget: 50 }, role);
@@ -39,7 +39,7 @@ test("project deletion rejects linked records and unauthorized roles without los
 });
 
 test("folder creation blocks deletion until acknowledgement and abandoned operations expire", () => {
-  let state = run(blankWorkspace(), { type: "addSite", name: "Pending project", location: "Pasig", budget: 100 }, "Administrator");
+  let state = run(blankWorkspace(), { type: "addSite", documentCode: "PENDING-PROJECT", name: "Pending project", location: "Pasig", budget: 100 }, "Administrator");
   const siteId = state.sites[0].id;
   state = run(state, { type: "startOperation", target: { kind: "project", id: siteId } }, "Administrator");
   assert.equal(execute(state, { type: "removeSite", siteId }, "Administrator").ok, false);
@@ -51,7 +51,7 @@ test("folder creation blocks deletion until acknowledgement and abandoned operat
 
 test("captured project deletion rejects a switched account", async () => {
   const actor = context("Administrator").actor;
-  const state = run(blankWorkspace(), { type: "addSite", name: "Unused", location: "Pasig", budget: 0 }, "Administrator");
+  const state = run(blankWorkspace(), { type: "addSite", documentCode: "UNUSED", name: "Unused", location: "Pasig", budget: 0 }, "Administrator");
   let active = actor;
   const gateway = bindAccountCommands({ getSnapshot: () => ({ snapshot: state }), execute: async (command, current) => applyCommand(state, command, { ...context(current.role), actor: current }) }, actor, () => active);
   active = { ...actor, email: "different@example.com" };

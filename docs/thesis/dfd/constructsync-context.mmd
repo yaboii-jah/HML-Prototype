@@ -1,0 +1,44 @@
+---
+config:
+  layout: elk
+  theme: base
+  flowchart:
+    htmlLabels: false
+---
+flowchart TB
+  admin["Administrator"]
+  pm["Project Manager"]
+  site["Site Personnel"]
+  proc["Procurement"]
+  supplier["Supplier"]
+  finance["Finance"]
+  accounting["Accounting / Auditing"]
+  logistics["Logistics"]
+  ai["AI Extraction Service"]
+  drive["Google Drive"]
+  P0("0 ConstructSync")
+  admin -->|"User / project settings"| P0
+  P0 -->|"User / project status"| admin
+  pm -->|"Project data / MRF decisions"| P0
+  P0 -->|"Project / MRF records"| pm
+  site -->|"MRFs / receipts / usage"| P0
+  P0 -->|"Request / stock status"| site
+  proc -->|"Offers / POs / warehouse receipts"| P0
+  P0 -->|"Bid / PO / delivery records"| proc
+  supplier -->|"Quotation files"| P0
+  P0 -->|"Issued POs"| supplier
+  finance -->|"Payment plans / priorities"| P0
+  P0 -->|"Payable / settled balances"| finance
+  accounting -->|"Reviews / payment verification"| P0
+  P0 -->|"PO / payment / evidence records"| accounting
+  logistics -->|"Schedules / dispatch details"| P0
+  P0 -->|"Cleared delivery quantities"| logistics
+  ai -->|"Extracted fields / match suggestions"| P0
+  P0 -->|"Source pages / MRF context"| ai
+  drive -->|"Folder / file refs and archive results"| P0
+  P0 -->|"Folder data / files / retrieval requests"| drive
+  classDef external fill:#ffffff,stroke:#000000,color:#000000
+  classDef process fill:#e4edf8,stroke:#000000,color:#000000
+  classDef data fill:#fff8e6,stroke:#8a7544,color:#000000
+  class admin,pm,site,proc,supplier,finance,accounting,logistics,ai,drive external
+  class P0 process
