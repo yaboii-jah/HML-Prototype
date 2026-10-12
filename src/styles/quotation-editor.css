@@ -1,4 +1,6 @@
-/* Tabbed quotation sheets and compact line editing; HML blue and Geist. */
+/* Hallmark · quotation review and worksheet · existing HML blue and Geist.
+ * Pre-emit critique: Philosophy 4, Hierarchy 4, Execution 5, Specificity 5, Restraint 5, Variety 4.
+ */
 .quotation-review-navigation{margin:20px 0 16px;min-width:0}
 .quotation-navigation-heading,.quotation-navigation-actions{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .quotation-navigation-heading{margin-bottom:12px}.quotation-navigation-heading h2{margin:0}.quotation-navigation-heading small{color:var(--muted)}
@@ -16,16 +18,17 @@
 .quotation-picker{display:grid;gap:12px}.quotation-picker>input{width:100%}.quotation-picker-list{max-height:55dvh;overflow:auto}
 .quotation-picker-list>button{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:52px;width:100%;padding:12px;border:0;border-bottom:1px solid var(--line);background:var(--surface);color:var(--ink);text-align:left}
 .quotation-picker-list>button[aria-pressed="true"]{background:var(--nav-2)}.quotation-picker-list strong,.quotation-picker-list small{display:block;overflow-wrap:anywhere}.quotation-picker-list small{color:var(--muted);font-size:11px}
-.quote-editor-panel{padding:20px;min-width:0}
+.quote-editor-panel{--quote-review-surface:color-mix(in srgb,var(--warn) 12%,var(--surface));--quote-review-hover-surface:color-mix(in srgb,var(--warn) 18%,var(--surface));--quote-review-ink:var(--warn);--quote-review-rule:var(--warn);padding:20px;min-width:0}
 .quote-editor-header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding-bottom:16px;margin-bottom:16px;border-bottom:1px solid var(--line)}
 .quote-editor-title{min-width:0;flex:1}.quote-editor-title>div{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.quote-editor-title h2{margin:0;font-size:21px;overflow-wrap:anywhere}
 .quote-editor-title p{margin:6px 0 0;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.quote-editor-title>small{display:block;margin-top:4px;color:var(--muted);font-size:11px}
 .quote-editor-header-actions{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap;max-width:50%}
 .quote-editor-header-actions>.button{min-height:34px;padding:6px 10px;font-size:12px}
-.quote-editor-issues{position:fixed;inset:auto;margin:0;width:min(360px,calc(100vw - 16px));max-height:min(420px,calc(100dvh - 16px));overflow:auto;padding:12px 16px;border:1px solid var(--color-badge-rule-3);border-radius:7px;background:var(--color-badge-surface-3);color:var(--color-badge-ink-3);box-shadow:var(--shadow);font-size:12px}
-.quote-editor-header-actions .quote-review-trigger{border-color:var(--color-badge-rule-3);background:var(--color-badge-surface-3);color:var(--color-badge-ink-3)}
+.quote-editor-issues{position:fixed;inset:auto;margin:0;width:min(360px,calc(100vw - 16px));max-height:min(420px,calc(100dvh - 16px));overflow:auto;padding:12px 16px;border:1px solid var(--quote-review-rule);border-radius:7px;background:var(--quote-review-surface);color:var(--ink);box-shadow:var(--shadow);font-size:12px}
+.quote-editor-header-actions .quote-review-trigger{border-color:var(--quote-review-rule);background:var(--quote-review-surface);color:var(--quote-review-ink)}
+.quote-editor-header-actions .quote-review-trigger:hover{background:var(--quote-review-hover-surface)}
 .quote-review-trigger:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
-.quote-editor-issues button:focus-visible{outline:3px solid var(--color-badge-ink-3);outline-offset:2px}
+.quote-editor-issues button:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
 .quote-review-count-status{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
 .quote-editor-issues ul{margin:6px 0;padding-left:18px}.quote-editor-issues .text-link{font-weight:400;text-align:left;color:inherit;font-size:12px;max-width:100%;min-width:0;white-space:normal;overflow-wrap:anywhere}.quote-editor-issues .text-link:hover{text-decoration:underline}
 .quote-editor-field-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0 16px}
@@ -35,30 +38,25 @@
 .quote-editor-material-heading{margin:20px 0 12px}.quote-editor-material-heading h3{margin:0 0 6px}.quote-editor-material-heading p{margin:0}
 .quote-editor-material-tools{display:flex;align-items:center;gap:8px;margin-bottom:12px}.quote-editor-material-tools input{flex:1;min-width:0}.quote-editor-material-tools select{max-width:180px}
 .quote-editor-lines{max-width:100%;overflow-x:auto;overscroll-behavior-x:contain;box-shadow:none}
-.quote-material-register .quote-editor-lines table{display:table;table-layout:auto;min-width:1800px;width:max(1800px,calc(100% + 160px))}
+.quote-material-register .quote-editor-lines table{display:table;table-layout:fixed;min-width:900px;width:max(900px,calc(100% + 160px))}
 .quote-editor-lines thead{display:table-header-group}
 .quote-editor-lines tbody{display:table-row-group}
 .quote-editor-lines tr{display:table-row}
 .quote-editor-lines th,.quote-material-register .quote-editor-lines td{max-width:none;display:table-cell}
-.quote-editor-lines thead th{white-space:nowrap;padding:10px 8px;font-size:11px}
-.quote-editor-lines :is(th,td):nth-child(1){width:480px;min-width:480px}
-.quote-editor-lines :is(th,td):nth-child(2){width:640px;min-width:640px}
-.quote-editor-lines :is(th,td):nth-child(3){width:100px;min-width:100px}
-.quote-editor-lines :is(th,td):nth-child(4){width:100px;min-width:100px}
-.quote-editor-lines :is(th,td):nth-child(5){width:140px;min-width:140px}
-.quote-editor-lines :is(th,td):nth-child(6){width:160px;min-width:160px}
-.quote-editor-lines :is(th,td):nth-child(7){width:180px;min-width:180px}
-.quote-material-register .quote-editor-lines td{max-width:none;padding:10px 8px;vertical-align:top;white-space:nowrap;overflow-wrap:normal;font-size:12px}
-.quote-editor-lines tr.needs-review{background:var(--color-badge-surface-3)}
+.quote-editor-lines thead th{white-space:nowrap;padding:10px 6px;font-size:12px}
+.quote-material-register .quote-editor-lines td{max-width:none;padding:12px 6px;vertical-align:top;white-space:nowrap;overflow-wrap:normal;font-size:13px}
+.quote-material-register .quote-editor-lines tr.needs-review{background:var(--quote-review-surface);color:var(--ink)}
+.quote-material-register .quote-editor-lines tr.needs-review:hover{background:var(--quote-review-hover-surface)}
+.quote-material-register .quote-editor-lines tr.needs-review>td:first-child{box-shadow:inset 3px 0 0 var(--quote-review-rule)}
 .quote-editor-lines .field{position:relative;margin:0}.quote-editor-lines .field>span{position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip-path:inset(50%)}
-.quote-editor-lines input:not([type=checkbox]),.quote-editor-lines select,.quote-editor-lines textarea{width:100%;min-width:0;min-height:34px;padding:6px;font-size:12px}
-.quote-editor-lines textarea{min-height:58px;resize:vertical;white-space:pre-wrap;overflow-wrap:break-word}
+.quote-editor-lines input:not([type=checkbox]),.quote-editor-lines select,.quote-editor-lines textarea{width:100%;min-width:0;min-height:36px;padding:6px;font-size:13px}
+.quote-editor-lines textarea{min-height:58px;resize:vertical;white-space:pre-wrap;overflow-wrap:break-word;line-height:1.5}
 .quote-line-number{display:block;margin-bottom:4px;color:var(--muted);font-size:11px}.quote-line-confidence{margin-top:5px}
-.quote-editor-lines .quote-check{display:flex;align-items:center;gap:6px;font-size:11px;margin:6px 0 0}.quote-editor-lines .quote-check input{flex:none}
+.quote-editor-lines .quote-check{display:flex;align-items:center;gap:6px;font-size:12px;margin:8px 0 0;cursor:pointer}.quote-editor-lines .quote-check input{flex:none}
 .quote-line-confidence{display:flex;align-items:center;gap:8px;flex-wrap:nowrap}
 .quote-line-confidence .quote-line-number{margin:0}
 .quote-editor-lines .quote-check input{width:14px;height:14px;min-height:14px;padding:0;margin:0}
-.quote-line-actions{display:flex;align-items:center;flex-direction:row;flex-wrap:nowrap;gap:12px}.quote-line-actions .button{min-height:32px;padding:5px 8px;font-size:12px}.quote-line-actions .text-link{font-size:12px}
+.quote-line-actions{display:flex;align-items:center;flex-direction:row;flex-wrap:nowrap;gap:8px}.quote-line-actions .button{flex:none;min-height:32px;padding:5px 8px;font-size:12px;white-space:nowrap}.quote-line-actions .text-link{flex:none;margin:0;font-size:12px;white-space:nowrap}
 .quote-editor-no-lines{padding:24px;text-align:center;margin:0}
 .quote-editor-pagination{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:12px;font-size:12px}.quote-editor-pagination>div,.quote-editor-pagination label{display:flex;align-items:center;gap:8px}.quote-editor-pagination .button{min-height:32px;padding:5px 9px;font-size:12px}.quote-editor-pagination select{min-height:32px;padding:4px 8px}
 .quote-editor-adjustments{margin-top:16px;padding-top:16px;border-top:1px solid var(--line)}.quote-editor-adjustments .panel-heading{align-items:center;margin-bottom:12px}.quote-editor-adjustments h3{margin:0}.quote-editor-adjustments .table-frame{overflow:visible}
@@ -73,3 +71,139 @@
 
 .quote-material-register .quote-editor-lines{overflow-x:scroll;overflow-y:auto;scrollbar-gutter:stable;scroll-padding-top:48px}
 .quote-material-register .quote-editor-lines td small{max-width:none;overflow:visible;text-overflow:clip}
+
+.quote-material-workspace,.quote-material-sheet{min-width:0}
+.quote-material-workspace{margin-top:20px}
+.quote-editor-material-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-top:0}
+.quote-editor-material-heading>div{min-width:0}
+.quote-material-review-actions{display:flex;align-items:center;flex-wrap:wrap;gap:8px;flex:none}
+.quote-material-review-actions .button{min-height:34px;padding:6px 10px;font-size:12px;white-space:nowrap}
+.quote-editor-material-heading .helper-note{max-width:62ch;font-size:12px}
+.quote-requested-item{display:block;margin-top:8px;font-size:11px;color:var(--muted)}
+.quote-requested-item>span{display:block;margin-bottom:4px}
+.quote-editor-lines .quote-requested-item select{min-height:30px;padding:4px 6px;font-size:12px;background:var(--paper);text-overflow:ellipsis}
+.quote-editor-lines .quote-line-number{margin-top:8px;font-size:12px;font-variant-numeric:tabular-nums}
+.quote-editor-lines :is(th:nth-child(3),th:nth-child(5),th:nth-child(6)),.quote-number-cell{text-align:right;font-variant-numeric:tabular-nums}
+.quote-number-cell input{text-align:right}
+.quote-number-cell>strong{display:block;padding-top:8px;font-size:13px}
+.quote-editor-lines .quote-requested-quantity,.quote-editor-lines .quote-unit-difference,.quote-editor-lines .quote-printed-difference,.quote-editor-lines .quote-supplier-code{display:block;margin-top:6px;font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.quote-editor-lines .quote-printed-difference,.quote-editor-lines .quote-review-note{color:var(--quote-review-ink)}
+.quote-unmatched{display:block;margin-top:8px;color:var(--muted);font-size:12px}
+.quote-unmatched small{display:block;font-size:11px}
+.quote-check.is-confirmed{color:var(--good);font-weight:600}
+.quote-material-register .quote-editor-lines :is(.field-error,.quote-review-note){display:block;max-width:100%;margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11px}
+.quote-editor-lines [aria-invalid=true]{border-color:var(--bad)}
+.quote-editor-lines :is(input,select,textarea):focus-visible,.quote-source-panel :is(button,select,a):focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.quote-match-report{margin-bottom:12px;font-size:12px;color:var(--muted)}
+.quote-match-report p{margin:0 0 6px}.quote-match-report.is-error p{color:var(--bad)}
+.quote-match-report summary{cursor:pointer;color:var(--brand)}.quote-match-report li{white-space:normal;overflow-wrap:anywhere}
+.quote-source-panel{display:flex;flex-direction:column;min-width:0;min-height:0;padding:12px;border:1px solid var(--line);border-radius:8px;background:var(--paper);height:100%;max-height:640px}
+.quote-source-panel>header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px;font-size:13px}
+.quote-source-panel .text-link{font-size:12px;white-space:nowrap}
+.quote-source-picker{display:flex;align-items:flex-start;flex-direction:column;gap:8px;margin-bottom:10px}
+.quote-source-picker select{width:100%;min-width:0;min-height:34px;font-size:12px;text-overflow:ellipsis}
+.quote-source-picker .button{min-height:30px;padding:4px 8px;font-size:12px}
+.quote-source-preview{display:flex;flex:1;min-width:0;min-height:320px;overflow:hidden}
+.quote-source-file{display:flex;flex-direction:column;width:100%;height:100%;min-width:0;min-height:0;overflow:hidden}
+.quote-source-original{align-self:flex-end;flex:none;margin-bottom:8px;font-size:12px}
+.quote-source-file .pdf-document-viewer{width:100%;min-height:0}
+.quote-source-file .pdf-document-toolbar{justify-content:flex-start;gap:4px;padding:4px}
+.quote-source-empty{align-self:center;margin:auto;padding:16px;max-width:100%;font-size:13px;color:var(--muted);overflow-wrap:anywhere;text-align:center}
+.quote-source-image-tools{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:12px}
+.quote-source-image-tools select{min-height:30px;padding:4px 8px;font-size:12px}
+.quote-source-image-scroll{min-height:0;flex:1;overflow:auto}
+.quote-source-image{min-width:0}.quote-source-image .loading-image{display:block;width:100%;height:auto}
+.quote-source-image .loading-image img{display:block;width:100%;height:auto;object-fit:contain}
+.quote-document-preview>.quote-source-file{width:100%;height:100%;padding:8px}
+@media(min-width:1280px){.quote-material-workspace.has-source{display:grid;grid-template-columns:minmax(0,1fr) 320px;align-items:stretch;gap:16px}.has-source .quote-editor-material-heading{flex-wrap:wrap}}
+@media(min-width:1600px){.quote-material-workspace.has-source{grid-template-columns:minmax(0,1fr) 400px}}
+@media(max-width:1279px){.quote-source-panel{display:none}}
+@media(max-width:800px){.quote-editor-material-heading{flex-direction:column}.quote-material-review-actions .button{min-height:44px}.quote-material-review-actions{width:100%}.quote-editor-lines .quote-requested-item select{min-height:36px}.quote-editor-lines .quote-check input{width:18px;height:18px;min-height:18px}.quote-editor-material-tools select{max-width:100%}}
+
+/* Quotation details and financial review; the material worksheet layout is preserved. */
+.quotation-navigation-heading h2{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin:0;font-size:18px}
+.quotation-navigation-heading h2 small{font-size:12px;font-weight:400}
+.quotation-navigation-actions>.button{min-height:34px;padding:6px 10px;font-size:12px;white-space:nowrap}
+.quotation-tab-scroll[hidden]{display:none}
+.quotation-tab-scroll:disabled{color:var(--muted);opacity:.4}
+.quotation-supplier-tabs>[role=tab]{min-height:48px;padding:8px 12px}
+.quotation-supplier-tabs>[role=tab]:focus-visible{outline:2px solid var(--focus);outline-offset:-3px}
+.quote-editor-title>div{gap:6px 8px}
+.quote-editor-panel .quote-core-details>.collapsible-body{padding:12px 16px}
+.quote-core-details .quote-editor-field-grid>.field{margin-bottom:8px;min-width:0}
+.quote-core-details .quote-editor-field-grid>.field>span{font-size:12px}
+.quote-core-details .quote-editor-field-grid :is(input,textarea){width:100%;min-width:0;min-height:36px;padding:8px;font-size:13px}
+.quote-core-details .collapsible-section{margin-bottom:0}
+.quote-financial-workspace{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;align-items:start;margin-top:20px;padding-top:20px;border-top:1px solid var(--line);min-width:0}
+.quote-financial-inputs{display:flex;flex-direction:column;gap:16px;min-width:0}
+.quote-financial-workspace .quote-editor-adjustments,.quote-financial-inputs>.quote-tax-controls,.quote-financial-card{min-width:0;margin:0;padding:16px;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+.quote-financial-workspace h3{margin:0;font-size:16px}
+.quote-financial-workspace .helper-note{font-size:12px;line-height:1.5}
+.quote-financial-workspace .quote-editor-adjustments>.panel-heading{align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.quote-editor-adjustments>.panel-heading .helper-note{margin:4px 0 0}
+.quote-editor-adjustments>.panel-heading .button{min-height:34px;padding:6px 10px;font-size:12px;white-space:nowrap}
+.quote-adjustments-empty{margin:0;padding:12px 0;color:var(--muted);font-size:13px}
+.quote-adjustment-list{display:grid;gap:12px}
+.quote-financial-workspace .quote-adjustment-card{min-width:0;border:1px solid var(--line);border-radius:7px;padding:12px;background:var(--paper)}
+.quote-adjustment-title{display:flex;align-items:center;gap:12px;margin-bottom:8px}
+.quote-adjustment-title>.field{flex:1;min-width:0}
+.quote-adjustment-title .text-link{flex:none;margin:16px 0 0;color:var(--bad);white-space:nowrap;font-size:12px}
+.quote-adjustment-fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.quote-adjustment-card .field{margin:0;min-width:0}
+.quote-adjustment-card .field>span{font-size:12px}
+.quote-financial-workspace .quote-adjustment-card :is(input,select){width:100%;min-width:0;min-height:36px;padding:6px;font-size:13px}
+.quote-adjustment-card input[type=number]{text-align:right;font-variant-numeric:tabular-nums}
+.quote-adjustment-contribution{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-top:10px}
+.quote-adjustment-contribution small{min-width:0;color:var(--muted);font-size:11px;line-height:1.5;overflow-wrap:anywhere}
+.quote-adjustment-contribution strong{flex:none;font-size:12px;font-variant-numeric:tabular-nums}
+.quote-adjustment-amount{display:grid;flex:none;text-align:right;gap:2px}
+.quote-adjustment-card .field-error{margin:8px 0 0;font-size:12px}
+.quote-adjustment-card [aria-invalid=true]{border-color:var(--bad)}
+.quote-financial-workspace :is(input,select,button):focus-visible,.quote-tax-controls:focus-visible,.quote-editor-adjustments:focus-visible,.quote-computation-summary [tabindex]:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.quote-tax-controls h3{margin-bottom:12px}
+.quote-vat-fields{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
+.quote-vat-fields .quote-price-basis{margin-top:0}
+.quote-vat-status-row{display:grid;grid-template-columns:minmax(0,1fr) 80px;align-items:start;gap:8px}
+.quote-vat-status-row>.field{margin:0;min-width:0}
+.quote-vat-status-row>.field>span{font-size:12px}
+.quote-vat-status-row input[type=number]{width:100%;min-width:0;min-height:36px;padding:6px;text-align:right;font-size:13px}
+.quote-radio-group{min-width:0;border:0;padding:0;margin:0}
+.quote-radio-group legend{float:none;padding:0;margin:0 0 6px;font-size:12px;color:var(--muted);font-weight:600}
+.quote-radio-group>div{display:flex;gap:6px}
+.quote-radio-group label{display:flex;align-items:center;justify-content:center;gap:6px;min-width:0;min-height:36px;padding:6px;border:1px solid var(--line);border-radius:6px;background:var(--surface);font-size:12px;white-space:nowrap;cursor:pointer}
+.quote-radio-group label:has(input:checked){border-color:var(--brand);background:var(--nav-2);color:var(--brand)}
+.quote-radio-group label:has(input:disabled){cursor:default}
+.quote-radio-group label:focus-within{outline:2px solid var(--focus);outline-offset:2px}
+.quote-radio-group input[type=radio]{flex:none;width:14px;height:14px;min-height:14px;padding:0;margin:0;accent-color:var(--brand)}
+.quote-price-basis{margin-top:12px}.quote-price-basis>div>label{flex:1}
+.quote-price-basis .helper-note{margin:6px 0 0}
+.quote-tax-controls>.quotation-operation-fields>.helper-note{margin:12px 0 0}
+.quote-financial-card .quote-tax-confirm{display:flex;align-items:flex-start;margin:0 0 12px;gap:8px;font-size:12px;line-height:1.5}
+.quote-tax-confirm input{flex:none;width:16px;height:16px;min-height:16px;padding:0;margin:2px 0 0}
+.quote-computation-summary{margin-top:16px;padding-top:16px;border-top:1px solid var(--line)}
+.quote-financial-card>.quote-computation-summary:first-child{margin-top:0;padding-top:0;border-top:0}
+.quote-computation-heading h3{margin-bottom:4px}
+.quote-computation-heading>small{display:block;color:var(--muted);font-size:11px;margin-bottom:12px}
+.quote-computation-summary dl{margin:0}
+.quote-computation-summary dl>div{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:baseline;gap:12px;padding:8px 0;font-size:12px}
+.quote-computation-summary dt{min-width:0;overflow-wrap:anywhere}
+.quote-computation-summary dt>small{display:block;margin-top:2px;font-size:11px;color:var(--muted)}
+.quote-computation-summary dd{margin:0;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.quote-computation-summary .quote-summary-gross{margin:8px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:12px 0;font-size:14px;font-weight:700}
+.quote-computation-summary .quote-summary-net{margin-top:8px;padding-top:12px;border-top:1px solid var(--line);font-size:14px;font-weight:700}
+.quote-summary-net dd{color:var(--brand)}
+.quote-computation-summary .quote-summary-ignored{color:var(--muted)}
+.quote-summary-help{margin-top:12px;font-size:12px}
+.quote-summary-help>summary{width:fit-content;color:var(--brand);cursor:pointer;font-weight:600;min-height:32px;line-height:32px}
+.quote-summary-help>summary:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.quote-summary-help .helper-note{margin:8px 0 0;color:var(--muted)}
+.quote-summary-recorded{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-top:12px;font-size:14px}
+.quote-finalize-actions{margin-top:16px;padding-top:12px;border-top:1px solid var(--line)}
+.quote-finalize-actions>.helper-note{margin:0 0 8px}
+.quote-finalize-actions .button{width:100%;min-height:40px;white-space:nowrap}
+@media(max-width:767px),(min-width:1000px) and (max-width:1200px){.quote-adjustment-fields{grid-template-columns:repeat(2,minmax(0,1fr))}.quote-adjustment-fields>.field:last-child{grid-column:1/-1}}
+@media(min-width:1440px){.quote-vat-fields{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px}}
+@media(min-width:1000px){.quote-financial-workspace{grid-template-columns:minmax(0,1fr) 360px}}
+@media(max-width:767px){.quote-core-details .quote-editor-field-grid{grid-template-columns:minmax(0,1fr)}.quote-financial-workspace .quote-editor-adjustments,.quote-financial-inputs>.quote-tax-controls,.quote-financial-card{padding:12px}.quotation-navigation-actions>.button,.quote-editor-adjustments>.panel-heading .button,.quote-radio-group label,.quote-vat-status-row input[type=number],.quote-financial-workspace .quote-adjustment-card :is(input,select),.quote-core-details .quote-editor-field-grid :is(input,textarea),.quote-finalize-actions .button,.quote-summary-help>summary{min-height:44px}.quote-computation-summary dl>div{gap:8px}}
+
+.quote-document-management{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:12px}.quote-document-management small{color:var(--muted);font-size:12px}

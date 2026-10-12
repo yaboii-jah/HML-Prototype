@@ -1,5 +1,6 @@
 import { bidLines } from "./bid-reports.ts";
 import { roundMoney } from "./pricing.ts";
+import { comparableMaterialAmount } from "./comparative-pricing.ts";
 import type { BidOffer, BidReport, BidReportData, ComparisonSelections, Item, QuoteLine } from "./types.ts";
 
 export const comparisonOffers = (data: BidReportData) => data.offers.filter(offer => offer.source !== "PO source");
@@ -48,7 +49,9 @@ export function comparisonCoverage(report: BidReport, offer: BidOffer) {
     const line = selectedComparisonLine(report, offer, item);
     if (!line) gaps.push(`Item ${index + 1}: not quoted`);
     else {
-      total += requiredComparisonAmount(item, line);
+      const amount = report.comparisonRevision === 4 ? comparableMaterialAmount(offer.quote, line, item) : requiredComparisonAmount(item, line);
+      if (amount === undefined) throw new Error(`Review VAT treatment for ${offer.supplierName} before generating the comparison.`);
+      total += amount;
       const offered = line.quantity * line.conversionFactor;
       if (offered + 0.000001 < item.quantity) gaps.push(`Item ${index + 1}: offered ${offered} of ${item.quantity} ${item.unit}`);
     }

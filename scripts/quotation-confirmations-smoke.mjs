@@ -54,6 +54,7 @@ try {
   fixture.pendingAwards=fixture.pendingAwards.filter(a=>a.requestId!==request.id);
   const offer={id:'confirm-offer',description:'Supplier material',quantity:20,unit:request.items[0].unit,unitPrice:50,brand:'',specification:'',requestItemId:request.items[0].id,conversionFactor:1,varianceReason:'',matchConfirmed:true,matchConfidence:'high',discountType:'none',discountValue:0,taxRate:0,printedTotal:null};
   const quote={...original,ref:'CONFIRM-FINAL',reviewStatus:'finalized',reviewedAt:'2026-10-07T00:00:00Z',currency:'PHP',lines:[offer],documents:[{name:'Supplier source.pdf',type:'application/pdf',fileId:'confirm-shared-file'}],supplierDetails:{name:'MetroBuild Materials',address:'',tin:'',contactName:'',email:'',phone:''},adjustments:[],archive:{status:'complete',files:[{localFileId:'confirm-shared-file',driveFileId:'confirm-drive',url:'https://drive.google.com/file/d/confirm-drive/view',name:'Supplier source.pdf'}]}};
+  quote.financial={vatStatus:'VAT',priceBasis:'inclusive',vatRate:12,reviewed:true};
   const draft={...structuredClone(quote),id:'confirm-draft',ref:'CONFIRM-DRAFT',reviewStatus:'draft',archive:undefined,reviewedAt:undefined,lines:[{...offer,id:'draft-offer'},{...offer,id:'draft-extra',description:'Extra offered material'}],adjustments:[{id:'draft-adjustment',label:'Freight',kind:'shipping',calculation:'fixed',value:100}]};
   fixture.quotes=fixture.quotes.filter(q=>q.mrfId!==request.id);fixture.quotes.push(quote,draft);
   const load=async()=>{await run(`localStorage.setItem('hml-constructsync-demo-v12',${JSON.stringify(JSON.stringify(fixture))});return true;`);await navigate('/requests/m1/quotes');await wait("return document.querySelector('.quote-review')?.dataset.quotationId==='confirm-draft'&&!!document.querySelector('.supplier-upload-workbench');");};
@@ -122,24 +123,27 @@ try {
     }
   }
   await call('Emulation.setDeviceMetricsOverride',{width:1440,height:900,deviceScaleFactor:1,mobile:false});
-  await press('Compare & allocate');
-  const quantitySelector='.quote-award-edit input';
-  const beforeQuantity=await snapshot();await fill(quantitySelector,'8');await sleep(100);
-  assert.equal(await snapshot(),beforeQuantity,'Typing an award saves no allocation');
-  assert.equal(await run("return [...document.querySelectorAll('button')].find(b=>b.textContent==='Generate supplier PO drafts').disabled;"),true);
-  await prompt(buttonCode('Apply allocations'));
-  assert.equal(await run("return document.querySelector('.quote-award-edit input').value;"),'8','Cancel preserves typed award');
-  await press('Upload & review');await press('Compare & allocate');assert.equal(await run("return document.querySelector('.quote-award-edit input').value;"),'8','Step navigation preserves unapplied quantities');
-  await run(buttonCode('Apply allocations'));await wait("return !!document.querySelector('.confirm-dialog[open]');");await click('.confirm-dialog[open] .confirm-actions button:last-child');
+  await press('Compare & award');
+  const beforeQuantity=await snapshot();
+  await click('[data-split-material]');await wait("return !!document.querySelector('.comparison-split input:not(:disabled)');");
+  const quantitySelector='.comparison-split input:not(:disabled)';
+  await fill(quantitySelector,'8');assert.equal(await snapshot(),beforeQuantity,'Typing a quantity saves no allocation');
+  await click('.record-dialog[open] .record-modal-close');
+  assert.equal(await snapshot(),beforeQuantity,'Cancelling split changes no saved awards');
+  await click('[data-split-material]');
+  for(const invalid of ['', '-1', '21']){await fill(quantitySelector,invalid);await press('Use these quantities');assert.equal(await run("return !!document.querySelector('.comparison-split .field-error');"),true,'Invalid award is rejected before review');}
+  await fill(quantitySelector,'8');await press('Use these quantities');
+  await press('Upload & review');await press('Compare & award');
+  assert.match(await run("return document.querySelector('.bid-award-summary').textContent;"),/8/,'Step navigation preserves unsaved awards');
+  await press('Review & save awards');await click('.record-dialog[open] .record-modal-close');
+  assert.equal(await snapshot(),beforeQuantity,'Closing review changes no allocations');
+  await press('Review & save awards');await press('Save awards');
   await wait("return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).pendingAwards.some(a=>a.quoteLineId==='confirm-offer'&&a.quantity===8);");
-  await fill(quantitySelector,'12');await sleep(100);await prompt(buttonCode('Apply allocations'),{escape:true});
-  assert.equal(JSON.parse(await snapshot()).pendingAwards.find(a=>a.quoteLineId==='confirm-offer').quantity,8);
-  await fill(quantitySelector,'0');await sleep(100);await prompt(buttonCode('Apply allocations'));
-  await press('Reset',"document.querySelector('.allocation-material-actions')");assert.equal(await run("return document.querySelector('.quote-award-edit input').value;"),'8');
-  for(const invalid of ['', '-1', '21']){await fill(quantitySelector,invalid);await press('Apply allocations');assert.equal(await run("return !document.querySelector('.confirm-dialog[open]')&&!!document.querySelector('.quote-award-edit .field-error');"),true,'Invalid award shows a field error before confirmation');await press('Reset',"document.querySelector('.allocation-material-actions')");}
-  await press('Review allocations');const beforeReview=await snapshot();await click('.record-dialog[open] .record-modal-close');assert.equal(await snapshot(),beforeReview,'Cancelling supplier review changes no allocations');
-  await fill(quantitySelector,'0');await press('Apply allocations');await click('.confirm-dialog[open] .confirm-actions button:last-child');await wait("return !JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).pendingAwards.some(a=>a.quoteLineId==='confirm-offer');");
-  await load();await press('Compare & allocate');await run("[...document.querySelectorAll('details')].find(d=>d.querySelector('summary strong')?.textContent==='Comparison reports').open=true;return true;");await prompt(buttonCode('Generate bid comparison'));
+  await click('.record-dialog[open] .record-modal-close');await click('[data-split-material]');
+  await fill(quantitySelector,'0');await press('Use these quantities');await press('Review & save awards');await press('Save awards');
+  await wait("return !JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).pendingAwards.some(a=>a.quoteLineId==='confirm-offer');");
+  await click('.record-dialog[open] .record-modal-close');
+  await load();await press('Compare & award');await run("[...document.querySelectorAll('details')].find(d=>d.querySelector('summary strong')?.textContent==='Comparison reports').open=true;return true;");await prompt(buttonCode('Generate bid comparison'));
   quote.archive={status:'pending',files:[],error:'Archive needs retry'};await load();
   await click('[data-quote-id="q1"]');
   await prompt(buttonCode('Retry Drive archive',finalRow));

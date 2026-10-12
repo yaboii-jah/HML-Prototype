@@ -2,6 +2,7 @@
 import { requiresPMReview } from "@/src/domain/full-disbursement";
 
 import { Register } from "@/src/components/ui/Register";
+import { MaterialDetailsModal, MaterialDetailsRow, MaterialDetailsTrigger } from "@/src/components/ui/MaterialDetails";
 
 import { CollapsibleSection, revealField } from "@/src/components/ui/CollapsibleSection";
 import { useArchive } from "@/src/app-state/ArchiveProvider";
@@ -103,13 +104,24 @@ export function RequestForm({ id }: { id?: string }) {
   const [copySourceId, setCopySourceId] = useState("");
   const selectedCopySourceId = items.some(item => item.id === copySourceId) ? copySourceId : items[items.length - 1]?.id || "";
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  const [viewingItemId, setViewingItemId] = useState<string | null>(null);
   const [materialSearch, setMaterialSearch] = useState("");
   const [invalidItemId, setInvalidItemId] = useState<string | null>(null);
   const addDialogRef = useRef<HTMLDialogElement>(null);
   const editDialogRef = useRef<HTMLDialogElement>(null);
   const editNameRef = useRef<HTMLInputElement>(null);
-  const closeMaterialEditor = () => { editDialogRef.current?.close(); setEditingItemId(null); };
+  const editInvokerRef = useRef<HTMLElement | null>(null);
+  const closeMaterialEditor = () => {
+    editDialogRef.current?.close(); setEditingItemId(null);
+    window.requestAnimationFrame(() => {
+      const trigger = editInvokerRef.current;
+      const fallback = document.querySelector<HTMLInputElement>('.materials-toolbar input[type="search"]');
+      const target = trigger?.isConnected && trigger.checkVisibility() ? trigger : fallback?.checkVisibility() ? fallback : stepHeadingRef.current;
+      target?.focus({ preventScroll: true });
+    });
+  };
   const openMaterialEditor = (itemId: string, focusField?: "material" | "quantity" | "needed" | "unit" | "location") => {
+    if (!editDialogRef.current?.open) editInvokerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     setEditingItemId(itemId);
     window.requestAnimationFrame(() => {
       const dialog = editDialogRef.current;
@@ -344,14 +356,10 @@ export function RequestForm({ id }: { id?: string }) {
           <thead><tr><th className="numeric">#</th><th>Material</th><th className="numeric">Quantity</th><th>Date needed</th><th>Delivery location</th><th aria-label="Actions" /></tr></thead>
           <tbody>{visibleItems.map(({ item, index }) => {
             const needsDetails = invalidItemId === item.id;
-            return <tr key={item.id} data-material-row={index} className={[!documentsOnly && "material-edit-row", needsDetails && "needs-details"].filter(Boolean).join(" ")} onClick={event => {
-              if (documentsOnly || !(event.target instanceof Element) || event.target.closest("button, a, input, select, textarea, .material-row-actions")) return;
-              openMaterialEditor(item.id);
-            }}>
+            return <MaterialDetailsRow key={item.id} data-material-row={index} disabled={documentsOnly || saving || savingPdf} className={needsDetails ? "needs-details" : ""} onOpen={() => openMaterialEditor(item.id)}>
               <td className="numeric">{index + 1}</td>
               <th scope="row" className="material-table-name">
-                <button type="button" className="material-name-trigger" onClick={() => openMaterialEditor(item.id)} aria-label={'Edit material ' + (index + 1) + ': ' + (item.name.trim() || 'Unnamed material')}>{item.name.trim() || 'Unnamed material'}</button>
-                {item.purpose && <small>{item.purpose}</small>}
+                <MaterialDetailsTrigger disabled={documentsOnly || saving || savingPdf} onClick={() => openMaterialEditor(item.id)} aria-label={'Edit material ' + (index + 1) + ': ' + (item.name.trim() || 'Unnamed material')}>{item.name.trim() || 'Unnamed material'}</MaterialDetailsTrigger>
                 {needsDetails && <span className="badge warn">Needs details</span>}
               </th>
               <td className="numeric">{item.quantity > 0 ? item.quantity + ' ' + (item.unit || '—') : '—'}</td>
@@ -361,7 +369,7 @@ export function RequestForm({ id }: { id?: string }) {
                 <button type="button" className="text-link" aria-label={'Edit material ' + (index + 1)} onClick={() => openMaterialEditor(item.id)}>Edit</button>
                 <button type="button" className="button secondary material-remove" aria-label={'Delete material ' + (index + 1)} disabled={items.length === 1} onClick={() => removeItem(item.id)}><span aria-hidden="true">×</span> Delete</button>
               </div></td>
-            </tr>;
+            </MaterialDetailsRow>;
           })}</tbody>
         </table></div> : <div className="material-search-empty"><strong>No materials match “{materialSearch}”.</strong><button type="button" className="text-link" onClick={() => setMaterialSearch("")}>Clear search</button></div>}
         </CollapsibleSection>
@@ -392,17 +400,14 @@ export function RequestForm({ id }: { id?: string }) {
           <div className="panel-heading"><h2>Materials · {items.length}</h2>{!documentsOnly && <button type="button" className="text-link" disabled={saving || savingPdf} onClick={() => changeStep(2)}>Edit materials</button>}</div>
           <div className="table-frame material-table request-review-table" tabIndex={0} role="region" aria-label="Requested materials"><table>
             <thead><tr><th className="numeric">#</th><th>Material</th><th className="numeric">Quantity</th><th>Date needed</th><th>Delivery location</th>{!documentsOnly && <th aria-label="Actions"/>}</tr></thead>
-            <tbody>{items.map((item, index) => <tr key={item.id} className={!documentsOnly && !saving && !savingPdf ? "material-edit-row" : undefined} onClick={event => {
-              if (documentsOnly || saving || savingPdf || !(event.target instanceof Element) || event.target.closest("button, a")) return;
-              openMaterialEditor(item.id);
-            }}>
+            <tbody>{items.map((item, index) => <MaterialDetailsRow key={item.id} disabled={saving || savingPdf} onOpen={() => documentsOnly ? setViewingItemId(item.id) : openMaterialEditor(item.id)}>
               <td className="numeric">{index + 1}</td>
-              <th scope="row" className="material-table-name">{documentsOnly ? <strong>{item.name || "Unnamed material"}</strong> : <button type="button" className="material-name-trigger" disabled={saving || savingPdf} aria-label={`Edit material ${index + 1}: ${item.name || "Unnamed material"}`} onClick={() => openMaterialEditor(item.id)}>{item.name || "Unnamed material"}</button>}{item.purpose && <small>Purpose: {item.purpose}</small>}{item.remarks && <small>Remarks: {item.remarks}</small>}</th>
+              <th scope="row" className="material-table-name"><MaterialDetailsTrigger disabled={saving || savingPdf} aria-label={`${documentsOnly ? "View" : "Edit"} material ${index + 1}: ${item.name || "Unnamed material"}`} onClick={() => documentsOnly ? setViewingItemId(item.id) : openMaterialEditor(item.id)}>{item.name || "Unnamed material"}</MaterialDetailsTrigger>{item.remarks && <small>Remarks: {item.remarks}</small>}</th>
               <td className="numeric">{item.quantity} {item.unit}</td>
               <td>{item.neededDate ? dateText(item.neededDate) : "—"}</td>
               <td>{item.location || "—"}</td>
               {!documentsOnly && <td className="material-actions-cell"><div className="material-row-actions"><button type="button" className="text-link" disabled={saving || savingPdf} aria-label={`Edit material ${index + 1}`} onClick={() => openMaterialEditor(item.id)}>Edit</button></div></td>}
-            </tr>)}</tbody>
+            </MaterialDetailsRow>)}</tbody>
           </table></div>
         </section>
       </>}
@@ -430,6 +435,7 @@ export function RequestForm({ id }: { id?: string }) {
         </>;
       })()}
     </dialog>
+    <MaterialDetailsModal item={items.find(item => item.id === viewingItemId)} onClose={() => setViewingItemId(null)}/>
     {confirmation}
   </>;
 }
@@ -453,10 +459,10 @@ function RequestMaterialList({ state, siteId, items, requestId }: { state: DemoS
         <thead><tr><th className="numeric">#</th><th>Material</th><th className="numeric">Quantity</th><th>Date needed</th><th>Delivery location</th><th className="numeric">Site stock</th><th aria-label="Actions" /></tr></thead>
         <tbody>{items.map((item, index) => {
           const stock = stockFor(state, siteId, item.name, item.unit);
-          return <tr key={item.id} data-material-row={index}>
+          return <MaterialDetailsRow key={item.id} data-material-row={index} onOpen={() => openViewer(item.id)}>
             <td className="numeric">{index + 1}</td>
             <th scope="row" className="material-table-name">
-              <button type="button" className="material-name-trigger" onClick={() => openViewer(item.id)} aria-label={'View material ' + (index + 1) + ': ' + (item.name || 'Unnamed material')}>{item.name || "Unnamed material"}</button>
+              <MaterialDetailsTrigger onClick={() => openViewer(item.id)} aria-label={'View material ' + (index + 1) + ': ' + (item.name || 'Unnamed material')}>{item.name || "Unnamed material"}</MaterialDetailsTrigger>
               {item.purpose && <small>{item.purpose}</small>}
             </th>
             <td className="numeric">{item.quantity > 0 ? item.quantity + ' ' + (item.unit || '—') : '—'}</td>
@@ -467,7 +473,7 @@ function RequestMaterialList({ state, siteId, items, requestId }: { state: DemoS
               <button type="button" className="text-link" aria-label={'View material ' + (index + 1)} onClick={() => openViewer(item.id)}>View</button>
               {offersFor(item.id) && <Link className="text-link" href={`/requests/${requestId}/quotes?materialId=${encodeURIComponent(item.id)}`}>Offers</Link>}
             </div></td>
-          </tr>;
+          </MaterialDetailsRow>;
         })}</tbody>
       </table></div>}
     <dialog ref={viewDialogRef} className="material-edit-dialog material-view-dialog" aria-labelledby="material-view-title" onCancel={event => { event.preventDefault(); closeViewer(); }}>

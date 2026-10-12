@@ -56,7 +56,7 @@ function Thumbnail({ pdf, number, active, root, onSelect }: { pdf: PDFDocumentPr
   return <button ref={button} type="button" className="pdf-document-thumbnail" aria-label={`Go to page ${number}`} aria-current={active ? "page" : undefined} onClick={onSelect}><span className="pdf-document-thumbnail-paper"><canvas ref={canvas} hidden={status !== "ready"}/>{status === "loading" && <span className="loading-visual"><Skeleton height="100%"/></span>}{status === "error" && <span>Preview unavailable</span>}</span><span>{number}</span></button>;
 }
 
-export function PdfDocumentViewer({ blob, fileName, sourceUrl }: { blob: Blob; fileName: string; sourceUrl: string }) {
+export function PdfDocumentViewer({ blob, fileName, sourceUrl, compact = false }: { blob: Blob; fileName: string; sourceUrl: string; compact?: boolean }) {
   const shell = useRef<HTMLDivElement>(null), sidebar = useRef<HTMLElement>(null), findInput = useRef<HTMLInputElement>(null), printer = useRef<HTMLIFrameElement>(null);
   const container = useRef<HTMLDivElement>(null), pages = useRef<HTMLDivElement>(null), viewer = useRef<PDFViewer | null>(null), events = useRef<EventBus | null>(null);
   const [page, setPage] = useState(1), [count, setCount] = useState(0), [pageInput, setPageInput] = useState("1");
@@ -123,15 +123,15 @@ export function PdfDocumentViewer({ blob, fileName, sourceUrl }: { blob: Blob; f
     try { if (document.fullscreenElement === shell.current) await document.exitFullscreen(); else await shell.current?.requestFullscreen(); }
     catch { setError("Fullscreen is unavailable in this browser."); }
   };
-  return <div ref={shell} className="pdf-document-viewer" onKeyDown={event => {
+  return <div ref={shell} className={`pdf-document-viewer${compact ? " is-compact" : ""}`} onKeyDown={event => {
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "f") { event.preventDefault(); setSearchOpen(true); requestAnimationFrame(() => findInput.current?.focus()); }
     if (event.key === "Escape" && searchOpen) { event.preventDefault(); event.stopPropagation(); toggleSearch(); }
   }}>
     <div className="pdf-document-toolbar" role="toolbar" aria-label="PDF viewer controls">
       <div className="pdf-document-toolbar-group">
-        <PdfTool icon="sidebar" label="Toggle thumbnails" disabled={!ready} pressed={sidebarOpen} onClick={() => setSidebarOpen(value => !value)}/>
+        {!compact && <><PdfTool icon="sidebar" label="Toggle thumbnails" disabled={!ready} pressed={sidebarOpen} onClick={() => setSidebarOpen(value => !value)}/>
         <PdfTool icon="search" label="Find in document" disabled={!ready} pressed={searchOpen} onClick={toggleSearch}/>
-        <span className="pdf-toolbar-divider"/>
+        <span className="pdf-toolbar-divider"/></>}
         <PdfTool icon="previous" label="Previous page" disabled={!ready || page === 1} onClick={() => go(page - 1)}/>
         <PdfTool icon="next" label="Next page" disabled={!ready || page === count} onClick={() => go(page + 1)}/>
         <label>Page <input aria-label="PDF page number" type="number" min="1" max={count || 1} value={pageInput} disabled={!ready} onChange={event => setPageInput(event.target.value)} onBlur={commitPage} onKeyDown={event => { if (event.key === "Enter") { event.preventDefault(); commitPage(); } }}/></label><span aria-live="polite">of {count || "—"}</span>
@@ -141,12 +141,12 @@ export function PdfDocumentViewer({ blob, fileName, sourceUrl }: { blob: Blob; f
         <PdfTool icon="plus" label="Zoom in" disabled={!ready || Number(scale) >= 400} onClick={() => zoom(1.2)}/>
         <select aria-label="PDF zoom" value={scale} disabled={!ready} onChange={event => { if (viewer.current) viewer.current.currentScaleValue = ["auto", "page-width", "page-fit"].includes(event.target.value) ? event.target.value : String(Number(event.target.value) / 100); }}><option value="auto">Automatic zoom</option><option value="page-width">Fit width</option><option value="page-fit">Fit page</option>{scales.map(value => <option key={value} value={value}>{value}%</option>)}{!["auto", "page-width", "page-fit"].includes(scale) && !scales.includes(Number(scale)) && <option value={scale}>{scale}%</option>}</select>
       </div>
-      <div className="pdf-document-toolbar-group pdf-document-file-tools">
+      {!compact && <div className="pdf-document-toolbar-group pdf-document-file-tools">
         <PdfTool icon="rotate" label="Rotate clockwise" disabled={!ready} onClick={() => { if (viewer.current) viewer.current.pagesRotation = (viewer.current.pagesRotation + 90) % 360; }}/>
         <PdfTool icon="fullscreen" label={fullscreen ? "Exit fullscreen" : "Fullscreen"} disabled={!ready} pressed={fullscreen} onClick={() => void toggleFullscreen()}/>
         <PdfTool icon="print" label="Print PDF" disabled={!ready} onClick={() => { setError(""); if (printUrl) { try { printer.current?.contentWindow?.print(); } catch { setError("Printing is unavailable here. Use Open document to print the original file."); } } else setPrintUrl(sourceUrl); }}/>
         <a className="pdf-tool-button" aria-label="Download PDF" title="Download PDF" href={sourceUrl} download={fileName}><Icon name="download"/></a>
-      </div>
+      </div>}
     </div>
     {searchOpen && <div className="pdf-document-findbar"><input ref={findInput} type="search" aria-label="Search PDF text" placeholder="Find in document…" value={query} onChange={event => { setQuery(event.target.value); setMatches({ current: 0, total: 0 }); setSearching(!!event.target.value); search(event.target.value); }} onKeyDown={event => { if (event.key === "Enter") { event.preventDefault(); search(query, event.shiftKey, true); } }}/><PdfTool icon="previous" label="Previous match" disabled={!query} onClick={() => search(query, true, true)}/><PdfTool icon="next" label="Next match" disabled={!query} onClick={() => search(query, false, true)}/><span role="status">{query ? searching ? "Searching…" : matches.total ? `${matches.current} of ${matches.total} matches` : "No matches" : ""}</span></div>}
     {error && <p className="field-error" role="alert">{error}</p>}

@@ -27,6 +27,7 @@ const browser = spawn(edge, ["--headless=new", "--disable-gpu", "--no-first-run"
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 let ws;
 process.on("SIGINT", () => { ws?.close(); browser.kill(); process.exit(130); });
+
 try {
   let target;
   for (let i = 0; i < 80; i++) { try { const pages = await fetch(`http://127.0.0.1:${port}/json`).then(r => r.json()); target = pages.find(p => p.type === "page" && p.url.startsWith(baseUrl)); if (target) break; } catch {} await sleep(250); }
@@ -599,7 +600,7 @@ try {
   await wait("return !document.querySelector('.material-edit-dialog[open]');");
   assert.equal(await run("return document.activeElement.classList.contains('material-name-trigger');"), true, 'Closing the dialog restores focus to its trigger');
   await navigate(materialLink);
-  assert.equal(await run("return document.querySelectorAll('.allocation-material-list button[aria-current=true]').length;"),1,'Material navigation highlights the relevant comparison');
+  assert.equal(await run("return document.activeElement.closest('[data-comparison-material]')?.dataset.comparisonMaterial===new URL(location.href).searchParams.get('materialId');"),true,'Material navigation focuses the relevant comparison row');
   const pageContrastFailures = new Map();
   for (const [page, pageRole] of [["/projects","Project Manager"],["/projects/site-a","Administrator"],["/suppliers","Procurement"],["/requests/m1/quotes","Procurement"],["/purchase-orders/po2/edit","Procurement"],["/accounting/po3","Accounting / Auditing"],["/finance/po3","Finance"],["/deliveries","Logistics"],["/inventory","Site Personnel"],["/accounting/po1","Accounting / Auditing"],["/accounting","Accounting / Auditing"],["/reports","Project Manager"],["/admin","Administrator"]]) {
     await role(pageRole);
@@ -1023,12 +1024,13 @@ try {
   await click("Finalize quotation");
   await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).quotes.some(q=>q.ref==='QT-SMOKE-001'&&q.archive?.status==='complete');`);
   assert.equal((await state()).quotes.find(q=>q.ref==='QT-SMOKE-001').archive.files.length, 2);
-  await click("Compare & allocate", ".procurement-steps button");
-  await fill('.allocation-offer-table input[type=number]', 20);
-  await click("Apply allocations");
-  await click("Review allocations");
+  await click("Compare & award", ".procurement-steps button");
+  await run("document.querySelector('[data-choose-offer]').click();return true;");
+  await click("Review & save awards");
   await fill('.allocation-review textarea', "Confirmed price and availability");
-  await click("Generate supplier PO drafts");
+  await click("Save awards");
+  await wait("return !!document.querySelector('.allocation-review .form-actions .button.primary')&&!document.querySelector('.allocation-review .form-actions .button.primary').disabled;");
+  await click("Create supplier PO drafts");
   await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).pos.some(p=>p.mrfId===${JSON.stringify(request.id)});`);
   snapshot = await state(); const po = snapshot.pos.at(-1); assert.equal(po.status, "draft");
   console.log("PO drafted", po.id);

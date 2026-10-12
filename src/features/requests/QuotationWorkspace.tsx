@@ -21,6 +21,7 @@ import { QuotationReviewNavigation } from "./QuotationReviewNavigation";
 import { QuoteDocumentsDialog } from "./QuoteDocumentsDialog";
 import { deleteLocalFile, readQuoteFile, saveQuoteFiles } from "./quote-files";
 import { syncFinalizedQuote } from "./archive-purchasing";
+import { QuotationExtractionDialog, type QuotationExtractionProgress } from "./QuotationExtractionDialog";
 import { CompareAllocate } from "./CompareAllocate";
 import { SupplierQuotationUploads, type QuotationUploadGroup as Group } from "./SupplierQuotationUploads";
 
@@ -45,7 +46,8 @@ export function QuotationWorkspace({ id, initialMaterialId = "" }: { id: string;
   const [activeQuoteId, setActiveQuoteId] = useState("");
   const [busy, setBusy] = useState(false);
   const [batchBusy, setBatchBusy] = useState(false);
-  const [extractionProgress, setExtractionProgress] = useState<{ current: number; total: number; label: string; completed: number; failed: number } | null>(null);
+  const [extractionLabel, setExtractionLabel] = useState<string | null>(null);
+  const [extractionProgress, setExtractionProgress] = useState<QuotationExtractionProgress | null>(null);
   const [error, setError] = useState("");
   const [bulkReport, setBulkReport] = useState<string[]>([]);
   const [bulkCounts, setBulkCounts] = useState<{ finalized: number; archived: number; pending: number; failed: number; skipped: number } | null>(null);
@@ -94,7 +96,7 @@ export function QuotationWorkspace({ id, initialMaterialId = "" }: { id: string;
     setGroup(group.id, { files: combined, error: "", status: "ready" });
   };
   const extract = async (files: File[], documents?: DocumentRef[], supersedesId?: string, groupId?: string) => {
-    setBusy(true); setError(""); if (groupId) setGroup(groupId, { status: "processing", error: "" });
+    setBusy(true); setExtractionLabel(files.map(file => file.name).join(" / ")); setError(""); if (groupId) setGroup(groupId, { status: "processing", error: "" });
     try {
       const form = new FormData(); files.forEach(file => form.append("files", file));
       form.append("materials", JSON.stringify(request.items.map(item => ({ id: item.id, description: item.name, quantity: item.quantity, unit: item.unit }))));
@@ -114,7 +116,7 @@ export function QuotationWorkspace({ id, initialMaterialId = "" }: { id: string;
       if (!await saveDraft(normalizedDraft)) throw new Error("The extracted draft could not be saved.");
       setActiveQuoteId(draft.id); setStep("review"); if (groupId) setGroup(groupId, { status: "completed" }); return true;
     } catch (cause) { const message = cause instanceof Error ? cause.message : "Quotation extraction failed."; setError(message); if (groupId) setGroup(groupId, { status: "failed", error: message }); return false; }
-    finally { setBusy(false); }
+    finally { setBusy(false); setExtractionLabel(null); }
   };
   const startManual = async (group?: Group) => {
     await confirmAction("Create a manual quotation draft?", `${group ? `${group.files.length} source files will be attached to the new draft.` : "A new draft will be created without source files."} Enter and review its supplier details before finalizing.`, "Create draft", async () => {
@@ -226,17 +228,17 @@ export function QuotationWorkspace({ id, initialMaterialId = "" }: { id: string;
     <RecordHeader backHref={`/requests/${id}`} backLabel={request.ref} eyebrow="PROCUREMENT · QUOTATION REVIEW" title="Compare supplier quotations" badges={<Badge value={request.status}/>}/>
     <p className="muted">Review each supplier offer, confirm its MRF matches, allocate quantities, and prepare supplier purchase orders.</p>
     {request.status === "approved" && (request.correction || request.archive?.status === "pending") && <div className="callout warn"><strong>Purchasing is paused</strong><p>{request.correction ? "Procurement is waiting for a corrected MRF and its new Drive archive." : "The approved MRF is waiting for its Google Drive archive. Procurement or an Administrator can retry from the request page."}</p></div>}
-    <nav className="procurement-steps" aria-label="Procurement steps">{(["review", "compare", "po"] as const).map((value, index) => <button key={value} type="button" className={step === value ? "active" : ""} onClick={() => { setStep(value); setError(""); }}><span>{String(index + 1).padStart(2, "0")}</span>{({ review: "Upload & review", compare: "Compare & allocate", po: "PO preparation" })[value]}<small>{({ review: `${drafts.length} draft · ${finalized.length} finalized`, compare: `${finalized.length} suppliers · ${staged.length} saved awards`, po: `${pos.length} POs` })[value]}</small></button>)}</nav>
+    <nav className="procurement-steps" aria-label="Procurement steps">{(["review", "compare", "po"] as const).map((value, index) => <button key={value} type="button" className={step === value ? "active" : ""} onClick={() => { setStep(value); setError(""); }}><span>{String(index + 1).padStart(2, "0")}</span>{({ review: "Upload & review", compare: "Compare & award", po: "PO preparation" })[value]}<small>{({ review: `${drafts.length} draft · ${finalized.length} finalized`, compare: `${finalized.length} suppliers · ${staged.length} saved awards`, po: `${pos.length} POs` })[value]}</small></button>)}</nav>
     {step === "review" && <>
-      {canEdit && <SupplierQuotationUploads groups={groups} locked={working || busy || batchBusy} extracting={batchBusy} progress={extractionProgress} onAdd={() => { const group: Group = { id: newId("group"), files: [], status: "ready" }; setGroups(current => [...current, group]); return group.id; }} onFiles={addGroupFiles} onOrder={(group, files) => setGroup(group.id, { files })} onRemove={removeGroup} onRemoveFile={removeGroupFile} onManual={startManual} onExtract={extractReady}/>}
+      {canEdit && <SupplierQuotationUploads groups={groups} locked={working || busy || batchBusy} onAdd={() => { const group: Group = { id: newId("group"), files: [], status: "ready" }; setGroups(current => [...current, group]); return group.id; }} onFiles={addGroupFiles} onOrder={(group, files) => setGroup(group.id, { files })} onRemove={removeGroup} onRemoveFile={removeGroupFile} onManual={startManual} onExtract={extractReady}/>}
       {canEdit && drafts.length > 0 && <div className="qa-bulk-toolbar"><p className="helper-note">{drafts.length} draft(s) remain. Finalized quotations can already be compared.</p><button className="button secondary" type="button" disabled={working || busy || batchBusy} onClick={() => void finalizeReady()}>Finalize ready drafts</button></div>}
       {preflighting && <p className="qa-upload-status" role="status"><span className="qa-spinner" aria-hidden="true"/> Checking drafts and original files…</p>}
       {bulkCounts && <p role="status">{bulkCounts.finalized} finalized · {bulkCounts.archived} archived · {bulkCounts.pending} archives need retry · {bulkCounts.failed} failed · {bulkCounts.skipped} skipped</p>}
       {bulkReport.length > 0 && <details className="subform" open><summary>Bulk finalization results</summary><ul aria-live="polite">{bulkReport.map((message, index) => <li key={index}>{message}</li>)}</ul></details>}
       {!quotes.length ? <section className="panel"><Empty detail="Add a supplier quotation to start the review."/></section> : <>
         <QuotationReviewNavigation entries={quotes.map(quote => ({ id: quote.id, name: supplierName(state, quote), ref: quote.ref, version: quote.version || 1, status: quote.reviewStatus || "finalized" }))} current={selectedQuote.id} mode={reviewMode} disabled={working} onSelect={value => { setActiveQuoteId(value); setReviewMode("focused"); }} onMode={setReviewMode}/>
-        {(reviewMode === "all" ? quotes : [selectedQuote]).map(quote => <QuoteDraftEditor key={quote.id} state={state} request={request} quote={quote} onSave={saveDraft} onAttach={files => attachDraftFiles(quote, files)} onRemoveDocument={fileId => removeDraftDocument(quote, fileId)} disabled={working} readOnly={!canEdit || quote.reviewStatus !== "draft"} compact={reviewMode === "all"} onConfirmAction={confirmAction} onFinalize={() => finalize(quote)} actions={<>
-          {quote.documents.length > 0 && <button type="button" className="button secondary" onClick={() => setPreviewQuote(quote)}>View documents</button>}
+        {(reviewMode === "all" ? quotes : [selectedQuote]).map(quote => <QuoteDraftEditor key={quote.id} state={state} request={request} quote={quote} onSave={saveDraft} onAttach={files => attachDraftFiles(quote, files)} onRemoveDocument={fileId => removeDraftDocument(quote, fileId)} disabled={working} documentError={error} readOnly={!canEdit || quote.reviewStatus !== "draft"} compact={reviewMode === "all"} onConfirmAction={confirmAction} onFinalize={() => finalize(quote)} actions={<>
+          <button type="button" className="button secondary" onClick={() => { setError(""); setPreviewQuote(quote); }}>View documents</button>
           {quote.reviewStatus === "draft" && canEdit && <button type="button" className="button danger-outline" disabled={working} onClick={() => void removeDraft(quote)}>Delete draft</button>}
           {quotationSecondaryActions(quote)}
           {quote.archive?.error && <span className="field-error">{quote.archive.error}</span>}
@@ -247,7 +249,8 @@ export function QuotationWorkspace({ id, initialMaterialId = "" }: { id: string;
     {step === "po" && <section className="panel"><h2 className="panel-title">Purchase orders from this MRF</h2><p className="helper-note">Confirm each draft&apos;s line discounts and quote adjustments before submitting it to Accounting. Item delivery locations come from the approved MRF.</p>{!pos.length && <Empty detail="Stage supplier awards, then generate PO drafts."/>}{pos.map(po => { const quote = quotes.find(value => value.id === po.quoteId); return <Link className="data-link" href={`/purchase-orders/${po.id}`} key={po.id}><span>{po.ref} · {state.suppliers.find(value => value.id === po.supplierId)?.name || (quote ? supplierName(state, quote) : "Supplier")}</span><Badge value={po.status}>{poStatusLabel(po.status)}</Badge></Link>; })}</section>}
     <InlineError message={error}/>
     </fieldset>
-    {previewQuote && <QuoteDocumentsDialog key={previewQuote.id} quote={previewQuote} onClose={() => setPreviewQuote(null)}/>}
+    {previewQuote && (() => { const current = state.quotes.find(value => value.id === previewQuote.id) || previewQuote; const editable = canEdit && current.reviewStatus === "draft"; return <QuoteDocumentsDialog key={current.id} quote={current} disabled={working || busy || batchBusy} error={error} onAttach={editable ? files => attachDraftFiles(current, files) : undefined} onRemoveDocument={editable ? fileId => removeDraftDocument(current, fileId) : undefined} onClose={() => setPreviewQuote(null)}/>; })()}
+    <QuotationExtractionDialog active={batchBusy || extractionLabel !== null} label={extractionLabel} progress={extractionProgress}/>
     {confirmation}
   </>;
 }

@@ -1,5 +1,6 @@
 import { isFinalizedQuote, latestFinalizedQuotes } from "./procurement.ts";
 import { resolveComparisonSelections } from "./comparison-report.ts";
+import { comparableUnitPrice, comparisonFinancialError } from "./comparative-pricing.ts";
 import { procurementReady } from "./request-archive.ts";
 import { projectCodeRequired } from "./document-numbering.ts";
 import type { BidReport, BidReportData, DemoSnapshot, Quote, QuoteAdjustment, QuoteLine } from "./types.ts";
@@ -44,6 +45,15 @@ export function captureBidReport(state: DemoSnapshot, requestId: string, current
   });
 }
 
+/** New comparisons require a known VAT basis; historical report loading does not. */
+export function normalizedBidReportReadiness(state: DemoSnapshot, requestId: string): string {
+  const error = bidReportReadiness(state, requestId);
+  if (error) return error;
+  const data = captureBidReport(state, requestId, true);
+  const offer = data.offers.find(value => value.source !== "PO source" && comparisonFinancialError(value.quote));
+  return offer ? `Review VAT treatment for ${offer.supplierName} before generating the comparison.` : "";
+}
+
 export function bidLines(data: BidReportData, quote: Quote): QuoteLine[] {
   if (quote.lines) return quote.lines;
   // Older records priced the full MRF quantity rather than recording offered quantities.
@@ -73,8 +83,8 @@ export function validBidReport(value: unknown): value is BidReport {
   try {
     const report = value as BidReport;
     const data = report.data;
-    if (report.comparisonRevision !== undefined && ![2, 3].includes(report.comparisonRevision)) return false;
-    if ((report.comparisonRevision === 2 || report.comparisonRevision === 3)) {
+    if (report.comparisonRevision !== undefined && ![2, 3, 4].includes(report.comparisonRevision)) return false;
+    if (report.comparisonRevision === 2 || report.comparisonRevision === 3 || report.comparisonRevision === 4) {
       if (!report.comparisonSelections) return false;
       const selections = resolveComparisonSelections(data, report.comparisonSelections);
       for (const [quoteId, items] of Object.entries(selections)) for (const [itemId, lineId] of Object.entries(items)) {
@@ -82,6 +92,10 @@ export function validBidReport(value: unknown): value is BidReport {
       }
       const offers = data.offers.filter(offer => offer.source !== "PO source");
       if (new Set(offers.map(offer => offer.quote.supplierId)).size !== offers.length) return false;
+      if (report.comparisonRevision === 4 && offers.some(offer => comparisonFinancialError(offer.quote) || data.request.items.some(item => {
+        const line = bidLines(data, offer.quote).find(value => value.requestItemId === item.id && value.id === selections[offer.quote.id]?.[item.id]);
+        return line && comparableUnitPrice(offer.quote, line) === undefined;
+      }))) return false;
     }
     const finite = (value: number | undefined) => value === undefined || Number.isFinite(value) && value >= 0;
     const text = (value: unknown) => value === undefined || typeof value === "string";

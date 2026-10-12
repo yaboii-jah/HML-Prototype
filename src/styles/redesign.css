@@ -52,4 +52,9 @@ input,select,textarea{border:1px solid var(--color-input-rule-2);border-radius:8
 .quote-source .button-row{margin:0;justify-content:flex-end}
 .quote-award-line{display:grid;grid-template-columns:minmax(0,1fr) minmax(130px,220px);align-items:center;gap:16px;padding:12px 0;border-top:1px solid var(--line)}
 .quote-award-line .field{margin:0}
+.material-details-row{cursor:pointer}
+.material-details-row:hover>td,.material-details-row:hover>th{box-shadow:inset 0 0 0 9999px color-mix(in srgb,var(--brand) 5%,transparent)}
+.material-details-row:focus-within{outline:2px solid var(--brand);outline-offset:-2px}
+.material-name-trigger:focus-visible{outline:2px solid var(--brand);outline-offset:3px;border-radius:2px}
+.material-details-summary strong{overflow-wrap:anywhere}
 @media(max-width:650px){.quote-source{display:block}.quote-source .button-row{justify-content:flex-start;margin-top:12px}.quote-award-line{grid-template-columns:1fr}.quote-award-line .field{max-width:220px}}
