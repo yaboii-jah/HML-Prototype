@@ -1,4 +1,89 @@
 .allocation-workspace{display:grid;grid-template-columns:260px minmax(0,1fr);gap:24px;align-items:start}
+/* Hallmark · component: comparative bid · theme: existing HML blue
+ * pre-emit critique: P5 H5 E4 S5 R5 V4
+ * states: default · hover · focus · active · disabled · loading · error · success
+ */
+.comparative-bid{min-width:0}
+.comparative-bid{--bid-supplier-violet:oklch(50% .14 305)}
+html[data-theme="dark"] .comparative-bid{--bid-supplier-violet:oklch(76% .12 305)}
+.comparative-bid .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
+.comparative-bid-toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.comparative-bid-toolbar>input{width:260px;max-width:100%;min-width:0;min-height:38px}
+.comparative-bid-toolbar>.button{margin-left:auto;min-height:38px;font-size:13px;padding:8px 12px}
+.comparative-bid-toolbar .view-tabs{margin:0;gap:4px}
+.comparative-bid-toolbar .view-tabs button{min-height:36px;padding:6px 10px;font-size:12px}
+.comparative-bid-toolbar .view-tabs [aria-pressed=true]{background:var(--nav-2);color:var(--brand);font-weight:700}
+.comparative-bid-basis{margin:0 0 14px;font-size:12px;line-height:1.5;color:var(--muted)}
+.comparative-bid-scroll{max-width:100%;max-height:min(70dvh,680px);overflow:scroll;border:1px solid var(--line);border-radius:8px;scrollbar-gutter:stable;isolation:isolate;scrollbar-color:var(--muted) var(--paper);scrollbar-width:auto}
+.comparative-bid-scroll::-webkit-scrollbar{width:14px;height:14px}
+.comparative-bid-scroll::-webkit-scrollbar-track,.comparative-bid-scroll::-webkit-scrollbar-corner{background:var(--paper)}
+.comparative-bid-scroll::-webkit-scrollbar-thumb{background:var(--muted);border:3px solid var(--paper);border-radius:8px}
+.comparative-bid-scroll:focus-visible{outline:2px solid var(--focus);outline-offset:3px}
+.comparative-bid-table{width:calc(608px + var(--bid-supplier-count)*280px);table-layout:fixed;border-collapse:separate;border-spacing:0;max-width:none;min-width:0;font-size:13px}
+.comparative-bid-table .bid-material-col{width:300px}.comparative-bid-table .bid-quantity-col{width:78px}.comparative-bid-table .bid-unit-col{width:70px}.comparative-bid-table .bid-price-col,.comparative-bid-table .bid-amount-col{width:140px}.comparative-bid-table .bid-award-col{width:160px}
+.comparative-bid-table :is(th,td){padding:12px 10px;vertical-align:top;border-bottom:1px solid var(--line);background:var(--surface);white-space:normal;overflow-wrap:anywhere}
+.comparative-bid-table .numeric{text-align:right;font-variant-numeric:tabular-nums}
+.comparative-bid-table thead{position:sticky;top:0;z-index:5}
+.comparative-bid-table thead th{background:var(--paper);color:var(--muted);font-weight:600;font-size:12px}
+.comparative-bid-table thead tr:last-child th{padding-block:8px}
+.comparative-bid-table .bid-fixed-material{position:sticky;left:0;z-index:2;text-align:left}
+.comparative-bid-table .bid-fixed-quantity{position:sticky;left:300px;z-index:2}
+.comparative-bid-table .bid-fixed-unit{position:sticky;left:378px;z-index:2;box-shadow:1px 0 0 var(--line)}
+.comparative-bid-table thead :is(.bid-fixed-material,.bid-fixed-quantity,.bid-fixed-unit){z-index:6}
+.bid-fixed-material .material-name-trigger{font-size:13px;line-height:1.5;text-align:left;font-weight:600;color:var(--ink)}
+.comparative-bid-table small{display:block;margin-top:5px;font-size:11px;line-height:1.5;color:var(--muted);font-weight:400}
+.comparative-bid-table .bid-supplier-heading{border-left:1px solid var(--line);text-align:left}
+.bid-supplier-heading>strong{display:block;color:var(--ink);font-size:13px;line-height:1.5}
+.bid-supplier-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px}
+.bid-supplier-actions .button,.bid-offer-amount .button{min-height:30px;padding:5px 9px;font-size:11px;white-space:nowrap}
+.comparative-bid-table .text-link{font-size:11px;min-height:28px}
+.comparative-bid-table .bid-offer-price{border-left:1px solid var(--line)}
+.comparative-bid-table .bid-offer-price>strong,.comparative-bid-table .bid-offer-amount>strong{display:block;white-space:nowrap;font-size:13px}
+.comparative-bid-table .bid-offer-price>strong{font-weight:500}
+.bid-price-meta{display:flex;justify-content:flex-end;align-items:center;gap:6px;margin-top:5px}
+.comparative-bid-table .bid-price-meta .text-link{font-size:10px;white-space:nowrap}
+.bid-price-meta .bid-lowest{margin-top:0;font-size:9px;padding:2px 4px}
+.bid-offer-price>select{display:block;width:100%;max-width:100%;min-width:0;padding:6px 2px;margin-bottom:8px;font-size:11px}
+.bid-offer-amount>.button{display:block;margin-left:auto;margin-top:8px}
+.comparative-bid-table .bid-offer-selected{background:var(--nav-2)}
+.comparative-bid-table .bid-row-edited>.bid-fixed-material{box-shadow:inset 3px 0 var(--brand)}
+.bid-lowest{display:inline-block;margin-top:6px;color:var(--brand);background:var(--nav-2);padding:2px 5px;border-radius:4px;font-size:10px;font-weight:600;white-space:nowrap}
+.bid-unsaved{display:inline-block;color:var(--brand);font-size:10px;font-weight:600;margin-top:5px}
+.comparative-bid-table .bid-warning,.comparison-bulk .bid-warning,.allocation-review .bid-warning{color:var(--warn)}
+.bid-award-summary{border-left:1px solid var(--line)}
+.bid-award-summary .field-error{display:block}
+.bid-award-summary>.text-link{margin-top:6px}
+.comparative-bid-table tfoot :is(th,td){background:var(--paper);font-size:12px;border-bottom:0}
+.comparative-bid-table tfoot td{border-left:1px solid var(--line)}
+.comparative-bid-table tbody tr:hover>th,.comparative-bid-table tbody tr:hover>td:not(.bid-offer-selected){background:var(--paper)}
+.comparative-bid-table [data-supplier-color="0"]{--bid-supplier-color:var(--warn)}
+.comparative-bid-table [data-supplier-color="1"]{--bid-supplier-color:var(--brand)}
+.comparative-bid-table [data-supplier-color="2"]{--bid-supplier-color:var(--good)}
+.comparative-bid-table [data-supplier-color="3"]{--bid-supplier-color:var(--bid-supplier-violet)}
+.comparative-bid-table [data-supplier-color="4"]{--bid-supplier-color:var(--accent)}
+.comparative-bid-table thead th[data-supplier-color]{background:color-mix(in srgb,var(--bid-supplier-color) 16%,var(--paper))}
+.comparative-bid-table .bid-supplier-heading[data-supplier-color]{box-shadow:inset 0 3px var(--bid-supplier-color);border-left-color:color-mix(in srgb,var(--bid-supplier-color) 35%,var(--line))}
+.comparative-bid-table tbody td[data-supplier-color]{background:color-mix(in srgb,var(--bid-supplier-color) 5%,var(--surface))}
+.comparative-bid-table .bid-offer-price[data-supplier-color]{border-left-color:color-mix(in srgb,var(--bid-supplier-color) 35%,var(--line))}
+.comparative-bid-table tbody tr:hover>td[data-supplier-color]:not(.bid-offer-selected){background:color-mix(in srgb,var(--bid-supplier-color) 10%,var(--surface))}
+.comparative-bid-table td.bid-offer-selected[data-supplier-color]{background:color-mix(in srgb,var(--bid-supplier-color) 15%,var(--surface))}
+.comparative-bid-table td.bid-offer-selected.bid-offer-price{box-shadow:inset 3px 0 var(--bid-supplier-color)}
+.comparative-bid-table tfoot td[data-supplier-color]{background:color-mix(in srgb,var(--bid-supplier-color) 12%,var(--paper))}
+.comparative-scroll-note{margin:8px 0 0;font-size:11px}
+.bid-horizontal-control{padding:6px 4px;border:1px solid var(--line);border-top:0;background:var(--paper);border-radius:0 0 6px 6px}
+.bid-horizontal-control label{display:block}
+.bid-horizontal-control input[type=range]{appearance:none;display:block;width:100%;height:14px;min-height:14px;padding:0;border:0;border-radius:8px;background:var(--line);cursor:ew-resize;margin:0}
+.bid-horizontal-control input::-webkit-slider-thumb{appearance:none;width:64px;height:14px;border-radius:8px;background:var(--muted);border:0}
+.bid-horizontal-control input::-moz-range-thumb{width:64px;height:14px;border-radius:8px;background:var(--muted);border:0}
+.comparison-split>section{display:grid;grid-template-columns:minmax(0,1fr) 180px;gap:20px;padding:16px 0;border-bottom:1px solid var(--line)}
+.comparison-split section small{display:block;color:var(--muted);font-size:12px;margin-top:5px;overflow-wrap:anywhere}
+.comparison-split .field{margin:0 0 6px}.comparison-split input{width:100%;font-variant-numeric:tabular-nums}
+.comparison-split section .text-link{display:block;margin-top:6px;font-size:12px}
+.comparison-bulk table{min-width:620px;font-size:13px}.comparison-bulk td:not(:first-child){white-space:nowrap}
+.comparison-bulk td small{display:block;margin-top:5px}
+.comparative-bid :is(button,input,select):focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.comparative-bid button:disabled{cursor:default}.comparative-bid button:active:not(:disabled){filter:brightness(.96)}
+@media(max-width:767px){.comparative-bid-toolbar{align-items:stretch;gap:10px}.comparative-bid-toolbar>input,.comparative-bid-toolbar>.button{width:100%;margin-left:0;min-height:44px}.comparative-bid-toolbar .view-tabs{width:100%;flex-wrap:wrap}.comparative-bid-table{width:calc(390px + var(--bid-supplier-count)*280px)}.comparative-bid-table .bid-material-col{width:140px}.comparative-bid-table .bid-quantity-col{width:50px}.comparative-bid-table .bid-unit-col{width:40px}.comparative-bid-table .bid-fixed-quantity,.comparative-bid-table .bid-fixed-unit{position:static;box-shadow:none}.comparative-bid-table .button,.comparative-bid-table .text-link,.comparative-bid-toolbar .view-tabs button{min-height:44px}.comparative-bid-table :is(th,td){padding:10px 8px}.comparative-bid-scroll{max-height:65dvh}.comparison-split>section{grid-template-columns:minmax(0,1fr)}.comparison-split .field input{min-height:44px}}
 .allocation-materials{min-width:0;border-right:1px solid var(--line);padding-right:16px}.allocation-materials>input{width:100%;margin-bottom:10px}.allocation-materials .view-tabs{gap:0}.allocation-materials .view-tabs button{padding-inline:8px;font-size:12px}.allocation-materials button[aria-pressed=true]{background:var(--nav-2);color:var(--brand);font-weight:700}
 .allocation-material-list{max-height:520px;overflow:auto;display:grid;gap:6px}.allocation-material-list>button{display:block;text-align:left;padding:12px;border:1px solid transparent;border-radius:6px;background:var(--surface);color:var(--ink);min-width:0}.allocation-material-list>button:hover{background:var(--paper)}.allocation-material-list>button[aria-current=true]{background:var(--nav-2);border-color:var(--line)}.allocation-material-list strong{display:block;overflow-wrap:anywhere}.allocation-material-list small{display:block;color:var(--muted);margin-top:4px}.allocation-material-list .badge{margin-top:6px}
 .allocation-offers{min-width:0}.allocation-offers h3{font-size:20px;margin:0 0 16px;overflow-wrap:anywhere}.allocation-back{display:none}.allocation-coverage{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;padding:12px;background:var(--paper);border-radius:6px;margin-bottom:12px}.allocation-coverage small,.allocation-coverage strong{display:block;overflow-wrap:anywhere}.allocation-coverage small{color:var(--muted);margin-bottom:4px}

@@ -121,12 +121,15 @@ try {
   assert.equal(await run("return document.querySelector('.procurement-steps .active').textContent.includes('Upload & review');"),true,'Bulk finalization keeps remaining review visible');
   // Retry B before comparing, then apply edits on both materials with one confirmation.
   await run("window.__failQaArchive='';return true;");
-  await press('Compare & allocate');await wait("return !!document.querySelector('[aria-label^=\"Award qa-ready-a\"]');");
-  const inputs=await run("return [...document.querySelectorAll('.allocation-offer-table input')].map(el=>({label:el.getAttribute('aria-label'),disabled:el.disabled}));");
-  const eligibleInput=inputs.find(el=>!el.disabled);assert.ok(eligibleInput);
-  await fill('[aria-label='+JSON.stringify(eligibleInput.label)+']','2');await click('.allocation-material-list button:nth-child(2)');
-  const second=await run("return [...document.querySelectorAll('.allocation-offer-table input')].find(el=>!el.disabled).getAttribute('aria-label');");await fill('[aria-label='+JSON.stringify(second)+']','3');
-  await press('Apply all edits (2)');await confirm();await wait(`return ${saved}.pendingAwards.length===2;`);
+  await press('Compare & award');await wait("return !!document.querySelector('.comparative-bid-table');");
+  for (const [index, quantity] of [[0, 2], [1, 3]]) {
+    await run(`document.querySelectorAll('[data-split-material]')[${index}].click();return true;`);
+    await wait("return !!document.querySelector('.comparison-split input:not(:disabled)');");
+    await fill('.comparison-split input:not(:disabled)', String(quantity));
+    await press('Use these quantities');
+  }
+  await press('Review & save awards');await press('Save awards');await wait(`return ${saved}.pendingAwards.length===2;`);
+  await click('.record-dialog[open] .record-modal-close');
   assert.deepEqual((await run(`return ${saved}.pendingAwards.map(a=>a.quantity);`)).sort(),[2,3]);
   // Prominent progress remains visible while ready groups across the queue are read.
   await press('Upload & review');await press('+ Supplier quotation group');

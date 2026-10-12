@@ -89,25 +89,30 @@ try {
   }
   await review(pdf, "MetroBuild Materials", "SMOKE-A", 700);
   await review(image, "SolidSpan Trading", "SMOKE-B", 680);
-  await click("Compare & allocate");
-  assert.equal(await run("return document.querySelectorAll('.quote-material-table tbody tr').length;"), 2);
-  await click("Compare & allocate");
+  await click("Compare & award");
+  assert.equal(await run("return document.querySelectorAll('.comparative-bid-table tbody [data-comparison-material]').length;"), (await snapshot()).requests.find(r=>r.id==='quote-smoke').items.length);
   async function award(reference, quantity) {
-    await run(`const row=[...document.querySelectorAll('[data-quote-ref]')].find(el=>el.dataset.quoteRef===${JSON.stringify(reference)});const el=row.querySelector('input[type=number]');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(el,${JSON.stringify(String(quantity))});el.dispatchEvent(new Event('input',{bubbles:true}));return true;`);
-    await sleep(100);
-    const changed=await run("return ![...document.querySelectorAll('button')].find(b=>b.textContent==='Apply allocations').disabled;");
-    if(changed)await click('Apply allocations');
-    await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).pendingAwards.some(value=>value.quantity===${quantity});`);
+    await run("document.querySelector('[data-split-material]').click();return true;");
+    await wait("return !!document.querySelector('.comparison-split');");
+    await run("const row=[...document.querySelectorAll('[data-split-offer]')].find(el=>el.textContent.includes("+JSON.stringify(reference)+"));const el=row.querySelector('input[type=number]');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(el,"+JSON.stringify(String(quantity))+");el.dispatchEvent(new Event('input',{bubbles:true}));return true;");
+    await click('Use these quantities');
+    await run("document.querySelector('.comparative-bid-toolbar>.button').click();return true;");
+    await wait("return !!document.querySelector('.allocation-review');");
+    if(await run("return [...document.querySelectorAll('.allocation-review button')].some(b=>b.textContent==='Save awards');"))await click('Save awards');
+    await wait("return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).pendingAwards.some(value=>value.quantity==="+quantity+");");
+    await wait("return !document.querySelector('.allocation-review .form-actions .button.primary').disabled;");
+    await run("document.querySelector('.record-dialog[open] .record-modal-close').click();return true;");
+    await wait("return !document.querySelector('.record-dialog[open] .allocation-review');");
   }
   await award("SMOKE-A", 8);
   await navigate("/requests/quote-smoke/quotes");
   assert.equal((await snapshot()).pendingAwards.filter(value => value.requestId === "quote-smoke").length, 1);
-  await click("Compare & allocate");
+  await click("Compare & award");
   await award("SMOKE-A", 8);
   await award("SMOKE-B", 12);
-  await click("Review allocations");
+  await click("Review saved awards");
   await run("document.querySelectorAll('.allocation-review textarea').forEach(el=>{Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,'value').set.call(el,'Confirmed price and availability');el.dispatchEvent(new Event('input',{bubbles:true}));});return true;");
-  await click("Generate supplier PO drafts");
+  await click("Create supplier PO drafts");
   await wait("return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).pos.filter(po=>po.mrfId==='quote-smoke').length===2;");
   const state = await snapshot();
   const pos = state.pos.filter(po => po.mrfId === "quote-smoke");
@@ -128,7 +133,7 @@ try {
   await acceptPending();
   await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).pos.find(value=>value.id===${JSON.stringify(firstPo.id)}).status==='submitted';`);
   await navigate('/requests/quote-smoke/quotes');
-  await click('Compare & allocate'); await run("[...document.querySelectorAll('details')].find(d=>d.querySelector('summary strong')?.textContent==='Comparison reports').open=true;return true;");
+  await click('Compare & award'); await run("[...document.querySelectorAll('details')].find(d=>d.querySelector('summary strong')?.textContent==='Comparison reports').open=true;return true;");
   assert.equal(await run("return [...document.querySelectorAll('button')].find(button=>button.textContent==='Generate bid comparison').disabled;"), false);
   await navigate(`/purchase-orders/${pos[1].id}/edit`);
   await fill('input[name="poDocument.terms"]', "30 days after delivery");
@@ -136,9 +141,9 @@ try {
   await run("const form=document.querySelector('form.form-stack');form.requestSubmit(form.querySelector('button[value=finalize]'));return true;");
   await acceptPending();
   await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).pos.find(value=>value.id===${JSON.stringify(pos[1].id)}).status==='submitted';`);
-  await navigate('/requests/quote-smoke/quotes'); await click('Compare & allocate'); await run("[...document.querySelectorAll('details')].find(d=>d.querySelector('summary strong')?.textContent==='Comparison reports').open=true;return true;");
+  await navigate('/requests/quote-smoke/quotes'); await click('Compare & award'); await run("[...document.querySelectorAll('details')].find(d=>d.querySelector('summary strong')?.textContent==='Comparison reports').open=true;return true;");
   const comparisonChoice=await run("const state=JSON.parse(localStorage.getItem('hml-constructsync-demo-v12'));const quote=state.quotes.find(value=>value.mrfId==='quote-smoke'&&value.reviewStatus==='finalized');const source=quote.lines[0];quote.lines.push({...source,id:quote.id+'-alternative',description:'Alternative material specification',unitPrice:source.unitPrice+100});localStorage.setItem('hml-constructsync-demo-v12',JSON.stringify(state));return {quoteId:quote.id,itemId:source.requestItemId,lineId:source.id};");
-  await call('Page.reload',{ignoreCache:true}); await wait("return !!document.querySelector('h1');"); await click('Compare & allocate'); await run("[...document.querySelectorAll('details')].find(d=>d.querySelector('summary strong')?.textContent==='Comparison reports').open=true;return true;");
+  await call('Page.reload',{ignoreCache:true}); await wait("return !!document.querySelector('h1');"); await click('Compare & award'); await run("[...document.querySelectorAll('details')].find(d=>d.querySelector('summary strong')?.textContent==='Comparison reports').open=true;return true;");
   await click('Generate bid comparison');
   await wait("return [...document.querySelectorAll('.field-error,.inline-error')].some(value=>value.textContent.includes('Choose an alternative'));");
   assert.equal((await snapshot()).bidReports.length,0);
@@ -168,10 +173,10 @@ try {
   await click('Generate new version');
   await wait("return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).bidReports.length===2&&JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).bidReports[1].archive.status==='complete';");
   assert.deepEqual((await snapshot()).bidReports[0].data,frozenReport.data);
-  await call('Page.reload',{ignoreCache:true}); await sleep(300); await wait("return !!document.querySelector('h1');"); await click('Compare & allocate'); await run("[...document.querySelectorAll('details')].find(d=>d.querySelector('summary strong')?.textContent==='Comparison reports').open=true;return true;");
+  await call('Page.reload',{ignoreCache:true}); await sleep(300); await wait("return !!document.querySelector('h1');"); await click('Compare & award'); await run("[...document.querySelectorAll('details')].find(d=>d.querySelector('summary strong')?.textContent==='Comparison reports').open=true;return true;");
   assert.equal(await run("return document.querySelectorAll('.bid-report-row').length;"),2);
   await role('Finance');
-  await navigate('/requests/quote-smoke/quotes'); await click('Compare & allocate'); await run("[...document.querySelectorAll('details')].find(d=>d.querySelector('summary strong')?.textContent==='Comparison reports').open=true;return true;");
+  await navigate('/requests/quote-smoke/quotes'); await click('Compare & award'); await run("[...document.querySelectorAll('details')].find(d=>d.querySelector('summary strong')?.textContent==='Comparison reports').open=true;return true;");
   await wait("return ![...document.querySelectorAll('button')].some(button=>button.textContent==='Generate new version');");
   const downloadsBefore=await run("return window.__bidDownloads.length;"); await click('Download Excel'); await wait(`return window.__bidDownloads.length>${downloadsBefore};`);
   await role('Accounting / Auditing');

@@ -9,6 +9,7 @@ test('an acknowledged spreadsheet archive completes and retry preserves its iden
   let state = seedDemo();
   state.role = 'Procurement';
   state.sites[0].driveFolderId = 'bid-project-folder';
+  for (const quote of state.quotes) quote.financial = { vatStatus: 'VAT', priceBasis: 'exclusive', vatRate: 12, reviewed: true };
   const run = async command => {
     const result = applyCommand(state, command);
     if (result.ok) state = result.snapshot;

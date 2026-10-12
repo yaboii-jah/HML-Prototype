@@ -1,5 +1,6 @@
 import { comparisonCoverage, quotedComparisonPrice, requiredComparisonAmount, selectedComparisonLine } from "../domain/comparison-report.ts";
 import { COMPARISON_COLORS } from "../domain/comparison-layout.ts";
+import { comparableMaterialAmount, comparableUnitPrice } from "../domain/comparative-pricing.ts";
 import type { BidOffer, BidReport } from "../domain/types.ts";
 import { documentDate, documentMoney } from "./document-template.ts";
 
@@ -37,9 +38,10 @@ export function buildComparisonTable(report: BidReport, offers: BidOffer[], supp
     offers.forEach((offer, n) => {
       const line = selectedComparisonLine(report, offer, item);
       const color = COMPARISON_COLORS[(supplierOffset + n) % COMPARISON_COLORS.length];
-      const price = line ? quotedComparisonPrice(line) : undefined;
-      const amount = line ? requiredComparisonAmount(item, line) : undefined;
-      const note = line ? `${line.description}\nOffered ${line.quantity} ${line.unit}; ${line.quantity * line.conversionFactor} ${item.unit}.` : "Not quoted";
+      const price = line ? report.comparisonRevision === 4 ? comparableUnitPrice(offer.quote, line) : quotedComparisonPrice(line) : undefined;
+      const amount = line ? report.comparisonRevision === 4 ? comparableMaterialAmount(offer.quote, line, item) : requiredComparisonAmount(item, line) : undefined;
+      if (line && report.comparisonRevision === 4 && (price === undefined || amount === undefined)) throw new Error(`Review VAT treatment for ${offer.supplierName} before generating the comparison.`);
+      const note = line ? `${line.description}\nOffered ${line.quantity} ${line.unit}; ${line.quantity * line.conversionFactor} ${item.unit}.${report.comparisonRevision === 4 ? "\nAfter item discounts, VAT included where applicable. Fixed discounts on partial awards require PO confirmation." : ""}` : "Not quoted";
       cells.push({ column: 5 + n * 2, span: 1, text: price === undefined ? "" : price.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 6 }), number: price, kind: "price", color, note });
       cells.push({ column: 6 + n * 2, span: 1, text: amount === undefined ? "" : documentMoney(amount), number: amount, kind: "amount", color });
     });
@@ -47,14 +49,14 @@ export function buildComparisonTable(report: BidReport, offers: BidOffer[], supp
   });
   const materialEnd = rows.length;
   const totalRow = rows.length;
-  add("total", [{ column: 0, span: 5, text: "Required MRF quantity × quoted unit cost. Excludes tax, discounts and freight.", color: "D9D9D9" }, ...offers.flatMap((offer, n) => {
+  add("total", [{ column: 0, span: 5, text: report.comparisonRevision === 4 ? "Required MRF quantity × material price after item discounts, VAT included where applicable. Excludes quotation-level charges, discounts and EWT." : "Required MRF quantity × quoted unit cost. Excludes tax, discounts and freight.", color: "D9D9D9" }, ...offers.flatMap((offer, n) => {
     const coverage = comparisonCoverage(report, offer), color = COMPARISON_COLORS[(supplierOffset + n) % COMPARISON_COLORS.length];
-    return [{ column: 5 + n * 2, span: 1, text: coverage.complete ? "GRAND TOTAL" : "INCOMPLETE TOTAL", bold: true, color }, { column: 6 + n * 2, span: 1, text: documentMoney(coverage.total), number: coverage.total, kind: "total" as const, color, bold: true }];
+    return [{ column: 5 + n * 2, span: 1, text: coverage.complete ? report.comparisonRevision === 4 ? "MATERIAL SUBTOTAL" : "GRAND TOTAL" : "INCOMPLETE TOTAL", bold: true, color }, { column: 6 + n * 2, span: 1, text: documentMoney(coverage.total), number: coverage.total, kind: "total" as const, color, bold: true }];
   })]);
   info("terms", "Proposal\nTerms and\nSchedule", "Lead Time", offers.map(offer => `${offer.quote.leadDays} days`));
   info("terms", "", "Payment Terms", offers.map(offer => offer.quote.terms));
   info("terms", "", "Delivery Schedule", offers.map(offer => offer.quote.deliveryTerms || ""));
-  if (report.comparisonRevision !== 3) info("terms", "", "Quotation Coverage", offers.map(offer => comparisonCoverage(report, offer).gaps.join("\n") || "Full required quantity quoted"));
+  if (report.comparisonRevision !== 3 && report.comparisonRevision !== 4) info("terms", "", "Quotation Coverage", offers.map(offer => comparisonCoverage(report, offer).gaps.join("\n") || "Full required quantity quoted"));
   for (let n = 0; n < Math.max(1, ...offers.map(offer => offer.quote.archive?.files.length || 0)); n++) {
     const links = supplierCells(offers.map(offer => offer.quote.archive?.files[n]?.name || ""));
     links.forEach((cell, index) => { cell.url = offers[index].quote.archive?.files[n]?.url; });

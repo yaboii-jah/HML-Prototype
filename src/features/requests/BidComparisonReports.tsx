@@ -7,25 +7,27 @@ import { useDemo } from "@/src/app-state/DemoProvider";
 import { useActionFeedback } from "@/src/app-state/action-feedback";
 import { useConfirmedAction } from "@/src/components/ui/useConfirmedAction";
 import { InlineError } from "@/src/components/ui/Primitives";
-import { bidReportReadiness } from "@/src/domain/bid-reports";
+import { normalizedBidReportReadiness } from "@/src/domain/bid-reports";
 import { captureBidReport } from "@/src/domain/bid-reports";
 import { comparisonOffers, materialOffers, resolveComparisonSelections } from "@/src/domain/comparison-report";
 import type { BidReport, ComparisonSelections } from "@/src/domain/types";
 import { archiveBidWorkbook, downloadBidWorkbook, getBidWorkbook } from "./bid-report-files";
 import { BidReportPreview } from "./BidReportPreview";
 
-export function BidComparisonReports({ requestId }: { requestId: string }) {
+export function BidComparisonReports({ requestId, comparisonSelections, onComparisonSelectionsChange }: { requestId: string; comparisonSelections?: ComparisonSelections; onComparisonSelectionsChange?: (selections: ComparisonSelections) => void }) {
   const { perform } = useArchive();
   const { snapshot, run, beginOperation } = useDemo();
   const { notify, update } = useActionFeedback();
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
   const [preview, setPreview] = useState<BidReport | null>(null);
-  const [selections, setSelections] = useState<ComparisonSelections>({});
+  const [localSelections, setLocalSelections] = useState<ComparisonSelections>({});
+  const selections = comparisonSelections ?? localSelections;
+  const setSelections = (next: ComparisonSelections) => onComparisonSelectionsChange ? onComparisonSelectionsChange(next) : setLocalSelections(next);
   const { confirmAction, working, confirmation } = useConfirmedAction(setError);
   if (!snapshot) return null;
   const procurement = snapshot.role === "Procurement";
-  const readiness = bidReportReadiness(snapshot, requestId);
+  const readiness = normalizedBidReportReadiness(snapshot, requestId);
   const currentData = !readiness ? captureBidReport(snapshot, requestId, true) : undefined;
   const alternatives = currentData ? comparisonOffers(currentData).flatMap(offer => currentData.request.items.flatMap(item => {
     const lines = materialOffers(currentData, offer, item);
@@ -73,7 +75,7 @@ export function BidComparisonReports({ requestId }: { requestId: string }) {
       }
       selected = resolveComparisonSelections(currentData, active);
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Choose the comparison alternatives."); return; }
-    await confirmAction(reports.length ? "Generate a new bid comparison version?" : "Generate bid comparison?", "Save the current supplier bids and selected alternatives as PDF and a single comparison worksheet, then archive both to Google Drive. Material totals use the required MRF quantity and exclude taxes, discounts and freight.", "Generate report", async () => {
+    await confirmAction(reports.length ? "Generate a new bid comparison version?" : "Generate bid comparison?", "Save the current supplier bids and selected alternatives as PDF and a single comparison worksheet, then archive both to Google Drive. Material totals use the full requested quantity after item discounts, including VAT where applicable. Quotation-level charges, discounts and EWT are excluded. This does not save awards or create POs.", "Generate report", async () => {
     setBusy("new"); setError("");
     try {
       const result = await run({ type: "createBidReport", requestId, comparisonSelections: selected });
@@ -85,11 +87,11 @@ export function BidComparisonReports({ requestId }: { requestId: string }) {
   const retry = (report: BidReport, action: "generate" | "archive") => confirmAction(action === "generate" ? "Retry bid report generation?" : "Retry bid report Drive archive?", `Bid comparison v${report.version}: ${action === "generate" ? "retry preparing" : "retry uploading"} the saved ${report.pdf ? "PDF and Excel files" : "Excel workbook"} in the project Drive folder. This uses the existing saved report version.`, action === "generate" ? "Retry generation" : "Retry archive", () => process(report, action));
   return <section className="panel">
     <fieldset className="quotation-operation-fields" disabled={working || !!busy}>
-    <div className="panel-heading"><div><h2>Bid comparison reports</h2><p className="helper-note">New PDF and Excel versions compare required MRF quantities at quoted unit prices. Excel contains one comparison worksheet; previous versions retain their original format.</p></div>
+    <div className="panel-heading"><div><h2>Bid comparison reports</h2><p className="helper-note">New PDF and Excel versions use the comparison table’s material prices: item discounts applied, VAT included where applicable, and full requested quantities. Previous versions retain their original calculations.</p></div>
       {procurement && <button className="button primary" type="button" disabled={!!busy || !!readiness} onClick={() => void generate()}>{busy ? "Processing…" : reports.length ? "Generate new version" : "Generate bid comparison"}</button>}
     </div>
     {procurement && readiness && <p className="helper-note">{readiness}</p>}
-    {procurement && alternatives.length > 0 && <fieldset className="comparison-alternatives" disabled={!!busy}><legend>Choose comparison alternatives</legend><p className="helper-note">Choose one offer per supplier and material. These choices apply to this report and do not change PO awards.</p>{alternatives.map(({ offer, item, lines }) => <label className="field" key={`${offer.quote.id}/${item.id}`}><span>{offer.supplierName} · {item.name}</span><select value={lines.some(line => line.id === selections[offer.quote.id]?.[item.id]) ? selections[offer.quote.id][item.id] : ""} onChange={event => setSelections(current => ({ ...current, [offer.quote.id]: { ...current[offer.quote.id], [item.id]: event.target.value } }))}><option value="">Choose an offer</option>{lines.map(line => <option key={line.id} value={line.id}>{line.description} · {line.brand} {line.specification} · PHP {line.unitPrice.toLocaleString("en-PH")} / {line.unit} · offered {line.quantity}</option>)}</select></label>)}</fieldset>}
+    {procurement && alternatives.length > 0 && (comparisonSelections !== undefined ? <p className="helper-note">Alternative offers use your choices in the comparison table. Choose an offer for each unresolved alternative before generating a report.</p> : <fieldset className="comparison-alternatives" disabled={!!busy}><legend>Choose comparison alternatives</legend><p className="helper-note">Choose one offer per supplier and material. These choices apply to this report and do not change PO awards.</p>{alternatives.map(({ offer, item, lines }) => <label className="field" key={`${offer.quote.id}/${item.id}`}><span>{offer.supplierName} · {item.name}</span><select value={lines.some(line => line.id === selections[offer.quote.id]?.[item.id]) ? selections[offer.quote.id][item.id] : ""} onChange={event => setSelections({ ...selections, [offer.quote.id]: { ...selections[offer.quote.id], [item.id]: event.target.value } })}><option value="">Choose an offer</option>{lines.map(line => <option key={line.id} value={line.id}>{line.description} · {line.brand} {line.specification} · PHP {line.unitPrice.toLocaleString("en-PH")} / {line.unit} · offered {line.quantity}</option>)}</select></label>)}</fieldset>)}
     {!reports.length && <p className="muted">No saved bid comparison yet.</p>}
     {reports.map(report => <article className="bid-report-row" key={report.id}>
       <div><strong>Bid comparison v{report.version}</strong><small>{new Date(report.generatedAt).toLocaleString()} · {report.data.project.name}</small><small>{report.sha256 ? report.archive.status === "complete" ? "Archived to Google Drive" : "Workbook ready · Drive archive pending" : "Workbook generation pending"}</small>

@@ -16,6 +16,7 @@ import { pageText } from './helpers/pdf-text.mjs';
 const context = { now: () => '2026-09-30T10:00:00Z', id: prefix => `${prefix}-corrections` };
 function fixture() {
   const state = seedDemo(); state.role = 'Procurement'; state.sites[0].driveFolderId = 'comparison-folder';
+  for (const quote of state.quotes) quote.financial = { vatStatus: 'VAT', priceBasis: 'exclusive', vatRate: 12, reviewed: true };
   const data = captureBidReport(state, 'm1', true);
   const report = { id: 'corrected', requestId: 'm1', version: 1, generatedAt: context.now(), fileName: 'comparison.xlsx', data, comparisonRevision: 2, comparisonSelections: resolveComparisonSelections(data), archive: { status: 'pending' } };
   return { state, report };
@@ -49,7 +50,7 @@ test('alternative selection is explicit, validated, frozen and independent of aw
   assert.match(applyCommand(state,{type:'createBidReport',requestId:'m1'},context).message,/Choose an alternative/);
   assert.equal(applyCommand(state,{type:'createBidReport',requestId:'m1',comparisonSelections:{[quote.id]:{[itemId]:'not-matching'}}},context).ok,false);
   const result = applyCommand(state,{type:'createBidReport',requestId:'m1',comparisonSelections:{[quote.id]:{[itemId]:'alternative'}}},context);
-  assert.equal(result.ok,true,result.message); assert.equal(result.snapshot.bidReports[0].comparisonRevision,3);
+  assert.equal(result.ok,true,result.message); assert.equal(result.snapshot.bidReports[0].comparisonRevision,4);
   assert.equal(result.snapshot.bidReports[0].comparisonSelections[quote.id][itemId],'alternative'); assert.deepEqual(result.snapshot.pos,before.pos); assert.deepEqual(state,before);
   quote.lines[1].unitPrice=999; assert.equal(result.snapshot.bidReports[0].data.offers[0].quote.lines[1].unitPrice,123);
   const invalid=structuredClone(result.snapshot.bidReports[0]); invalid.comparisonSelections[quote.id][itemId]='unknown'; assert.equal(validBidReport(invalid),false);

@@ -19,6 +19,7 @@ function fixture() {
   const state = seedDemo();
   state.role = "Procurement";
   state.sites[0].driveFolderId = "bid-project-folder";
+  for (const quote of state.quotes) quote.financial = { vatStatus: "VAT", priceBasis: "exclusive", vatRate: 12, reviewed: true };
   state.pos[0].lines = [{ itemId: "m1-i1", quoteLineId: state.quotes[1].lines[0].id, quantity: 60, unitPrice: 278, discountType: "fixed", discountValue: 20, taxRate: 12 }];
   state.pos[0].adjustments = [{ id: "freight", label: "Freight", kind: "shipping", calculation: "percentage", value: 3, included: true, confirmed: true }, { id: "excluded", label: "Not included", kind: "tax", calculation: "fixed", value: 100, included: false, confirmed: true }];
   return state;
@@ -79,6 +80,8 @@ test("XLSX contains correct formulas, cached results, converted bids, unmatched 
   const report = state.bidReports[0];
   // Older frozen reports still use the original workbook and quoted-quantity calculations.
   delete report.comparisonRevision; delete report.comparisonSelections;
+  for (const offer of report.data.offers) delete offer.quote.financial;
+  for (const current of state.quotes) delete current.financial;
   const bytes = await generateBidWorkbook(report);
   assert.equal(bytes.subarray(0, 4).toString("hex"), "504b0304");
   const book = new ExcelJS.Workbook(); await book.xlsx.load(bytes);

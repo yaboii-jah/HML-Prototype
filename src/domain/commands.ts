@@ -23,7 +23,8 @@ import { calculatedPoFinancial, defaultQuotationFinancial, poFinancialError, rou
 import { directPoError } from "./po-review.ts";
 import { newId } from "./ids.ts";
 import { archiveFileName, freezeUploadNames, hasNewFiles, issueDocumentReference, lockProjectCode, nextDocumentReference, normalizeProjectCode, prefixedReference, projectCodeLocked, projectCodeRequired, projectCodeValidation } from "./document-numbering.ts";
-import { bidReportReadiness, captureBidReport } from "./bid-reports.ts";
+import { normalizedBidReportReadiness, captureBidReport, bidLines } from "./bid-reports.ts";
+import { comparableMaterialAmount } from "./comparative-pricing.ts";
 import { budgetFor, inventoryFor, orderedFor, paidTotal, poItems, poSupplierId, poTotal, requestForPO, schedulableFor, stockFor } from "./selectors.ts";
 import { hasFinalizedSuccessor, isFinalizedQuote, latestFinalizedQuotes, quotationCurrency, quoteReviewIssues } from "./procurement.ts";
 import { poLineTotal } from "./pricing.ts";
@@ -256,7 +257,7 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
     }
     case "createBidReport": {
       if (!permit("Procurement")) return fail("Sign in as Procurement to generate a bid comparison.");
-      const error = bidReportReadiness(state, command.requestId);
+      const error = normalizedBidReportReadiness(state, command.requestId);
       if (error) return fail(error);
       const request = state.requests.find(value => value.id === command.requestId)!;
       const codeError = projectCodeRequired(state, request.siteId);
@@ -267,10 +268,14 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       let comparisonSelections: ComparisonSelections;
       try { comparisonSelections = resolveComparisonSelections(data, command.comparisonSelections); }
       catch (cause) { return fail(cause instanceof Error ? cause.message : "Review the comparison alternatives."); }
+      for (const offer of data.offers.filter(value => value.source !== "PO source")) for (const item of data.request.items) {
+        const line = bidLines(data, offer.quote).find(value => value.id === comparisonSelections[offer.quote.id]?.[item.id]);
+        if (line && comparableMaterialAmount(offer.quote, line, item) === undefined) return fail(`Review the material price, quantity and conversion for ${offer.supplierName}: ${item.name}.`);
+      }
       const version = Math.max(0, ...state.bidReports.filter(report => report.requestId === command.requestId).map(report => report.version)) + 1;
       const reportId = id("bid");
       const ref = prefixedReference(project.documentCode!, data.request.ref);
-      state.bidReports.push({ id: reportId, requestId: command.requestId, version, comparisonRevision: 3, comparisonSelections, generatedAt: at, fileName: archiveFileName(ref, "bid-comparison", "v" + version, ".xlsx"), data, pdf: { fileName: archiveFileName(ref, "bid-comparison", "v" + version, ".pdf"), archive: { status: "pending" } }, archive: { status: "pending" } });
+      state.bidReports.push({ id: reportId, requestId: command.requestId, version, comparisonRevision: 4, comparisonSelections, generatedAt: at, fileName: archiveFileName(ref, "bid-comparison", "v" + version, ".xlsx"), data, pdf: { fileName: archiveFileName(ref, "bid-comparison", "v" + version, ".pdf"), archive: { status: "pending" } }, archive: { status: "pending" } });
       log(reportId, `Bid comparison v${version} captured`);
       return done("Bid comparison captured. Generating Excel and PDF…", reportId);
     }

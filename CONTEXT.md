@@ -25,6 +25,10 @@ _Avoid_: Demo role, role picker
 
 **Goods:** Requested materials and supplier material offers that can be ordered and received.
 
+**Item match confirmation:** Procurement explicitly confirms that an offered material refers to the linked requested material. This does not approve its price, quantity, taxes or supplier payment.
+
+**Eligible item match:** An unconfirmed, high-confidence suggested item link with the same quantity and unit, no conversion, and no outstanding line issue or printed-amount difference. Procurement may confirm these links together after checking the source; partial offers and uncertain matches receive individual confirmation.
+
 **PHP quotation:** A supplier quotation priced in Philippine pesos. Missing currency defaults to PHP; an explicitly detected foreign currency must be replaced with a PHP quotation or corrected by re-extraction before finalization. Existing finalized records retain their recorded currency.
 
 **Services:** Non-material fees, such as delivery or installation charges. Taxes and discounts remain financial adjustments.
@@ -47,6 +51,16 @@ _Avoid_: Demo role, role picker
 
 **PO review:** Accounting's review of a purchase order, including its taxes, charges, payment mode and project budget.
 _Avoid_: Finance PO approval
+
+**Quotation total:** The gross value of the offered materials and included charges after discounts and the quotation's VAT treatment, before withholding deductions.
+
+**Comparative bid:** A side-by-side comparison of supplier material offers for the full requested MRF quantities. Missing and short offers remain visible; comparison choices do not purchase materials.
+
+**Comparable material price:** The offered material price after item discounts, including VAT where applicable, converted to the requested material unit. Quotation-wide charges, discounts and EWT remain separate. A fixed discount is spread over the quoted quantity for comparison; its use on a partial purchase still needs confirmation.
+
+**Supplier award:** Procurement's saved choice of a supplier offer and purchase quantity for a requested material. A material may be split between offers. Awards account for existing orders, persist until PO draft creation, and are distinct from comparison-offer choices.
+
+**Estimated supplier payable:** The quotation total less calculated goods and services EWT. This is a quotation estimate, separate from Accounting's payment verification and the actual supplier settlement.
 
 **Calculated EWT:** Withholding derived from the VAT-exclusive goods and services amounts at 1% and 2% respectively. NON VAT quotations and orders have zero calculated EWT.
 

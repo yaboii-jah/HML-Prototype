@@ -1,49 +1,31 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { PdfDocumentViewer } from "@/src/components/PdfDocumentViewer";
 import { CloseButton } from "@/src/components/ui/CloseButton";
-import { DocumentLoading } from "@/src/components/ui/Skeleton";
-import { LoadingImage } from "@/src/components/ui/LoadingImage";
 import type { Quote } from "@/src/domain/types";
-import { readQuoteFile } from "./quote-files";
+import { QuoteSourcePreview } from "./QuoteSourcePreview";
 
-export function QuoteDocumentsDialog({ quote, onClose }: { quote: Quote; onClose: () => void }) {
+export function QuoteDocumentsDialog({ quote, onClose, initialIndex = 0, onAttach, onRemoveDocument, disabled = false, error = "" }: { quote: Quote; onClose: () => void; initialIndex?: number; onAttach?: (files: File[]) => Promise<void>; onRemoveDocument?: (fileId: string) => Promise<void>; disabled?: boolean; error?: string }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
-  const [selectedIndex, setSelectedIndex] = useState(0);
-  const [preview, setPreview] = useState<{ url: string; type: string; blob: Blob } | null>(null);
-  const [error, setError] = useState("");
-  const document = quote.documents[selectedIndex];
+  const [selectedIndex, setSelectedIndex] = useState(initialIndex);
+  const invoker = useRef<HTMLElement | null>(null);
+  const currentIndex = Math.min(selectedIndex, Math.max(0, quote.documents.length - 1));
+  const selected = quote.documents[currentIndex];
 
   useEffect(() => {
     const dialog = dialogRef.current;
+    invoker.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     dialog?.showModal();
-    return () => { if (dialog?.open) dialog.close(); };
+    return () => { if (dialog?.open) dialog.close(); if (invoker.current?.isConnected) invoker.current.focus({ preventScroll: true }); };
   }, []);
-
-  useEffect(() => {
-    let active = true;
-    let url = "";
-    if (!document?.fileId) return;
-    readQuoteFile(document.fileId).then(blob => {
-      if (!active) return;
-      if (!blob) { setError("The original file is unavailable. Attach it again."); setPreview(null); return; }
-      url = URL.createObjectURL(blob);
-      setPreview({ url, type: document.type || blob.type, blob });
-      setError("");
-    }).catch(() => { if (active) { setError("The original file could not be opened. Please try again."); setPreview(null); } });
-    return () => { active = false; if (url) URL.revokeObjectURL(url); };
-  }, [document?.fileId, document?.type]);
-
-  const select = (index: number) => { setPreview(null); setError(""); setSelectedIndex(index); };
-  const isPdf = preview?.type === "application/pdf" || document?.name.toLowerCase().endsWith(".pdf");
-  const isImage = preview?.type.startsWith("image/") || /\.(jpe?g|png|webp)$/i.test(document?.name || "");
 
   return <dialog ref={dialogRef} className="quote-documents-dialog" aria-labelledby="quote-documents-title" onCancel={event => { event.preventDefault(); onClose(); }}>
     <div className="quote-documents-heading"><div><span className="eyebrow">QUOTATION SOURCE</span><h2 id="quote-documents-title">View documents</h2></div><CloseButton aria-label="Close document preview" onClick={onClose}/></div>
+    {onAttach && <div className="quote-document-management"><label className="button secondary file-button">+ Add supplier files<input type="file" accept=".pdf,.jpg,.jpeg,.png,.webp" multiple disabled={disabled} onChange={event => { const files = Array.from(event.target.files || []); event.target.value = ""; if (files.length) void onAttach(files); }}/></label>{onRemoveDocument && selected?.fileId && <button type="button" className="button danger-outline" disabled={disabled} onClick={() => void onRemoveDocument(selected.fileId!)}>Remove selected attachment</button>}<small>Up to 12 PDF or image files · 20 MB each · 45 MB total</small></div>}
+    {error && <p className="inline-error" role="alert">{error}</p>}
     <div className="quote-documents-layout">
-      <nav className="quote-documents-list" aria-label="Quotation documents">{quote.documents.map((item, index) => <button type="button" key={`${item.fileId || item.name}-${index}`} className={selectedIndex === index ? "active" : ""} aria-current={selectedIndex === index ? "true" : undefined} onClick={() => select(index)}><span>{index + 1}</span><strong>{item.name}</strong></button>)}</nav>
-      <div className="quote-document-preview">{error ? <p role="alert">{error}</p> : !document?.fileId ? <p>This older document reference has no available source file.</p> : !preview ? <DocumentLoading/> : isPdf ? <PdfDocumentViewer key={preview.url} blob={preview.blob} fileName={document.name} sourceUrl={preview.url}/> : isImage ? <LoadingImage key={preview.url} src={preview.url} alt={`Preview of ${document.name}`}/> : <p>Preview is unavailable for this file type.</p>}</div>
+      <nav className="quote-documents-list" aria-label="Quotation documents">{!quote.documents.length && <p className="helper-note">No supplier files attached.</p>}{quote.documents.map((item, index) => <button type="button" key={`${item.fileId || item.name}-${index}`} className={currentIndex === index ? "active" : ""} aria-current={currentIndex === index ? "true" : undefined} onClick={() => setSelectedIndex(index)}><span>{index + 1}</span><strong>{item.name}</strong></button>)}</nav>
+      <div className="quote-document-preview"><QuoteSourcePreview document={selected}/></div>
     </div>
   </dialog>;
 }

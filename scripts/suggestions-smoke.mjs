@@ -102,9 +102,10 @@ try {
   await fill('#siteId', 'site-a'); await sleep(100);
   assert.deepEqual(await run("return [...document.querySelector('#scopeId').options].slice(1).map(o=>o.textContent);"), ['Structural', 'Civil Works'], 'Scope choices show names only');
   await navigate('/requests/m1/quotes');
-  await run("[...document.querySelectorAll('.procurement-steps button')].find(b=>b.textContent.includes('Compare & allocate')).click();return true;");
+  await run("[...document.querySelectorAll('.procurement-steps button')].find(b=>b.textContent.includes('Compare & award')).click();return true;");
   await wait("return !!document.querySelector('.compare-allocate');");
-  assert.equal(await run("const details=[...document.querySelectorAll('details')].find(d=>d.querySelector('summary strong')?.textContent==='Comparison reports');return details.open&&!!(details.compareDocumentPosition(document.querySelector('.compare-allocate'))&Node.DOCUMENT_POSITION_FOLLOWING);"), true, 'Open comparison reports precede allocation');
+  assert.equal(await run("const details=[...document.querySelectorAll('details')].find(d=>d.querySelector('summary strong')?.textContent==='Comparison reports');return !details.open&&!!(details.compareDocumentPosition(document.querySelector('.compare-allocate'))&Node.DOCUMENT_POSITION_FOLLOWING);"), true, 'Reports start collapsed above the comparative bid');
+  await run("[...document.querySelectorAll('details')].find(d=>d.querySelector('summary strong')?.textContent==='Comparison reports').open=true;return true;");
   const before = await run("return localStorage.getItem('hml-constructsync-demo-v12');");
   for (const width of [1440, 375]) {
     await call('Emulation.setDeviceMetricsOverride', { width, height: 900, deviceScaleFactor: 1, mobile: width === 375 });
@@ -123,8 +124,9 @@ try {
   }
   // A missing saved PDF must report an error and must not generate a new artifact.
   report.pdf.localFileId = 'missing-preview'; await setFixture(); await navigate('/requests/m1/quotes');
-  await run("[...document.querySelectorAll('.procurement-steps button')].find(b=>b.textContent.includes('Compare & allocate')).click();return true;");
+  await run("[...document.querySelectorAll('.procurement-steps button')].find(b=>b.textContent.includes('Compare & award')).click();return true;");
   await wait("return !!document.querySelector('.bid-report-row');");
+  await run("[...document.querySelectorAll('details')].find(d=>d.querySelector('summary strong')?.textContent==='Comparison reports').open=true;return true;");
   await run("[...document.querySelectorAll('.bid-report-row button')].find(b=>b.textContent==='Preview PDF').click();return true;");
   await wait("return !!document.querySelector('.bid-report-preview [role=alert]');");
   assert.equal(await run("return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).bidReports.length;"), 1);
