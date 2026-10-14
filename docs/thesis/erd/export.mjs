@@ -38,9 +38,9 @@ const links = model.relationships.map(link => {
 }).join("\n");
 const boxes = model.entities.map(entity => {
   const [x, y] = entity.position, height = boxHeight(entity), color = entity.color;
-  return `<g data-entity="${entity.name}" transform="translate(${x},${y})"><title>${escape(entity.purpose)}</title><rect width="${boxWidth}" height="${height}" rx="3" fill="white" stroke="#53606e" stroke-width="0.9"/><path data-header="true" d="M3 0H${boxWidth - 3}Q${boxWidth} 0 ${boxWidth} 3V${headerHeight}H0V3Q0 0 3 0Z" fill="${color}"/><line x1="0" y1="${headerHeight}" x2="${boxWidth}" y2="${headerHeight}" stroke="#53606e" stroke-width="0.65"/><line x1="29" y1="${headerHeight}" x2="29" y2="${height}" stroke="#bac2ca" stroke-width="0.65"/><text class="entity-title" x="${boxWidth / 2}" y="${headerHeight * 0.66}" text-anchor="middle" font-size="${model.headerFontSize}" font-weight="bold">${escape(entity.title)}</text>${entity.fields.map((field, index) => `<g data-field="${field.name}"><text x="6" y="${headerHeight + index * rowHeight + rowHeight * 0.72}" font-weight="${field.key ? "bold" : "normal"}">${escape(field.key)}</text><text x="35" y="${headerHeight + index * rowHeight + rowHeight * 0.72}">${escape(field.name)}</text></g>`).join("")}</g>`;
+  return `<g data-entity="${entity.name}" transform="translate(${x},${y})"><title>${escape(entity.purpose)}</title><rect width="${boxWidth}" height="${height}" rx="3" fill="white" stroke="#53606e" stroke-width="0.9"/><path data-header="true" d="M3 0H${boxWidth - 3}Q${boxWidth} 0 ${boxWidth} 3V${headerHeight}H0V3Q0 0 3 0Z" fill="${color}"/><line x1="0" y1="${headerHeight}" x2="${boxWidth}" y2="${headerHeight}" stroke="#53606e" stroke-width="0.65"/><line x1="42" y1="${headerHeight}" x2="42" y2="${height}" stroke="#bac2ca" stroke-width="0.65"/><text class="entity-title" x="${boxWidth / 2}" y="${headerHeight * 0.66}" text-anchor="middle" font-size="${model.headerFontSize}" font-weight="bold">${escape(entity.title)}</text>${entity.fields.map((field, index) => `<g data-field="${field.name}"><text x="6" y="${headerHeight + index * rowHeight + rowHeight * 0.72}" font-weight="${field.key ? "bold" : "normal"}">${escape(field.key)}</text><text x="50" y="${headerHeight + index * rowHeight + rowHeight * 0.72}">${escape(field.name)}</text></g>`).join("")}${entity.constraint ? `<line x1="0" y1="${headerHeight+entity.fields.length*rowHeight}" x2="${boxWidth}" y2="${headerHeight+entity.fields.length*rowHeight}" stroke="#53606e"/><text data-constraint="true" x="${boxWidth/2}" y="${height-rowHeight*0.28}" text-anchor="middle" font-weight="bold">${escape(entity.constraint)}</text>` : ""}</g>`;
 }).join("\n");
-const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${model.printWidthMm}mm" height="${model.height / model.width * model.printWidthMm}mm" viewBox="0 0 ${model.width} ${model.height}" role="img" aria-labelledby="figure-title" style="font-family:Arial,sans-serif;font-size:${model.fontSize}px;fill:#182534"><title id="figure-title">${escape(model.title)}</title><desc>Ten core tables with business fields, unlabeled Crow's Foot relationships and distinct header colors.</desc><rect width="100%" height="100%" fill="white"/>${links}${boxes}</svg>`;
+const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${model.printWidthMm}mm" height="${model.height / model.width * model.printWidthMm}mm" viewBox="0 0 ${model.width} ${model.height}" role="img" aria-labelledby="figure-title" style="font-family:Arial,sans-serif;font-size:${model.fontSize}px;fill:#182534"><title id="figure-title">${escape(model.title)}</title><desc>Eleven core entities with business fields, unlabeled Crow's Foot relationships and distinct header colors.</desc><rect width="100%" height="100%" fill="white"/>${links}${boxes}</svg>`;
 await writeFile(path.join(directory, "constructsync-erd.svg"), svg, "utf8");
 const require = createRequire(path.resolve(cli));
 const { default: puppeteer } = await import(pathToFileURL(require.resolve("puppeteer")).href);
@@ -57,9 +57,13 @@ try {
     for (const entity of expected) {
       const node = nodes.find(node => node.dataset.entity === entity.name);
       if (!node) { errors.push(`Missing ${entity.name}`); continue; }
-      const bounds = node.getBoundingClientRect();
+      const bounds = node.querySelector("rect").getBoundingClientRect();
       if (node.querySelector("[data-header]")?.getAttribute("fill") !== entity.color) errors.push(`Wrong header color: ${entity.name}`);
       for (const field of entity.fields) if (!node.querySelector(`[data-field="${field.name}"]`)) errors.push(`Missing ${entity.name}.${field.name}`);
+      for (const field of node.querySelectorAll("[data-field]")) {
+        const [key, name] = [...field.querySelectorAll("text")].map(text => text.getBoundingClientRect());
+        if (key.right > name.left) errors.push(`Key overlaps field name: ${entity.name}/${field.dataset.field}`);
+      }
       for (const text of node.querySelectorAll("text")) {
         const rect = text.getBoundingClientRect();
         if (rect.left < bounds.left || rect.right > bounds.right || rect.top < bounds.top || rect.bottom > bounds.bottom) errors.push(`Text clipped: ${entity.name}/${text.textContent}`);
@@ -79,7 +83,7 @@ try {
     return { errors, nodes: nodes.length, links: document.querySelectorAll("[data-relationship]").length, captions: document.querySelectorAll("[data-cardinality]").length, legendEntries: document.querySelectorAll("[data-color-legend]").length, minimumFont: Math.min(...texts.map(text => parseFloat(getComputedStyle(text).fontSize))) };
   }, model.entities);
   assert.deepEqual(result.errors, []);
-  assert.equal(result.nodes, 10);
+  assert.equal(result.nodes, model.entities.length);
   assert.equal(result.links, model.relationships.length);
   assert.equal(result.captions, 0);
   assert.equal(result.legendEntries, 0);
@@ -114,12 +118,13 @@ try {
 
 Verified on ${model.verifiedDate}.
 
-- Exactly 10 connected entities, ${model.entities.reduce((sum,entity) => sum + entity.fields.length,0)} business fields and ${model.relationships.length} unlabeled Crow's Foot relationships.
+- Exactly ${model.entities.length} connected entities, ${model.entities.reduce((sum,entity) => sum + entity.fields.length,0)} business fields and ${model.relationships.length} unlabeled Crow's Foot relationships.
 - Unique entity/field names, one PK per entity and valid type-matched FK targets.
 - All connector endpoints terminate on their entity borders; orthogonal routes do not pass through boxes.
+- All sixteen relationship routes have zero crossings, overlapping segments or accidental junctions. Source and destination Project links use separate lanes; every cardinality endpoint remains visible.
 - No numeric relationship labels appear. Endpoint symbols retain cardinalities.
-- Ten distinct header colors are retained; no legend is present and tables do not overlap.
-- Visible text is limited to table names, fields and keys. No legend, numeric connector labels, diagram title or explanatory caption is present.
+- Eleven distinct header colors are retained; no legend is present and tables do not overlap.
+- Visible text is limited to table names, fields, keys and the Delivery XOR constraint. No legend, numeric connector labels, diagram title or explanatory caption is present.
 - All displayed fields and headers fit their boxes and canvas.
 - Every label is at least ${minimumPoints.toFixed(2)} pt at the intended 160 mm width.
 - SVG is 160 × ${heightMm.toFixed(2)} mm, preserving scalable text and colored headers.
@@ -133,6 +138,9 @@ These checks concern the reduced model, not an installed database or runtime cha
 
 | Scenario | Representation |
 |---|---|
+| Internal transfer or mixed fulfillment | Stock Transfer links one MRF to source/destination projects; material-level quantities remain in supporting lines. |
+| Independent delivery source | Delivery requires exactly one PO or transfer parent, explicitly marked XOR; trips need no fictional PO. |
+| Source release and site balances | Source confirmation, transfer-out at dispatch and transfer-in for accepted destination stock are retained in notes. |
 | Several suppliers and split sourcing | Multiple quotations and POs per MRF; detailed line allocations are explained outside the figure. |
 | Unmatched offered extras | Detailed matches are omitted; notes preserve the confirmed-match requirement before award. |
 | Partial credit payments | One PO can have zero or many Accounting-verified payments; delivery need not wait for settlement. |
@@ -148,5 +156,5 @@ These checks concern the reduced model, not an installed database or runtime cha
 
 Run node docs/thesis/erd/generate.mjs --check for canonical source consistency. The exporter additionally checks actual rendered labels, print size, PDF page count and selectable fields.
 `, "utf8");
-  console.log(`Exported one 10-entity diagram with expanded fields, ten table colors and a compact layout without a legend. Preview: ${preview}`);
+  console.log(`Exported one 11-entity diagram with expanded fields, eleven table colors and a compact layout without a legend. Preview: ${preview}`);
 } finally { await browser.close(); }

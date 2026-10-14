@@ -1,0 +1,24 @@
+---
+config:
+  layout: elk
+  theme: neutral
+  flowchart:
+    htmlLabels: false
+---
+flowchart TB
+  %% Receipt documentation and review
+  %% Descriptive events identify entries; named process handoffs use off-page pentagons in publication exports.
+  receiptEvidence(["Warehouse or site; receipt evidence available"])
+  archiveReceipts["Receiving teams; Archive generated; and signed receipts"]
+  reviewDocuments["Accounting; Review required evidence"]
+  evidenceAccepted{"Evidence complete; and acceptable?"}
+  completeEvidence["Receiving teams; Complete or correct; receipt evidence"]
+  documentsReviewed(["Documents reviewed"])
+  receiptEvidence --> archiveReceipts
+  archiveReceipts --> reviewDocuments
+  reviewDocuments --> evidenceAccepted
+  evidenceAccepted -->|"No"| completeEvidence
+  completeEvidence --> archiveReceipts
+  evidenceAccepted -->|"Yes"| documentsReviewed
+  classDef plain fill:#ffffff,stroke:#000000,color:#000000
+  class receiptEvidence,archiveReceipts,reviewDocuments,evidenceAccepted,completeEvidence,documentsReviewed plain

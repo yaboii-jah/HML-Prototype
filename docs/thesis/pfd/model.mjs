@@ -204,6 +204,8 @@ const combinedEdges = [
   edge("balanceSettled", "creditSettled", [[1720,655],[1730,655],[1730,787.5],[1720,787.5]], "Yes", [1700,733,45]),
 ];
 
-export const diagrams = [
+export const historicalCombinedDiagrams = [
   { id: "combined", name: "Full Disbursement and Credit / Terms", nodes: combinedNodes, edges: combinedEdges },
 ];
+
+export { diagrams } from "./flows.mjs";

@@ -68,6 +68,8 @@
       "data": [
         "reviewed-quotation-data",
         "material-allocations",
+        "transfer-proposals",
+        "allocation-cancellations",
         "po-drafts",
         "po-issuance"
       ]
@@ -77,6 +79,9 @@
       "to": "proc",
       "data": [
         "approved-mrf-data",
+        "stock-availability",
+        "remaining-purchase-quantities",
+        "transfer-status",
         "comparative-bids",
         "po-documents"
       ]
@@ -152,21 +157,27 @@
       "to": "P5",
       "data": [
         "delivery-schedules",
-        "dispatch-updates"
+        "dispatch-updates",
+        "transfer-trip-schedules",
+        "transfer-dispatch-updates"
       ]
     },
     {
       "from": "P5",
       "to": "logistics",
       "data": [
-        "cleared-delivery-quantities"
+        "cleared-delivery-quantities",
+        "approved-transfer-quantities"
       ]
     },
     {
       "from": "site",
       "to": "P5",
       "data": [
+        "source-release-decisions",
+        "confirmed-release-quantities",
         "site-receipts",
+        "transfer-receipts",
         "stock-posting",
         "material-usage"
       ]
@@ -175,7 +186,9 @@
       "from": "P5",
       "to": "site",
       "data": [
+        "source-release-proposals",
         "site-delivery-data",
+        "transfer-trip-data",
         "stock-balances"
       ]
     },
@@ -236,6 +249,7 @@
       "to": "P6",
       "data": [
         "invoice-receipt-references",
+        "transfer-receipt-evidence",
         "document-review-results"
       ]
     },
@@ -292,12 +306,12 @@
     {
       "from": "P3",
       "to": "D3",
-      "information": "Saved quotations, awards and purchase orders"
+      "information": "Saved quotations, awards, POs, transfer proposals and sourcing allocations/cancellations"
     },
     {
       "from": "D3",
       "to": "P3",
-      "information": "Quotation and PO data"
+      "information": "Quotation/PO data, transfer reservations, release decisions and remaining demand"
     },
     {
       "from": "D2",
@@ -318,6 +332,11 @@
       "from": "D6",
       "to": "P3",
       "information": "Extracted drafts and file references"
+    },
+    {
+      "from": "D5",
+      "to": "P3",
+      "information": "Project stock movements and balances used with D3 reservations to determine availability"
     },
     {
       "from": "P4",
@@ -347,12 +366,12 @@
     {
       "from": "P5",
       "to": "D5",
-      "information": "Saved delivery receipts and inventory movements"
+      "information": "Saved purchasing and transfer trips, accepted receipts, transfer-out and transfer-in stock movements"
     },
     {
       "from": "D5",
       "to": "P5",
-      "information": "Delivery and stock data"
+      "information": "Purchasing/transfer trip information and project stock movements/balances"
     },
     {
       "from": "D4",
@@ -360,19 +379,24 @@
       "information": "Accounting delivery clearance"
     },
     {
+      "from": "P5",
+      "to": "D3",
+      "information": "Source release decisions and confirmed transfer quantities"
+    },
+    {
       "from": "D3",
       "to": "P5",
-      "information": "Ordered material quantities"
+      "information": "Ordered material quantities and stock-transfer proposals/released allocations"
     },
     {
       "from": "P5",
       "to": "D6",
-      "information": "Delivery receipt files"
+      "information": "Purchasing and transfer receipt files"
     },
     {
       "from": "D6",
       "to": "P5",
-      "information": "Archived delivery receipts"
+      "information": "Archived purchasing and transfer receipt references"
     },
     {
       "from": "P6",

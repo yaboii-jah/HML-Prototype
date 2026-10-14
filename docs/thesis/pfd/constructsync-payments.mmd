@@ -1,0 +1,41 @@
+---
+config:
+  layout: elk
+  theme: neutral
+  flowchart:
+    htmlLabels: false
+---
+flowchart TB
+  %% Payment coordination and delivery clearance
+  %% Descriptive events identify entries; named process handoffs use off-page pentagons in publication exports.
+  issuedPo(["Supplier PO issued"])
+  paymentMode{"Payment; arrangement?"}
+  upfrontFinance["Finance; Coordinate payment; outside app"]
+  upfrontVerify["Accounting; Archive proof &; verify payment"]
+  fullPaymentVerified{"Full net payment; verified?"}
+  upfrontClearance["Accounting; Clear delivery"]
+  upfrontDelivery["Proceed to; supplier delivery"]
+  creditPaths(("Credit"))
+  creditClearance["Accounting; Clear credit delivery"]
+  creditDelivery["Proceed to; supplier delivery"]
+  creditFinance["Finance; Coordinate payment; outside app"]
+  creditVerify["Accounting; Archive proof &; verify payment"]
+  balanceSettled{"Balance settled?"}
+  creditSettled(["Credit settled"])
+  issuedPo --> paymentMode
+  paymentMode -->|"Upfront"| upfrontFinance
+  paymentMode -->|"Credit / terms"| creditPaths
+  upfrontFinance --> upfrontVerify
+  upfrontVerify --> fullPaymentVerified
+  fullPaymentVerified -->|"No / resolve"| upfrontFinance
+  fullPaymentVerified -->|"Yes"| upfrontClearance
+  upfrontClearance --> upfrontDelivery
+  creditPaths -->|"Delivery"| creditClearance
+  creditPaths -->|"Payment"| creditFinance
+  creditClearance --> creditDelivery
+  creditFinance --> creditVerify
+  creditVerify --> balanceSettled
+  balanceSettled -->|"No / follow up"| creditFinance
+  balanceSettled -->|"Yes"| creditSettled
+  classDef plain fill:#ffffff,stroke:#000000,color:#000000
+  class issuedPo,paymentMode,upfrontFinance,upfrontVerify,fullPaymentVerified,upfrontClearance,upfrontDelivery,creditPaths,creditClearance,creditDelivery,creditFinance,creditVerify,balanceSettled,creditSettled plain

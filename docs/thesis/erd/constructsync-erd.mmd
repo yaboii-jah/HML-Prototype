@@ -6,7 +6,7 @@ config:
 erDiagram
   direction TB
   accTitle: ConstructSync Core Entity Relationship Diagram
-  accDescr: Ten core tables with expanded business fields and unlabeled Crow's Foot connectors.
+  accDescr: Eleven core entities with expanded business fields and unlabeled Crow's Foot connectors.
   %% Proposed core business view, not the exhaustive physical database schema.
   %% Publication SVG uses a distinct header color per entity; no legend or visible diagram title.
   %% User header color: #BCD8F7
@@ -95,9 +95,11 @@ erDiagram
     string proof_reference
   }
   %% Delivery header color: #DCEB9F
+  %% DELIVERY constraint: PO XOR transfer; exactly one parent is required, never both or neither.
   DELIVERY["Delivery"] {
     uuid delivery_id PK
-    uuid po_id FK
+    uuid? po_id FK
+    uuid? transfer_id FK
     string reference
     string leg
     date scheduled_date
@@ -116,6 +118,16 @@ erDiagram
     decimal quantity
     datetime occurred_at
   }
+  %% Stock Transfer header color: #F2D4DC
+  STOCK_TRANSFER["Stock Transfer"] {
+    uuid transfer_id PK
+    uuid mrf_id FK
+    uuid source_id FK
+    uuid destination_id FK
+    string reference
+    string status
+    datetime created_at
+  }
   APP_USER ||..o{ MRF : ""
   PROJECT ||..o{ MRF : ""
   MRF ||..o{ MRF_ITEM : ""
@@ -125,6 +137,10 @@ erDiagram
   QUOTATION ||..o{ PURCHASE_ORDER : ""
   SUPPLIER ||..o{ PURCHASE_ORDER : ""
   PURCHASE_ORDER ||..o{ PAYMENT : ""
-  PURCHASE_ORDER ||..o{ DELIVERY : ""
+  PURCHASE_ORDER |o..o{ DELIVERY : ""
   PROJECT ||..o{ INVENTORY_MOVEMENT : ""
   DELIVERY |o..o{ INVENTORY_MOVEMENT : ""
+  MRF ||..o{ STOCK_TRANSFER : ""
+  PROJECT ||..o{ STOCK_TRANSFER : ""
+  PROJECT ||..o{ STOCK_TRANSFER : ""
+  STOCK_TRANSFER |o..o{ DELIVERY : ""
