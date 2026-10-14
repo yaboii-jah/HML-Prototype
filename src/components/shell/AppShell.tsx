@@ -6,13 +6,15 @@ import { StickyHeadings } from "@/src/components/ui/StickyHeadings";
 import { CloseButton } from "@/src/components/ui/CloseButton";
 import { ToastStack } from "@/src/components/ui/ToastStack";
 import { CompactNavigation } from "./CompactNavigation";
+import { SidebarToggle } from "./SidebarToggle";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { useDemo } from "@/src/app-state/DemoProvider";
 import { accountDisplayName } from "@/src/app-state/demo-session";
 import { tasksFor } from "@/src/domain/queues";
+import { roleLabel } from "@/src/domain/format";
 import { ROLES, type Role } from "@/src/domain/types";
 
 type IconName = "grid" | "building" | "request" | "supplier" | "purchase" | "finance" | "delivery" | "inventory" | "accounting" | "report" | "admin" | "bell" | "menu" | "close" | "chevron" | "moon" | "sun";
@@ -76,6 +78,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   const accountDialogRef = useRef<HTMLDialogElement>(null);
   const accountTriggerRef = useRef<HTMLButtonElement>(null);
   const frameRef = useRef<HTMLDivElement>(null);
+  const notificationTriggerRef = useRef<HTMLButtonElement>(null);
+  const notificationPanelRef = useRef<HTMLDivElement>(null);
   const theme = useSyncExternalStore(subscribeTheme, getTheme, getServerTheme);
   const pathname = usePathname();
   const router = useRouter();
@@ -86,18 +90,44 @@ export function AppShell({ children }: { children: ReactNode }) {
       dialog.querySelector<HTMLButtonElement>("button")?.focus();
     } else if (!accountOpen && dialog?.open) dialog.close();
   }, [accountOpen]);
-  useEffect(() => { const onKeyDown = (event: KeyboardEvent) => { if (event.key === "Escape") { setAccountOpen(false); setNotificationsOpen(false); setMenuOpen(false); } }; window.addEventListener("keydown", onKeyDown); return () => window.removeEventListener("keydown", onKeyDown); }, []);
+  useEffect(() => { const onKeyDown = (event: KeyboardEvent) => { if (event.key === "Escape") { setAccountOpen(false); if (notificationPanelRef.current) notificationTriggerRef.current?.focus(); setNotificationsOpen(false); setMenuOpen(false); } }; window.addEventListener("keydown", onKeyDown); return () => window.removeEventListener("keydown", onKeyDown); }, []);
+  useLayoutEffect(() => {
+    if (!notificationsOpen) return;
+    const position = () => {
+      const trigger = notificationTriggerRef.current, panel = notificationPanelRef.current;
+      if (!trigger || !panel) return;
+      const rect = trigger.getBoundingClientRect(), viewport = window.visualViewport;
+      const width = Math.min(340, (viewport?.width ?? document.documentElement.clientWidth) - 24);
+      const viewportLeft = viewport?.offsetLeft ?? 0;
+      const top = rect.bottom + 10;
+      panel.style.width = `${width}px`;
+      panel.style.left = `${Math.max(viewportLeft + 12, Math.min(rect.right - width, viewportLeft + (viewport?.width ?? document.documentElement.clientWidth) - width - 12))}px`;
+      panel.style.top = `${top}px`;
+      panel.style.maxHeight = `${Math.max(0, (viewport?.height ?? innerHeight) + (viewport?.offsetTop ?? 0) - top - 12)}px`;
+    };
+    position();
+    window.addEventListener("resize", position);
+    window.addEventListener("scroll", position, true);
+    window.visualViewport?.addEventListener("resize", position);
+    window.visualViewport?.addEventListener("scroll", position);
+    return () => {
+      window.removeEventListener("resize", position);
+      window.removeEventListener("scroll", position, true);
+      window.visualViewport?.removeEventListener("resize", position);
+      window.visualViewport?.removeEventListener("scroll", position);
+    };
+  }, [notificationsOpen]);
   if (!snapshot) return null;
-  const accountName = accountDisplayName(session.email) || snapshot.role;
+  const accountName = accountDisplayName(session.email) || roleLabel(snapshot.role);
   const initials = accountName.split(" ").map(part => part[0]).slice(0, 2).join("");
   const tasks = tasksFor(snapshot, siteIds).filter(task => access.canOpen(task.href));
   const section = NAV.find(item => pathname === item.href || pathname.startsWith(`${item.href}/`))?.label || (pathname.startsWith("/stock-transfers/") ? "Site stock transfers" : "Workspace");
   return <div ref={frameRef} className="app-frame">
     <StickyHeadings scopeRef={frameRef}/>
     {menuOpen && <button className="mobile-scrim" aria-label="Close navigation" onClick={() => setMenuOpen(false)}/>}
-    <aside className={`side-nav ${menuOpen ? "is-open" : ""}`}>
-      <div className="side-brand"><Link className="brand-logo" href="/dashboard" onClick={() => setMenuOpen(false)} aria-label="HML ConstructSync dashboard"><Image src="/company%20-%20logo.webp" alt="HML Technologies and Services Inc." width={190} height={45} priority/></Link><button className="mobile-close icon-button" aria-label="Close navigation" onClick={() => setMenuOpen(false)}><Icon name="close"/></button></div>
-      <div className="side-product"><strong>ConstructSync</strong></div>
+    <aside id="workspace-navigation" className={`side-nav ${menuOpen ? "is-open" : ""}`}>
+      <div className="side-brand"><Link className="brand-logo" href="/dashboard" onClick={() => setMenuOpen(false)} aria-label="HML ConstructSync dashboard"><Image src="/company%20-%20logo.webp" alt="HML Technologies and Services Inc." width={190} height={45} priority/><span className="brand-compact" aria-hidden="true">HML</span></Link><button className="mobile-close icon-button" aria-label="Close navigation" onClick={() => setMenuOpen(false)}><Icon name="close"/></button></div>
+      <div className="side-product"><strong>ConstructSync</strong><SidebarToggle/></div>
       <CompactNavigation items={NAV.filter(item => access.canOpen(item.href)).map(item => ({ ...item, icon: <Icon name={item.icon}/>, count: tasks.filter(task => task.href.startsWith(item.href)).length }))} primary={primary[snapshot.role]} pathname={pathname} onNavigate={() => setMenuOpen(false)}/>
     </aside>
     <div className="workspace">
@@ -107,8 +137,8 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="masthead-right">
           <label className="site-context"><span>Project</span><select aria-label="Site context" value={snapshot.siteFilter} onChange={event => void run({ type: "setSiteFilter", siteId: event.target.value })}><option value="all">{access.sitePersonnel ? "All assigned projects" : "All sites"}</option>{snapshot.sites.filter(site => access.canReadProject(site.id)).map(site => <option key={site.id} value={site.id}>{site.name}</option>)}</select></label>
           <button className="theme-toggle icon-button" type="button" aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`} aria-pressed={theme === "dark"} title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`} onClick={() => { const nextTheme = theme === "dark" ? "light" : "dark"; document.documentElement.dataset.theme = nextTheme; try { localStorage.setItem("constructsync-theme", nextTheme); } catch {} }}><Icon name={theme === "dark" ? "sun" : "moon"}/></button>
-          <div className="notification-wrap"><button className="notification-trigger icon-button" aria-label={`Notifications${tasks.length ? `, ${tasks.length} tasks` : ""}`} aria-expanded={notificationsOpen} onClick={() => setNotificationsOpen(!notificationsOpen)}><Icon name="bell"/>{tasks.length > 0 && <i>{tasks.length}</i>}</button>{notificationsOpen && <div className="notification-popover"><div className="popover-heading"><strong>Needs attention</strong><span>{tasks.length} tasks</span></div>{tasks.length ? tasks.slice(0, 7).map(task => <Link key={task.href + task.title} href={task.href} onClick={() => setNotificationsOpen(false)}><b>{task.title}</b><small>{task.detail} · {task.waiting} days</small></Link>) : <p>Nothing waiting for this role.</p>}<Link href="/dashboard#role-tasks" onClick={() => setNotificationsOpen(false)}>View all tasks ({tasks.length})</Link></div>}</div>
-          <button ref={accountTriggerRef} className="masthead-account" onClick={() => { setAccountError(""); setAccountOpen(true); }} aria-haspopup="dialog" aria-label={`Account: ${accountName}, ${snapshot.role}`}><span className="account-avatar">{initials}</span><span className="account-label"><strong title={accountName}>{accountName}</strong><small title={snapshot.role}>{snapshot.role}</small></span><Icon name="chevron" size={16}/></button>
+          <div className="notification-wrap"><button ref={notificationTriggerRef} className="notification-trigger icon-button" aria-controls="workspace-notifications" aria-label={`Notifications${tasks.length ? `, ${tasks.length} tasks` : ""}`} aria-expanded={notificationsOpen} onClick={() => setNotificationsOpen(!notificationsOpen)}><Icon name="bell"/>{tasks.length > 0 && <i>{tasks.length}</i>}</button>{notificationsOpen && <div ref={notificationPanelRef} id="workspace-notifications" className="notification-popover" role="region" aria-label="Notifications"><div className="popover-heading"><strong>Needs attention</strong><span>{tasks.length} tasks</span></div><div className="notification-list" tabIndex={0} role="region" aria-label="Task list">{tasks.length ? tasks.slice(0, 7).map(task => <Link key={task.href + task.title} href={task.href} onClick={() => setNotificationsOpen(false)}><b>{task.title}</b><small>{task.detail} · {task.waiting} days</small></Link>) : <p>Nothing waiting for this role.</p>}</div><Link className="notification-footer" href="/dashboard#role-tasks" onClick={() => setNotificationsOpen(false)}>View all tasks ({tasks.length})</Link></div>}</div>
+          <button ref={accountTriggerRef} className="masthead-account" onClick={() => { setAccountError(""); setAccountOpen(true); }} aria-haspopup="dialog" aria-label={`Account: ${accountName}, ${roleLabel(snapshot.role)}`}><span className="account-avatar">{initials}</span><span className="account-label"><strong title={accountName}>{accountName}</strong><small title={roleLabel(snapshot.role)}>{roleLabel(snapshot.role)}</small></span><Icon name="chevron" size={16}/></button>
         </div>
       </header>
       <main className="workspace-content"><ArchiveStatus/><WorkspaceAccess>{children}</WorkspaceAccess></main>
@@ -125,7 +155,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) setAccountOpen(false);
     }}>
         <div className="modal-head"><h2 id="account-title">Your account</h2><CloseButton iconOnly aria-label="Close account menu" onClick={() => setAccountOpen(false)}/></div>
-        <div className="account-details"><strong>{accountName}</strong><small>{snapshot.role}</small><span>{session.email}</span></div>
+        <div className="account-details"><strong>{accountName}</strong><small>{roleLabel(snapshot.role)}</small><span>{session.email}</span></div>
         <section className="account-departments" aria-labelledby="account-departments-title">
           <h3 id="account-departments-title">Switch department</h3>
           <div className="role-options">{ROLES.flatMap(role => directory.users.filter(user => user.active && user.role === role)).map(account => <button key={account.id} type="button" className={session.userId === account.id ? "selected" : ""} aria-pressed={session.userId === account.id} onClick={() => {
@@ -135,7 +165,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             setNotificationsOpen(false);
             setMenuOpen(false);
             requestAnimationFrame(() => document.querySelector<HTMLButtonElement>(".masthead-account")?.focus({ preventScroll: true }));
-          }}><span aria-hidden="true">{account.name.split(" ").map(part => part[0]).slice(0, 2).join("")}</span><div><strong>{account.role}</strong><small>{account.name}</small></div></button>)}</div>
+          }}><span aria-hidden="true">{account.name.split(" ").map(part => part[0]).slice(0, 2).join("")}</span><div><strong>{roleLabel(account.role)}</strong><small>{account.name}</small></div></button>)}</div>
         </section>
         {accountError && <p className="inline-error" role="alert">{accountError}</p>}
         <div className="account-modal-actions"><button type="button" className="button secondary" onClick={() => { signOut(); setAccountOpen(false); router.replace("/sign-in"); }}>Sign out</button></div>

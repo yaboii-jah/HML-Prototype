@@ -1,4 +1,5 @@
 "use client";
+import { roleLabel } from "@/src/domain/format";
 
 import { RecordLink as Link } from "./RecordLink";
 import { useDemo } from "@/src/app-state/DemoProvider";
@@ -12,7 +13,7 @@ const recordLink = (event: Activity, records: Map<string, AuditRecord>) => { con
 function HistoryTable({ groups, records, visible }: { groups: AuditGroup[]; records: Map<string, AuditRecord>; visible?: Set<string> }) {
   return <div className="table-frame"><table><thead><tr><th>Recorded at</th><th>Action / changes</th><th>User</th><th>Department</th><th>Record</th><th>Reason</th></tr></thead><tbody>{groups.map(group => {
     const event = group.entries[0], hidden = visible ? !visible.has(group.id) : false;
-    return <tr key={group.id} data-audit-event={event.eventType || "historical"} {...(hidden ? { "data-off-page": "true" } : {})}><td><time dateTime={event.at}>{auditTime(event.at)}</time>{group.entries.length > 1 && <small>From {auditTime(group.entries.at(-1)?.at)}</small>}</td><td>{group.entries.length > 1 ? <details className="audit-save-group"><summary>{event.action} · {group.entries.length} saves</summary><ol>{group.entries.map(value => <li key={value.id}><time dateTime={value.at}>{auditTime(value.at)}</time><strong>{actorName(value.actor, value.actorIdentity)} · {value.actor}</strong>{value.changedFields?.length ? <span>{value.changedFields.join(", ")}</span> : null}{value.reason && <span>{value.reason}</span>}</li>)}</ol></details> : <><strong>{event.action}</strong>{!!event.changedFields?.length && <small>{event.changedFields.join(", ")}</small>}</>}</td><td>{actorName(event.actor, event.actorIdentity)}</td><td>{event.actor}</td><td>{recordLink(event, records)}</td><td>{event.reason || "—"}</td></tr>;
+    return <tr key={group.id} data-audit-event={event.eventType || "historical"} {...(hidden ? { "data-off-page": "true" } : {})}><td><time dateTime={event.at}>{auditTime(event.at)}</time>{group.entries.length > 1 && <small>From {auditTime(group.entries.at(-1)?.at)}</small>}</td><td>{group.entries.length > 1 ? <details className="audit-save-group"><summary>{event.action} · {group.entries.length} saves</summary><ol>{group.entries.map(value => <li key={value.id}><time dateTime={value.at}>{auditTime(value.at)}</time><strong>{actorName(value.actor, value.actorIdentity)} · {roleLabel(value.actor)}</strong>{value.changedFields?.length ? <span>{value.changedFields.join(", ")}</span> : null}{value.reason && <span>{value.reason}</span>}</li>)}</ol></details> : <><strong>{event.action}</strong>{!!event.changedFields?.length && <small>{event.changedFields.join(", ")}</small>}</>}</td><td>{actorName(event.actor, event.actorIdentity)}</td><td>{roleLabel(event.actor)}</td><td>{recordLink(event, records)}</td><td>{event.reason || "—"}</td></tr>;
   })}</tbody></table></div>;
 }
 

@@ -69,19 +69,22 @@ html[data-theme="dark"]{--sticky-heading-active-surface:color-mix(in srgb,var(--
 .accounting-groups .accounting-group-list{min-width:0;table-layout:fixed}
 .accounting-groups .accounting-group-list>tbody>.accounting-group>td{padding:0;max-width:none;background:var(--surface)}
 .accounting-mrf.collapsible-section{margin:0;border:0;border-radius:0}
-.accounting-mrf>summary{padding:18px 20px}
+.accounting-mrf>summary{padding:10px 16px}
 .accounting-mrf>summary:hover,.accounting-mrf>summary:active{background:var(--paper)}
 .accounting-mrf[open]>summary{background:var(--paper);border-bottom:1px solid var(--line)}
 .accounting-mrf>summary:focus-visible{outline:3px solid var(--focus);outline-offset:-3px}
-.accounting-mrf>summary>span:first-child{flex:1}
-.accounting-groups .accounting-mrf>summary small{max-width:none;white-space:normal;overflow:visible;text-overflow:clip}
-.accounting-mrf-summary{display:flex;align-items:center;justify-content:space-between;gap:8px 24px;flex-wrap:wrap}
+.accounting-mrf>summary>span:first-child{flex:1;display:flex;align-items:center;gap:4px 20px;flex-wrap:wrap}
+.accounting-mrf>summary>span:first-child>strong{flex:none;white-space:nowrap}
+.accounting-groups .accounting-mrf>summary small{flex:1 1 640px;min-width:0;max-width:none;margin-top:0;white-space:normal;overflow:visible;text-overflow:clip}
+.accounting-mrf-summary{display:grid;grid-template-columns:minmax(80px,1fr) auto auto;align-items:center;gap:8px 20px}
+.accounting-mrf-project{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.accounting-mrf-counts{white-space:nowrap}
 .accounting-mrf-summary strong{margin-left:8px;color:var(--ink)}
-.accounting-mrf>.collapsible-body{padding:16px 20px 20px}
-.accounting-mrf-heading{display:flex;justify-content:flex-end;margin-bottom:12px}
-.accounting-mrf-heading a{display:inline-flex;align-items:center;min-height:44px;white-space:nowrap}
+.accounting-mrf>.collapsible-body{padding:12px 20px 16px}
+.accounting-mrf-actions{display:flex;align-items:center;gap:8px 20px;flex-wrap:wrap}
+.accounting-mrf-link{display:inline-flex;align-items:center;min-height:44px;white-space:nowrap}
 .accounting-po-scroll{max-width:100%;overflow-x:auto;border:1px solid var(--line);border-radius:8px;overscroll-behavior-x:contain}
 .accounting-groups .accounting-po-list{min-width:900px;table-layout:auto}
 .accounting-po-list caption{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
 .accounting-po-list .numeric{white-space:nowrap}
-@media(max-width:768px){.accounting-mrf>summary{padding:16px}.accounting-mrf-summary{display:grid;gap:6px}.accounting-mrf>.collapsible-body{padding:12px 12px 16px}.accounting-mrf-summary strong{display:block;margin-left:0}}
+@media(max-width:768px){.accounting-mrf>summary{padding:16px}.accounting-mrf-summary{grid-template-columns:minmax(0,1fr);gap:6px}.accounting-mrf-project{white-space:normal;overflow-wrap:anywhere}.accounting-mrf-counts{white-space:normal}.accounting-mrf>.collapsible-body{padding:12px 12px 16px}.accounting-mrf-summary strong{display:block;margin-left:0}}

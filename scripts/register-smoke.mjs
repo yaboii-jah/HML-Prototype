@@ -47,6 +47,8 @@ try {
   await wait("return location.pathname==='/dashboard'&&!!document.querySelector('.masthead-account');");
   const fixture = seedDemo(), sourceRequest = fixture.requests.find(r => r.id === "m1"), sourcePo = fixture.pos.find(p => p.mrfId === sourceRequest.id);
   fixture.role = "Procurement";
+  const batchTemplate = fixture.batches[0];
+  for (let i = 0; i < 27; i++) fixture.batches.push({ ...structuredClone(batchTemplate), id: `register-batch-${i}`, ref: `REGISTER-BATCH-${i}` });
   for (let i = 0; i < 27; i++) {
     const request = { ...structuredClone(sourceRequest), id: `register-mrf-${i}`, ref: `REGISTER-MRF-${i}`, createdAt: "2026-10-07T00:00:00Z" };
     fixture.requests.push(request);
@@ -68,6 +70,10 @@ try {
   assert.equal(await run("return [...document.querySelectorAll('.accounting-mrf')].every(group=>!group.open)&&![...document.querySelectorAll('.accounting-po-list')].some(table=>table.checkVisibility());"),true,'MRFs begin collapsed and PO tables are hidden');
   await click('.accounting-mrf summary');
   assert.equal(await run("return document.querySelector('.accounting-mrf').open&&document.querySelector('.accounting-po-list').checkVisibility();"),true,'Expanding an MRF reveals its POs');
+  // Prevent navigation temporarily to verify the link does not toggle its group.
+  await run("const link=document.querySelector('.accounting-mrf summary a');link.addEventListener('click',event=>event.preventDefault(),{once:true});link.click();return true;");
+  assert.equal(await run("return document.querySelector('.accounting-mrf').open;"),true,'View MRF link does not toggle the disclosure');
+  assert.equal(await run("const group=document.querySelector('.accounting-mrf'),summary=group.querySelector(':scope>summary'),table=group.querySelector('.accounting-po-scroll');return !!summary.querySelector('a[href^=\"/requests/\"]')&&table.getBoundingClientRect().top-summary.getBoundingClientRect().bottom<=13;"),true,'MRF link shares the summary and expanded PO table starts without an empty action row');
   await click('.accounting-mrf summary');
   assert.equal(await run("return !document.querySelector('.accounting-mrf').open;"),true,'Clicking the MRF header collapses its POs');
   await run("document.querySelector('.accounting-mrf summary').focus();return true;");
@@ -105,6 +111,11 @@ try {
   }
   await call("Emulation.clearDeviceMetricsOverride");
   await run("document.documentElement.dataset.theme='light';return true;");
+  const requestHref = await run("const link=document.querySelector('.accounting-mrf summary a');link.focus();return link.getAttribute('href');");
+  await call('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13 });
+  await call('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13 });
+  await wait(`return location.pathname===${JSON.stringify(requestHref)};`);
+  await navigate('/accounting');
   if (process.argv.includes("--accounting-only")) {
     assert.equal(await run("return localStorage.getItem('hml-constructsync-demo-v12');"), before, "Accounting disclosures change no records");
     console.log(`Accounting smoke passed: collapse/expand, keyboard controls, search, complete MRF pagination and responsive light/dark layouts. Screenshots: ${profile}`);
@@ -121,40 +132,68 @@ try {
     await click('.view-tabs [role=tab]:last-child');
     assert.equal(await run("return document.querySelector('input[aria-label=\"Search ready deliveries\"]').value;"),'REGISTER-PO');
     assert.equal(await run("return document.querySelector('select[aria-label=\"ready POs per page\"]').value;"),'50','Delivery views retain independent controls');
-    await navigate("/suppliers"); await click('.suppliers-register tbody button');
-    await wait("return !!document.querySelector('.record-dialog[open]');");
-    await call("Input.dispatchKeyEvent", { type: "keyDown", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 });
-    await wait("return !document.querySelector('.record-dialog[open]')&&document.activeElement===document.querySelector('.suppliers-register tbody button');");
-    await navigate("/requests/m1/quotes");
-    await click('.quote-editor-header button[popoverTarget]');
-    assert.equal(await run("const menu=document.querySelector('.row-action-menu:popover-open'),rect=menu.getBoundingClientRect();return rect.left>=0&&rect.right<=innerWidth&&rect.bottom<=innerHeight;"), true, "Quotation action popover fits");
-    await call("Input.dispatchKeyEvent", { type: "keyDown", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 });
-    assert.equal(await run("return !!document.querySelector('.row-action-menu:popover-open');"), false);
-    await navigate("/requests");
-    await call("Emulation.setDeviceMetricsOverride", { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false });await sleep(150);
-    await writeFile(path.join(profile, "register-desktop.png"), Buffer.from((await call("Page.captureScreenshot", { format: "png" })).data, "base64"));
-    assert.equal(await run("return localStorage.getItem('hml-constructsync-demo-v12');"), before, "Register and modal inspection changes no records");
-    // Inspect compact settings and focus outlines at the supported viewport widths.
-    await click('.masthead-account');
-    await run("[...document.querySelectorAll('.role-options button')].find(el=>el.textContent.includes('Administrator')).click();return true;");
-    await navigate('/admin');await click('.admin-projects tbody button');
-    await click('.record-dialog[open] [role=tab]:nth-child(2)');
-    for(const width of [1440,900,801,768,414,375,320]){
-      await call('Emulation.setDeviceMetricsOverride',{width,height:width<800?568:900,deviceScaleFactor:1,mobile:width<800});
-      for(const theme of ['light','dark']){
-        await run(`document.documentElement.dataset.theme=${JSON.stringify(theme)};const input=document.querySelector('.record-dialog[open] .drive-folder-form input');input.focus();return true;`);await sleep(150);
-        const modalGeometry=await run("const modal=document.querySelector('.record-dialog[open]').getBoundingClientRect(),body=document.querySelector('.record-dialog[open] .record-dialog-body').getBoundingClientRect(),input=document.querySelector('.record-dialog[open] .drive-folder-form input').getBoundingClientRect(),gutter=Math.max(20,Math.min(56,innerWidth*.05));return {left:modal.left,right:innerWidth-modal.right,top:modal.top,bottom:innerHeight-modal.bottom,inputLeft:input.left-body.left,inputRight:body.right-input.right,gutter};");
-        assert.equal(modalGeometry.left>=modalGeometry.gutter-1&&modalGeometry.right>=modalGeometry.gutter-1&&modalGeometry.top>=0&&modalGeometry.bottom>=0&&modalGeometry.inputLeft>=5&&modalGeometry.inputRight>=5,true,`Project modal has clear side margins and a fitting input at ${width}/${theme}: ${JSON.stringify(modalGeometry)}`);
-        if(width===1440)assert.equal(await run("return document.querySelector('.record-dialog[open]').getBoundingClientRect().height<600;"),true,'Short settings fit their content');
-        if(width===1440||width===900||width===375)await writeFile(path.join(profile,`project-modal-${width}-${theme}.png`),Buffer.from((await call('Page.captureScreenshot',{format:'png'})).data,'base64'));
+    await click('.view-tabs [role=tab]:first-child');
+    await fill('input[aria-label="Search deliveries"]','');
+    for (const [width, height, minimum] of [[1440, 480, 480], [375, 568, 420]]) {
+      await call('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile: width < 800 }); await sleep(180);
+      assert.equal(await run(`const table=document.querySelector('.delivery-overview-table');return table.getBoundingClientRect().height>=${minimum}&&parseFloat(getComputedStyle(table).minHeight)===${minimum};`), true, `Delivery table has increased usable height at ${width}px`);
+      await run("const table=document.querySelector('.delivery-overview-table'),body=table.querySelector('.register-scroll');window.scrollTo(0,scrollY+table.getBoundingClientRect().top-76);body.scrollTop=body.scrollHeight;return true;");
+      assert.equal(await run("const table=document.querySelector('.delivery-overview-table'),body=table.querySelector('.register-scroll'),header=body.querySelector('thead th').getBoundingClientRect(),footer=table.querySelector('.register-footer').getBoundingClientRect();return body.scrollHeight>body.clientHeight&&Math.abs(header.top-body.getBoundingClientRect().top)<2&&footer.bottom<=table.getBoundingClientRect().bottom;"), true, 'Tall delivery table retains scrolling body, fixed header and pagination');
+    }
+    await call('Emulation.clearDeviceMetricsOverride');
+    await navigate('/inventory');
+    for (const [width, height] of [[1440, 480], [375, 568]]) {
+      await call('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile: width < 800 });
+      await run('window.scrollTo(0,0);return true;'); await sleep(180);
+      const baseline = await run("return {height:document.querySelector('.register').getBoundingClientRect().height,page:document.documentElement.scrollHeight};");
+      for (let i = 0; i < 6; i++) {
+        await run('window.scrollTo(0,document.documentElement.scrollHeight);return true;'); await sleep(50);
+        await fill('select[aria-label="Sort inventory"]', i % 2 === 0 ? 'za' : 'az'); await sleep(100);
+        await fill('input[aria-label="Search inventory"]', i % 2 === 0 ? 'no-matches' : '');
+        await fill('select[aria-label="materials per page"]', i % 2 === 0 ? 25 : 10); await sleep(100);
+        assert.equal(await run(`const el=document.querySelector('.register');return Math.abs(el.getBoundingClientRect().height-${baseline.height})<=1&&Math.abs(document.documentElement.scrollHeight-${baseline.page})<=1;`), true, `Inventory height stays stable when sorting at the bottom (${width}px, iteration ${i})`);
       }
     }
-    await click('.record-dialog[open] .record-modal-close');
-    await navigate('/dashboard');
-    await click('.request-monitoring tbody button');await sleep(100);
-    await run("document.querySelector('.record-dialog[open] .record-dialog-body').scrollTop=200;return true;");
-    assert.equal(await run("const modal=document.querySelector('.record-dialog[open]').getBoundingClientRect(),heading=document.querySelector('.record-dialog[open] .record-dialog-heading').getBoundingClientRect(),body=document.querySelector('.record-dialog[open] .record-dialog-body');return modal.bottom<=innerHeight&&heading.top>=0&&heading.bottom<=innerHeight&&body.scrollHeight>body.clientHeight&&body.scrollTop>0;"),true,'Long record details keep a fixed header and scrolling body');
-    await click('.record-dialog[open] .record-modal-close');
-    console.log(`Register smoke passed: complete Accounting groups, page sizes/ranges/resets, fixed headers/footers, responsive themes, modal focus and quotation action popovers. Screenshots: ${profile}`);
+    await call('Emulation.clearDeviceMetricsOverride');
+    if (!process.argv.includes('--tables-only')) {
+      await navigate("/suppliers"); await click('.suppliers-register tbody button');
+      await wait("return !!document.querySelector('.record-dialog[open]');");
+      await call("Input.dispatchKeyEvent", { type: "keyDown", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 });
+      await wait("return !document.querySelector('.record-dialog[open]')&&document.activeElement===document.querySelector('.suppliers-register tbody button');");
+      await navigate("/requests/m1/quotes");
+      await click('.quote-editor-header button[popoverTarget]');
+      assert.equal(await run("const menu=document.querySelector('.row-action-menu:popover-open'),rect=menu.getBoundingClientRect();return rect.left>=0&&rect.right<=innerWidth&&rect.bottom<=innerHeight;"), true, "Quotation action popover fits");
+      await call("Input.dispatchKeyEvent", { type: "keyDown", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 });
+      assert.equal(await run("return !!document.querySelector('.row-action-menu:popover-open');"), false);
+      await navigate("/requests");
+      await call("Emulation.setDeviceMetricsOverride", { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false });await sleep(150);
+      await writeFile(path.join(profile, "register-desktop.png"), Buffer.from((await call("Page.captureScreenshot", { format: "png" })).data, "base64"));
+      assert.equal(await run("return localStorage.getItem('hml-constructsync-demo-v12');"), before, "Register and modal inspection changes no records");
+      // Inspect compact settings and focus outlines at the supported viewport widths.
+      await click('.masthead-account');
+      await run("[...document.querySelectorAll('.role-options button')].find(el=>el.textContent.includes('Administrator')).click();return true;");
+      await navigate('/admin');await click('.admin-projects tbody button');
+      await click('.record-dialog[open] [role=tab]:nth-child(2)');
+      for(const width of [1440,900,801,768,414,375,320]){
+        await call('Emulation.setDeviceMetricsOverride',{width,height:width<800?568:900,deviceScaleFactor:1,mobile:width<800});
+        for(const theme of ['light','dark']){
+          await run(`document.documentElement.dataset.theme=${JSON.stringify(theme)};const input=document.querySelector('.record-dialog[open] .drive-folder-form input');input.focus();return true;`);await sleep(150);
+          const modalGeometry=await run("const modal=document.querySelector('.record-dialog[open]').getBoundingClientRect(),body=document.querySelector('.record-dialog[open] .record-dialog-body').getBoundingClientRect(),input=document.querySelector('.record-dialog[open] .drive-folder-form input').getBoundingClientRect(),gutter=Math.max(20,Math.min(56,innerWidth*.05));return {left:modal.left,right:innerWidth-modal.right,top:modal.top,bottom:innerHeight-modal.bottom,inputLeft:input.left-body.left,inputRight:body.right-input.right,gutter};");
+          assert.equal(modalGeometry.left>=modalGeometry.gutter-1&&modalGeometry.right>=modalGeometry.gutter-1&&modalGeometry.top>=0&&modalGeometry.bottom>=0&&modalGeometry.inputLeft>=5&&modalGeometry.inputRight>=5,true,`Project modal has clear side margins and a fitting input at ${width}/${theme}: ${JSON.stringify(modalGeometry)}`);
+          if(width===1440)assert.equal(await run("return document.querySelector('.record-dialog[open]').getBoundingClientRect().height<600;"),true,'Short settings fit their content');
+          if(width===1440||width===900||width===375)await writeFile(path.join(profile,`project-modal-${width}-${theme}.png`),Buffer.from((await call('Page.captureScreenshot',{format:'png'})).data,'base64'));
+        }
+      }
+      await click('.record-dialog[open] .record-modal-close');
+      await navigate('/dashboard');
+      await click('.request-monitoring tbody button');await sleep(100);
+      await run("document.querySelector('.record-dialog[open] .record-dialog-body').scrollTop=200;return true;");
+      assert.equal(await run("const modal=document.querySelector('.record-dialog[open]').getBoundingClientRect(),heading=document.querySelector('.record-dialog[open] .record-dialog-heading').getBoundingClientRect(),body=document.querySelector('.record-dialog[open] .record-dialog-body');return modal.bottom<=innerHeight&&heading.top>=0&&heading.bottom<=innerHeight&&body.scrollHeight>body.clientHeight&&body.scrollTop>0;"),true,'Long record details keep a fixed header and scrolling body');
+      await click('.record-dialog[open] .record-modal-close');
+      console.log(`Register smoke passed: complete Accounting groups, page sizes/ranges/resets, fixed headers/footers, responsive themes, modal focus and quotation action popovers. Screenshots: ${profile}`);
+    } else {
+      assert.equal(await run("return localStorage.getItem('hml-constructsync-demo-v12');"), before, 'Table layout and pagination change no records');
+      console.log(`Table smoke passed: Accounting groups, pagination, filters, responsive themes, larger delivery lists, fixed headers and local scrolling. Screenshots: ${profile}`);
+    }
   }
 } finally { ws?.close(); browser.kill(); }

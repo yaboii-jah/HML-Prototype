@@ -24,9 +24,13 @@ export function RegisterFrame({ children, footer, filters, embedded = false, cla
     const update = () => {
       if (!root.checkVisibility()) return;
       const viewport = window.visualViewport;
-      const available = (viewport?.offsetTop || 0) + (viewport?.height || innerHeight) - root.getBoundingClientRect().top - 16;
+      // Viewport-relative positions change with page scrolling. Use the document
+      // position so observer/filter updates cannot progressively grow the table.
+      const documentTop = root.getBoundingClientRect().top + window.scrollY;
+      const available = (viewport?.height || innerHeight) - documentTop - 16;
       const contentHeight = (table?.offsetHeight || 0) + (footer?.offsetHeight || 0) + (toolbar?.offsetHeight || 0) + 20;
-      root.style.setProperty("--register-height", `${embedded ? Math.min(520, Math.max(160, contentHeight)) : Math.max(300, available)}px`);
+      const minimumHeight = parseFloat(getComputedStyle(root).minHeight) || 480;
+      root.style.setProperty("--register-height", `${embedded ? Math.min(520, Math.max(160, contentHeight)) : Math.max(minimumHeight, available)}px`);
     };
     const observer = new ResizeObserver(update);
     observer.observe(document.documentElement);

@@ -20,6 +20,11 @@ export const metadata: Metadata = {
 
 const themeScript = `
   try {
+    document.documentElement.dataset.sidebar = localStorage.getItem("constructsync-sidebar") === "collapsed" ? "collapsed" : "expanded";
+  } catch {
+    document.documentElement.dataset.sidebar = "expanded";
+  }
+  try {
     const savedTheme = localStorage.getItem("constructsync-theme");
     const theme = savedTheme === "light" || savedTheme === "dark"
       ? savedTheme
