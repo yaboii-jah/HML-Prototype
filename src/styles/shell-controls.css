@@ -1,0 +1,27 @@
+.side-product{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.sidebar-toggle{width:32px;height:32px}
+.brand-compact{display:none;color:var(--brand);font-size:13px;font-weight:800;line-height:1;letter-spacing:-.03em}
+.sidebar-tooltip{position:fixed;z-index:55;transform:translateY(-50%);max-width:240px;padding:8px 12px;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:var(--ink);box-shadow:var(--shadow);font-size:12px;pointer-events:none;overflow-wrap:anywhere}
+html:not([data-sidebar="collapsed"]) .sidebar-tooltip{display:none}
+@media(min-width:801px){
+  html[data-sidebar="collapsed"] .app-frame{grid-template-columns:72px minmax(0,1fr)}
+  html[data-sidebar="collapsed"] .side-brand{padding:0;justify-content:center}
+  html[data-sidebar="collapsed"] .brand-logo img{display:none}
+  html[data-sidebar="collapsed"] .brand-compact{display:block}
+  html[data-sidebar="collapsed"] .side-product{padding-inline:0;justify-content:center}
+  html[data-sidebar="collapsed"] .side-product>strong{display:none}
+  html[data-sidebar="collapsed"] .compact-navigation>nav>.side-link{position:relative;justify-content:center;padding-inline:0;gap:0}
+  html[data-sidebar="collapsed"] .compact-navigation>nav>.side-link>.nav-label{position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+  html[data-sidebar="collapsed"] .compact-navigation>nav>.side-link>i{position:absolute;right:0;top:0;min-width:16px;height:16px;padding:0 2px;font-size:9px}
+  html[data-sidebar="collapsed"] .skeleton-nav>.skeleton{max-width:100%}
+}
+@media(max-width:800px){.sidebar-toggle,.sidebar-tooltip{display:none}}
+.notification-popover{position:fixed;right:auto;display:flex;flex-direction:column;overflow:hidden;box-sizing:border-box;padding:14px;max-height:calc(100dvh - 88px)}
+.notification-popover .popover-heading,.notification-footer{flex:none}
+.notification-list{min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable;overflow-wrap:anywhere}
+.notification-list>a{display:block;border-top:1px solid var(--line);padding:10px 4px}
+.notification-list>a:hover{background:var(--color-notification-popover-surface)}
+html[data-theme="dark"] .notification-list>a:hover{background:var(--color-dark-side-link-surface)}
+.notification-list>a:focus-visible{outline:2px solid var(--focus);outline-offset:-2px}
+.notification-footer{background:var(--surface);overflow-wrap:anywhere}
+@media(prefers-reduced-motion:reduce){.side-nav{transition:none}}

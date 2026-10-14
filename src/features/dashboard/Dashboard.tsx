@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useDemo } from "@/src/app-state/DemoProvider";
 import { Badge, Empty, PageHeader } from "@/src/components/ui/Primitives";
-import { money } from "@/src/domain/format";
+import { money, roleLabel } from "@/src/domain/format";
 import { dashboardMetrics, tasksFor } from "@/src/domain/queues";
 import { RequestMonitoringTable } from "@/src/features/requests/RequestMonitoringTable";
 import { budgetFor } from "@/src/domain/selectors";
@@ -16,7 +16,7 @@ export function Dashboard() {
   const tasks = tasksFor(state, siteIds).filter(task => access.canOpen(task.href));
   const visibleSites = state.sites.filter(site => access.canReadProject(site.id) && (state.siteFilter === "all" || site.id === state.siteFilter));
   return <>
-    <PageHeader eyebrow={`${state.role} workspace`} title="Operations dashboard" description={access.sitePersonnel ? "Your next decisions and progress across assigned projects." : "Your next decisions and the current position of every project."} actions={state.role === "Site Personnel" && access.projectIds.length ? <Link href="/requests/new" className="button primary">New material request</Link> : undefined}/>
+    <PageHeader eyebrow={`${roleLabel(state.role)} workspace`} title="Operations dashboard" description={access.sitePersonnel ? "Your next decisions and progress across assigned projects." : "Your next decisions and the current position of every project."} actions={state.role === "Site Personnel" && access.projectIds.length ? <Link href="/requests/new" className="button primary">New material request</Link> : undefined}/>
     <AssignmentNotice/>
     {!access.sitePersonnel && !state.sites.length && <section className="panel"><span className="eyebrow">START HERE</span><h2>Build your workflow from an empty workspace</h2><p>A Project Manager or Administrator adds projects, then Site Personnel creates material requests. Each department receives the next task in its queue.</p><Link className="button primary" href="/projects">Set up project</Link></section>}
     <div className="metric-strip dashboard-metrics">

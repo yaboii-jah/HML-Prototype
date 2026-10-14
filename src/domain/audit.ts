@@ -1,10 +1,11 @@
 import { ROLES, type Activity, type AuditEntityType, type AuditEventType, type AuditIdentity, type DemoSnapshot, type HistoricalActor, type Quote } from "./types.ts";
 import type { Command } from "./commands.ts";
+import { roleLabel } from "./format.ts";
 
 export const copyIdentity = (identity?: AuditIdentity): AuditIdentity | undefined => identity ? { name: identity.name, email: identity.email, role: identity.role, ...(identity.userId ? { userId: identity.userId } : {}), ...(identity.sessionRevision ? { sessionRevision: identity.sessionRevision } : {}) } : undefined;
 export const validIdentity = (identity: AuditIdentity) => typeof identity.name === "string" && !!identity.name.trim() && typeof identity.email === "string" && !!identity.email.trim() && (ROLES.includes(identity.role) || String(identity.role) === "Management");
 export const actorName = (role: HistoricalActor, identity?: AuditIdentity) => identity && validIdentity(identity) && identity.role === role ? identity.name : "User not recorded";
-export const actorText = (role: HistoricalActor, identity?: AuditIdentity) => `${actorName(role, identity)} · ${role}`;
+export const actorText = (role: HistoricalActor, identity?: AuditIdentity) => `${actorName(role, identity)} · ${roleLabel(role)}`;
 export function auditTime(value?: string) {
   if (!value || !Number.isFinite(Date.parse(value))) return "Time not recorded";
   return new Intl.DateTimeFormat("en-PH", { timeZone: "Asia/Manila", month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit", second: "2-digit" }).format(new Date(value));

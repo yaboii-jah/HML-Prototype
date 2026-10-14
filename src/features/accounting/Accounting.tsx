@@ -42,8 +42,7 @@ export function Accounting() {
         const count = pos.length === totalCount ? `${totalCount} purchase order${totalCount === 1 ? "" : "s"}` : `${pos.length} of ${totalCount} purchase orders match`;
         return <tr key={request.id} className="accounting-group"><td>
           <CollapsibleSection key={`${request.id}-${search.trim()}-${state.siteFilter}`} title={request.ref || "Unnumbered MRF"} defaultOpen={!!search.trim()} stickyHeading={false} className="accounting-mrf"
-            summary={<span className="accounting-mrf-summary"><span>{siteName(state, request.siteId)} · {count} · {eligible.length} approved</span><span>Approved outstanding balance <strong>{money(balance)}</strong></span></span>}>
-            <div className="accounting-mrf-heading"><Link className="text-link" href={`/requests/${request.id}`}>View MRF →</Link></div>
+            summary={<span className="accounting-mrf-summary"><span className="accounting-mrf-project" title={siteName(state, request.siteId)}>{siteName(state, request.siteId)}</span><span className="accounting-mrf-counts">{count} · {eligible.length} approved</span><span className="accounting-mrf-actions"><span>Approved outstanding balance <strong>{money(balance)}</strong></span><Link className="text-link accounting-mrf-link" href={`/requests/${request.id}`} onClick={event => event.stopPropagation()} onKeyDown={event => event.stopPropagation()}>View MRF →</Link></span></span>}>
             <div className="accounting-po-scroll" role="region" aria-label={`Purchase orders for ${request.ref || "unnumbered MRF"}`} tabIndex={0}>
               <table className="accounting-po-list"><caption>Purchase orders for {request.ref || "unnumbered MRF"}</caption>
                 <thead><tr><th>PO</th><th>Supplier</th><th>PO status</th><th>Documents</th><th>Payment</th><th className="numeric">Balance</th><th>Next action</th></tr></thead>
