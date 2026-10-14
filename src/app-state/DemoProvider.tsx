@@ -2,13 +2,16 @@
 
 import { ArchiveProvider } from "./ArchiveProvider";
 import { ToastProvider, useToasts } from "./ToastProvider";
-import { createContext, useContext, useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
 import { demoRepository, serverRepositoryView, type RepositoryView } from "@/src/mock/repository";
 import { demoSession, accountForCredentials, serverSessionView, type DemoSessionView } from "./demo-session";
 import type { Command, CommandResult } from "@/src/domain/commands";
 import type { AuditIdentity, OperationTarget, Role } from "@/src/domain/types";
 import { userDirectory, serverUserDirectory, type UserDirectoryView, type UserChange } from "./user-directory";
 import { bindAccountCommands, type CommandRunner } from "./command-gateway";
+import { createReadAccess, type ReadAccess } from "@/src/domain/read-access";
+
+const NO_ASSIGNMENTS: readonly string[] = [];
 
 type DemoContextValue = RepositoryView & {
   run: (command: Command) => Promise<CommandResult>;
@@ -18,6 +21,7 @@ type DemoContextValue = RepositoryView & {
   signIn: (email: string, password: string) => Promise<{ ok: boolean; message: string }>;
   directory: UserDirectoryView;
   siteIds: readonly string[];
+  access: ReadAccess;
   manageUser: (change: UserChange) => Promise<{ ok: boolean; message: string }>;
   switchAccount: (id: string) => { ok: boolean; message: string };
   switchRole: (role: Role) => { ok: boolean; message: string };
@@ -49,7 +53,9 @@ function DemoSessionProvider({ children }: { children: ReactNode }) {
       void demoRepository.execute({ type: "setRole", role: session.role });
     }
   }, [session.role, snapshotRole]);
-  const siteIds = directory.users.find(user => user.id === session.userId)?.siteIds || [];
+  const siteIds = directory.users.find(user => user.id === session.userId)?.siteIds || NO_ASSIGNMENTS;
+  const access = useMemo(() => createReadAccess(view.snapshot, session.role, siteIds), [view.snapshot, session.role, siteIds]);
+  const snapshot = useMemo(() => view.snapshot && view.snapshot.siteFilter !== access.siteFilter ? { ...view.snapshot, siteFilter: access.siteFilter } : view.snapshot, [view.snapshot, access.siteFilter]);
   const gateway = bindAccountCommands(demoRepository, identityFor(session), () => identityFor(demoSession.read()), () => userDirectory.getSnapshot().users.find(user => user.id === demoSession.read().userId)?.siteIds || []);
   const run = async (command: Command) => {
     const result = await gateway.run(command);
@@ -90,7 +96,7 @@ function DemoSessionProvider({ children }: { children: ReactNode }) {
     return userDirectory.change(actor, change);
   };
   const reset = async () => { if (demoSession.read().role !== "Administrator") throw new Error("Workspace reset requires an Administrator."); await demoRepository.reset(); notify({ tone: "success", title: "Workspace cleared. Start by adding a project." }); };
-  return <ArchiveProvider><DemoContext.Provider value={{ ...view, run, beginOperation: gateway.beginOperation, session, signedOut, directory, siteIds, manageUser, signIn, switchRole, switchAccount, signOut, reset }}>{children}</DemoContext.Provider></ArchiveProvider>;
+  return <ArchiveProvider><DemoContext.Provider value={{ ...view, snapshot, access, run, beginOperation: gateway.beginOperation, session, signedOut, directory, siteIds, manageUser, signIn, switchRole, switchAccount, signOut, reset }}>{children}</DemoContext.Provider></ArchiveProvider>;
 }
 
 export function DemoProvider({ children }: { children: ReactNode }) {

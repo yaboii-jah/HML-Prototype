@@ -51,8 +51,8 @@ export function tasksFor(state: DemoSnapshot, siteIds?: readonly string[]): Task
   });
   return [...suitabilityTasks, ...transferTasks, ...receiptTasks, ...tasks].filter(task => role !== "Site Personnel" || siteIds === undefined || !!task.siteId && siteIds.includes(task.siteId)).filter(task => state.siteFilter === "all" || !task.siteId || task.siteId === state.siteFilter);
 }
-export function dashboardMetrics(state: DemoSnapshot) {
-  const matches = (siteId?: string) => state.siteFilter === "all" || siteId === state.siteFilter;
+export function dashboardMetrics(state: DemoSnapshot, canReadProject: (id?: string) => boolean = () => true) {
+  const matches = (siteId?: string) => canReadProject(siteId) && (state.siteFilter === "all" || siteId === state.siteFilter);
   const requests = state.requests.filter(r => matches(r.siteId));
   const pos = state.pos.filter(p => matches(requestForPO(state,p)?.siteId));
   return {

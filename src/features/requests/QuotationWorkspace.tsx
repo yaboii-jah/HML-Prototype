@@ -86,7 +86,7 @@ export function QuotationWorkspace({ id, initialMaterialId = "" }: { id: string;
   };
   const archiveQuote = async (quote: Quote, snapshot: DemoSnapshot = state) => {
     setArchivingQuoteId(quote.id); setError("");
-    try { const result = await perform(`quote-${quote.id}`, `Quotation ${quote.ref || quote.supplierDetails?.name || "files"}`, async progress => syncFinalizedQuote(snapshot, quote, await beginOperation({kind:"quote",id:quote.id}), progress)); if (!result.ok) setError(result.message); return result.ok; }
+    try { const result = await perform(`quote-${quote.id}`, `Quotation ${quote.ref || quote.supplierDetails?.name || "files"}`, async progress => syncFinalizedQuote(snapshot, quote, await beginOperation({kind:"quote",id:quote.id}), progress), {kind:"quote",id:quote.id}); if (!result.ok) setError(result.message); return result.ok; }
     catch (cause) { setError(cause instanceof Error ? cause.message : "Archive needs retry."); return false; }
     finally { setArchivingQuoteId(""); }
   };

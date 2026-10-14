@@ -15,7 +15,7 @@ import { useActionFeedback } from "@/src/app-state/action-feedback";
 import { Badge, Empty, Field, InlineError, PageHeader, RecordHeader } from "@/src/components/ui/Primitives";
 import { CloseButton } from "@/src/components/ui/CloseButton";
 import { useConfirmation } from "@/src/components/ui/ConfirmDialog";
-import { MissingRecord } from "@/src/components/ui/States";
+import { AssignmentNotice, MissingRecord } from "@/src/components/ui/States";
 import { dateText, money } from "@/src/domain/format";
 import { nextDocumentReference, projectCodeRequired } from "@/src/domain/document-numbering";
 import { newId } from "@/src/domain/ids";
@@ -52,15 +52,15 @@ type RequestDetails = { sourceRef: string; siteId: string; scopeId: string; ref:
 type RequestStep = 1 | 2 | 3;
 
 export function Requests() {
-  const { snapshot: state } = useDemo();
+  const { snapshot: state, access } = useDemo();
   const [search,setSearch]=useState(""), [status,setStatus]=useState("all"), [neededBy,setNeededBy]=useState(""), [sort,setSort]=useState("recent");
   if(!state)return null;
-  const rows=state.requests.filter(r=>(state.siteFilter==="all"||r.siteId===state.siteFilter)&&`${r.ref} ${r.items.map(i=>i.name).join(" ")}`.toLowerCase().includes(search.toLowerCase())&&(status==="all"||r.status===status)&&(!neededBy||r.items.some(item=>item.neededDate && item.neededDate<=neededBy))).sort((a,b)=>sort==="needed"?(earliestNeededDate(a)||"9999").localeCompare(earliestNeededDate(b)||"9999"):b.updatedAt.localeCompare(a.updatedAt));
-  return <><PageHeader eyebrow="MATERIAL REQUEST REGISTER" title="Material requests" description="Requirements, MRF decisions, quotations, and linked purchases." actions={state.role==="Site Personnel"?<Link className="button primary" href="/requests/new">+ New MRF</Link>:undefined}/><Register rows={rows} resetKey={search+status+neededBy+sort+state.siteFilter} filters={<><input aria-label="Search requests" placeholder="Search MRF or material" value={search} onChange={e=>setSearch(e.target.value)}/><select aria-label="Request status" value={status} onChange={e=>setStatus(e.target.value)}>{["all","draft","submitted","returned","approved","rejected"].map(s=><option key={s} value={s}>{s==="all"?"All statuses":s}</option>)}</select><input aria-label="Needed by date" type="date" value={neededBy} onChange={e=>setNeededBy(e.target.value)}/><select aria-label="Sort requests" value={sort} onChange={e=>setSort(e.target.value)}><option value="recent">Recently updated</option><option value="needed">Needed soonest</option></select></>} headers={<><th>MRF / material</th><th>Project</th><th>Earliest needed</th><th>Status</th><th>Updated</th></>} empty={state.requests.length ? "Try a different search, filter, or site." : "No material requests yet. Site Personnel can create the first MRF."} renderRow={r=><tr key={r.id}><td><Link className="table-primary" href={`/requests/${r.id}`}>{r.ref || "Unnumbered draft"}</Link><small>{`${r.items.length} materials · ${r.items.slice(0,2).map(i=>i.name).join(", ")}`}</small></td><td>{siteName(state,r.siteId)}</td><td>{earliestNeededDate(r)?dateText(earliestNeededDate(r)):"—"}</td><td><Badge value={r.status}/></td><td>{dateText(r.updatedAt)}</td></tr>}/></>;
+  const rows=state.requests.filter(r=>access.canReadProject(r.siteId)&&(state.siteFilter==="all"||r.siteId===state.siteFilter)&&`${r.ref} ${r.items.map(i=>i.name).join(" ")}`.toLowerCase().includes(search.toLowerCase())&&(status==="all"||r.status===status)&&(!neededBy||r.items.some(item=>item.neededDate && item.neededDate<=neededBy))).sort((a,b)=>sort==="needed"?(earliestNeededDate(a)||"9999").localeCompare(earliestNeededDate(b)||"9999"):b.updatedAt.localeCompare(a.updatedAt));
+  return <><PageHeader eyebrow="MATERIAL REQUEST REGISTER" title="Material requests" description="Requirements, MRF decisions, quotations, and linked purchases." actions={state.role==="Site Personnel"&&access.projectIds.length>0?<Link className="button primary" href="/requests/new">+ New MRF</Link>:undefined}/><AssignmentNotice/><Register rows={rows} resetKey={search+status+neededBy+sort+state.siteFilter} filters={<><input aria-label="Search requests" placeholder="Search MRF or material" value={search} onChange={e=>setSearch(e.target.value)}/><select aria-label="Request status" value={status} onChange={e=>setStatus(e.target.value)}>{["all","draft","submitted","returned","approved","rejected"].map(s=><option key={s} value={s}>{s==="all"?"All statuses":s}</option>)}</select><input aria-label="Needed by date" type="date" value={neededBy} onChange={e=>setNeededBy(e.target.value)}/><select aria-label="Sort requests" value={sort} onChange={e=>setSort(e.target.value)}><option value="recent">Recently updated</option><option value="needed">Needed soonest</option></select></>} headers={<><th>MRF / material</th><th>Project</th><th>Earliest needed</th><th>Status</th><th>Updated</th></>} empty={state.requests.length ? "Try a different search, filter, or site." : "No material requests yet. Site Personnel can create the first MRF."} renderRow={r=><tr key={r.id}><td><Link className="table-primary" href={`/requests/${r.id}`}>{r.ref || "Unnumbered draft"}</Link><small>{`${r.items.length} materials · ${r.items.slice(0,2).map(i=>i.name).join(", ")}`}</small></td><td>{siteName(state,r.siteId)}</td><td>{earliestNeededDate(r)?dateText(earliestNeededDate(r)):"—"}</td><td><Badge value={r.status}/></td><td>{dateText(r.updatedAt)}</td></tr>}/></>;
 }
 
 export function RequestForm({ id }: { id?: string }) {
-  const { snapshot: state, run, siteIds } = useDemo();
+  const { snapshot: state, run, siteIds, access } = useDemo();
   const router = useRouter();
   const original = state?.requests.find(request => request.id === id);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -76,7 +76,7 @@ export function RequestForm({ id }: { id?: string }) {
   const documentsOnly = original?.correction?.scope === "documents";
   const activeSupportingPdf = documents.find(document => document.type === "Supporting PDF");
   const [details, setDetails] = useState<RequestDetails>(() => ({
-    siteId: original?.siteId || (state?.siteFilter !== "all" ? state?.siteFilter : "") || state?.sites[0]?.id || "",
+    siteId: original?.siteId || (state?.siteFilter !== "all" ? state?.siteFilter : "") || state?.sites.find(site => access.canReadProject(site.id))?.id || "",
     scopeId: original?.scopeId || "",
     sourceRef: original?.sourceRef || "", ref: original?.ref || "", requestDate: original?.requestDate || todayLocal(),
     requestedBy: original?.requestedBy || "", approvedBy: original?.approvedBy || "",
@@ -442,6 +442,7 @@ export function RequestForm({ id }: { id?: string }) {
 }
 
 function RequestMaterialList({ state, siteId, items, requestId }: { state: DemoSnapshot; siteId: string; items: Item[]; requestId: string }) {
+  const { access } = useDemo();
   const [viewingId, setViewingId] = useState<string | null>(null);
   const viewDialogRef = useRef<HTMLDialogElement>(null);
   const closeViewer = () => { viewDialogRef.current?.close(); setViewingId(null); };
@@ -449,7 +450,7 @@ function RequestMaterialList({ state, siteId, items, requestId }: { state: DemoS
     setViewingId(itemId);
     window.requestAnimationFrame(() => { if (viewDialogRef.current && !viewDialogRef.current.open) viewDialogRef.current.showModal(); });
   };
-  const offersFor = (itemId: string) => state.quotes.some(quote => quote.mrfId === requestId && quote.reviewStatus !== "draft" && quote.lines?.some(line => line.requestItemId === itemId));
+  const offersFor = (itemId: string) => access.canOpen(`/requests/${requestId}/quotes`) && state.quotes.some(quote => quote.mrfId === requestId && quote.reviewStatus !== "draft" && quote.lines?.some(line => line.requestItemId === itemId));
 
   return <section className="panel request-materials-panel" aria-label="Materials">
     <div className="request-materials-heading">
@@ -502,14 +503,14 @@ function RequestMaterialList({ state, siteId, items, requestId }: { state: DemoS
 
 export function RequestDetail({ id }: { id: string }) {
   const { perform } = useArchive();
-  const { snapshot: state, run, beginOperation, siteIds }=useDemo(); const [decision,setDecision]=useState<"return"|"reject"|null>(null),[error,setError]=useState("");
+  const { snapshot: state, run, beginOperation, siteIds, access }=useDemo(); const [decision,setDecision]=useState<"return"|"reject"|null>(null),[error,setError]=useState("");
   const [archiving,setArchiving]=useState(false),[reopenOpen,setReopenOpen]=useState(false);
   const { notify, update, dismiss } = useActionFeedback();
   const { confirm, confirmation } = useConfirmation();
   if(!state)return null; const request=state.requests.find(r=>r.id===id); if(!request)return <MissingRecord name="MRF" listHref="/requests"/>;
   const pos=posForRequest(state,request),po=pos[0];
   const currentArchive = request.archive?.versions.at(-1);
-  const archive=async(source=state)=>{const current=source.requests.find(value=>value.id===id),site=source.sites.find(value=>value.id===current?.siteId);if(!current||!site)return;setArchiving(true);try{const result=await perform(`request-${current.id}`, `MRF ${current.ref}`, async progress => syncApprovedRequest(current,site,await beginOperation({kind:"request",id:current.id}),progress));setError(result.ok?"":result.message);}catch(cause){setError(cause instanceof Error?cause.message:"Archive needs retry.");}finally{setArchiving(false);}};
+  const archive=async(source=state)=>{const current=source.requests.find(value=>value.id===id),site=source.sites.find(value=>value.id===current?.siteId);if(!current||!site)return;setArchiving(true);try{const result=await perform(`request-${current.id}`, `MRF ${current.ref}`, async progress => syncApprovedRequest(current,site,await beginOperation({kind:"request",id:current.id}),progress), {kind:"request",id:current.id});setError(result.ok?"":result.message);}catch(cause){setError(cause instanceof Error?cause.message:"Archive needs retry.");}finally{setArchiving(false);}};
   const decide=async(choice:"approve"|"return"|"reject",reason?:string)=>{if(!await confirm(`${choice === "approve" ? "Approve" : choice === "return" ? "Return" : "Reject"} ${request.ref}?`,choice === "approve" ? "The approved MRF and supporting PDF will be archived to Google Drive before Procurement begins." : choice === "return" ? "Site Personnel will revise this request." : "This request will close.",`${choice === "approve" ? "Approve" : choice === "return" ? "Return" : "Reject"} request`,choice === "reject"))return;const toast=notify({tone:"progress",title:choice==="approve"?`Approving ${request.ref}…`:choice==="return"?`Returning ${request.ref}…`:`Rejecting ${request.ref}…`,detail:choice==="approve"?"Archiving the approved MRF and supporting PDF to Google Drive":undefined});const result=await run({type:"reviewRequest",id,decision:choice,reason});if(!result.ok){setError(result.message);update(toast,{tone:"error",title:result.message,detail:request.ref});}else{setDecision(null);setError("");if(choice==="approve"){dismiss(toast);await archive(result.snapshot);}else update(toast,{tone:choice==="reject"?"warning":"success",title:result.message,detail:request.ref});}};
   return <><RecordHeader backHref="/requests" backLabel="Material requests" eyebrow={siteName(state,request.siteId)} title={request.ref || "Unnumbered draft"} badges={<><Badge value={request.status}/>{po&&<Badge value={po.status}>{poStatusLabel(po.status)}</Badge>}</>}/>
     <RequestLifecycle key={request.id} state={state} requestId={id}/>
@@ -524,7 +525,7 @@ export function RequestDetail({ id }: { id: string }) {
     {state.role==="Procurement"&&request.status==="approved"&&!request.correction&&request.archive?.status==="complete"&&<section className="panel"><h2 className="panel-title">Correct approved MRF</h2><p className="helper-note">Site Personnel will revise the same request. Once quotations or POs exist, only the supporting PDF can change.</p>{reopenOpen ? <form onSubmit={async event=>{event.preventDefault();const reason=String(new FormData(event.currentTarget).get("reason")||"");const toast=notify({tone:"progress",title:"Reopening approved MRF…",detail:request.ref});const result=await run({type:"reopenApprovedRequest",id,reason});setError(result.ok?"":result.message);update(toast,result.ok?{tone:"warning",title:result.message,detail:request.ref}:{tone:"error",title:result.message,detail:request.ref});if(result.ok)setReopenOpen(false);}}><Field label="Correction reason"><textarea name="reason" required minLength={5}/></Field><div className="button-row"><button type="button" className="button secondary" onClick={()=>setReopenOpen(false)}>Cancel</button><button className="button primary">Send back to Site Personnel</button></div></form> : <button className="button secondary" onClick={()=>setReopenOpen(true)}>Reopen for correction</button>}</section>}
     <InlineError message={error}/>
     {confirmation}
-    {procurementReady(request)&&<section className="action-bar"><div><strong>Supplier comparison</strong><p>{state.quotes.filter(q=>q.mrfId===id).length} quotations on file. The lowest price is highlighted but never selected automatically.</p></div><Link className="button primary" href={`/requests/${id}/quotes`}>Compare quotations →</Link></section>}
+    {!access.sitePersonnel&&procurementReady(request)&&<section className="action-bar"><div><strong>Supplier comparison</strong><p>{state.quotes.filter(q=>q.mrfId===id).length} quotations on file. The lowest price is highlighted but never selected automatically.</p></div><Link className="button primary" href={`/requests/${id}/quotes`}>Compare quotations →</Link></section>}
 </div></>;
 }
 

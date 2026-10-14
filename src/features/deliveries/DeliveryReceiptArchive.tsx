@@ -36,20 +36,20 @@ export function useDeliveryReceiptArchive() {
           await pipeline({ type: "failDeliveryReceiptArchive", batchId, receiptId: receipt.id, error: cause instanceof Error ? cause.message : "Receipt archive needs retry." });
           throw cause;
         }
-      }); } catch (cause) { failures.push(cause instanceof Error ? cause.message : "Receipt archive needs retry."); }
+      }, { kind: "delivery-receipt", batchId, receiptId: receipt.id }); } catch (cause) { failures.push(cause instanceof Error ? cause.message : "Receipt archive needs retry."); }
     }
     if (failures.length) throw new Error(failures.join(" "));
   };
 }
 
-export function DeliveryReceiptArchive({ batch }: { batch: Batch }) {
+export function DeliveryReceiptArchive({ batch, readOnly = false }: { batch: Batch; readOnly?: boolean }) {
   const { snapshot: state, run } = useDemo();
   const { jobs } = useArchive();
   const archive = useDeliveryReceiptArchive();
   const [error, setError] = useState(""), [busy, setBusy] = useState(false);
   if (!state) return null;
   const receipts = batch.receiptVersions || [], current = receipts.at(-1);
-  const eligible = ["Accounting / Auditing", "Administrator", isSiteBatch(batch) ? "Site Personnel" : "Procurement"].includes(state.role);
+  const eligible = !readOnly && ["Accounting / Auditing", "Administrator", isSiteBatch(batch) ? "Site Personnel" : "Procurement"].includes(state.role);
   const active = busy || receipts.some(receipt => jobs.some(job => job.id === `delivery-receipt-${receipt.id}` && job.phase !== "complete" && !job.error));
   const retry = async () => {
     if (active) return; setBusy(true); setError("");

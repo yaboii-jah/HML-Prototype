@@ -56,7 +56,7 @@ export function AccountingPOReview({ po }: { po: PO }) {
   const approvalBlocked = scopeError || (total > scopeBudget.available ? "This PO exceeds the available scope budget." : total > budget.available ? "This PO exceeds the available project budget." : "");
   const busy = jobs.some(job => job.id === `po-${po.id}` && job.phase !== "complete" && !job.error);
   const archive = async (snapshot = state, approved = po) => {
-    try { const result = await perform(`po-${approved.id}`, `PO ${approved.ref}`, async progress => syncApprovedPO(snapshot, approved, await beginOperation({kind:"po",id:approved.id}), progress));
+    try { const result = await perform(`po-${approved.id}`, `PO ${approved.ref}`, async progress => syncApprovedPO(snapshot, approved, await beginOperation({kind:"po",id:approved.id}), progress), {kind:"po",id:approved.id});
     setError(result.ok ? "" : result.message); } catch(cause) { setError(cause instanceof Error ? cause.message : "Archive needs retry."); }
   };
   const save = async (event: FormEvent<HTMLFormElement>) => {

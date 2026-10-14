@@ -34,7 +34,7 @@ export function TransferDocuments({ state, transfer, delivery }: { state: DemoSn
     try {
       const pipeline = await beginOperation({kind:"transfer-receipt",deliveryId:delivery.id,receiptId});
       const receipt = delivery.receiptVersions?.find(value => value.id === receiptId);
-      await perform("transfer-receipt-"+receiptId,delivery.ref+": receipt v"+receipt?.version,progress => archiveTransferReceipt(state,delivery.id,receiptId,pipeline,progress));
+      await perform("transfer-receipt-"+receiptId,delivery.ref+": receipt v"+receipt?.version,progress => archiveTransferReceipt(state,delivery.id,receiptId,pipeline,progress), {kind:"transfer-receipt",deliveryId:delivery.id,receiptId});
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Archive needs retry."); } finally { finish(); }
   }
   async function upload(files:File[]) {
@@ -43,7 +43,7 @@ export function TransferDocuments({ state, transfer, delivery }: { state: DemoSn
       const pipeline = await beginOperation({kind:"transfer-attachment",transferId:transfer.id,deliveryId:delivery.id});
       const saved = await attachTransferFiles(state,transfer.id,delivery.id,files,kind,pipeline);
       for (const [index,doc] of saved.documents.entries()) {
-        await perform("transfer-evidence-"+doc.id,doc.name,progress => archiveTransferEvidence(saved.snapshot,transfer.id,doc,pipeline,value => progress({...value,fileIndex:index+1,fileCount:saved.documents.length})));
+        await perform("transfer-evidence-"+doc.id,doc.name,progress => archiveTransferEvidence(saved.snapshot,transfer.id,doc,pipeline,value => progress({...value,fileIndex:index+1,fileCount:saved.documents.length})), {kind:"transfer-evidence",transferId:transfer.id,documentId:doc.id});
       }
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Evidence remains saved; archive needs retry."); } finally { finish(); }
   }
@@ -51,7 +51,7 @@ export function TransferDocuments({ state, transfer, delivery }: { state: DemoSn
     if (!start("archive",doc.id)) return;
     try {
       const pipeline = await beginOperation({kind:"transfer-evidence",transferId:transfer.id,documentId:doc.id});
-      await perform("transfer-evidence-"+doc.id,doc.name,progress => archiveTransferEvidence(state,transfer.id,doc,pipeline,progress));
+      await perform("transfer-evidence-"+doc.id,doc.name,progress => archiveTransferEvidence(state,transfer.id,doc,pipeline,progress), {kind:"transfer-evidence",transferId:transfer.id,documentId:doc.id});
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Evidence archive needs retry."); } finally { finish(); }
   }
   async function view(doc:TransferEvidence) {

@@ -19,7 +19,7 @@ export function CompactNavigation({ items, primary, pathname, onNavigate }: { it
     window.addEventListener("resize", measure); measure();
     return () => { observer.disconnect(); window.removeEventListener("resize", measure); };
   }, [items.length]);
-  const sorted = [...primary.map(href => items.find(item => item.href === href)!), ...items.filter(item => !primary.includes(item.href))];
+  const sorted = [...primary.flatMap(href => items.filter(item => item.href === href)), ...items.filter(item => !primary.includes(item.href))];
   const compact = capacity < items.length;
   const shown = compact ? sorted.slice(0, Math.min(primary.length, Math.max(1, capacity - 1))) : sorted;
   const others = sorted.filter(item => !shown.includes(item));

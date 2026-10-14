@@ -46,7 +46,7 @@ function PdfPage({ blob, pageNumber = 1, onPageCount }: { blob: Blob; pageNumber
         if (!disposed) setStatus("ready");
       } catch { if (!disposed) setStatus("error"); }
     })();
-    return () => { disposed = true; rendering?.cancel(); void loading?.destroy(); };
+    return () => { disposed = true; rendering?.cancel(); void loading?.destroy().catch(() => {}); };
   }, [blob, pageNumber, onPageCount]);
   return <>{status === "loading" && <DocumentLoading inline/>}{status === "error" && <span className="document-gallery-placeholder">Page preview unavailable. Open the document to view it.</span>}<canvas ref={canvas} className="document-gallery-page" hidden={status !== "ready"} aria-label={`Page ${pageNumber} of the attached PDF`}/></>;
 }

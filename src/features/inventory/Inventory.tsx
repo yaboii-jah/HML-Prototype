@@ -11,7 +11,7 @@ import { useDemo } from "@/src/app-state/DemoProvider";
 import { useActionFeedback } from "@/src/app-state/action-feedback";
 import { Badge, Field, InlineError, PageHeader, RecordHeader } from "@/src/components/ui/Primitives";
 import { useConfirmation } from "@/src/components/ui/ConfirmDialog";
-import { MissingRecord } from "@/src/components/ui/States";
+import { AssignmentNotice, MissingRecord } from "@/src/components/ui/States";
 import { dateText } from "@/src/domain/format";
 import { sourceStockAvailable, transferReservedFor } from "@/src/domain/stock-transfers";
 import { inventoryFor, materialFor, siteName, stockFor } from "@/src/domain/selectors";
@@ -21,17 +21,18 @@ import type { DemoSnapshot } from "@/src/domain/types";
 export function Inventory() {
   const { snapshot: state } = useDemo();
   if (!state) return null;
-  return <><PageHeader eyebrow="SITE STOCK LEDGER" title="Site inventory" description="Posted receipts, usage, and corrections by project and material."/><InventoryRegister key={state.siteFilter} state={state}/></>;
+  return <><PageHeader eyebrow="SITE STOCK LEDGER" title="Site inventory" description="Posted receipts, usage, and corrections by project and material."/><AssignmentNotice/><InventoryRegister key={state.siteFilter} state={state}/></>;
 }
 
 function InventoryRegister({ state }: { state: DemoSnapshot }) {
+  const { access } = useDemo();
   const [search, setSearch] = useState("");
   const [selectedKey, setSelectedKey] = useState("");
   const [sort, setSort] = useState("az");
   const [scope, setScope] = useState(""), [unit, setUnit] = useState(""), [position, setPosition] = useState("all");
-  const rows = state.sites.filter(site => state.siteFilter === "all" || site.id === state.siteFilter).flatMap(site => inventoryFor(state, site.id).map(item => ({ ...item, site })));
+  const rows = state.sites.filter(site => access.canReadProject(site.id) && (state.siteFilter === "all" || site.id === state.siteFilter)).flatMap(site => inventoryFor(state, site.id).map(item => ({ ...item, site })));
   const provenance = receivedMaterialScopes(state);
-  const scopes = state.scopes.filter(value => state.siteFilter === "all" || value.siteId === state.siteFilter);
+  const scopes = state.scopes.filter(value => access.canReadProject(value.siteId) && (state.siteFilter === "all" || value.siteId === state.siteFilter));
   const units = [...new Set(rows.map(row => row.unit.toLowerCase()))].sort();
   const activeScope = scopes.some(value => value.id === scope) ? scope : "";
   const activeUnit = units.includes(unit) ? unit : "";

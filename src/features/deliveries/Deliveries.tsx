@@ -14,7 +14,7 @@ import { useActionFeedback } from "@/src/app-state/action-feedback";
 import { AccountingDocuments } from "@/src/features/accounting/AccountingDocuments";
 import { Badge, Empty, Field, InlineError, PageHeader, RecordHeader, Timeline } from "@/src/components/ui/Primitives";
 import { useConfirmation } from "@/src/components/ui/ConfirmDialog";
-import { MissingRecord } from "@/src/components/ui/States";
+import { AssignmentNotice, MissingRecord } from "@/src/components/ui/States";
 import { DocumentPreview } from "@/src/components/DocumentPreview";
 import { auditTime, actorName } from "@/src/domain/audit";
 import { dateText } from "@/src/domain/format";
@@ -23,17 +23,17 @@ import { poItems, outstandingFor, requestForPO, schedulableFor, siteName, stockF
 import type { Batch, DeliveryLeg, DeliveryLocation, DemoSnapshot, PO } from "@/src/domain/types";
 
 export function Deliveries() {
-  const { snapshot: state } = useDemo();
+  const { snapshot: state, access } = useDemo();
   const id=useId(),[view,setView]=useState(0),[readySearch,setReadySearch]=useState("");
   const [search, setSearch] = useState(""), [stage, setStage] = useState("all");
   if (!state) return null;
-  const matchesProject = (po: PO) => state.siteFilter === "all" || requestForPO(state, po)?.siteId === state.siteFilter;
+  const matchesProject = (po: PO) => access.canReadRecord(po.id) && (state.siteFilter === "all" || requestForPO(state, po)?.siteId === state.siteFilter);
   const ready = state.pos.filter(po => po.status === "released" && `${po.ref} ${requestForPO(state,po)?.ref} ${supplierName(state,po)}`.toLowerCase().includes(readySearch.toLowerCase()) && matchesProject(po) && poItems(state, po).some(item => schedulableFor(state, po, item.id) > 0));
   const rows = state.batches.filter(batch => {
     const po = state.pos.find(value => value.id === batch.poId);
     return po && matchesProject(po) && (stage === "all" || batch.status === stage) && `${batch.ref} ${po.ref} ${requestForPO(state, po)?.ref} ${supplierName(state, po)} ${batch.destination?.name || ""}`.toLowerCase().includes(search.toLowerCase());
   }).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-  return <><PageHeader title="Delivery tracker" description="Scheduling, warehouse forwarding, site stock transfers, receiving and stock posting."/><StockTransferRegister/><ViewTabs id={id} active={view} onChange={setView} labels={["Delivery batches", "Ready to schedule"]}/><div role="tabpanel" id={`${id}-panel-0`} aria-labelledby={`${id}-tab-0`} hidden={view!==0}><Register rows={rows} resetKey={search+stage+state.siteFilter} unit="batches" className="delivery-overview-table" filters={<><input aria-label="Search deliveries" placeholder="Search batch, PO, MRF or supplier" value={search} onChange={event => setSearch(event.target.value)}/><select aria-label="Delivery stage" value={stage} onChange={event => setStage(event.target.value)}><option value="all">All stages</option><option value="expected">Scheduled</option><option value="dispatched">In transit</option><option value="confirmed">Received</option><option value="posted">Stock posted</option></select></>} headers={<><th>Batch / PO / MRF</th><th>Project / supplier</th><th>Scheduled</th><th>Route</th><th>Destination</th><th>Stage</th><th>Payment</th></>} empty={state.batches.length?"No delivery batches match these filters.":"Logistics schedules batches after Accounting releases a PO."} renderRow={batch => {
+  return <><PageHeader title="Delivery tracker" description="Scheduling, warehouse forwarding, site stock transfers, receiving and stock posting."/><AssignmentNotice/><StockTransferRegister/><ViewTabs id={id} active={view} onChange={setView} labels={["Delivery batches", "Ready to schedule"]}/><div role="tabpanel" id={`${id}-panel-0`} aria-labelledby={`${id}-tab-0`} hidden={view!==0}><Register rows={rows} resetKey={search+stage+state.siteFilter} unit="batches" className="delivery-overview-table" filters={<><input aria-label="Search deliveries" placeholder="Search batch, PO, MRF or supplier" value={search} onChange={event => setSearch(event.target.value)}/><select aria-label="Delivery stage" value={stage} onChange={event => setStage(event.target.value)}><option value="all">All stages</option><option value="expected">Scheduled</option><option value="dispatched">In transit</option><option value="confirmed">Received</option><option value="posted">Stock posted</option></select></>} headers={<><th>Batch / PO / MRF</th><th>Project / supplier</th><th>Scheduled</th><th>Route</th><th>Destination</th><th>Stage</th><th>Payment</th></>} empty={state.batches.length?"No delivery batches match these filters.":"Logistics schedules batches after Accounting releases a PO."} renderRow={batch => {
       const po = state.pos.find(value => value.id === batch.poId)!, request = requestForPO(state, po)!;
       const locations = deliveryLocations(state, po, batch);
       return <tr key={batch.id}><td><Link className="table-primary" href={`/deliveries/${batch.id}`}>{batch.ref}</Link><small><Link href={`/purchase-orders/${po.id}`}>{po.ref}</Link> · {request.ref}</small></td><td>{siteName(state, request.siteId)}<small>{supplierName(state, po)}</small></td><td>{dateText(batch.scheduledDate)}{batch.delayReason && <small>Delayed · {batch.delayReason}</small>}</td><td>{legLabel(batch)}</td><td>{locations.destination.name}<small>{locations.destination.address}</small></td><td><Badge value={batch.status}>{batchStage(batch)}</Badge></td><td>{deliveryPayment(state, po)}</td></tr>;

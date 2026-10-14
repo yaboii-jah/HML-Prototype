@@ -6,8 +6,10 @@ import { PdfDocumentViewer } from "./PdfDocumentViewer";
 import { CloseButton } from "./ui/CloseButton";
 import { archiveFileName, prefixedReference } from "@/src/domain/document-numbering";
 import { DocumentLoading } from "./ui/Skeleton";
+import { useDemo } from "@/src/app-state/DemoProvider";
 
 export function DocumentPreview({ kind, request, po, quote, project, batch, parentBatch, transferData }: { kind: "mrf" | "po" | "delivery" | "transfer"; transferData?: TransferReceiptData; request: MRF; po?: PO; quote?: Quote; project: Site; batch?: Batch; parentBatch?: Batch }) {
+  const { access } = useDemo();
   const [url, setUrl] = useState(""), [busy, setBusy] = useState(false), [error, setError] = useState("");
   const dialog = useRef<HTMLDialogElement>(null), invoker = useRef<HTMLButtonElement>(null);
   const [blob, setBlob] = useState<Blob | null>(null);
@@ -16,6 +18,8 @@ export function DocumentPreview({ kind, request, po, quote, project, batch, pare
   const fileName = kind === "transfer" ? ref + "-Stock-Transfer-Receipt-v" + (transferData?.receiptVersion || 1) + ".pdf" : kind === "delivery" ? batch?.receiptVersions?.at(-1)?.fileName || (project.documentCode ? archiveFileName(prefixedReference(project.documentCode, ref), "receipt", "v1", ".pdf") : ref + ".pdf") : kind === "po" ? (po?.archiveRef || ref) + ".pdf" : (request.archiveRef || ref) + ".pdf";
   useEffect(() => () => { if (url) URL.revokeObjectURL(url); }, [url]);
   useEffect(() => () => pending.current?.abort(), []);
+  const readable = access.canReadRecord(kind === "transfer" ? transferData?.transfer.id : kind === "delivery" ? batch?.id : kind === "po" ? po?.id : request.id);
+  if (!readable) return null;
   const open = async () => {
     if (pending.current && !pending.current.signal.aborted) return;
     const controller = new AbortController();
