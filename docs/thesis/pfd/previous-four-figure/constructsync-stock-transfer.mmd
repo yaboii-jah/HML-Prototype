@@ -1,0 +1,25 @@
+---
+config:
+  layout: elk
+  theme: neutral
+  flowchart:
+    htmlLabels: false
+---
+flowchart TB
+  %% C: Site stock transfer
+  %% Matching letter connectors continue the same flow; publication references use off-page pentagons.
+  transferQuantities(["Transfer quantities from A"])
+  proposeTransfer["Procurement; Propose site transfer"]
+  sourceRelease{"Source Site; Personnel; Release decision?"}
+  resourcing["Unreleased quantities; Return to sourcing in A"]
+  scheduleTransfer["Logistics; Schedule transfer trip"]
+  dispatchTransfer["Logistics; Dispatch & deduct; source stock"]
+  transferReceiving["Destination receiving; & records in D"]
+  transferQuantities --> proposeTransfer
+  proposeTransfer --> sourceRelease
+  sourceRelease -->|"Reject"| resourcing
+  sourceRelease -->|"Approve full / part"| scheduleTransfer
+  scheduleTransfer --> dispatchTransfer
+  dispatchTransfer -->|"Dispatched trip"| transferReceiving
+  classDef plain fill:#ffffff,stroke:#000000,color:#000000
+  class transferQuantities,proposeTransfer,sourceRelease,resourcing,scheduleTransfer,dispatchTransfer,transferReceiving plain

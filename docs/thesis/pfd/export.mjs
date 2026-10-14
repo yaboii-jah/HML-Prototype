@@ -7,7 +7,7 @@ import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { PDFDocument } from "pdf-lib";
 import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
-import { diagrams, page as dimensions } from "./model.mjs";
+import { diagrams } from "./model.mjs";
 import { validateGeometry } from "./layout.mjs";
 
 const directory = fileURLToPath(new URL("./", import.meta.url));
@@ -22,11 +22,11 @@ const configuration = JSON.parse(await readFile(new URL("../erd/puppeteer-config
 const temporary = await mkdtemp(path.join(os.tmpdir(), "constructsync-pfd-"));
 const escape = value => String(value).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll('"', "&quot;");
 const textWidth = (value, size) => [...value].reduce((sum, character) => sum + ("ilI1.,| /".includes(character) ? 0.27 : /[A-Z]/.test(character) ? 0.65 : 0.52) * size, 0);
-const wrap = (values, width) => [values].flat().flatMap(value => {
+const wrap = (values, width, size) => [values].flat().flatMap(value => {
   const lines = []; let line = "";
   for (const word of value.split(/\s+/)) {
     const next = line ? `${line} ${word}` : word;
-    if (line && textWidth(next, dimensions.fontSize) > width) { lines.push(line); line = word; }
+    if (line && textWidth(next, size) > width) { lines.push(line); line = word; }
     else line = next;
   }
   if (line) lines.push(line);
@@ -34,18 +34,20 @@ const wrap = (values, width) => [values].flat().flatMap(value => {
 });
 
 function render(diagram) {
+  const dimensions = diagram.page;
   const font = dimensions.fontSize, step = font * 1.12;
   const block = (lines, cx, cy, roles = 0) => lines.map((line, index) => `<text x="${cx}" y="${cy - (lines.length - 1) * step / 2 + index * step + font * 0.35}" text-anchor="middle"${index < roles ? ' font-weight="bold"' : ""}>${escape(line)}</text>`).join("");
   const nodes = diagram.nodes.map(node => {
-    const role = node.role ? wrap(node.role, node.type === "decision" ? node.w * 0.75 : node.w - 20) : [];
-    const lines = [...role, ...wrap(node.lines, node.type === "decision" ? node.w * 0.75 : node.w - 20)];
-    const shape = node.type === "junction" ? `<circle cx="${node.w/2}" cy="${node.h/2}" r="${node.w/2}" fill="#000000"/>` : node.type === "decision" ? `<polygon points="${node.w/2},0 ${node.w},${node.h/2} ${node.w/2},${node.h} 0,${node.h/2}"/>` : `<rect width="${node.w}" height="${node.h}" rx="${node.type === "terminal" ? node.h/2 : 0}"/>`;
-    return `<g data-node="${node.id}" data-kind="${node.type}" transform="translate(${node.x},${node.y})"><title>${escape(node.name || [...(node.role ? [node.role].flat() : []), ...node.lines].join("; "))}</title><g fill="white" stroke="#000000" stroke-width="1.8">${shape}</g>${block(lines, node.w/2, node.h/2, role.length)}</g>`;
+    const role = node.role ? wrap(node.role, node.type === "decision" ? node.w * 0.75 : node.w - 28, font) : [];
+    const lines = [...role, ...wrap(node.lines, node.type === "decision" ? node.w * 0.75 : node.w - 28, font)];
+    const shape = node.type === "connector" ? `<circle cx="${node.w/2}" cy="${node.h/2}" r="${node.w/2}"/>` : node.type === "decision" ? `<polygon points="${node.w/2},0 ${node.w},${node.h/2} ${node.w/2},${node.h} 0,${node.h/2}"/>` : node.type === "reference" ? `<polygon points="0,0 ${node.w},0 ${node.w},${node.h*0.8} ${node.w/2},${node.h} 0,${node.h*0.8}"/>` : `<rect width="${node.w}" height="${node.h}" rx="${node.type === "terminal" ? node.h/2 : 0}"/>`;
+    const sides = node.type === "subprocess" ? `<path d="M12 0V${node.h}M${node.w-12} 0V${node.h}"/>` : "";
+    return `<g data-node="${node.id}" data-kind="${node.type}" transform="translate(${node.x},${node.y})"><title>${escape(node.name || [...(node.role ? [node.role].flat() : []), ...node.lines].join("; "))}</title><g fill="white" stroke="#000000" stroke-width="1.8">${shape}${sides}</g>${block(lines, node.w/2, node.h*(node.type === "reference" ? 0.4 : 0.5), role.length)}</g>`;
   }).join("");
   const edges = diagram.edges.map((edge, index) => `<g data-edge="${index}" data-from="${edge.from}" data-to="${edge.to}"><title>${escape(edge.label || `${edge.from} to ${edge.to}`)}</title><polyline points="${edge.points.map(point => point.join(",")).join(" ")}" stroke="#000000" stroke-width="1.8" stroke-linejoin="round" fill="none" marker-end="url(#arrow)"/></g>`).join("");
   const labels = diagram.edges.flatMap((edge, index) => {
     if (!edge.label) return [];
-    const [cx, cy, width] = edge.labelAt, lines = wrap(edge.label, width), height = lines.length * step + 6;
+    const [cx, cy, width] = edge.labelAt, lines = wrap(edge.label, width, font), height = lines.length * step + 6;
     return [`<g data-label="${index}"><rect x="${cx-width/2-3}" y="${cy-height/2}" width="${width+6}" height="${height}" rx="2" fill="white"/>${block(lines,cx,cy)}</g>`];
   }).join("");
   const height = dimensions.height/dimensions.width*dimensions.printWidthMm;
@@ -56,6 +58,7 @@ const browser = await puppeteer.launch(configuration);
 const reports = [];
 try {
   for (const diagram of diagrams) {
+    const dimensions = diagram.page;
     validateGeometry(diagram);
     const prefix = `constructsync-${diagram.id}`, svg = render(diagram);
     const page = await browser.newPage();
@@ -67,7 +70,7 @@ try {
       const nodes = [...document.querySelectorAll("[data-node]")], labels = [...document.querySelectorAll("[data-label]")];
       const overlaps = (a,b) => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
       for (const node of nodes) {
-        const bounds = node.getBoundingClientRect();
+        const bounds = node.querySelector("rect,polygon,circle").getBoundingClientRect();
         for (const text of node.querySelectorAll("text")) {
           const rect = text.getBoundingClientRect();
           if (rect.left < bounds.left || rect.right > bounds.right || rect.top < bounds.top || rect.bottom > bounds.bottom) errors.push(`Text clips ${node.dataset.node}: ${text.textContent}`);
@@ -95,14 +98,14 @@ try {
     await page.setViewport({ width: dimensions.width, height: dimensions.height, deviceScaleFactor: 1 });
     const preview = path.join(temporary, `${diagram.id}-preview.png`);
     await page.screenshot({ path: preview, fullPage: true });
-    await page.setContent(`<html><head><style>@page{size:A4 landscape;margin:10mm}html,body{margin:0}body{width:277mm;height:189mm;display:flex;align-items:center;justify-content:center}svg{display:block;width:${dimensions.printWidthMm}mm;height:auto;max-height:189mm}</style></head><body>${svg}</body></html>`);
+    await page.setContent(`<html><head><style>@page{size:A4 ${dimensions.orientation};margin:10mm}html,body{margin:0}body{width:${dimensions.orientation === "portrait" ? 190 : 277}mm;height:${dimensions.orientation === "portrait" ? 277 : 190}mm;display:flex;align-items:center;justify-content:center}svg{display:block;width:${dimensions.printWidthMm}mm;height:auto;max-height:${dimensions.orientation === "portrait" ? 277 : 190}mm}</style></head><body>${svg}</body></html>`);
     await page.evaluate(() => document.fonts.ready);
     const pdf = await PDFDocument.load(await page.pdf({ preferCSSPageSize: true, printBackground: true }));
     assert.equal(pdf.getPageCount(), 1, "Each diagram must fit one page");
-    assert.ok(Math.abs(pdf.getPage(0).getWidth()-297*72/25.4) < 1);
-    assert.ok(Math.abs(pdf.getPage(0).getHeight()-210*72/25.4) < 1);
+    assert.ok(Math.abs(pdf.getPage(0).getWidth()-(dimensions.orientation === "portrait" ? 210 : 297)*72/25.4) < 1);
+    assert.ok(Math.abs(pdf.getPage(0).getHeight()-(dimensions.orientation === "portrait" ? 297 : 210)*72/25.4) < 1);
     pdf.setTitle(`ConstructSync Process Flow: ${diagram.name}`);
-    pdf.setSubject("Role responsibilities in the revised purchasing, payment and delivery workflow");
+    pdf.setSubject("Role responsibilities and descriptive process handoffs in the purchasing, payment and delivery workflow");
     const bytes = await pdf.save(), loading = getDocument({ data: new Uint8Array(bytes), useSystemFonts: true });
     try {
       const parsed = await loading.promise, content = await (await parsed.getPage(1)).getTextContent();
@@ -114,7 +117,7 @@ try {
     } finally { await loading.destroy(); }
     await writeFile(path.join(directory, `${prefix}.pdf`), bytes);
     const points = dimensions.fontSize*dimensions.printWidthMm/dimensions.width*72/25.4;
-    reports.push(`- **${diagram.name}**: ${diagram.nodes.length} symbols, ${diagram.edges.length} connections. One A4 landscape PDF, selectable text of at least ${points.toFixed(2)} pt; PNG ${dimensions.width*4} × ${dimensions.height*4} pixels. ${geometry.crossings} connector crossings, ${geometry.overlappingSegments} overlapping segments and ${geometry.labelCollisions} connector/label collisions.`);
+    reports.push(`- **${diagram.name}**: ${diagram.nodes.length} symbols, ${diagram.edges.length} connections. One A4 ${dimensions.orientation} PDF, selectable text of at least ${points.toFixed(2)} pt; PNG ${dimensions.width*4} × ${dimensions.height*4} pixels. ${geometry.crossings} connector crossings, ${geometry.overlappingSegments} overlapping segments and ${geometry.labelCollisions} connector/label collisions.`);
     console.log(`${diagram.id} exported. Preview: ${preview}`);
     await page.close();
   }
@@ -122,18 +125,23 @@ try {
 
 await writeFile(path.join(directory,"VALIDATION.md"), `# Process flow validation
 
-Checked against docs/WORKFLOW.md and revised delivery/payment rules on 2026-10-11.
+Checked against docs/WORKFLOW.md and the delivery/payment rules on 2026-10-13.
 
 ${reports.join("\n")}
 
+- The request and fulfillment overview supports purchase-only, transfer-only and mixed MRF quantities. Existing project setup is a prerequisite. Issued supplier POs proceed to payment coordination.
+- Site transfers require suitability confirmation, any required destination review, source release and dispatch before destination receiving; transfers have no PO/payment path.
+- Reduced/rejected release quantities and missing transfer quantities return to material sourcing without reversing source dispatch; accepted site quantities still reach stock posting independently.
+- Warehouse and site receipt evidence each proceeds to documentation and review. Warehouse documentation does not wait for site arrival, and receipt review never gates site stock posting.
 - All nodes are reachable, decisions have labeled outcomes, and approval returns/rejections/holds retain their meaning.
 - Upfront delivery cannot bypass full verified payment. A failed payment/proof check loops for resolution.
-- Credit delivery reaches site inventory without entering the payment path. Payment settlement is reachable without entering delivery/document activities. Partial payment loops to Finance follow-up.
+- Credit clearance reaches supplier delivery without entering the payment path. Payment settlement is reachable without entering delivery/document activities. Partial payment loops to Finance follow-up and never retriggers clearance.
 - Direct site receipt and warehouse receipt/transfer/site receipt are both reachable.
-- Site inventory and document review finish independently; neither closes the MRF. Warehouse receipt does not post site inventory.
-- Connectors are orthogonal and continuous, start/end on separate symbol ports and do not touch unrelated shapes. Geometry checks reject connector crossings, shared segments and self-intersections. Intentional split/merge points have explicit junction dots.
+- Site inventory and document review finish independently; neither closes the MRF. Warehouse receipt does not post site inventory. Receipt review loops incomplete or unacceptable evidence for correction and re-archiving.
+- Entries and handoffs name business events and processes. Visible node/arrow labels and active explanations are checked to reject figure-letter references and the former abbreviated credit connector.
+- Connectors are orthogonal and continuous, start/end on separate symbol ports and do not touch unrelated shapes. Geometry checks reject connector crossings, shared segments and self-intersections. The Credit connector routes independent credit paths; off-page handoffs name their next process.
 - Actual rendered label bounds are checked against every connector, including their own, with 2 px clearance. Label backgrounds cannot hide lines. No white under-strokes erase connector intersections. Layout checks also reject clipped text, overlapping labels, labels covering shapes, and text outside decision diamonds.
-- The combined PDF is one A4 landscape page with selectable node/branch text and actual text of at least 10 pt. The SVG preserves vector text; the PNG renders at 3× resolution.
+- Each active PDF is one A4 page in its documented orientation with selectable node/branch text and actual text of at least 10 pt. The SVG preserves vector text; the PNG renders at 4× resolution.
 - Run node docs/thesis/pfd/generate.mjs --check to check model and editable-source consistency.
 
 These are documentation/export checks. No application or database changes were made.

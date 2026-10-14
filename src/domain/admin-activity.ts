@@ -21,7 +21,7 @@ export function adminActivityGroups(state: DemoSnapshot, filters: ActivityFilter
   return groupAuditEvents(state.activity).flatMap(group => {
     const entries = group.entries.filter(event => {
       const projectId = auditProjectId(state, event, records);
-      if (filters.project !== "all" && (filters.project === "unassigned" ? !!projectId : projectId !== filters.project)) return false;
+      if (filters.project !== "all" && (filters.project === "unassigned" ? !!projectId : projectId !== filters.project && !event.relatedProjectIds?.includes(filters.project))) return false;
       if (filters.department !== "all" && event.actor !== filters.department) return false;
       if (filters.from || filters.to) {
         const date = activityDateKey(event.at);

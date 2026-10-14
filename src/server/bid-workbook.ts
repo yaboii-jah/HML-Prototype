@@ -88,7 +88,7 @@ const legacyCharges = (value: { tax?: number; freight?: number; discount?: numbe
 
 export function buildBidWorkbook(report: BidReport) {
   if (!validBidReport(report)) throw new Error("The frozen bid report is invalid.");
-  if (report.comparisonRevision === 2 || report.comparisonRevision === 3 || report.comparisonRevision === 4) return buildCurrentComparisonWorkbook(report);
+  if (report.comparisonRevision === 2 || report.comparisonRevision === 3 || report.comparisonRevision === 4 || report.comparisonRevision === 5) return buildCurrentComparisonWorkbook(report);
   const book = new ExcelJS.Workbook();
   book.creator = "HML ConstructSync";
   book.created = new Date(report.generatedAt); book.modified = new Date(report.generatedAt);

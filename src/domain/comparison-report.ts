@@ -3,11 +3,12 @@ import { roundMoney } from "./pricing.ts";
 import { comparableMaterialAmount } from "./comparative-pricing.ts";
 import type { BidOffer, BidReport, BidReportData, ComparisonSelections, Item, QuoteLine } from "./types.ts";
 
+export const comparisonItems = (report: BidReport) => report.comparisonRevision === 5 ? report.data.request.items.map(item => ({ ...item, quantity: report.data.sourcing?.[item.id]?.purchase || 0 })).filter(item => item.quantity > 0) : report.data.request.items;
 export const comparisonOffers = (data: BidReportData) => data.offers.filter(offer => offer.source !== "PO source");
 export const materialOffers = (data: BidReportData, offer: BidOffer, item: Item) => bidLines(data, offer.quote).filter(line => line.requestItemId === item.id);
 
 /** Resolve only single offers automatically. Alternatives require the purchaser's choice. */
-export function resolveComparisonSelections(data: BidReportData, input: ComparisonSelections = {}): ComparisonSelections {
+export function resolveComparisonSelections(data: BidReportData, input: ComparisonSelections = {}, useSourcing = false): ComparisonSelections {
   if (!input || typeof input !== "object" || Array.isArray(input)) throw new Error("Review the comparison selections.");
   const offers = comparisonOffers(data);
   if (!offers.length) throw new Error("Finalize at least one PHP supplier bid for the comparison.");
@@ -23,6 +24,7 @@ export function resolveComparisonSelections(data: BidReportData, input: Comparis
   for (const offer of offers) {
     const chosen: Record<string, string> = {};
     for (const item of data.request.items) {
+      if (useSourcing && data.sourcing && data.sourcing[item.id]?.purchase <= 0) continue;
       const lines = materialOffers(data, offer, item);
       if (!lines.length) continue;
       const selected = input[offer.quote.id]?.[item.id] || (lines.length === 1 ? lines[0].id : "");
@@ -45,11 +47,11 @@ export function selectedComparisonLine(report: BidReport, offer: BidOffer, item:
 export function comparisonCoverage(report: BidReport, offer: BidOffer) {
   const gaps: string[] = [];
   let total = 0;
-  report.data.request.items.forEach((item, index) => {
+  comparisonItems(report).forEach((item, index) => {
     const line = selectedComparisonLine(report, offer, item);
     if (!line) gaps.push(`Item ${index + 1}: not quoted`);
     else {
-      const amount = report.comparisonRevision === 4 ? comparableMaterialAmount(offer.quote, line, item) : requiredComparisonAmount(item, line);
+      const amount = [4, 5].includes(report.comparisonRevision || 0) ? comparableMaterialAmount(offer.quote, line, item) : requiredComparisonAmount(item, line);
       if (amount === undefined) throw new Error(`Review VAT treatment for ${offer.supplierName} before generating the comparison.`);
       total += amount;
       const offered = line.quantity * line.conversionFactor;

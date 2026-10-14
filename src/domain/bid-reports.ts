@@ -1,3 +1,4 @@
+import { requestSourcing } from "./stock-transfers.ts";
 import { isFinalizedQuote, latestFinalizedQuotes } from "./procurement.ts";
 import { resolveComparisonSelections } from "./comparison-report.ts";
 import { comparableUnitPrice, comparisonFinancialError } from "./comparative-pricing.ts";
@@ -40,6 +41,7 @@ export function captureBidReport(state: DemoSnapshot, requestId: string, current
   const name = (quote: Quote) => quote.supplierDetails?.name || state.suppliers.find(value => value.id === quote.supplierId)?.name || "Unnamed supplier";
   return structuredClone({
     project, request, pos,
+    ...(currentComparison ? { sourcing: Object.fromEntries(request.items.map(item => { const value = requestSourcing(state, request, item); return [item.id, { requested: value.requested, transfers: value.transfers, ordered: value.ordered, suitability: value.suitability, purchase: value.purchase }]; })) } : {}),
     offers: selected.filter(quote => !quote.currency || quote.currency === "PHP").map(quote => ({ quote, supplierName: name(quote), source: sourceIds.has(quote.id) ? latest.some(value => value.id === quote.id) ? "Latest bid / PO source" as const : "PO source" as const : "Latest bid" as const })),
     excluded: selected.filter(quote => quote.currency && quote.currency !== "PHP").map(quote => ({ supplierName: name(quote), ref: quote.ref, currency: quote.currency!, version: quote.version || 1 })),
   });
@@ -50,6 +52,7 @@ export function normalizedBidReportReadiness(state: DemoSnapshot, requestId: str
   const error = bidReportReadiness(state, requestId);
   if (error) return error;
   const data = captureBidReport(state, requestId, true);
+  if (data.request.items.every(item => (data.sourcing?.[item.id]?.purchase || 0) <= 0)) return "No quantity is currently available for supplier purchasing. Stock requests, existing orders and suitability reviews account for this MRF.";
   const offer = data.offers.find(value => value.source !== "PO source" && comparisonFinancialError(value.quote));
   return offer ? `Review VAT treatment for ${offer.supplierName} before generating the comparison.` : "";
 }
@@ -83,20 +86,21 @@ export function validBidReport(value: unknown): value is BidReport {
   try {
     const report = value as BidReport;
     const data = report.data;
-    if (report.comparisonRevision !== undefined && ![2, 3, 4].includes(report.comparisonRevision)) return false;
-    if (report.comparisonRevision === 2 || report.comparisonRevision === 3 || report.comparisonRevision === 4) {
+    if (report.comparisonRevision !== undefined && ![2, 3, 4, 5].includes(report.comparisonRevision)) return false;
+    if (report.comparisonRevision === 2 || report.comparisonRevision === 3 || report.comparisonRevision === 4 || report.comparisonRevision === 5) {
       if (!report.comparisonSelections) return false;
-      const selections = resolveComparisonSelections(data, report.comparisonSelections);
+      const selections = resolveComparisonSelections(data, report.comparisonSelections, report.comparisonRevision === 5);
       for (const [quoteId, items] of Object.entries(selections)) for (const [itemId, lineId] of Object.entries(items)) {
         if (report.comparisonSelections[quoteId]?.[itemId] !== lineId) return false;
       }
       const offers = data.offers.filter(offer => offer.source !== "PO source");
       if (new Set(offers.map(offer => offer.quote.supplierId)).size !== offers.length) return false;
-      if (report.comparisonRevision === 4 && offers.some(offer => comparisonFinancialError(offer.quote) || data.request.items.some(item => {
+      if ([4, 5].includes(report.comparisonRevision || 0) && offers.some(offer => comparisonFinancialError(offer.quote) || data.request.items.some(item => {
         const line = bidLines(data, offer.quote).find(value => value.requestItemId === item.id && value.id === selections[offer.quote.id]?.[item.id]);
         return line && comparableUnitPrice(offer.quote, line) === undefined;
       }))) return false;
     }
+    if (report.comparisonRevision === 5 && (!data.sourcing || !data.request.items.some(item => (data.sourcing?.[item.id]?.purchase || 0) > 0) || data.request.items.some(item => { const row = data.sourcing?.[item.id]; return !row || [row.requested, row.transfers, row.ordered, row.suitability ?? 0, row.purchase].some(n => !Number.isFinite(n) || n < 0) || row.requested !== item.quantity || row.transfers + row.ordered + (row.suitability ?? 0) > row.requested + .000001 || Math.abs(row.purchase - Math.max(0, row.requested - row.transfers - row.ordered - (row.suitability ?? 0))) > .000001; }))) return false;
     const finite = (value: number | undefined) => value === undefined || Number.isFinite(value) && value >= 0;
     const text = (value: unknown) => value === undefined || typeof value === "string";
     const strings = (...values: unknown[]) => values.every(text);

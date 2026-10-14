@@ -1,4 +1,6 @@
 import { applyCommand, type Command, type CommandResult } from "../domain/commands.ts";
+import { validStockReviews } from "../domain/stock-suitability.ts";
+import { validTransferState } from "../domain/transfer-document.ts";
 import { newId } from "../domain/ids.ts";
 import { blankWorkspace } from "./fixtures/blank.ts";
 import { normalizeKnownPlaceholders } from "./normalize.ts";
@@ -16,7 +18,7 @@ export interface DemoRepository {
   load(): Promise<RepositoryView>;
   getSnapshot(): RepositoryView;
   subscribe(listener: () => void): () => void;
-  execute(command: Command, actor?: AuditIdentity): Promise<CommandResult>;
+  execute(command: Command, actor?: AuditIdentity, siteIds?: readonly string[]): Promise<CommandResult>;
   reset(): Promise<RepositoryView>;
 }
 
@@ -71,6 +73,8 @@ const parseCurrent = (raw: string): DemoSnapshot | null => {
   const parsed = isRecord(saved) && saved.role === "Management" ? { ...saved, role: "Project Manager" } : saved;
   if (!isSnapshotShape(parsed) || parsed.version !== 12 || !Array.isArray(parsed.paymentRequests) || !Array.isArray(parsed.pendingAwards) || !Array.isArray(parsed.bidReports)) return null;
   const state = parsed as DemoSnapshot;
+  if (!validStockReviews(state)) return null;
+  if (!validTransferState(state)) return null;
   if (!validDocumentNumberingState(state)) return null;
   if (!state.pos.every(po => ["draft", "submitted", "hold", "returned", "rejected", "approved", "released"].includes(po.status))) return null;
   if (!state.paymentRequests.every(value => ["draft", "submitted", "hold", "returned", "rejected", "approved", "disbursed"].includes(value.status) && Number.isFinite(value.amount) && value.amount > 0 && state.pos.some(po => po.id === value.poId))) return null;
@@ -144,10 +148,10 @@ export class LocalDemoRepository implements DemoRepository {
   async load() { return this.read(); }
   getSnapshot() { return this.read(); }
   subscribe(listener: () => void) { this.listeners.add(listener); return () => this.listeners.delete(listener); }
-  async execute(command: Command, actor?: AuditIdentity): Promise<CommandResult> {
+  async execute(command: Command, actor?: AuditIdentity, siteIds?: readonly string[]): Promise<CommandResult> {
     const current = this.read().snapshot;
     if (!current) return { ok: false, message: "Restore the workspace before making changes." };
-    const result = applyCommand(current, command, actor ? { actor, now: () => new Date().toISOString(), id: newId } : undefined);
+    const result = applyCommand(current, command, actor ? { actor, siteIds, now: () => new Date().toISOString(), id: newId } : undefined);
     if (result.ok) { this.view = this.write(result.snapshot); this.notify(); }
     return result;
   }

@@ -67,7 +67,7 @@ const primary: Record<Role, string[]> = {
 };
 
 export function AppShell({ children }: { children: ReactNode }) {
-  const { snapshot, session, directory, run, switchAccount, signOut } = useDemo();
+  const { snapshot, session, directory, siteIds, run, switchAccount, signOut } = useDemo();
   const [accountOpen, setAccountOpen] = useState(false);
   const [accountError, setAccountError] = useState("");
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -89,8 +89,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   if (!snapshot) return null;
   const accountName = accountDisplayName(session.email) || snapshot.role;
   const initials = accountName.split(" ").map(part => part[0]).slice(0, 2).join("");
-  const tasks = tasksFor(snapshot);
-  const section = NAV.find(item => pathname === item.href || pathname.startsWith(`${item.href}/`))?.label || "Workspace";
+  const tasks = tasksFor(snapshot, siteIds);
+  const section = NAV.find(item => pathname === item.href || pathname.startsWith(`${item.href}/`))?.label || (pathname.startsWith("/stock-transfers/") ? "Site stock transfers" : "Workspace");
   return <div ref={frameRef} className="app-frame">
     <StickyHeadings scopeRef={frameRef}/>
     {menuOpen && <button className="mobile-scrim" aria-label="Close navigation" onClick={() => setMenuOpen(false)}/>}
@@ -104,13 +104,13 @@ export function AppShell({ children }: { children: ReactNode }) {
         <button className="mobile-menu icon-button" aria-label="Open navigation" aria-expanded={menuOpen} onClick={() => setMenuOpen(true)}><Icon name="menu"/></button>
         <div className="top-context"><span>Workspace</span><span className="crumb-separator">/</span><strong>{section}</strong></div>
         <div className="masthead-right">
-          <label className="site-context"><span>Project</span><select aria-label="Site context" value={snapshot.siteFilter} onChange={event => void run({ type: "setSiteFilter", siteId: event.target.value })}><option value="all">All sites</option>{snapshot.sites.map(site => <option key={site.id} value={site.id}>{site.name}</option>)}</select></label>
+          <label className="site-context"><span>Project</span><select aria-label="Site context" value={snapshot.siteFilter} onChange={event => void run({ type: "setSiteFilter", siteId: event.target.value })}><option value="all">All sites</option>{snapshot.sites.filter(site => snapshot.role !== "Site Personnel" || siteIds.includes(site.id)).map(site => <option key={site.id} value={site.id}>{site.name}</option>)}</select></label>
           <button className="theme-toggle icon-button" type="button" aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`} aria-pressed={theme === "dark"} title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`} onClick={() => { const nextTheme = theme === "dark" ? "light" : "dark"; document.documentElement.dataset.theme = nextTheme; try { localStorage.setItem("constructsync-theme", nextTheme); } catch {} }}><Icon name={theme === "dark" ? "sun" : "moon"}/></button>
           <div className="notification-wrap"><button className="notification-trigger icon-button" aria-label={`Notifications${tasks.length ? `, ${tasks.length} tasks` : ""}`} aria-expanded={notificationsOpen} onClick={() => setNotificationsOpen(!notificationsOpen)}><Icon name="bell"/>{tasks.length > 0 && <i>{tasks.length}</i>}</button>{notificationsOpen && <div className="notification-popover"><div className="popover-heading"><strong>Needs attention</strong><span>{tasks.length} tasks</span></div>{tasks.length ? tasks.slice(0, 7).map(task => <Link key={task.href + task.title} href={task.href} onClick={() => setNotificationsOpen(false)}><b>{task.title}</b><small>{task.detail} · {task.waiting} days</small></Link>) : <p>Nothing waiting for this role.</p>}<Link href="/dashboard#role-tasks" onClick={() => setNotificationsOpen(false)}>View all tasks ({tasks.length})</Link></div>}</div>
           <button ref={accountTriggerRef} className="masthead-account" onClick={() => { setAccountError(""); setAccountOpen(true); }} aria-haspopup="dialog" aria-label={`Account: ${accountName}, ${snapshot.role}`}><span className="account-avatar">{initials}</span><span className="account-label"><strong title={accountName}>{accountName}</strong><small title={snapshot.role}>{snapshot.role}</small></span><Icon name="chevron" size={16}/></button>
         </div>
       </header>
-      <main className="workspace-content"><ArchiveStatus/>{children}</main>
+      <main className="workspace-content"><ArchiveStatus/>{snapshot.role === "Site Personnel" && !siteIds.some(id => snapshot.sites.some(site => site.id === id)) && <p className="transfer-assignment-note" role="status">Your account has no project assignments yet. Ask an Administrator to assign projects in User management before creating MRFs, releasing stock, receiving deliveries or recording inventory actions.</p>}{children}</main>
     </div>
     <dialog ref={accountDialogRef} className="modal account-modal" aria-labelledby="account-title" onCancel={() => setAccountOpen(false)} onClose={() => { setAccountOpen(false); accountTriggerRef.current?.focus({ preventScroll: true }); }} onKeyDown={event => {
       if (event.key !== "Tab") return;

@@ -30,12 +30,13 @@ export function segmentIntersectsRect([a,b],rect,padding = 0) {
 
 const border = ([x,y],node) => {
   if (node.type === "decision") return close(Math.abs(x-node.x-node.w/2)/(node.w/2)+Math.abs(y-node.y-node.h/2)/(node.h/2),1);
-  if (node.type === "junction") return close(Math.hypot(x-node.x-node.w/2,y-node.y-node.h/2),node.w/2);
+  if (["junction","connector"].includes(node.type)) return close(Math.hypot(x-node.x-node.w/2,y-node.y-node.h/2),node.w/2);
+  if (node.type === "reference") return (close(y,node.y) && x>=node.x && x<=node.x+node.w) || ((close(x,node.x) || close(x,node.x+node.w)) && y>=node.y && y<=node.y+node.h*0.8) || (close(x,node.x+node.w/2) && close(y,node.y+node.h));
   return (close(x,node.x) || close(x,node.x+node.w)) && y >= node.y && y <= node.y+node.h || (close(y,node.y) || close(y,node.y+node.h)) && x >= node.x && x <= node.x+node.w;
 };
 const inside = ([x,y],node) => {
   if (node.type === "decision") return Math.abs(x-node.x-node.w/2)/(node.w/2)+Math.abs(y-node.y-node.h/2)/(node.h/2) < 1-epsilon;
-  if (node.type === "junction") return Math.hypot(x-node.x-node.w/2,y-node.y-node.h/2) < node.w/2-epsilon;
+  if (["junction","connector"].includes(node.type)) return Math.hypot(x-node.x-node.w/2,y-node.y-node.h/2) < node.w/2-epsilon;
   return x > node.x+epsilon && x < node.x+node.w-epsilon && y > node.y+epsilon && y < node.y+node.h-epsilon;
 };
 const near = (point,toward) => [point[0]+(toward[0]-point[0])*0.01,point[1]+(toward[1]-point[1])*0.01];

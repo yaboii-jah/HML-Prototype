@@ -5,12 +5,19 @@ import type { Command } from "./commands.ts";
 import type { DemoSnapshot, OperationTarget, Role } from "./types.ts";
 
 export function operationEntity(target: OperationTarget): string {
+  if (target.kind === "transfer-receipt") return target.receiptId;
+  if (target.kind === "transfer-evidence") return target.documentId;
+  if (target.kind === "transfer-attachment") return target.deliveryId;
   return (target.kind === "evidence" || target.kind === "payment-proof") ? target.documentId : target.kind === "attachment" ? target.batchId || target.poId : target.kind === "delivery-receipt" ? target.receiptId : target.id;
 }
 // Bind to the document/version being processed, not just a reusable record ID.
 export function operationFingerprint(state: DemoSnapshot, target: OperationTarget): string {
   const project = (requestId?: string) => { const request = state.requests.find(value => value.id === requestId); return [request?.ref, request?.siteId, state.sites.find(value => value.id === request?.siteId)?.driveFolderId]; };
   switch (target.kind) {
+    case "transfer-receipt": { const delivery = state.transferDeliveries?.find(value => value.id === target.deliveryId), receipt = delivery?.receiptVersions?.find(value => value.id === target.receiptId); return JSON.stringify([receipt?.data, receipt?.id, project(receipt?.data.request.id)]); }
+    case "transfer-evidence": { const transfer = state.stockTransfers?.find(value => value.id === target.transferId), doc = transfer?.documents?.find(value => value.id === target.documentId); return JSON.stringify([doc?.id, doc?.deliveryId, doc?.receiptVersion, doc?.sha256, doc?.size, doc?.localFileId, project(transfer?.requestId)]); }
+    case "transfer-attachment": { const transfer = state.stockTransfers?.find(value => value.id === target.transferId), delivery = state.transferDeliveries?.find(value => value.id === target.deliveryId && value.transferId === transfer?.id); return JSON.stringify([transfer?.id, delivery?.id, delivery?.status, delivery?.receiptVersions?.at(-1)?.version, project(transfer?.requestId)]); }
+
     case "payment-proof": { const po = state.pos.find(value => value.id === target.poId), proof = po?.paymentProofs?.find(value => value.id === target.documentId); return JSON.stringify([po?.id,po?.issuance,proof?.id,proof?.sha256,proof?.size,proof?.localFileId,state.sites.find(site => site.id === state.requests.find(request => request.id === po?.mrfId)?.siteId)?.driveFolderId]); }
     case "project": { const value = state.sites.find(site => site.id === target.id); return JSON.stringify([value?.id, value?.name, value?.driveFolderId]); }
     case "request": { const value = state.requests.find(record => record.id === target.id); return JSON.stringify([value?.ref, value?.siteId, value?.requestDate, value?.requestedBy, value?.approvedBy, value?.purchaser, value?.financeOfficer, value?.items, value?.documents, value?.specialInstructions, value?.archive?.approvedAt, Math.max(0, (value?.archive?.versions.length || 0) - (value?.archive?.status === "complete" ? 1 : 0)), project(value?.id)]); }
@@ -25,6 +32,10 @@ export function operationFingerprint(state: DemoSnapshot, target: OperationTarge
 export function operationError(state: DemoSnapshot, target: OperationTarget, role: Role): string {
   const permitted = (...roles: Role[]) => roles.includes(role);
   switch (target.kind) {
+    case "transfer-receipt": return permitted("Site Personnel", "Accounting / Auditing", "Administrator") && state.transferDeliveries?.some(delivery => delivery.id === target.deliveryId && delivery.receiptVersions?.some(receipt => receipt.id === target.receiptId && receipt.archive.status === "pending")) ? "" : "This transfer receipt has no pending archive.";
+    case "transfer-evidence": return permitted("Site Personnel", "Accounting / Auditing", "Administrator") && state.stockTransfers?.some(transfer => transfer.id === target.transferId && transfer.documents?.some(doc => doc.id === target.documentId && doc.archive.status === "pending")) ? "" : "This transfer evidence has no pending archive.";
+    case "transfer-attachment": return permitted("Site Personnel", "Accounting / Auditing") && state.transferDeliveries?.some(delivery => delivery.id === target.deliveryId && delivery.transferId === target.transferId && ["confirmed", "posted"].includes(delivery.status)) ? "" : "Receive this transfer before attaching evidence.";
+
     case "payment-proof": { const po = state.pos.find(value => value.id === target.poId); return permitted("Accounting / Auditing", "Administrator") && po && canAttachPaymentProof(po) && !proofAssigned(po,target.documentId) && po.paymentProofs?.some(value => value.id === target.documentId && value.archive.status === "pending") ? "" : "This proof has no pending archive."; }
     case "project": return permitted("Administrator", "Project Manager") && state.sites.some(site => site.id === target.id && !site.driveFolderId) ? "" : "This project already has a folder or cannot be configured.";
     case "request": { const record = state.requests.find(value => value.id === target.id); return (permitted("Procurement", "Administrator") || permitted("Project Manager") && requiresPMReview(state.requests.find(r => r.id === target.id))) && record?.status === "approved" && !record.correction && record.archive?.status === "pending" ? "" : "This MRF is not available for archiving."; }
@@ -38,6 +49,10 @@ export function operationError(state: DemoSnapshot, target: OperationTarget, rol
 }
 export function operationRetry(state: DemoSnapshot, target: OperationTarget): boolean {
   switch (target.kind) {
+    case "transfer-receipt": return !!state.transferDeliveries?.find(value => value.id === target.deliveryId)?.receiptVersions?.find(value => value.id === target.receiptId)?.archive.error;
+    case "transfer-evidence": return !!state.stockTransfers?.find(value => value.id === target.transferId)?.documents?.find(value => value.id === target.documentId)?.archive.error;
+    case "transfer-attachment": return false;
+
     case "payment-proof": return !!state.pos.find(value => value.id === target.poId)?.paymentProofs?.find(value => value.id === target.documentId)?.archive.error;
     case "project": return !!state.sites.find(site => site.id === target.id)?.driveFolderSetup?.error;
     case "request": return !!state.requests.find(value => value.id === target.id)?.archive?.error;
@@ -51,6 +66,10 @@ export function operationRetry(state: DemoSnapshot, target: OperationTarget): bo
 }
 export function operationAllows(target: OperationTarget, command: Command): boolean {
   switch (target.kind) {
+    case "transfer-receipt": return (command.type === "completeTransferReceiptArchive" || command.type === "failTransferReceiptArchive") && command.deliveryId === target.deliveryId && command.receiptId === target.receiptId;
+    case "transfer-evidence": return (command.type === "completeTransferEvidenceArchive" || command.type === "failTransferEvidenceArchive") && command.transferId === target.transferId && command.documentId === target.documentId;
+    case "transfer-attachment": return command.type === "attachTransferEvidence" && command.transferId === target.transferId && command.documents.every(doc => doc.deliveryId === target.deliveryId);
+
     case "payment-proof": return (command.type === "completePaymentProofArchive" || command.type === "failPaymentProofArchive") && command.poId === target.poId && command.documentId === target.documentId;
     case "project": return (command.type === "completeProjectFolder" || command.type === "failProjectFolder") && command.siteId === target.id;
     case "request": return ["completeRequestArchive", "failRequestArchive"].includes(command.type) && "id" in command && command.id === target.id;

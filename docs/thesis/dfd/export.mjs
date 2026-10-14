@@ -23,7 +23,7 @@ const temporary = await mkdtemp(path.join(os.tmpdir(),"constructsync-dfd-"));
 const entityMap = new Map(entities.map(entity => [entity.id,entity]));
 const storeMap = new Map(stores.map(store => [store.id,store]));
 const escape = value => String(value).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll('"',"&quot;");
-const textWidth = (value,size) => [...value].reduce((sum,char) => sum + ("ilI1.,| /".includes(char) ? 0.27 : /[A-Z]/.test(char) ? 0.65 : 0.52) * size,0);
+const textWidth = (value,size) => [...value].reduce((sum,char) => sum + ("ilI1.,| /".includes(char) ? 0.27 : /[A-Z]/.test(char) ? 0.65 : 0.48) * size,0);
 const wrap = (text,width,size) => {
   if (Array.isArray(text)) return text;
   const lines = []; let line = "";
@@ -47,7 +47,8 @@ function build(name) {
     if (kind === "entity") {
       result.svg = `<rect width="${w}" height="${h}" fill="white" stroke="#64748b" stroke-width="1.2"/>${duplicate ? '<path d="M6 3l8 8m-2-8l8 8" stroke="#64748b" fill="none"/>' : ""}${text(w/2,h/2,label,w-20,font,true)}`;
     } else if (kind === "process") {
-      result.svg = `<rect width="${w}" height="${h}" rx="12" fill="#e4edf8" stroke="#365b88" stroke-width="1.3"/><line x1="0" y1="27" x2="${w}" y2="27" stroke="#365b88" stroke-width="1"/>${text(w/2,13,number,w-20,font,true)}${text(w/2,27+(h-27)/2,label,w-18,font,true)}`;
+      const band = font*1.35;
+      result.svg = `<rect width="${w}" height="${h}" rx="12" fill="#e4edf8" stroke="#365b88" stroke-width="1.3"/><line x1="0" y1="${band}" x2="${w}" y2="${band}" stroke="#365b88" stroke-width="1"/>${text(w/2,band/2,number,w-20,font,true)}${text(w/2,band+(h-band)/2,label,w-18,font,true)}`;
     } else {
       result.svg = `<path d="M${w} 0H0V${h}H${w}" fill="#fff8e6" stroke="#8a7544" stroke-width="1.2"/><line x1="38" y1="0" x2="38" y2="${h}" stroke="#8a7544"/>${duplicate ? `<line x1="5" y1="0" x2="5" y2="${h}" stroke="#8a7544"/>` : ""}${text(21,h/2,canonical,30,font,true)}${text(38+(w-38)/2,h/2,label,w-48)}`;
     }
@@ -62,7 +63,8 @@ function build(name) {
   if (name === "context") {
     const system = node("system","P0","process",20,300,1360,90,["ConstructSync"],"0");
     for (let i = 0; i < entities.length; i++) {
-      const entity = entities[i], top = i < 5, column = i % 5, x = 20 + column * 280;
+      const entity = entities[i], top = i < 5, column = top ? i : i - 5;
+      const count = top ? 5 : entities.length - 5, x = 20 + (5-count)*140 + column * 280;
       const actor = node(entity.id,entity.id,"entity",x,top ? 20 : 560,240,65,entity.name);
       const incoming = contextFlows.find(flow => flow.from === entity.id), outgoing = contextFlows.find(flow => flow.to === entity.id);
       flow(actor.id,system.id,incoming.label,top ? [[x+55,85],[x+55,300]] : [[x+55,560],[x+55,390]],x+55,top ? 190 : 475,110);
@@ -73,17 +75,17 @@ function build(name) {
     for (const process of processes) {
       const [ox,oy] = process.position;
       // Separate horizontal input/output lanes keep every connector continuous.
-      const core = node(process.id,process.id,"process",ox+330,oy+15,150,325,process.display,process.number);
+      const core = node(process.id,process.id,"process",ox+450,oy+10,210,475,process.display,process.number);
       const addNeighbor = (definition,kind,index,count,input,output) => {
-        const spacing = 85;
-        const cy = oy+55+index*spacing+(4-count)*spacing/2;
-        const left = kind === "entity", x = ox+(left ? 0 : 645), w = left ? 160 : 150;
+        const spacing = 100;
+        const cy = oy+70+index*spacing+(5-count)*spacing/2;
+        const left = kind === "entity", x = ox+(left ? 0 : 890), w = left ? 230 : 200;
         const used = uses.get(definition.id)||0; uses.set(definition.id,used+1);
-        const instance = node(process.id+"-"+definition.id,definition.id,kind,x,cy-27,w,54,left ? definition.name : definition.display,undefined,used>0);
+        const instance = node(process.id+"-"+definition.id,definition.id,kind,x,cy-37,w,74,left ? definition.name : definition.display,undefined,used>0);
         const near = left ? x+w : x, port = left ? core.x : core.x+core.w;
         const cx = (near+port)/2, width = Math.abs(near-port)-12;
-        if(input) flow(instance.id,core.id,input,[[near,cy-12],[port,cy-12]],cx,cy-27,width);
-        if(output) flow(core.id,instance.id,output,[[port,cy+12],[near,cy+12]],cx,cy+27,width);
+        if(input) flow(instance.id,core.id,input,[[near,cy-11],[port,cy-11]],cx,cy-32,width);
+        if(output) flow(core.id,instance.id,output,[[port,cy+11],[near,cy+11]],cx,cy+32,width);
       };
       process.actors.forEach((actor,i)=>addNeighbor(entityMap.get(actor.id),"entity",i,process.actors.length,actor.input,actor.output));
       process.stores.forEach((store,i)=>addNeighbor(storeMap.get(store.id),"store",i,process.stores.length,store.read,store.write));
@@ -124,7 +126,7 @@ try {
       const nodes = [...document.querySelectorAll("[data-node]")], labels = [...document.querySelectorAll("[data-label]")];
       const overlaps = (a,b)=>a.left<b.right && a.right>b.left && a.top<b.bottom && a.bottom>b.top;
       for (const node of nodes) {
-        const bounds = node.getBoundingClientRect();
+        const bounds = node.querySelector("rect,path").getBoundingClientRect();
         for (const text of node.querySelectorAll("text")) {
           const rect = text.getBoundingClientRect();
           if (rect.left<bounds.left || rect.right>bounds.right || rect.top<bounds.top || rect.bottom>bounds.bottom) errors.push(`Node text clips: ${node.dataset.node}/${text.textContent}`);
@@ -174,14 +176,14 @@ try {
       assert.ok(content.items.length>flows.length,"PDF labels must be selectable text");
     } finally { await loading.destroy(); }
     await writeFile(path.join(directory,`${prefix}.pdf`),bytes);
-    reports.push(`- **${name}**: ${nodes.length} visible symbols; ${flows.length} labeled flows; minimum ${points.toFixed(2)} pt at ${config.printWidthMm} mm width. PNG ${config.width*3} × ${config.height*3} pixels. Exactly one selectable-text PDF page${name==="level1" ? ", A4 landscape" : ""}.`);
+    reports.push(`- **${name}**: ${nodes.length} visible symbols; ${flows.length} labeled flows; minimum ${points.toFixed(2)} pt at ${config.printWidthMm} mm width. PNG ${config.width*4} × ${config.height*4} pixels. Exactly one selectable-text PDF page${name==="level1" ? ", A4 landscape" : ""}.`);
     console.log(`${name} exported. Preview: ${preview}`);
     await page.close();
   }
 } finally { await browser.close(); }
 await writeFile(path.join(directory,"VALIDATION.md"),`# DFD validation
 
-Verified against the revised workflow on 2026-10-11.
+Verified against the revised workflow on 2026-10-13.
 
 ${reports.join("\n")}
 
@@ -193,6 +195,8 @@ ${reports.join("\n")}
 - Level 1 connectors have zero crossings, overlapping segments or connector/label collisions. Repeated neighbors keep connections local; removing them would introduce long links across process groups.
 - Boundary payloads and store endpoints match the fixed approved-flows.json baseline.
 - Every visible label fits the canvas; labels do not overlap nodes or each other. Node labels fit their shapes.
+- Stock availability, transfer proposals, source release decisions, trip schedules and transfer receipt evidence are represented; transfers have no payment or supplier-clearance dependency.
+- Supplier quotations enter from Supplier and issued purchase orders return to Supplier at both levels. The accompanying documentation explains that Procurement mediates these exchanges; no direct supplier access is implied. The context figure contains no explanatory footer.
 - Finance plans, Accounting verification, credit/upfront clearance, reviewed AI drafts and warehouse/site quantities remain distinct information.
 - Diagram sources and notes derive from one model. Run node docs/thesis/dfd/generate.mjs --check for consistency.
 

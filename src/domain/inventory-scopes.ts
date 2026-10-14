@@ -8,6 +8,7 @@ export function receivedMaterialScopes(state: DemoSnapshot): Map<string, Set<str
   const batches = new Map(state.batches.map(batch => [batch.id, batch]));
   const result = new Map<string, Set<string>>();
   for (const movement of state.movements) {
+    if (movement.kind === "transfer-in" && movement.transferId && movement.quantity > 0) { const transfer = state.stockTransfers?.find(value => value.id === movement.transferId); const request = requests.get(transfer?.requestId || ""); if (request?.scopeId && request.siteId === movement.siteId) { const key = movement.siteId + "/" + materialId(movement.itemName, movement.unit); const scopes = result.get(key) || new Set<string>(); scopes.add(request.scopeId); result.set(key, scopes); } continue; }
     if (movement.kind !== "receipt" || movement.quantity <= 0 || !movement.batchId) continue;
     const batch = batches.get(movement.batchId);
     const po = batch && orders.get(batch.poId);

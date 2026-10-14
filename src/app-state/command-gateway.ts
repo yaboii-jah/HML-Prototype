@@ -4,25 +4,27 @@ import { copyIdentity, validIdentity } from "../domain/audit.ts";
 import { operationAllows, operationFingerprint } from "../domain/operations.ts";
 
 export type CommandRunner = (command: Command) => Promise<CommandResult>;
-type Repository = { execute: (command: Command, actor?: AuditIdentity) => Promise<CommandResult>; getSnapshot: () => { snapshot: DemoSnapshot | null } };
+type Repository = { execute: (command: Command, actor?: AuditIdentity, siteIds?: readonly string[]) => Promise<CommandResult>; getSnapshot: () => { snapshot: DemoSnapshot | null } };
 const denied = (message: string): CommandResult => ({ ok: false, message });
-export function bindAccountCommands(repository: Repository, expected: AuditIdentity | undefined, activeAccount: () => AuditIdentity | undefined) {
+export function bindAccountCommands(repository: Repository, expected: AuditIdentity | undefined, activeAccount: () => AuditIdentity | undefined, activeSiteIds: () => readonly string[] | undefined = () => undefined) {
   const actor = copyIdentity(expected);
   const current = () => { const active = activeAccount(); return actor && validIdentity(actor) && active?.email === actor.email && active.role === actor.role && active.userId === actor.userId && active.sessionRevision === actor.sessionRevision; };
   const run: CommandRunner = async command => {
     if (command.type === "setRole" || command.type === "startOperation") return denied("Use the account or operation controls to continue.");
     if (!current()) return denied("Your account changed. Sign in and try this action again.");
-    return repository.execute(command, copyIdentity(activeAccount()));
+    return repository.execute(command, copyIdentity(activeAccount()), activeSiteIds());
   };
   const beginOperation = async (target: OperationTarget): Promise<CommandRunner> => {
     if (!current()) throw new Error("Sign in with the initiating account before starting this operation.");
     const initiator = copyIdentity(activeAccount());
+    const initiatorSites = activeSiteIds();
     const scope = structuredClone(target);
     const initial = repository.getSnapshot().snapshot;
     if (!initial) throw new Error("The workspace is unavailable.");
     const fingerprint = operationFingerprint(initial, scope);
     const priorIds = new Set(repository.getSnapshot().snapshot?.accounting.flatMap(record => record.documents?.map(document => document.id) || []));
-    const start = await repository.execute({ type: "startOperation", target: scope }, initiator);
+    const priorTransferIds = new Set(repository.getSnapshot().snapshot?.stockTransfers?.flatMap(record => record.documents?.map(document => document.id) || []));
+    const start = await repository.execute({ type: "startOperation", target: scope }, initiator, initiatorSites);
     if (!start.ok) throw new Error(start.message);
     let attached = false;
     const acknowledged = new Set<string>();
@@ -31,21 +33,29 @@ export function bindAccountCommands(repository: Repository, expected: AuditIdent
       const evidenceCommand = command.type === "completeAccountingArchive" || command.type === "failAccountingArchive";
       const evidenceStart = command.type === "startOperation" && command.target.kind === "evidence";
       const derivedEvidence = scope.kind === "attachment" && (evidenceCommand && command.poId === scope.poId && createdEvidence.has(command.documentId) || evidenceStart && command.target.kind === "evidence" && command.target.poId === scope.poId && createdEvidence.has(command.target.documentId));
-      if (!derivedEvidence && !operationAllows(scope, command)) return denied("This operation cannot change another record or perform business decisions.");
+      const transferAck = command.type === "completeTransferEvidenceArchive" || command.type === "failTransferEvidenceArchive";
+      const derivedTransfer = scope.kind === "transfer-attachment" && transferAck && command.transferId === scope.transferId && createdEvidence.has(command.documentId);
+      if (!derivedEvidence && !derivedTransfer && !operationAllows(scope, command)) return denied("This operation cannot change another record or perform business decisions.");
       const snapshot = repository.getSnapshot().snapshot;
       if (!snapshot || operationFingerprint(snapshot, scope) !== fingerprint) return denied("The operation's source record changed. Start a new operation.");
       if (derivedEvidence && scope.kind === "attachment") {
         const documentId = evidenceCommand ? command.documentId : command.type === "startOperation" && command.target.kind === "evidence" ? command.target.documentId : "";
         if (createdEvidence.get(documentId) !== operationFingerprint(snapshot, {kind:"evidence",poId:scope.poId,documentId})) return denied("The evidence changed. Start a new archive operation.");
       }
+      if (derivedTransfer && scope.kind === "transfer-attachment" && transferAck && createdEvidence.get(command.documentId) !== operationFingerprint(snapshot, { kind: "transfer-evidence", transferId: scope.transferId, documentId: command.documentId })) return denied("The transfer evidence changed. Start a new archive operation.");
+      if (scope.kind === "transfer-attachment" && command.type === "attachTransferEvidence" && attached) return denied("This transfer attachment operation already saved its files.");
       if (scope.kind === "attachment" && command.type === "attachAccountingDocuments" && attached) return denied("This attachment operation has already saved its documents.");
-      const acknowledgement = command.type !== "startOperation" && command.type !== "attachAccountingDocuments" ? JSON.stringify(command) : undefined;
+      const acknowledgement = command.type !== "startOperation" && command.type !== "attachAccountingDocuments" && command.type !== "attachTransferEvidence" ? JSON.stringify(command) : undefined;
       if (acknowledgement && acknowledged.has(acknowledgement)) return { ok: true, snapshot, message: "This operation acknowledgement was already saved." };
-      const result = await repository.execute(command, initiator);
+      const result = await repository.execute(command, initiator, initiatorSites);
       if (result.ok && acknowledgement) acknowledged.add(acknowledgement);
       if (result.ok && scope.kind === "attachment" && command.type === "attachAccountingDocuments") {
         attached = true;
         for (const document of result.snapshot.accounting.find(record => record.poId === scope.poId)?.documents || []) if (!priorIds.has(document.id) && document.batchId === scope.batchId && document.uploadedByIdentity?.email === initiator?.email) createdEvidence.set(document.id, operationFingerprint(result.snapshot, {kind:"evidence",poId:scope.poId,documentId:document.id}));
+      }
+      if (result.ok && scope.kind === "transfer-attachment" && command.type === "attachTransferEvidence") {
+        attached = true;
+        for (const document of result.snapshot.stockTransfers?.find(record => record.id === scope.transferId)?.documents || []) if (!priorTransferIds.has(document.id) && document.deliveryId === scope.deliveryId && document.uploadedByIdentity?.email === initiator?.email) createdEvidence.set(document.id, operationFingerprint(result.snapshot, { kind: "transfer-evidence", transferId: scope.transferId, documentId: document.id }));
       }
       return result;
     };

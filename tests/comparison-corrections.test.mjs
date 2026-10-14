@@ -44,13 +44,13 @@ test('comparison uses required quantities, raw converted prices, self-contained 
 });
 
 test('alternative selection is explicit, validated, frozen and independent of awards', () => {
-  const { state } = fixture(), quote = state.quotes[0], itemId = quote.lines[0].requestItemId;
+  const { state } = fixture(); state.pos = []; const quote = state.quotes[0], itemId = quote.lines[0].requestItemId;
   quote.lines.push({ ...quote.lines[0], id:'alternative',unitPrice:123 });
   const before = structuredClone(state);
   assert.match(applyCommand(state,{type:'createBidReport',requestId:'m1'},context).message,/Choose an alternative/);
   assert.equal(applyCommand(state,{type:'createBidReport',requestId:'m1',comparisonSelections:{[quote.id]:{[itemId]:'not-matching'}}},context).ok,false);
   const result = applyCommand(state,{type:'createBidReport',requestId:'m1',comparisonSelections:{[quote.id]:{[itemId]:'alternative'}}},context);
-  assert.equal(result.ok,true,result.message); assert.equal(result.snapshot.bidReports[0].comparisonRevision,4);
+  assert.equal(result.ok,true,result.message); assert.equal(result.snapshot.bidReports[0].comparisonRevision,5);
   assert.equal(result.snapshot.bidReports[0].comparisonSelections[quote.id][itemId],'alternative'); assert.deepEqual(result.snapshot.pos,before.pos); assert.deepEqual(state,before);
   quote.lines[1].unitPrice=999; assert.equal(result.snapshot.bidReports[0].data.offers[0].quote.lines[1].unitPrice,123);
   const invalid=structuredClone(result.snapshot.bidReports[0]); invalid.comparisonSelections[quote.id][itemId]='unknown'; assert.equal(validBidReport(invalid),false);

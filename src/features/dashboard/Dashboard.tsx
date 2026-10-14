@@ -9,10 +9,10 @@ import { RequestMonitoringTable } from "@/src/features/requests/RequestMonitorin
 import { budgetFor } from "@/src/domain/selectors";
 
 export function Dashboard() {
-  const { snapshot: state } = useDemo();
+  const { snapshot: state, siteIds } = useDemo();
   if (!state) return null;
   const metrics = dashboardMetrics(state);
-  const tasks = tasksFor(state);
+  const tasks = tasksFor(state, siteIds);
   const visibleSites = state.sites.filter(site => state.siteFilter === "all" || site.id === state.siteFilter);
   return <>
     <PageHeader eyebrow={`${state.role} workspace`} title="Operations dashboard" description="Your next decisions and the current position of every project." actions={state.role === "Site Personnel" && state.sites.length ? <Link href="/requests/new" className="button primary">New material request</Link> : undefined}/>

@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import type { StockTransfer, TransferDelivery, TransferEvidence, TransferReceiptVersion } from "../domain/types.ts";
 import type { DeliveryReceiptVersion } from "../domain/types.ts";
 import type { AccountingDocument, Batch, MRF, PO, PaymentProof } from "../domain/types.ts";
 import { ACCOUNTING_MIMES, MAX_ACCOUNTING_FILE } from "../domain/accounting-documents.ts";
@@ -314,4 +315,43 @@ export async function archiveDeliveryReceipt(projectFolderId: string, receipt: D
   }
   const file = await uploadPdf(batchFolder.id, name, await generate(), tags);
   return { driveFileId: file.id, url: fileUrl(file) };
+}
+
+async function transferArchiveFolder(projectFolderId: string, request: MRF, transfer: StockTransfer) {
+  const project = await validateProjectFolder(projectFolderId);
+  const requestTag = { hmlRequestId: request.id };
+  const requestFolder = await createFolder(project.id, safeName(request.ref), requestTag, false);
+  const root = await createFolder(requestFolder.id, "Stock Transfers", requestTag);
+  const tags = { ...requestTag, hmlTransferId: transfer.id, hmlSourceProjectId: transfer.sourceSiteId, hmlDestinationProjectId: transfer.destinationSiteId };
+  const folder = await createFolder(root.id, safeName(transfer.ref), tags, false);
+  return { folder, tags };
+}
+export async function archiveTransferReceipt(projectFolderId: string, receipt: TransferReceiptVersion, generate: () => Promise<Uint8Array>) {
+  const { request, transfer, delivery } = receipt.data;
+  const { folder, tags: owner } = await transferArchiveFolder(projectFolderId, request, transfer);
+  const fingerprint = createHash("sha256").update(JSON.stringify(receipt.data)).digest("hex");
+  const tags = { ...owner, hmlDeliveryId: delivery.id, hmlDocumentId: receipt.id, hmlVersion: String(receipt.version), hmlType: "transfer-receipt", hmlSha256: fingerprint };
+  const existing = await taggedChild(folder.id, receipt.fileName, { hmlDocumentId: receipt.id }, false);
+  if (existing) {
+    if (existing.mimeType !== "application/pdf" || existing.appProperties?.hmlSha256 !== fingerprint || existing.appProperties?.hmlTransferId !== transfer.id) throw new Error("This transfer receipt has a different archived snapshot.");
+    return { driveFileId: existing.id, url: fileUrl(existing) };
+  }
+  const file = await uploadPdf(folder.id, safeName(receipt.fileName), await generate(), tags);
+  return { driveFileId: file.id, url: fileUrl(file) };
+}
+export async function prepareTransferEvidence(projectFolderId: string, request: MRF, transfer: StockTransfer, delivery: TransferDelivery, document: TransferEvidence) {
+  const { folder, tags: owner } = await transferArchiveFolder(projectFolderId, request, transfer);
+  const tags = { ...owner, hmlDeliveryId: delivery.id, hmlDocumentId: document.id, hmlVersion: String(document.receiptVersion || 0), hmlType: "transfer-evidence", hmlSha256: document.sha256 };
+  const existing = await taggedChild(folder.id, document.name, { hmlDocumentId: document.id }, false);
+  if (existing) {
+    if (existing.mimeType !== document.mime || Number(existing.size) !== document.size || existing.appProperties?.hmlSha256 !== document.sha256 || existing.appProperties?.hmlDeliveryId !== delivery.id) throw new Error("This transfer evidence differs from its Drive copy.");
+    return { driveFileId: existing.id, url: fileUrl(existing) };
+  }
+  return { sessionUri: await beginUpload(folder.id, safeName(document.archiveName || document.name), document.size, document.mime, tags) };
+}
+export async function downloadTransferEvidence(projectFolderId: string, requestId: string, transferId: string, deliveryId: string, documentId: string, fileId: string) {
+  const project = await validateProjectFolder(projectFolderId), file = await getDriveFile(fileId), tags = file.appProperties;
+  if (!ACCOUNTING_MIMES.some(mime => mime === file.mimeType) || tags?.hmlType !== "transfer-evidence" || tags.hmlRequestId !== requestId || tags.hmlTransferId !== transferId || tags.hmlDeliveryId !== deliveryId || tags.hmlDocumentId !== documentId || Number(file.size) > MAX_ACCOUNTING_FILE || !await isWithinFolder(fileId, project.id)) throw new Error("This transfer evidence is outside the destination project or has invalid ownership.");
+  const response = await drive(API + "/" + encodeURIComponent(fileId) + "?alt=media&supportsAllDrives=true");
+  return { bytes: Buffer.from(await response.arrayBuffer()), mime: file.mimeType };
 }

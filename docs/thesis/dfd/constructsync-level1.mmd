@@ -34,11 +34,11 @@ flowchart TB
   pm -->|"Budgets"| P1
   P1 -->|"Project status"| pm
   site -->|"MRF / files"| P2
-  P2 -->|"Request status"| site
+  P2 -->|"MRF status"| site
   pm -->|"MRF decisions"| P2
   P2 -->|"Review MRFs"| pm
-  proc -->|"Offers / awards"| P3
-  P3 -->|"Bids / POs"| proc
+  proc -->|"Sourcing data"| P3
+  P3 -->|"Sourcing / POs"| proc
   accounting -->|"PO review"| P3
   P3 -->|"PO / budget"| accounting
   supplier -->|"Quotations"| P3
@@ -48,14 +48,14 @@ flowchart TB
   finance -->|"Payment plans"| P4
   P4 -->|"Balances"| finance
   logistics -->|"Dispatch data"| P5
-  P5 -->|"Cleared goods"| logistics
-  site -->|"Site entries"| P5
-  P5 -->|"Site stock"| site
+  P5 -->|"Ready goods"| logistics
+  site -->|"Release/entry"| P5
+  P5 -->|"Release/stock"| site
   proc -->|"WH receipts"| P5
   P5 -->|"WH quantities"| proc
   ai -->|"AI drafts"| P6
-  P6 -->|"Pages / context"| ai
-  drive -->|"Archive results"| P6
+  P6 -->|"Pages/context"| ai
+  drive -->|"Archive data"| P6
   P6 -->|"Files / lookups"| drive
   accounting -->|"Doc review"| P6
   P6 -->|"Evidence"| accounting
@@ -67,12 +67,13 @@ flowchart TB
   D2 -->|"MRF records"| P2
   P2 -->|"MRF sources"| D6
   D6 -->|"AI drafts"| P2
-  P3 -->|"Offers / POs"| D3
-  D3 -->|"Offer / PO"| P3
+  P3 -->|"Sourcing"| D3
+  D3 -->|"Allocations"| P3
   D2 -->|"Approved MRF"| P3
   D1 -->|"Budget data"| P3
   P3 -->|"Quote / PO"| D6
   D6 -->|"Drafts / refs"| P3
+  D5 -->|"Site stock"| P3
   P4 -->|"Payment data"| D4
   D4 -->|"Pay status"| P4
   D3 -->|"PO terms"| P4
@@ -80,8 +81,9 @@ flowchart TB
   D6 -->|"Proof refs"| P4
   P5 -->|"Stock entries"| D5
   D5 -->|"Stock data"| P5
-  D4 -->|"Clearance"| P5
-  D3 -->|"Ordered goods"| P5
+  D4 -->|"PO clearance"| P5
+  P5 -->|"Releases"| D3
+  D3 -->|"Sourced goods"| P5
   P5 -->|"Receipt files"| D6
   D6 -->|"Receipt refs"| P5
   P6 -->|"Drafts / refs"| D6
@@ -92,3 +94,4 @@ flowchart TB
   class admin,pm,site,proc,supplier,finance,accounting,logistics,ai,drive external
   class P1,P2,P3,P4,P5,P6 process
   class D1,D2,D3,D4,D5,D6 data
+  %% Supplier quotations and issued purchase orders are exchanged through Procurement; suppliers do not directly access the application.

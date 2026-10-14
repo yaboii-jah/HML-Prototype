@@ -1,6 +1,7 @@
 import { isExternalCredit, isExternalPayment } from "./full-disbursement.ts";
 import { isSiteBatch, normalizedQuantity, orderedQuantity, siteAcceptedFor, supplierSchedulableFor } from "./delivery-flow.ts";
 import { materialId } from "./ids.ts";
+import { sourceStockOnHand } from "./stock-transfers.ts";
 import { poFinancialBreakdown, poLineTotal, quoteFinancialBreakdown, quoteLineTotal, totalWithAdjustments } from "./pricing.ts";
 import type { DemoSnapshot, MRF, PO, Quote } from "./types.ts";
 
@@ -34,7 +35,7 @@ export const budgetFor = (state: DemoSnapshot, siteId: string) => {
 export const acceptedFor = siteAcceptedFor;
 export const outstandingFor = (state: DemoSnapshot, po: PO, itemId: string) => Math.max(0, normalizedQuantity(orderedFor(state, po, itemId) - acceptedFor(state, po.id, itemId)));
 export const schedulableFor = supplierSchedulableFor;
-export const stockFor = (state: DemoSnapshot, siteId: string, itemName: string, unit: string) => state.movements.filter(m => m.siteId === siteId && m.itemName.toLowerCase() === itemName.toLowerCase() && m.unit.toLowerCase() === unit.toLowerCase()).reduce((sum, m) => normalizedQuantity(sum + m.quantity), 0);
+export const stockFor = sourceStockOnHand;
 export const inventoryFor = (state: DemoSnapshot, siteId: string) => {
   const entries = new Map<string, { id: string; name: string; unit: string }>();
   state.movements.filter(m => m.siteId === siteId).forEach(m => entries.set(materialId(m.itemName, m.unit), { id: materialId(m.itemName, m.unit), name: m.itemName, unit: m.unit }));

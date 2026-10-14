@@ -1,0 +1,53 @@
+/* Hallmark component: transfer detail; existing app tokens; pre-emit critique: P4 H4 E4 S5 R5 V4. */
+.transfer-review-table{min-width:680px}
+.transfer-review-table input[type=number]{width:110px}
+.transfer-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.transfer-assignment-note{padding:14px;border:1px solid var(--line);border-left:3px solid var(--warn);background:var(--paper);border-radius:var(--radius-md)}
+.transfer-review-table small,.transfer-trip td small,.transfer-summary small{display:block;margin-top:4px;font-weight:400;color:var(--muted)}
+.transfer-summary strong{text-align:right}
+.stock-transfer-detail{display:grid;gap:16px;min-width:0}
+.stock-transfer-detail>.panel{margin:0;min-width:0}
+.stock-transfer-detail>.record-header{margin-bottom:0}
+.stock-transfer-detail h2{margin-bottom:8px}
+.stock-transfer-detail .panel-heading{margin-bottom:16px}
+.stock-transfer-detail .panel-heading h2{margin-bottom:0}
+.stock-transfer-detail .panel-heading .helper-note{margin:8px 0 0}
+.stock-transfer-detail .transfer-summary{margin-bottom:16px}
+.stock-transfer-detail .qa-bounded-table+.field{margin-top:16px}
+.stock-transfer-detail .transfer-form-actions{margin-top:16px}
+.stock-transfer-detail .transfer-form-actions:empty{display:none}
+.stock-transfer-detail .transfer-preview{margin-bottom:16px}
+.stock-transfer-detail .form-grid{align-items:start;gap:16px;grid-template-columns:repeat(2,minmax(0,1fr))}
+.stock-transfer-detail .form-grid .field{margin:0;min-width:0}
+.stock-transfer-detail input:not([type=checkbox]):not([type=file]),.stock-transfer-detail select{height:44px;min-height:44px;box-sizing:border-box;max-width:100%}
+.stock-transfer-detail input[type=date]::-webkit-calendar-picker-indicator{padding:2px}
+.stock-transfer-detail .form-grid input,.stock-transfer-detail .form-grid select{width:100%;min-width:0}
+.stock-transfer-detail .transfer-schedule .form-grid{margin-bottom:16px}
+.stock-transfer-detail textarea{min-height:88px;resize:vertical}
+.stock-transfer-detail .transfer-review-status{display:grid;justify-items:start;gap:12px;margin-bottom:16px}
+.stock-transfer-detail .transfer-review-status ul{margin:0;padding-left:20px;line-height:1.6;color:var(--muted)}
+.stock-transfer-detail .transfer-review-status li+li{margin-top:6px}
+.transfer-documents{margin-top:20px;padding-top:20px;min-width:0}
+.transfer-documents h3{font-size:15px;margin:0 0 16px}
+.transfer-document-list{display:grid;gap:12px}
+.transfer-document-row.qa-document-record{margin:0;min-width:0;align-items:center}
+.transfer-document-copy{min-width:0;flex:1;overflow-wrap:anywhere}
+.transfer-document-copy strong,.transfer-document-copy small{display:block}
+.transfer-document-copy .badge{margin-top:8px}
+.transfer-document-copy .field-error{margin:8px 0 0}
+.transfer-document-actions{flex:none;justify-content:flex-end}
+.transfer-upload{display:grid;gap:16px;margin-top:20px}
+.transfer-upload>.field{margin:0;max-width:360px;min-width:0}
+.transfer-upload select{width:100%;min-width:0}
+.transfer-upload .qa-file-upload{margin:0;min-width:0}
+.transfer-documents .qa-upload-status{font-size:12px}
+.stock-transfer-detail .transfer-actions .button{min-height:40px}
+@media(max-width:768px){
+  .stock-transfer-detail .form-grid{grid-template-columns:minmax(0,1fr)}
+  .transfer-document-row.qa-document-record{align-items:stretch}
+  .transfer-document-actions{justify-content:flex-start}
+  .transfer-upload>.field{max-width:none}
+  .stock-transfer-detail .transfer-actions .button{min-height:44px}
+  .transfer-summary>div{gap:12px}
+  .transfer-summary strong{min-width:0;overflow-wrap:anywhere}
+}

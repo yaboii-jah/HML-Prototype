@@ -1,32 +1,105 @@
-# ConstructSync process flow diagram
+# ConstructSync process flowcharts
 
-One combined business workflow figure covers full disbursement/upfront and credit/terms. It shares purchasing and delivery activities, while keeping their payment rules distinct. It shows activities, decisions and responsible roles for the intended production application, assuming authenticated users and shared persistent records. Prototype-only storage and sign-in behavior are not part of the flow. It is not a data flow diagram or screen-level system flowchart. See the [production design basis](../PRODUCTION_DESIGN.md).
+Six connected business figures describe the intended production workflow. The request and fulfillment overview introduces five focused flows: purchasing, payments, site transfers, receiving/inventory and receipt review. Each uses descriptive entry events and process handoffs. See the [production design basis](../PRODUCTION_DESIGN.md).
 
-## Figures
+## Active figures
 
-- **Combined process flow:** [PDF](constructsync-combined.pdf), [PNG](constructsync-combined.png), [SVG](constructsync-combined.svg), [Mermaid](constructsync-combined.mmd).
+| Figure | PDF | Image | Vector | Editable source |
+|---|---|---|---|---|
+| Request and fulfillment overview | [PDF](constructsync-overview.pdf) | [PNG](constructsync-overview.png) | [SVG](constructsync-overview.svg) | [Mermaid](constructsync-overview.mmd) |
+| Supplier purchasing and PO approval | [PDF](constructsync-purchasing.pdf) | [PNG](constructsync-purchasing.png) | [SVG](constructsync-purchasing.svg) | [Mermaid](constructsync-purchasing.mmd) |
+| Payment coordination and delivery clearance | [PDF](constructsync-payments.pdf) | [PNG](constructsync-payments.png) | [SVG](constructsync-payments.svg) | [Mermaid](constructsync-payments.mmd) |
+| Inter-site stock transfer | [PDF](constructsync-stock-transfer.pdf) | [PNG](constructsync-stock-transfer.png) | [SVG](constructsync-stock-transfer.svg) | [Mermaid](constructsync-stock-transfer.mmd) |
+| Delivery, receiving and inventory | [PDF](constructsync-delivery-receiving.pdf) | [PNG](constructsync-delivery-receiving.png) | [SVG](constructsync-delivery-receiving.svg) | [Mermaid](constructsync-delivery-receiving.mmd) |
+| Receipt documentation and review | [PDF](constructsync-document-review.pdf) | [PNG](constructsync-document-review.png) | [SVG](constructsync-document-review.svg) | [Mermaid](constructsync-document-review.mmd) |
 
-The PDF is one A4 landscape page with 10 mm margins. Keep the figure at 27.4 cm wide for labels of at least 10 pt. Place the caption outside the image, for example *Process flow of ConstructSync*. The figure uses white shapes with black text, borders and arrows, no internal title and no legend. Use the 6960 ? 4800 PNG when pasting into documents, or SVG/PDF for vector text. Preserve its proportions and avoid image compression. Roles appear in bold inside activity boxes. Diamonds indicate decisions; rounded shapes indicate starts, rejection outcomes or recorded milestones. Filled dots mark intentional splits or merges. The credit dot splits independent delivery/payment paths; the delivery dot accepts either eligible arrangement without waiting for both; the receipt dot splits inventory and document milestones. They are not additional decisions.
+Use the request and fulfillment overview as the main figure and the five focused flows as supporting figures. Add captions outside the images and assign the paper's figure numbers separately. Supplier PO issuance begins payment coordination; delivery clearance begins supplier delivery scheduling; site-transfer dispatch begins destination receiving. Warehouse or site receipt evidence begins documentation and review.
 
-Read the shared purchasing steps across the top two rows, then the payment arrangement in the center. Upfront payment is on the left and credit payment on the right. Shared delivery runs across the lower row, with inventory and documents beneath it. Return and follow-up routes use reserved corridors. Arrows are continuous, with no crossings or shared connector segments, and every branch label sits beside its connector rather than covering it.
+## Reading and print layout
 
-The earlier [separate upfront PDF](constructsync-upfront.pdf) and [separate credit PDF](constructsync-credit-terms.pdf) are retained for reference. Regeneration now produces the combined figure only.
+The overview, purchasing, site transfer and receipt-review figures use A4 portrait. Payment coordination and delivery/receiving use A4 landscape. All PDFs have 10 mm margins. Keep portrait images at 19 cm and landscape images at 27.7 cm wide, with their aspect ratios preserved. Printed labels are at least 10 pt. SVG/PDF retain selectable vector text; PNGs are generated at four times the canvas size.
 
-## Reading the flow
+Activities read downward and alternative branches sit beside each other. White shapes, black text and arrows, consistent spacing, and bold responsible roles preserve the paper style. No internal title or legend is inserted.
 
-- Activity boxes use short action labels. Project setup includes budgets, scopes and the Drive folder; MRF submission includes the supporting PDF. Quotation review includes finalization, archiving and comparative bids before allocation. PO cost review includes prices, VAT/EWT, adjustments and allocated budget. Issuing the PO means supplier issuance is confirmed and the PO becomes Served. The notes below retain the requirements summarized by each short label.
-- The shared path begins with project setup and MRF submission, then shows approval, quotation review, comparison/allocation, PO review, approval/archive and supplier issuance. The same MRF can produce multiple supplier POs: repeat each PO's downstream path as needed. Approved MRF evidence is archived before procurement continues; AI extraction, when used, is reviewed before submission/finalization.
-- MRF returns go to Site Personnel for correction. PO returns go to Procurement for correction. Accounting holds await another Accounting review rather than being treated as approved or returned. Rejected MRFs and POs stop their respective paths.
-- The selected payment arrangement is confirmed by Accounting. Upfront clearance follows full verified **net supplier payment** with archived proof; failed payment/proof checks loop back for resolution. Finance coordinates actual payment outside ConstructSync and cannot verify payment or clear delivery.
-- Credit requires an Accounting-agreed due date. After the PO is Served, payment and delivery proceed independently. The two outgoing paths are concurrent possibilities, not alternatives and not a synchronization barrier. Accounting may clear delivery before any payment. Each verified partial payment leaves an outstanding balance for Finance follow-up; full verified settlement ends the payment path.
-- Finance may coordinate payment before Accounting's check, but Accounting verification does not require a particular Finance coordination status. A planned payment date is distinct from the agreed due date. Overdue credit balances require follow-up; they do not automatically stop delivery.
-- Direct deliveries go to Site Personnel. Warehouse deliveries are received by Procurement, then transferred by Logistics and received at site. Receiving teams record accepted quantities, shortages and damage. Only accepted site quantities are posted to site inventory; warehouse receipt alone does not post site stock. Repeat the delivery path for partial batches.
-- After receipt, inventory posting and document evidence progress separately. Generated and signed receipts for **every received batch**, including warehouse and site batches, must be archived to Google Drive. Receiving teams upload signed receipts; Accounting can supply missing evidence and archives remaining accounting documents. Corrected quantities require current-version evidence before Accounting can mark document review complete.
-- Payment settlement, site inventory posting and document review are distinct milestones. Their rounded shapes do not imply automatic PO/MRF closure. Material usage is ongoing after inventory posting, not a completion gate. Core review steps include resolution of invalid evidence; the figures omit screen actions, detailed formulas, archive retry mechanics and legacy payment requests.
+Rectangles are activities; diamonds are decisions; rounded symbols are entries or recorded milestones. Double-sided rectangles refer to named subprocesses. Pentagons identify the next process, not automatic system closure. The Credit connector routes independent delivery-clearance and payment paths. Warehouse and site receipt evidence each proceeds to receipt review without waiting for the other path.
 
-## Maintain and regenerate
+## What changed and why
 
-Update the logical flow and fixed publication positions in model.mjs when [the workflow](../../WORKFLOW.md) changes. The Mermaid files describe the same connections with automatic layout; publication SVGs use fixed routes for legible paper figures.
+- Starting events and named process handoffs replace figure letters, so each flow can be understood independently of its caption or position in the paper.
+- Entry and handoff shapes are resized, and their connector ports are adjusted, to keep the longer descriptive labels readable.
+- Purchasing and PO approval remain separate from payment coordination and clearance, making responsibility and payment gates easier to follow.
+- Required destination suitability review precedes Procurement's release proposal. Reduced/rejected releases and transfer shortages return explicitly to material sourcing.
+- Warehouse evidence can reach receipt review before goods arrive at the site, and site stock posting never waits for document review.
+- The overview begins with a ready project and marks purchasing/transfer quantities as applicable, preserving purchase-only, transfer-only and mixed requests.
+
+## Request and fulfillment overview
+
+The overview begins with an existing project and shows MRF submission, Project Manager review, and Procurement allocation of requested quantities. Supplier purchasing and site transfers may fulfill the same request independently. Cleared supplier deliveries and dispatched transfers proceed to receiving and stock posting, while receipt evidence proceeds to documentation and review. These milestones do not establish automatic MRF closure.
+
+- Project setup is a prerequisite, not an activity repeated for each MRF.
+- Use purchase quantities, transfer quantities, or both; one item may be split across sources.
+- Cleared supplier deliveries and dispatched site transfers enter receiving independently. Warehouse or site receipt evidence proceeds to receipt review as it becomes available.
+- Stock posting, payment settlement and document review are separate milestones; none automatically closes the MRF.
+
+## Supplier purchasing and PO approval
+
+The purchasing flow begins with materials allocated for purchase and covers supplier quotation evaluation, material awards, PO preparation, and Accounting review of costs, budget and terms. Returned POs go back for correction, held reviews remain pending, and rejected POs end that purchasing path. Approved POs are archived and issued to suppliers before payment coordination begins.
+
+- Repeat for each supplier PO; only the allocated purchasing quantities enter this flow.
+- Accounting reviews costs, taxes, adjustments and budget, agrees the credit due date when applicable, and archives the approved PO.
+- Hold preserves pending review; Return requires PO correction; Reject does not close the entire MRF.
+- Supplier quotation and PO exchanges are handled by Procurement. Issued supplier POs proceed to payment coordination; actual payments occur outside the application.
+
+## Payment coordination and delivery clearance
+
+The payment flow separates upfront and credit arrangements after PO issuance. Upfront deliveries require full verified net payment and Accounting clearance. Under credit terms, delivery clearance and payment coordination proceed independently; partial payments retain the outstanding balance and payment settlement does not trigger another delivery.
+
+- Finance coordinates actual payments outside the application; Accounting archives proof and verifies paid amounts.
+- Upfront requires full verified net payment followed by separate Accounting delivery clearance.
+- The Credit connector routes two independent paths. Cleared supplier deliveries proceed to Logistics while Finance follows outstanding balances.
+- Finance's planned payment date differs from the agreed credit due date. Settlement never retriggers delivery; site transfers bypass payment coordination.
+
+## Inter-site stock transfer
+
+The transfer flow begins with materials allocated for site transfer and Procurement's suitability confirmation. Destination personnel review uncertain matches when required, after which Procurement rechecks stock and proposes release. Source personnel authorize available quantities. Released quantities proceed to Logistics, while rejected or reduced quantities return to material sourcing. Dispatch deducts source stock before the dispatched trip proceeds to destination receiving.
+
+- Suitability approval never authorizes source release. Procurement rechecks availability before requesting release.
+- Source proposals reserve stock and MRF demand. Only confirmed release quantities continue to Logistics; unreleased quantities return to material sourcing.
+- No supplier quotation, PO, payment, budget charge or purchase delivery clearance applies.
+- Repeat for multiple sites and trips. Dispatch deducts source stock once; destination receiving posts accepted site stock once. Cancellation of undispatched allocations remains in the workflow notes.
+
+## Delivery, receiving and inventory
+
+The receiving flow begins with either a cleared supplier delivery or a dispatched site transfer. Supplier deliveries may travel directly to the project or through the warehouse, while dispatched transfers enter at destination receiving. Site personnel record accepted quantities and post stock independently of receipt review. Warehouse receipts produce evidence without adding site stock. Missing transfer quantities return to material sourcing without restoring dispatched source stock.
+
+- Supplier deliveries enter before scheduling; site transfers enter after their trip has been dispatched.
+- Warehouse receipt alone does not post site stock. Warehouse and site evidence each proceed to receipt review immediately.
+- Only accepted site quantities are posted. Posting and document review do not depend on one another.
+- Transfer shortages return to material sourcing. Supplier discrepancies remain associated with their PO and delivery records; further batches may still be pending.
+- Repeat for partial deliveries. Neither posting nor document completion automatically closes an MRF.
+
+## Receipt documentation and review
+
+Warehouse and site receipt evidence enter the documentation flow independently of stock posting. Receiving teams archive generated and current signed receipts, and Accounting checks the required evidence. Missing or unacceptable documents return for completion and re-archiving before review is completed. Transfers require no supplier invoice or payment proof.
+
+- Run for each received warehouse or site batch; receipt evidence becomes available without waiting for stock posting or site arrival.
+- Archive generated and current signed receipts. Corrected quantities require evidence for the current version.
+- Accounting checks applicable purchasing evidence; transfer receipts require no supplier invoice or payment proof. Payment verification remains in the payment coordination process.
+- Archive failures and missing evidence are resolved without undoing receiving or stock posting. Document review does not close the MRF.
+
+## Details kept in notes
+
+MRFs and supplier quotations retain reviewed supporting files and archive requirements. PO review includes VAT/EWT, adjustments and budget checks. Stock matching requires compatible units and Procurement suitability confirmation. Project assignments control source release and destination receipt/posting. Detailed reservation, cancellation, shortage, evidence-version and archive-retry rules remain in [the workflow](../../WORKFLOW.md) rather than adding screen-level boxes.
+
+Receipt evidence review remains independent of payment settlement and stock posting. Transfer receipts require no supplier invoice or payment proof. Generated and current signed receipts must cover every received trip, including warehouse batches. Material usage continues after stock posting and is not a completion gate.
+
+## Historical figures
+
+The [previous four-figure set](previous-four-figure/ARCHIVE.md) retains its original labels and is not the active version. The [former combined chart](constructsync-combined.pdf), [former upfront chart](constructsync-upfront.pdf), and [former credit chart](constructsync-credit-terms.pdf) remain historical files. Use the six active figures above; regeneration does not overwrite the archives.
+
+## Regenerate
+
+Edit flows.mjs for current business content and fixed publication positions. model.mjs re-exports those figures and retains historical definitions. Mermaid uses automatic layout; publication SVGs use the checked fixed positions.
 
 ```powershell
 node docs/thesis/pfd/generate.mjs
@@ -34,6 +107,4 @@ node docs/thesis/pfd/generate.mjs --check
 node docs/thesis/pfd/export.mjs --cli "PATH_TO_CACHED_MERMAID_CLI/src/cli.js"
 ```
 
-The exporter reuses the existing cached Puppeteer installation and Edge configuration, without adding application dependencies. [Validation](VALIDATION.md) records flow checks, layout checks and export checks. No app or database behavior is changed.
-
-Sources: [workflow](../../WORKFLOW.md), [delivery-clearance rules](../../../src/domain/workflow.ts), [payment coordination](../../../src/domain/payment-coordination.ts), and [receipt evidence requirements](../../../src/domain/delivery-archive.ts).
+The exporter reuses the installed PDF utilities, cached Puppeteer and Edge; application dependencies and behavior do not change. [Validation](VALIDATION.md) records structural, cross-chart, geometry and rendered-text checks. [Diagram conventions](../research/diagram-conventions.md) explains the modeling sources.
