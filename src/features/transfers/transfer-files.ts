@@ -1,3 +1,4 @@
+import type { ArchiveProgressListener } from "../../domain/archive-progress.ts";
 import type { Command, CommandResult } from "../../domain/commands.ts";
 import type { DemoSnapshot, TransferEvidence } from "../../domain/types.ts";
 import { transferReceiptData } from "../../domain/stock-transfers.ts";
@@ -31,8 +32,9 @@ export async function attachTransferFiles(state: DemoSnapshot, transferId: strin
     return { snapshot: result.snapshot, documents: result.snapshot.stockTransfers!.find(value => value.id === transferId)!.documents!.filter(value => written.includes(value.localFileId)) };
   } catch (cause) { await Promise.allSettled(written.map(deleteLocalFile)); throw cause; }
 }
-export async function archiveTransferEvidence(state: DemoSnapshot, transferId: string, document: TransferEvidence, run: Run) {
+export async function archiveTransferEvidence(state: DemoSnapshot, transferId: string, document: TransferEvidence, run: Run, progress?: ArchiveProgressListener) {
   if (document.archive.status === "complete") return;
+  progress?.({ phase:"preparing" });
   try {
     const transfer = state.stockTransfers?.find(value => value.id === transferId), delivery = state.transferDeliveries?.find(value => value.id === document.deliveryId && value.transferId === transferId), project = state.sites.find(value => value.id === transfer?.destinationSiteId);
     if (!transfer || !delivery || !project?.driveFolderId) throw new Error("Map the destination project's Drive folder before archiving.");
@@ -40,11 +42,14 @@ export async function archiveTransferEvidence(state: DemoSnapshot, transferId: s
     if (!blob || blob.size !== document.size || await workbookDigest(blob) !== document.sha256) throw new Error("Original evidence is unavailable or changed. Attach a new copy.");
     const data = document.kind === "Signed delivery receipt" ? delivery.receiptVersions?.find(value => value.version === document.receiptVersion)?.data : transferReceiptData(state, delivery);
     if (!data) throw new Error("The signed receipt's quantity version is unavailable.");
+    progress?.({ phase:"uploading",loaded:0,total:blob.size });
     const start = await json(await fetch("/api/drive/transfer-evidence", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ document, data, projectFolderId: project.driveFolderId }) }));
-    const finish = start.driveFileId && start.url ? start : start.ticket && Number.isInteger(start.offset) ? await uploadDocument(blob, start.ticket, start.offset!, "/api/drive/transfer-evidence/chunk") : undefined;
+    const finish = start.driveFileId && start.url ? start : start.ticket && Number.isInteger(start.offset) ? await uploadDocument(blob, start.ticket, start.offset!, "/api/drive/transfer-evidence/chunk",progress) : undefined;
     if (!finish?.driveFileId || !finish.url) throw new Error("Drive did not confirm the evidence upload.");
+    progress?.({ phase:"uploading",loaded:blob.size,total:blob.size });
     const result = await run({ type: "completeTransferEvidenceArchive", transferId, documentId: document.id, fileId: finish.driveFileId, url: finish.url });
     if (!result.ok) throw new Error(result.message);
+    progress?.({ phase:"complete" });
   } catch (cause) {
     await run({ type: "failTransferEvidenceArchive", transferId, documentId: document.id, error: cause instanceof Error ? cause.message : "Archive needs retry." }); throw cause;
   }
@@ -62,16 +67,19 @@ export async function readTransferEvidence(state: DemoSnapshot, transferId: stri
   try { await saveGeneratedFile(document.localFileId, blob); } catch {}
   return blob;
 }
-export async function archiveTransferReceipt(state: DemoSnapshot, deliveryId: string, receiptId: string, run: Run) {
+export async function archiveTransferReceipt(state: DemoSnapshot, deliveryId: string, receiptId: string, run: Run, progress?: ArchiveProgressListener) {
   const delivery = state.transferDeliveries?.find(value => value.id === deliveryId), receipt = delivery?.receiptVersions?.find(value => value.id === receiptId);
   if (!receipt || receipt.archive.status === "complete") return;
+  progress?.({ phase:"preparing" });
   try {
     const folder = state.sites.find(value => value.id === receipt.data.project.id)?.driveFolderId;
     if (!folder) throw new Error("A destination-project Drive folder is required. Receiving remains saved.");
+    progress?.({ phase:"uploading" });
     const finish = await json(await fetch("/api/drive/transfer-receipts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ receipt, projectFolderId: folder }) }));
     if (!finish.driveFileId || !finish.url) throw new Error("Drive did not confirm the receipt archive.");
     const result = await run({ type: "completeTransferReceiptArchive", deliveryId, receiptId, fileId: finish.driveFileId, url: finish.url });
     if (!result.ok) throw new Error(result.message);
+    progress?.({ phase:"complete" });
   } catch (cause) {
     await run({ type: "failTransferReceiptArchive", deliveryId, receiptId, error: cause instanceof Error ? cause.message : "Receipt archive needs retry." }); throw cause;
   }

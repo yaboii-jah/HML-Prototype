@@ -13,6 +13,7 @@ export function siteActionProject(state: DemoSnapshot, command: Command): string
     const transferId = "transferId" in target ? target.transferId : "deliveryId" in target ? state.transferDeliveries?.find(delivery => delivery.id === target.deliveryId)?.transferId : undefined;
     return state.stockTransfers?.find(value => value.id === transferId)?.destinationSiteId;
   }
+  if (command.type === "reviewStockSuitability") return state.stockSuitabilityReviews?.find(review => review.id === command.id)?.destinationSiteId;
   if (command.type === "saveRequest" || command.type === "recordMovement") return command.siteId;
   if (command.type === "confirmBatch" || command.type === "postBatch" || command.type === "captureDeliveryReceipt") {
     const batch = state.batches.find(value => value.id === command.id);

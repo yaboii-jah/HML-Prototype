@@ -1,4 +1,4 @@
-import { transferQuantityFor, transfersForRequest, deliveriesForTransfer, requestSourcing } from "./stock-transfers.ts";
+import { transferQuantityFor, transfersForRequest, deliveriesForTransfer } from "./stock-transfers.ts";
 import { isSiteBatch, legFor, warehouseHeldFor } from "./delivery-flow.ts";
 import { auditRecords, type AuditRecord } from "./audit.ts";
 import { acceptedFor, outstandingFor, paidTotal, poItems, poTotal } from "./selectors.ts";
@@ -36,7 +36,7 @@ export function requestLifecycle(state: DemoSnapshot, requestId: string) {
   const openLines = active.filter(value => value.status === "released").reduce((total, po) => total + poItems(state, po).filter(item => outstandingFor(state, po, item.id) > 0).length, 0);
   const transfers = transfersForRequest(state, requestId), transferTrips = transfers.flatMap(transfer => deliveriesForTransfer(state, transfer.id));
   const transferScheduled = transferTrips.filter(value => value.status === "expected").length, transferTransit = transferTrips.filter(value => value.status === "dispatched").length, transferReceived = transferTrips.filter(value => value.status === "confirmed").length, transferPosted = transferTrips.filter(value => value.status === "posted").length;
-  const transferOnly = !active.length && transfers.length > 0 && request.items.every(item => requestSourcing(state, request, item).purchase <= 0);
+  const transferOnly = !active.length && transfers.length > 0 && request.items.every(item => transferQuantityFor(state, request.id, item.id) + .000001 >= item.quantity);
   const allReceived = request.items.length > 0 && request.items.every(item => item.quantity > 0 && active.reduce((total, po) => total + acceptedFor(state, po.id, item.id), 0) + transferQuantityFor(state, requestId, item.id, "accepted") + .000001 >= item.quantity);
   const hasReceipts = transferTrips.some(delivery => ["confirmed", "posted"].includes(delivery.status)) || active.some(po => poItems(state, po).some(item => acceptedFor(state, po.id, item.id) > 0));
   const stages: LifecycleStage[] = [

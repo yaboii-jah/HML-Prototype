@@ -1,4 +1,5 @@
 import { applyCommand, type Command, type CommandResult } from "../domain/commands.ts";
+import { validStockReviews } from "../domain/stock-suitability.ts";
 import { validTransferState } from "../domain/transfer-document.ts";
 import { newId } from "../domain/ids.ts";
 import { blankWorkspace } from "./fixtures/blank.ts";
@@ -72,6 +73,7 @@ const parseCurrent = (raw: string): DemoSnapshot | null => {
   const parsed = isRecord(saved) && saved.role === "Management" ? { ...saved, role: "Project Manager" } : saved;
   if (!isSnapshotShape(parsed) || parsed.version !== 12 || !Array.isArray(parsed.paymentRequests) || !Array.isArray(parsed.pendingAwards) || !Array.isArray(parsed.bidReports)) return null;
   const state = parsed as DemoSnapshot;
+  if (!validStockReviews(state)) return null;
   if (!validTransferState(state)) return null;
   if (!validDocumentNumberingState(state)) return null;
   if (!state.pos.every(po => ["draft", "submitted", "hold", "returned", "rejected", "approved", "released"].includes(po.status))) return null;

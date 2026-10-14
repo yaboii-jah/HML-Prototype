@@ -96,7 +96,7 @@ export function CompareAllocate({ state, request, initialMaterialId, canEdit, wo
         else if (quantity > 0 && offerAwardError(state, offer.quote)) invalid[offer.line.id] = offerAwardError(state, offer.quote);
       }
       const coverage = status(item, values);
-      if (coverage.proposed + coverage.ordered + coverage.transfers > item.quantity + 0.000001) invalid[item.id] = "Awards exceed the requested quantity for " + item.name + ".";
+      if (coverage.proposed + coverage.ordered + coverage.transfers + coverage.suitability > item.quantity + 0.000001) invalid[item.id] = "Awards exceed the requested quantity for " + item.name + ".";
     }
     return invalid;
   };
@@ -186,7 +186,7 @@ export function CompareAllocate({ state, request, initialMaterialId, canEdit, wo
               const selectedAwards = awards.filter(award => award.item.id === item.id);
               return <MaterialDetailsRow key={item.id} data-comparison-material={item.id} className={coverage.edited ? "bid-row-edited" : ""} disabled={blocked} onOpen={() => setMaterialId(item.id)}>
                 <th className="bid-fixed-material" scope="row"><MaterialDetailsTrigger onClick={() => setMaterialId(item.id)}>{request.items.indexOf(item) + 1}. {item.name}</MaterialDetailsTrigger><small>{coverage.ordered > 0 ? "Ordered " + coverage.ordered + " · " : ""}{coverage.unassigned} {item.unit} unassigned</small>{coverage.edited && <span className="bid-unsaved">Unsaved</span>}</th>
-                <td className="bid-fixed-quantity numeric">{coverage.remainingToOrder}<small>MRF {item.quantity} / Transfers {coverage.transfers} / Ordered {coverage.ordered}</small></td><td className="bid-fixed-unit">{item.unit}</td>
+                <td className="bid-fixed-quantity numeric">{coverage.remainingToOrder}<small>MRF {item.quantity} / Transfers {coverage.transfers} / Ordered {coverage.ordered} / Site review {coverage.suitability}</small></td><td className="bid-fixed-unit">{item.unit}</td>
                 {cellOffers.map(({ quote, line, price }, supplierIndex) => {
                   const lines = (quote.lines || []).filter(row => row.requestItemId === item.id);
                   const selected = line ? selectedAwards.some(award => award.line.id === line.id) : false;
@@ -205,7 +205,7 @@ export function CompareAllocate({ state, request, initialMaterialId, canEdit, wo
                     </td>
                   </Fragment>;
                 })}
-                <td className="bid-award-summary">{selectedAwards.length ? selectedAwards.map(award => <small key={award.line.id}><strong>{award.quantity} {item.unit}</strong> · {supplier(state, award.quote)}{offerAwardError(state, award.quote) && <span className="field-error">{offerAwardError(state, award.quote)}</span>}</small>) : <small className="muted">{coverage.remainingToOrder ? "No supplier selected" : "Covered by orders or site stock"}</small>}
+                <td className="bid-award-summary">{selectedAwards.length ? selectedAwards.map(award => <small key={award.line.id}><strong>{award.quantity} {item.unit}</strong> · {supplier(state, award.quote)}{offerAwardError(state, award.quote) && <span className="field-error">{offerAwardError(state, award.quote)}</span>}</small>) : <small className="muted">{coverage.remainingToOrder ? "No supplier selected" : coverage.suitability > 0 ? "Quantity set aside for site review" : "Covered by orders or site stock"}</small>}
                   <button type="button" className="text-link" data-split-material={item.id} disabled={blocked} onClick={() => openSplit(item.id)}>{canEdit ? "Split quantity" : "View awards"}</button>
                 </td>
               </MaterialDetailsRow>;
@@ -217,7 +217,7 @@ export function CompareAllocate({ state, request, initialMaterialId, canEdit, wo
         <p className="helper-note comparative-scroll-note">Scroll sideways to compare suppliers. Lowest price does not assess specifications, availability or quotation-level charges.</p>
       </>}
       <InlineError message={error}/>
-      <footer className="allocation-footer"><div><strong>{covered} of {request.items.length} materials covered</strong><small>{editedItems.length ? editedItems.length + " materials with unsaved choices" : staged.length + " saved awards"} · Saving awards does not create POs.</small><small>Unsaved choices remain while this workspace is open; saved awards survive refresh.</small></div>{canEdit && editedItems.length > 0 && <button type="button" className="text-link" disabled={blocked} onClick={reset}>Discard changes</button>}</footer>
+      <footer className="allocation-footer"><div><strong>{covered} of {request.items.length} materials with sourcing planned</strong><small>{editedItems.length ? editedItems.length + " materials with unsaved choices" : staged.length + " saved awards"} · Saving awards does not create POs.</small><small>Unsaved choices remain while this workspace is open; saved awards survive refresh.</small></div>{canEdit && editedItems.length > 0 && <button type="button" className="text-link" disabled={blocked} onClick={reset}>Discard changes</button>}</footer>
     </section>
 
     <CollapsibleSection title="Quotation financial summaries" defaultOpen={false}>{suppliers.map(quote => <section className="panel" key={quote.id}><h3>{supplier(state, quote)} · {quote.ref}</h3><QuotationFinancialSummary quote={quote}/><button type="button" className="button secondary" onClick={() => onReview(quote)}>Review quotation</button></section>)}</CollapsibleSection>

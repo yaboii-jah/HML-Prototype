@@ -15,7 +15,7 @@ function setup() {
   state.pos = []; state.pendingAwards = []; state.batches = []; state.movements = []; state.payments = []; state.paymentRequests = [];
   const request = state.requests[0], source = state.sites.find(site => site.id !== request.siteId);
   request.status = 'approved'; delete request.archive; delete request.correction;
-  request.items = [{ ...request.items[0], id: 'cement', name: 'Cement', unit: 'bag', quantity: 100 }];
+  request.items = [{ ...request.items[0], id: 'cement', name: 'Cement stock', unit: 'bag', quantity: 100 }];
   state.movements.push({ id: 'opening', siteId: source.id, itemName: 'CEMENT STOCK', unit: 'BAG', quantity: 80, kind: 'opening', reason: 'Opening stock', actor: 'Site Personnel', at: '2026-10-12T00:00:00Z' });
   const command = (role, input, sites = []) => {
     const context = { now: () => '2026-10-12T02:00:00Z', id: prefix => prefix + '-' + ++nextId, siteIds: sites, actor: { name: role + ' person', email: role.replaceAll(' ', '-') + '@example.com', role } };
@@ -61,10 +61,10 @@ test('partial source approval, multiple trips and shortages preserve stock conse
   assert.equal(f.command('Site Personnel', { type: 'receiveTransferDelivery', id: delivery.id, lines: { [lineId]: { accepted: 18, issue: 'Two bags damaged' } } }, [f.source.id]).ok, false);
   assert.equal(f.command('Site Personnel', { type: 'receiveTransferDelivery', id: delivery.id, lines: { [lineId]: { accepted: 18, issue: 'Two bags damaged' } } }, [f.request.siteId]).ok, true);
   assert.equal(requestSourcing(f.state, f.request, f.request.items[0]).purchase, 77);
-  assert.equal(sourceStockOnHand(f.state, f.request.siteId, 'Cement', 'bag'), 0);
+  assert.equal(sourceStockOnHand(f.state, f.request.siteId, 'Cement stock', 'bag'), 0);
   assert.equal(f.command('Site Personnel', { type: 'postTransferDelivery', id: delivery.id, quantities: { [lineId]: 18 }, reason: '' }, [f.request.siteId]).ok, true);
   assert.equal(f.command('Site Personnel', { type: 'postTransferDelivery', id: delivery.id, quantities: { [lineId]: 18 }, reason: '' }, [f.request.siteId]).ok, false);
-  assert.equal(sourceStockOnHand(f.state, f.request.siteId, 'Cement', 'bag'), 18);
+  assert.equal(sourceStockOnHand(f.state, f.request.siteId, 'Cement stock', 'bag'), 18);
   assert.equal(transferUnscheduled(f.state, f.state.stockTransfers[0], lineId), 5);
   assert.equal(validTransferState(f.state), true);
 });
@@ -169,7 +169,7 @@ test('new reports freeze remaining purchase quantities while historical report q
   f.propose(40);
   const result = f.command('Procurement', { type: 'createBidReport', requestId: f.request.id }); assert.equal(result.ok, true, result.message);
   const report = f.state.bidReports.at(-1); assert.equal(report.comparisonRevision, 5); assert.equal(comparisonItems(report)[0].quantity, 60);
-  const sheet = buildBidWorkbook(report).worksheets[0]; const row = sheet.getRows(1, sheet.rowCount).find(value => value.getCell(2).value === 'Cement');
+  const sheet = buildBidWorkbook(report).worksheets[0]; const row = sheet.getRows(1, sheet.rowCount).find(value => value.getCell(2).value === 'Cement stock');
   assert.equal(row.getCell(3).value, 60); assert.match(row.getCell(5).value, /Transfers\s*:\s*40/);
   f.command('Procurement', { type: 'cancelStockTransfer', id: f.state.stockTransfers[0].id, reason: 'Purchase instead' });
   assert.equal(comparisonItems(report)[0].quantity, 60); assert.equal(comparisonItems(historical)[0].quantity, 100);

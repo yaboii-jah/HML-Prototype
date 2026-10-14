@@ -1,4 +1,5 @@
 import { applyTransferCommand, isTransferCommand, requestSourcing, sourceStockAvailable, transferQuantityFor, transfersForRequest, type TransferCommand } from "./stock-transfers.ts";
+import { applyStockSourcingCommand, invalidateStockReviews, isStockSourcingCommand, suitabilityQuantityFor, type StockSourcingCommand } from "./stock-suitability.ts";
 import { siteActionProject } from "./site-access.ts";
 import { coordinationEligible, coordinationBalance, coordinationError, saveCoordination, resetCoordination } from "./payment-coordination.ts";
 import { projectRemovalReason } from "./project-removal.ts";
@@ -33,7 +34,7 @@ import { poLineTotal } from "./pricing.ts";
 import { procurementReady, supportingPdf } from "./request-archive.ts";
 import { ROLES, type ArchivedQuoteFile, type DemoSnapshot, type DocumentRef, type DocumentStatus, type Item, type POAdjustment, type POLine, type Priority, type Quote, type Role } from "./types.ts";
 
-export type Command = TransferCommand
+export type Command = StockSourcingCommand | TransferCommand
   | { type: "savePaymentCoordination"; poId: string; revision: number; priority: PaymentCoordination["priority"]; status: PaymentCoordination["status"]; plannedDate: string; note: string }
   | { type: "recordCreditPayment"; poId: string; paymentId: string; amount: number; method: Payment["method"]; reference: string; date: string; proofIds: string[] }
   | { type: "voidCreditPayment"; poId: string; paymentId: string; reason: string }
@@ -139,7 +140,7 @@ function awardError(state: DemoSnapshot, requestId: string, quote: Quote, lines:
     awarded.set(award.itemId, (awarded.get(award.itemId) || 0) + award.quantity);
     if (award.quoteId === quote.id) usedOffers.set(award.quoteLineId, (usedOffers.get(award.quoteLineId) || 0) + award.quantity);
   }
-  if (request.items.some(item => (awarded.get(item.id) || 0) + transferQuantityFor(state, requestId, item.id) > item.quantity + 0.000001)) return "Awarded quantities exceed the MRF request or overlap stock transfers.";
+  if (request.items.some(item => (awarded.get(item.id) || 0) + transferQuantityFor(state, requestId, item.id) + suitabilityQuantityFor(state, requestId, item.id) > item.quantity + 0.000001)) return "Awarded quantities exceed the MRF request or overlap stock requests and suitability reviews.";
   if (quote.lines.some(offer => (usedOffers.get(offer.id) || 0) > offer.quantity * offer.conversionFactor + 0.000001)) return "Awarded quantity exceeds the supplier's quoted quantity.";
   const subtotal = lines.reduce((sum, line) => sum + poLineTotal(line), 0);
   if (discount > subtotal + tax + freight) return "Discount exceeds the PO amount.";
@@ -156,6 +157,7 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
     const siteId = siteActionProject(state, command);
     if (siteId && !ctx.siteIds.includes(siteId)) return fail("Ask an Administrator to assign your account to this project before performing site actions.");
   }
+  if (isStockSourcingCommand(command)) return applyStockSourcingCommand(state, command, ctx);
   if (isTransferCommand(command)) return applyTransferCommand(state, command, ctx);
   const reopenDocumentReview = (poId: string, reason: string) => {
     const record = state.accounting.find(value => value.poId === poId);
@@ -367,6 +369,7 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
           original.updatedAt = at;
         } else Object.assign(original, fields);
         Object.assign(original, aiReview);
+        invalidateStockReviews(state, original.id, at);
         log(original.id, command.intent === "submit" ? "MRF revised and resubmitted" : "MRF draft saved");
         return done(command.intent === "submit" ? `MRF submitted to ${requiresPMReview(original) ? "Project Manager" : "Procurement"}.` : "MRF draft saved.", original.id);
       }
@@ -531,7 +534,8 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
         if (award.quantity + used > offer.quantity * offer.conversionFactor + 0.000001) return fail("Awarded quantity exceeds the supplier's quoted quantity.");
         candidates.push({ id: prior.find(value => value.quoteLineId === offer.id)?.id || id("award"), requestId: request.id, itemId: item.id, quoteId: quote.id, quoteLineId: offer.id, quantity: award.quantity });
       }
-      const ordered = requestSourcing(state, request, item).ordered + transferQuantityFor(state, request.id, item.id);
+      const sourcing = requestSourcing(state, request, item);
+      const ordered = sourcing.ordered + sourcing.transfers + sourcing.suitability;
       if (ordered + candidates.reduce((sum, value) => sum + value.quantity, 0) > item.quantity + 0.000001) return fail("Awarded quantities exceed the MRF request.");
       state.pendingAwards = [...state.pendingAwards.filter(value => value.requestId !== request.id || value.itemId !== item.id), ...candidates];
       for (const award of [...prior, ...candidates.filter(value => !prior.some(old => old.id === value.id))]) {
@@ -555,7 +559,7 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       const usedRequest = state.pos.filter(value => value.mrfId === request.id && value.status !== "rejected").reduce((sum, po) => sum + orderedFor(state, po, offer.requestItemId), 0) + otherPending.filter(value => value.itemId === offer.requestItemId).reduce((sum, value) => sum + value.quantity, 0);
       const usedOffer = state.pos.filter(value => value.quoteId === quote.id && value.status !== "rejected").reduce((sum, po) => sum + (po.lines || []).filter(value => value.quoteLineId === offer.id).reduce((total, value) => total + value.quantity, 0), 0);
       const requested = request.items.find(value => value.id === offer.requestItemId);
-      if (!requested || command.quantity + usedRequest + transferQuantityFor(state, request.id, requested.id) > requested.quantity + 0.000001) return fail("Awarded quantities exceed the MRF request or overlap stock transfers.");
+      if (!requested || command.quantity + usedRequest + transferQuantityFor(state, request.id, requested.id) + suitabilityQuantityFor(state, request.id, requested.id) > requested.quantity + 0.000001) return fail("Awarded quantities exceed the MRF request or overlap stock requests and suitability reviews.");
       if (command.quantity + usedOffer > offer.quantity * offer.conversionFactor + 0.000001) return fail("Awarded quantity exceeds the supplier's quoted quantity.");
       if (existing) state.pendingAwards = state.pendingAwards.filter(value => value.id !== existing.id);
       if (command.quantity > 0) state.pendingAwards.push({ id: existing?.id || id("award"), requestId: request.id, quoteId: quote.id, quoteLineId: offer.id, itemId: offer.requestItemId, quantity: command.quantity });
@@ -648,7 +652,7 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       if (quote.archive && quote.archive.status !== "complete") return fail("Archive the supplier quotation before creating a PO.");
       if (state.pos.some(p => p.mrfId === request.id && p.status !== "rejected")) return fail("Use the material award flow to create another PO for this MRF.");
       if (state.pendingAwards.some(value => value.requestId === request.id)) return fail("Use Compare & award to create POs from saved supplier awards.");
-      if (transfersForRequest(state, request.id).some(value => value.status === "pending" || value.status === "approved")) return fail("Use Compare & award to purchase only the quantities remaining after stock transfers.");
+      if (request.items.some(item => suitabilityQuantityFor(state, request.id, item.id) > 0) || transfersForRequest(state, request.id).some(value => value.status === "pending" || value.status === "approved")) return fail("Use Compare & award to purchase only the quantities remaining after stock transfers.");
       if (!reasonOK(command.reason)) return fail("Explain the supplier choice in at least five characters.", "reason");
       const codeError = projectCodeRequired(state, state.requests.find(value => value.id === command.requestId)!.siteId);
       if (codeError) return fail(codeError);

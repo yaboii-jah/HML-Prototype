@@ -90,15 +90,25 @@ _Avoid_: Serve PO
 
 **Inventory movement:** A project stock receipt, usage or adjustment. The inventory balance is the accumulated effect of these movements.
 
-**Stock transfer:** A Procurement proposal to fulfill an approved MRF using materials held at another project site. Source Site Personnel confirm the quantities that may be released; one transfer may use several delivery trips.
+**Stock transfer:** A Procurement request to fulfill an approved MRF using materials held at another project site. The stock screen offers matching descriptions and units and sends verified selections directly to source release; existing suitability reviews retain their approval path. Source Site Personnel confirm release quantities, and one transfer may use several delivery trips.
+
+**Matching stock description:** A stock description and unit identical to the requested material after ignoring letter case and extra description spaces. It is a suggestion that Procurement must verify, not an automatic technical approval.
+
+**Stock suitability review:** A previously submitted request for the requesting site to decide whether different or uncertain stock can meet an MRF. Its pending or approved quantity is set aside from purchasing while source stock remains available. Existing reviews remain actionable; new stock-screen submissions create source-release requests instead.
+
+**Approved alternative stock:** A proposed stock material accepted by destination Site Personnel up to a specified quantity. Approval establishes suitability without guaranteeing source availability.
+
+**Source release request:** Procurement's request for another project to release verified or site-approved stock. Source Site Personnel confirm the quantities their project can spare.
+
+**Stock sourcing draft:** Procurement's unsent stock choices for an MRF. Draft quantities hold neither source stock nor MRF demand.
 
 **Stock reservation:** Undispatched stock held for a proposed or approved transfer. It remains physically on hand but cannot be used or allocated to another transfer until released.
 
-**Available site stock:** Posted project stock remaining after transfer reservations. Materials in transit and receipts awaiting stock posting are excluded.
+**Available site stock:** Posted project stock remaining after transfer reservations. Materials in transit and receipts awaiting stock posting are excluded. This balance does not establish that the source project can spare the stock.
 
 **Transfer delivery:** One scheduled trip from a source project to the MRF's destination project. Dispatch reduces source stock; destination receiving and posting are separate actions.
 
-**Sourcing coverage:** Requested quantities committed to stock transfers, supplier awards, or purchase orders. Coverage prevents duplicate sourcing; it does not mean the goods have arrived.
+**Sourcing coverage:** Requested quantities committed to stock transfers, supplier awards, or purchase orders. Active stock suitability reviews separately set aside demand to prevent duplicate purchasing. These holds do not establish transfer coverage or receipt of goods.
 
 **Site assignment:** An Administrator's association of a Site Personnel account with one or more projects, authorizing that account's site actions.
 

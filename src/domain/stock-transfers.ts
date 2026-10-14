@@ -1,3 +1,4 @@
+import { exactStockMatch, reviewIsCurrent, suitabilityQuantityFor } from "./stock-suitability.ts";
 import { materialId } from "./ids.ts";
 import { normalizedQuantity, orderedQuantity } from "./delivery-flow.ts";
 import { procurementReady } from "./request-archive.ts";
@@ -49,10 +50,11 @@ export function requestSourcing(state: DemoSnapshot, request: MRF, item: Item) {
   const ordered = q(state.pos.filter(po => po.mrfId === request.id && po.status !== "rejected").reduce((sum, po) => sum + orderedQuantity(po, request, item.id), 0));
   const transfers = transferQuantityFor(state, request.id, item.id);
   const staged = q(state.pendingAwards.filter(award => award.requestId === request.id && award.itemId === item.id).reduce((sum, award) => sum + award.quantity, 0));
-  return { requested: item.quantity, ordered, transfers, staged, purchase: Math.max(0, q(item.quantity - ordered - transfers)), unassigned: Math.max(0, q(item.quantity - ordered - transfers - staged)) };
+  const suitability = suitabilityQuantityFor(state, request.id, item.id);
+  return { requested: item.quantity, ordered, transfers, staged, suitability, purchase: Math.max(0, q(item.quantity - ordered - transfers - suitability)), unassigned: Math.max(0, q(item.quantity - ordered - transfers - suitability - staged)) };
 }
 export type TransferCommand =
-  | { type: "proposeStockTransfer"; requestId: string; sourceSiteId: string; note: string; lines: { itemId: string; sourceName: string; unit: string; quantity: number; suitabilityConfirmed: boolean }[] }
+  | { type: "proposeStockTransfer"; requestId: string; sourceSiteId: string; note: string; lines: { itemId: string; sourceName: string; unit: string; quantity: number; suitabilityConfirmed: boolean; suitabilityReviewId?: string }[] }
   | { type: "reviewStockTransfer"; id: string; decision: "approve" | "reject"; quantities: Record<string, number>; reason: string }
   | { type: "cancelStockTransfer"; id: string; reason: string }
   | { type: "scheduleTransferDelivery"; transferId: string; scheduledDate: string; evidence: string; quantities: Record<string, number> }
@@ -110,13 +112,15 @@ export function applyTransferCommand(state: DemoSnapshot, command: TransferComma
     const byItem = new Map<string, number>(), byStock = new Map<string, number>();
     for (const line of command.lines) {
       const item = request.items.find(value => value.id === line.itemId), stockId = materialId(line.sourceName, line.unit);
-      if (!item || !positive(line.quantity) || !line.sourceName.trim() || !sameStockUnit(item.unit, line.unit) || line.suitabilityConfirmed !== true) return fail("Confirm the selected stock is suitable and uses the requested unit.");
+      if (!item || !positive(line.quantity) || q(line.quantity) <= 0 || !line.sourceName.trim() || !sameStockUnit(item.unit, line.unit) || line.suitabilityConfirmed !== true) return fail("Confirm the selected stock is suitable and uses the requested unit.");
+      const review = line.suitabilityReviewId ? state.stockSuitabilityReviews?.find(value => value.id === line.suitabilityReviewId) : undefined;
+      if (line.suitabilityReviewId ? !review || review.status !== "used" || review.transferId !== undefined || !reviewIsCurrent(state, review) || review.requestId !== request.id || review.itemId !== item.id || review.sourceSiteId !== source.id || review.sourceMaterialId !== stockId || review.released !== q(line.quantity) : !exactStockMatch(item, line.sourceName, line.unit)) return fail("Alternative stock requires the requesting site approval before source release.");
       byItem.set(item.id, q((byItem.get(item.id) || 0) + line.quantity));
       byStock.set(stockId, q((byStock.get(stockId) || 0) + line.quantity));
       if (byItem.get(item.id)! > requestSourcing(state, request, item).unassigned) return fail("Transfers, saved awards and orders cannot exceed the MRF. Reduce existing supplier awards first.");
       if (byStock.get(stockId)! > sourceStockAvailable(state, source.id, line.sourceName, line.unit)) return fail("The selected source stock is no longer available.");
     }
-    const transfer: StockTransfer = { id: ctx.id("transfer"), ...issueDocumentReference(state, destination.id, "TRF", at), requestId: request.id, sourceSiteId: source.id, destinationSiteId: destination.id, origin: { name: source.name, address: source.location }, destination: { name: destination.name, address: destination.location }, status: "pending", note: command.note.trim(), createdAt: at, updatedAt: at, createdBy: identity, lines: command.lines.map(line => ({ id: ctx.id("transfer-line"), itemId: line.itemId, sourceMaterialId: materialId(line.sourceName, line.unit), sourceName: line.sourceName.trim(), unit: line.unit.trim(), proposed: q(line.quantity), approved: 0, cancelled: 0, suitabilityConfirmed: true })) };
+    const transfer: StockTransfer = { id: ctx.id("transfer"), ...issueDocumentReference(state, destination.id, "TRF", at), requestId: request.id, sourceSiteId: source.id, destinationSiteId: destination.id, origin: { name: source.name, address: source.location }, destination: { name: destination.name, address: destination.location }, status: "pending", note: command.note.trim(), createdAt: at, updatedAt: at, createdBy: identity, lines: command.lines.map(line => ({ id: ctx.id("transfer-line"), itemId: line.itemId, sourceMaterialId: materialId(line.sourceName, line.unit), sourceName: line.sourceName.trim(), unit: line.unit.trim(), proposed: q(line.quantity), approved: 0, cancelled: 0, suitabilityConfirmed: true, ...(line.suitabilityReviewId ? { suitabilityReviewId: line.suitabilityReviewId } : { matchVerifiedBy: identity }) })) };
     state.stockTransfers.push(transfer);
     return done("Stock transfer proposed; source stock reserved.", transfer.id, transfer);
   }

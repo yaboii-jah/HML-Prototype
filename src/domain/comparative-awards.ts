@@ -34,7 +34,7 @@ export function materialAwardStatus(state: DemoSnapshot, request: MRF, item: Ite
   const saved = normalizedQuantity(state.pendingAwards.filter(award => award.requestId === request.id && award.itemId === item.id).reduce((sum, award) => sum + award.quantity, 0));
   const proposed = normalizedQuantity(materialAwardOffers(state, request.id, item.id).reduce((sum, { line }) => sum + Math.max(0, Number(awardInputValue(state, request.id, line.id, edits)) || 0), 0));
   const sourcing = requestSourcing(state, request, item);
-  return { ordered, saved, proposed, transfers: sourcing.transfers, remainingToOrder: sourcing.purchase, unassigned: Math.max(0, normalizedQuantity(sourcing.purchase - proposed)), edited: materialAwardOffers(state, request.id, item.id).some(({ line }) => awardInputDirty(state, request.id, line.id, edits)) };
+  return { ordered, saved, proposed, transfers: sourcing.transfers, suitability: sourcing.suitability, remainingToOrder: sourcing.purchase, unassigned: Math.max(0, normalizedQuantity(sourcing.purchase - proposed)), edited: materialAwardOffers(state, request.id, item.id).some(({ line }) => awardInputDirty(state, request.id, line.id, edits)) };
 }
 export function selectedMaterialOffer(quote: Quote, itemId: string, selections: ComparisonSelections): QuoteLine | undefined {
   const lines = (quote.lines || []).filter(line => line.requestItemId === itemId);

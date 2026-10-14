@@ -1,4 +1,5 @@
 import { orderedFor, poSupplierId } from "./selectors.ts";
+import { suitabilityQuantityFor } from "./stock-suitability.ts";
 import { transferQuantityFor } from "./stock-transfers.ts";
 import type { DemoSnapshot, PO, POLine } from "./types.ts";
 
@@ -19,7 +20,7 @@ export function directPoError(state: DemoSnapshot, po: PO, lines: POLine[], supp
   for (const item of request.items) {
     const existing = state.pos.filter(value => value.id !== po.id && value.mrfId === po.mrfId && value.status !== "rejected").reduce((sum, value) => sum + orderedFor(state, value, item.id), 0);
     const staged = state.pendingAwards.filter(value => value.requestId === request.id && value.itemId === item.id).reduce((sum, value) => sum + value.quantity, 0);
-    if (existing + staged + transferQuantityFor(state, request.id, item.id) + (quantities.get(item.id) || 0) > item.quantity + .000001) return "Awarded quantities exceed the MRF request or overlap stock transfers.";
+    if (existing + staged + transferQuantityFor(state, request.id, item.id) + suitabilityQuantityFor(state, request.id, item.id) + (quantities.get(item.id) || 0) > item.quantity + .000001) return "Awarded quantities exceed the MRF request or overlap stock requests and suitability reviews.";
   }
   return "";
 }
