@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { InlineError } from "@/src/components/ui/Primitives";
 import { LoadingRegion, SkeletonRows } from "@/src/components/ui/Skeleton";
+import { useDemo } from "@/src/app-state/DemoProvider";
 
 type FileEntry = { id: string; name: string; mimeType: string; webViewLink?: string };
 type Page = { files: FileEntry[]; nextPageToken?: string; truncated?: boolean; error?: string };
@@ -10,6 +11,8 @@ type Listing = { key: string; files: FileEntry[]; nextPage: string; error: strin
 const FOLDER = "application/vnd.google-apps.folder";
 
 export function DriveProjectFiles({ projectFolderId }: { projectFolderId: string }) {
+  const { access } = useDemo();
+  if (access.sitePersonnel) return null;
   return <DriveFolderListing key={projectFolderId} projectFolderId={projectFolderId}/>;
 }
 

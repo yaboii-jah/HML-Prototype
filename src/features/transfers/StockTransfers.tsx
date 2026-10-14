@@ -1,5 +1,5 @@
 "use client";
-import Link from "next/link";
+import { RecordLink as Link } from "@/src/components/ui/RecordLink";
 import { useState, type FormEvent } from "react";
 import { useDemo } from "@/src/app-state/DemoProvider";
 import { useArchive } from "@/src/app-state/ArchiveProvider";
@@ -18,10 +18,10 @@ import { archiveTransferReceipt } from "./transfer-files";
 import { TransferDocuments } from "./TransferDocuments";
 
 export function StockTransferRegister({ accounting = false }: { accounting?: boolean }) {
-  const { snapshot: state } = useDemo();
+  const { snapshot: state, access } = useDemo();
   const [search, setSearch] = useState("");
   if (!state || !state.stockTransfers?.length) return null;
-  const rows = state.stockTransfers.filter(value => (state.siteFilter === "all" || value.sourceSiteId === state.siteFilter || value.destinationSiteId === state.siteFilter) && (value.ref + " " + value.origin.name + " " + value.destination.name).toLowerCase().includes(search.toLowerCase()) && (!accounting || state.transferDeliveries?.some(delivery => delivery.transferId === value.id && ["confirmed", "posted"].includes(delivery.status))));
+  const rows = state.stockTransfers.filter(value => access.canReadRecord(value.id) && (state.siteFilter === "all" || value.sourceSiteId === state.siteFilter || value.destinationSiteId === state.siteFilter) && (value.ref + " " + value.origin.name + " " + value.destination.name).toLowerCase().includes(search.toLowerCase()) && (!accounting || state.transferDeliveries?.some(delivery => delivery.transferId === value.id && ["confirmed", "posted"].includes(delivery.status))));
   if (accounting && !rows.length) return null;
   return <section className="panel"><h2>{accounting ? "Stock transfer document review" : "Site stock transfers"}</h2><p className="helper-note">{accounting ? "Review generated and signed transfer receipts. Transfers have no supplier invoice or payment requirement." : "Source release, delivery trips and receiving between project sites."}</p><Register embedded rows={rows} unit="transfers" resetKey={search + state.siteFilter} filters={<input aria-label="Search stock transfers" placeholder="Search transfer or project" value={search} onChange={event => setSearch(event.target.value)}/>} headers={<><th>Transfer / MRF</th><th>From</th><th>To</th><th>Source release</th><th>Delivery trips</th><th>Documents</th></>} renderRow={transfer => <tr key={transfer.id}><td><Link className="table-primary" href={"/stock-transfers/" + transfer.id}>{transfer.ref}</Link><small>{state.requests.find(request => request.id === transfer.requestId)?.ref}</small></td><td>{transfer.origin.name}</td><td>{transfer.destination.name}</td><td><Badge>{transfer.status === "pending" ? "Awaiting source" : transfer.status}</Badge></td><td>{deliveriesForTransfer(state, transfer.id).filter(delivery => delivery.status !== "cancelled").length}</td><td><Badge>{transfer.documentReview?.status || "Incomplete"}</Badge></td></tr>}/></section>;
 }
@@ -53,7 +53,7 @@ export function StockTransferDetail({ id }: { id: string }) {
           if (receipt.archive.status === "complete") continue;
           try {
             const pipeline = await beginOperation({ kind:"transfer-receipt",deliveryId:delivery.id,receiptId:receipt.id });
-            await perform("transfer-receipt-"+receipt.id,delivery.ref+": receipt v"+receipt.version,progress => archiveTransferReceipt(result.snapshot,delivery.id,receipt.id,pipeline,progress));
+            await perform("transfer-receipt-"+receipt.id,delivery.ref+": receipt v"+receipt.version,progress => archiveTransferReceipt(result.snapshot,delivery.id,receipt.id,pipeline,progress), {kind:"transfer-receipt",deliveryId:delivery.id,receiptId:receipt.id});
           }
           catch (cause) { setError("Receiving/posting remains saved. " + (cause instanceof Error ? cause.message : "Receipt archive needs retry.")); }
         }

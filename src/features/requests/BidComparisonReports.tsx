@@ -53,7 +53,7 @@ export function BidComparisonReports({ requestId, comparisonSelections, onCompar
             else await archiveBidWorkbook(workbook.report, workbook.blob, pipeline!, format, progress);
           };
           if (action === "download") await operation();
-          else await perform(`bid-${report.id}-${format}`, `Bid comparison v${report.version} ${format.toUpperCase()}`, operation);
+          else await perform(`bid-${report.id}-${format}`, `Bid comparison v${report.version} ${format.toUpperCase()}`, operation, {kind:"report",id:report.id,format});
         } catch (cause) { errors.push(`${format.toUpperCase()}: ${cause instanceof Error ? cause.message : "The report could not be processed."}`); }
       }
       if (errors.length) throw new Error(errors.join(" "));

@@ -110,7 +110,7 @@ _Avoid_: Serve PO
 
 **Sourcing coverage:** Requested quantities committed to stock transfers, supplier awards, or purchase orders. Active stock suitability reviews separately set aside demand to prevent duplicate purchasing. These holds do not establish transfer coverage or receipt of goods.
 
-**Site assignment:** An Administrator's association of a Site Personnel account with one or more projects, authorizing that account's site actions.
+**Site assignment:** An Administrator's association of a Site Personnel account with one or more projects, authorizing access to those projects' operational records and permitted site actions. A transfer involving an assigned project exposes the other project's transfer context without granting access to its broader records.
 
 **Pooled project stock:** The balance of a material and unit within one project, shared across scopes of work. Selecting a scope shows materials received for that scope while retaining their full project balance; it does not attribute usage to a scope.
 
@@ -140,4 +140,4 @@ _Avoid_: Generated receipt, payment receipt
 
 **PO-level document:** Invoice or supporting paperwork associated with a purchase order as a whole rather than a particular delivery batch.
 
-**Site Personnel / Warehouse:** The role that requests materials, confirms site receiving, posts stock and records material usage.
+**Site Personnel / Warehouse:** The role that requests materials, confirms site receiving, posts stock and records material usage on assigned projects. Its operational view includes linked purchasing documents and transaction amounts while excluding project and scope budget positions.

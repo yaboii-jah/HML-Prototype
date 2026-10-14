@@ -98,6 +98,11 @@ export function PdfDocumentViewer({ blob, fileName, sourceUrl, compact = false }
         const document = await task.promise;
         if (disposed) return;
         setPdf(document); links.setDocument(document); instance.setDocument(document);
+        // PDF.js initializes its pages asynchronously. Account changes can destroy
+        // the transport during that work, after the loading task has completed.
+        void instance.pagesPromise?.catch(() => {
+          if (!disposed) setError("The PDF could not be displayed. Use Open document to view the original file.");
+        });
         resize = new ResizeObserver(() => {
           if (instance?.pagesCount && ["auto", "page-width", "page-fit"].includes(instance.currentScaleValue)) instance.currentScaleValue = instance.currentScaleValue;
         });
@@ -105,7 +110,7 @@ export function PdfDocumentViewer({ blob, fileName, sourceUrl, compact = false }
       } catch { if (!disposed) setError("The PDF could not be displayed. Use Open document to view the original file."); }
     })();
     return () => {
-      disposed = true; resize?.disconnect(); instance?.setDocument(null); viewer.current = null; events.current = null; void task?.destroy();
+      disposed = true; resize?.disconnect(); instance?.setDocument(null); viewer.current = null; events.current = null; void task?.destroy().catch(() => {});
       document.removeEventListener("fullscreenchange", onFullscreen); if (printTimer.current) clearTimeout(printTimer.current);
     };
   }, [blob]);
@@ -149,7 +154,7 @@ export function PdfDocumentViewer({ blob, fileName, sourceUrl, compact = false }
       </div>}
     </div>
     {searchOpen && <div className="pdf-document-findbar"><input ref={findInput} type="search" aria-label="Search PDF text" placeholder="Find in document…" value={query} onChange={event => { setQuery(event.target.value); setMatches({ current: 0, total: 0 }); setSearching(!!event.target.value); search(event.target.value); }} onKeyDown={event => { if (event.key === "Enter") { event.preventDefault(); search(query, event.shiftKey, true); } }}/><PdfTool icon="previous" label="Previous match" disabled={!query} onClick={() => search(query, true, true)}/><PdfTool icon="next" label="Next match" disabled={!query} onClick={() => search(query, false, true)}/><span role="status">{query ? searching ? "Searching…" : matches.total ? `${matches.current} of ${matches.total} matches` : "No matches" : ""}</span></div>}
-    {error && <p className="field-error" role="alert">{error}</p>}
+    {error && <p className="field-error inline-error" role="alert">{error}</p>}
     <div className="pdf-document-body">{sidebarOpen && <aside ref={sidebar} className="pdf-document-sidebar" aria-label="Page thumbnails"><div className="pdf-document-sidebar-heading">Thumbnails</div>{pdf && ready && Array.from({ length: count }, (_, index) => <Thumbnail key={index + 1} pdf={pdf} number={index + 1} active={page === index + 1} root={sidebar} onSelect={() => go(index + 1)}/>)}</aside>}<div className="pdf-document-stage">{!rendered && !error && <DocumentLoading/>}<div ref={container} className="pdf-document-scroll" tabIndex={0} role="region" aria-label="PDF document pages" aria-busy={!rendered && !error}><div ref={pages} className="pdfViewer"/></div></div></div>
     {printUrl && <iframe ref={printer} className="pdf-document-print-frame" tabIndex={-1} aria-hidden="true" src={printUrl} title="PDF print document" onLoad={() => { printTimer.current = setTimeout(() => { try { printer.current?.contentWindow?.focus(); printer.current?.contentWindow?.print(); } catch { setError("Printing is unavailable here. Use Open document to print the original file."); } }, 500); }}/>}
   </div>;

@@ -1,8 +1,11 @@
 "use client";
 import { useArchive } from "@/src/app-state/ArchiveProvider";
+import { useDemo } from "@/src/app-state/DemoProvider";
 
 export function ArchiveStatus() {
-  const { jobs, dismiss } = useArchive();
+  const { jobs: allJobs, dismiss } = useArchive();
+  const { access } = useDemo();
+  const jobs = allJobs.filter(job => access.canReadTarget(job.target));
   if (!jobs.length) return null;
   const failed = jobs.filter(job => job.error).length, active = jobs.filter(job => !job.error && job.phase !== "complete").length;
   return <aside className={`archive-activity ${failed ? "has-error" : !active ? "is-complete" : ""}`} aria-label="Document archive activity">

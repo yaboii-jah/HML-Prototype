@@ -12,7 +12,7 @@ import { projectScopes, scopeBudgetFor, scopeRemovalReason, SCOPE_OF_WORK_OPTION
 import { useConfirmation, type ConfirmAction } from "@/src/components/ui/ConfirmDialog";
 
 export function ScopeBudgets({ siteId, editable = false, confirmChange }: { siteId: string; editable?: boolean; confirmChange?: ConfirmAction }) {
-  const { snapshot: state } = useDemo();
+  const { snapshot: state, access } = useDemo();
   const { runAction } = useActionFeedback();
   const [draft, setDraft] = useState({ id: "", name: "", budget: "" });
   const [error, setError] = useState("");
@@ -24,6 +24,8 @@ export function ScopeBudgets({ siteId, editable = false, confirmChange }: { site
   const site = state.sites.find(value => value.id === siteId);
   if (!site) return null;
   const scopes = projectScopes(state, siteId), canEdit = editable && ["Administrator", "Project Manager"].includes(state.role);
+  if (!access.canReadProject(siteId)) return null;
+  if (!access.showBudgets) return <section aria-label={`Scopes of work for ${site.name}`}><h3 className="subheading">Scopes of work</h3>{scopes.length ? <ul>{scopes.map(scope => <li key={scope.id}>{scope.name}</li>)}</ul> : <p className="muted">A Project Manager or Administrator must set up this project&apos;s scopes before requests can be submitted.</p>}</section>;
   const existingScopeName = scopes.find(scope => scope.id === draft.id)?.name;
   const allocated = roundMoney(scopes.reduce((sum, scope) => sum + scope.budget, 0));
   const clear = () => { setDraft({ id: "", name: "", budget: "" }); setError(""); };

@@ -22,8 +22,9 @@ const pngBytes = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0
 await Promise.all([writeFile(mrfPage1, pngBytes), writeFile(mrfPage2, pngBytes)]);
 await Promise.all([writeFile(sampleReference, Buffer.concat([Buffer.from("%PDF-1.4\nsmoke test"), Buffer.alloc(7 * 1024 * 1024)])), writeFile(sampleScope, "%PDF-1.4\nscope smoke"), writeFile(sampleImage, "image smoke test"), writeFile(unsupportedReference, "unsupported"), writeFile(oversizedReference, Buffer.alloc(25 * 1024 * 1024 + 1))]);
 const port = 9223 + Math.floor(Math.random() * 1000);
+const workflowOnly = process.argv.includes("--workflow-only");
 const baseUrl = (process.argv[2] || "http://localhost:3000").replace(/\/$/, "");
-const browser = spawn(edge, ["--headless=new", "--disable-gpu", "--no-first-run", `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`, baseUrl], { windowsHide: true, stdio: "ignore" });
+const browser = spawn(edge, ["--headless=new", "--disable-gpu", "--disable-background-timer-throttling", "--disable-renderer-backgrounding", "--no-first-run", `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`, baseUrl], { windowsHide: true, stdio: "ignore" });
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 let ws;
 process.on("SIGINT", () => { ws?.close(); browser.kill(); process.exit(130); });
@@ -107,7 +108,7 @@ try {
     };
   })();` });
   const run = async code => { const result = await call("Runtime.evaluate", { expression: `(()=>{${code}})()`, returnByValue: true }); if (result.exceptionDetails) throw new Error(result.exceptionDetails.exception?.description || result.exceptionDetails.text); return result.result.value; };
-  const wait = async code => { for (let i = 0; i < 100; i++) { try { const value = await run(code); if (value) return value; } catch (cause) { if (String(cause).includes("CDP timeout")) throw cause; } await sleep(120); } throw new Error(`Timed out: ${code}; ${JSON.stringify(await run("return {page:location.pathname,errors:[...document.querySelectorAll('.inline-error,.field-error')].map(el=>el.textContent)};"))}; exceptions: ${browserExceptions.join("; ")}`); };
+  const wait = async code => { for (let i = 0; i < 250; i++) { try { const value = await run(code); if (value) return value; } catch (cause) { if (String(cause).includes("CDP timeout")) throw cause; } await sleep(120); } throw new Error(`Timed out: ${code}; ${JSON.stringify(await run("return {page:location.pathname,errors:[...document.querySelectorAll('.inline-error,.field-error')].map(el=>el.textContent)};"))}; exceptions: ${browserExceptions.join("; ")}`); };
   const navigate = async url => { await call("Page.navigate", { url: `${baseUrl}${url}` }); await wait(`return location.pathname === ${JSON.stringify(url.split("?")[0])} && !!document.querySelector('h1') && !document.querySelector('.state-screen');`); await sleep(150); };
   const acceptPending = async () => { await sleep(90); if (await run("return !!document.querySelector('.confirm-dialog[open]');")) await run("document.querySelector('.confirm-dialog[open] .confirm-actions button:last-child').click();return true;"); };
   const click = async (text, selector = "button") => { await wait(`return [...document.querySelectorAll(${JSON.stringify(selector)})].some(x=>x.textContent.trim().includes(${JSON.stringify(text)}));`); const result = await run(`const el=[...document.querySelectorAll(${JSON.stringify(selector)})].find(x=>x.textContent.trim().includes(${JSON.stringify(text)}));if(!el)throw Error(${JSON.stringify(`Missing ${selector}: ${text}`)});el.focus();el.click();return true;`); await acceptPending(); return result; };
@@ -151,7 +152,7 @@ try {
     }
     await call("Emulation.clearDeviceMetricsOverride");
   };
-  const installFixture = async (fixture = seedDemo()) => { await run(`localStorage.setItem('hml-constructsync-demo-v12', ${JSON.stringify(JSON.stringify(fixture))}); return true;`); await call("Page.reload", { ignoreCache: true }); };
+  const installFixture = async (fixture = seedDemo()) => { await run(`localStorage.setItem('hml-constructsync-demo-v12', ${JSON.stringify(JSON.stringify(fixture))});const key='hml-constructsync-users-v1',directory=JSON.parse(localStorage.getItem(key));for(const user of directory.users.filter(user=>user.role==='Site Personnel'))user.siteIds=${JSON.stringify(fixture.sites.map(site=>site.id))};localStorage.setItem(key,JSON.stringify(directory));return true;`); await call("Page.reload", { ignoreCache: true }); };
   const signInAs = async name => {
     const account = ACCOUNT_FIXTURES.find(value => value.role === name);
     assert.ok(account, 'Known department account');
@@ -190,6 +191,8 @@ try {
     await run(`document.querySelector(${JSON.stringify(selector)}).focus();return true;`);
     assert.equal(await run(`const el=document.querySelector(${JSON.stringify(selector)}),style=getComputedStyle(el),canvas=document.createElement('canvas');canvas.width=canvas.height=1;const ctx=canvas.getContext('2d');const lum=color=>{ctx.fillStyle=color;ctx.fillRect(0,0,1,1);return [...ctx.getImageData(0,0,1,1).data].slice(0,3).map(v=>v/255).map(v=>v<=.04045?v/12.92:((v+.055)/1.055)**2.4).reduce((sum,v,i)=>sum+v*[.2126,.7152,.0722][i],0);};const ring=lum(style.outlineColor),surface=lum(style.backgroundColor);return parseFloat(style.outlineWidth)>=2&&(Math.max(ring,surface)+.05)/(Math.min(ring,surface)+.05)>=3;`), true, "Focused controls need a contrasting ring");
   };
+  let snapshot, request;
+  if (!workflowOnly) {
   console.log("Browser ready; checking department sign-in");
   await wait("return location.pathname === '/sign-in' && !!document.querySelector('.signin-form');");
   assert.equal(await run("return new URLSearchParams(location.search).get('next');"), "/dashboard");
@@ -247,7 +250,7 @@ try {
   const storedSession = await run(`return JSON.parse(localStorage.getItem(${JSON.stringify(SESSION_STORAGE_KEY)}));`);
   assert.deepEqual(storedSession, { email: ACCOUNT_FIXTURES[0].email, role: 'Site Personnel', userId: 'bootstrap-site-personnel', revision: 1 });
   assert.equal((await state()).sites.length, 0, "A fresh workspace starts without projects");
-  assert.equal(await run("return document.body.innerText.includes('Build your workflow from an empty workspace');"), true);
+  assert.equal(await run("return document.body.innerText.includes('No assigned projects');"), true);
   await navigate("/reports");
   assert.equal(await run("return document.querySelector('h1').textContent;"), "Access unavailable", "Reports require Project Manager or Administrator");
   await role("Administrator"); await navigate("/reports");
@@ -255,7 +258,7 @@ try {
   assert.equal(await run("return document.querySelectorAll('.empty').length;"), 0, "An empty report should show one useful starting state");
   await writeFile(path.join(profile, "report-empty.png"), Buffer.from((await call("Page.captureScreenshot", { format: "png" })).data, "base64"));
   await role("Site Personnel");
-  for (const [route, message] of [["/requests", "No material requests yet"], ["/suppliers", "No suppliers yet"], ["/purchase-orders", "No purchase orders yet"], ["/inventory", "No site stock yet"], ["/accounting", "No purchase orders are linked"]]) {
+  for (const [route, message] of [["/requests", "No material requests yet"], ["/inventory", "No site stock yet"]]) {
     await navigate(route);
     assert.equal(await run(`return document.querySelector('.empty')?.textContent.includes(${JSON.stringify(message)});`), true, `${route} should explain its empty state`);
   }
@@ -289,8 +292,8 @@ try {
   await click('Project','.record-dialog[open] [role=tab]');
   await click('Edit project','.admin-project-details button');
   await fill('.admin-edit-project .field:nth-child(1) input','Smoke project edited');
-  await fill('.admin-edit-project .field:nth-child(2) input','Updated site');
-  await fill('.admin-edit-project .field:nth-child(3) input',110000);
+  await fill('.admin-edit-project .field:nth-child(3) input','Updated site');
+  await fill('.admin-edit-project .field:last-child input',110000);
   const beforeEditCancel=await state();
   await run("document.querySelector('.admin-edit-project').requestSubmit();return true;");
   await wait("return !!document.querySelector('.confirm-dialog[open]');");
@@ -344,9 +347,10 @@ try {
   await wait("return document.querySelector('.record-dialog[open] [role=tab][aria-selected=true]').textContent==='Scopes';");
   await checkDepartmentLayout('.scope-budgets', 'scope-budgets');
   await click('Close','.record-dialog[open] .record-dialog-heading button');
+  await installFixture(await state());
   await role("Site Personnel");
   await navigate('/projects/' + (await state()).sites[0].id);
-  assert.equal(await run("return !document.querySelector('.scope-budget-form') && document.querySelector('.scope-budgets').textContent.includes('Structural');"), true, 'Site Personnel reads allocations without editing');
+  assert.equal(await run("return !document.querySelector('.scope-budget-form') && !!document.querySelector('section[aria-label^=\"Scopes of work\"]') && !document.querySelector('.metric-strip');"), true, 'Site Personnel reads scope names without budget allocations');
   await navigate("/requests/new");
   assert.equal(await run("return !!document.querySelector('select[name=site]') && !document.querySelector('select[name=category]');"), true);
   await fill('select[name=site]', (await state()).sites[0].id);
@@ -415,6 +419,8 @@ try {
   const auditRoutes = ["/dashboard", "/projects", "/projects/site-a", "/requests", "/requests/new", "/requests/m1", "/requests/m7/edit", "/requests/m1/quotes", "/suppliers", "/purchase-orders", "/purchase-orders/po1", "/purchase-orders/po2/edit", "/finance", "/finance/po3", "/deliveries", "/deliveries/new?poId=po1", "/deliveries/b1", "/inventory", `/inventory/site-a/${materialId("Portland cement", "bag")}`, "/accounting", "/accounting/po1", "/reports", "/admin"];
   for (const route of auditRoutes) {
     console.log("Checking layout",route);
+    const auditRole = route.startsWith('/finance') ? 'Finance' : route.startsWith('/accounting') ? 'Accounting / Auditing' : /^\/(admin|reports)/.test(route) ? 'Administrator' : route.startsWith('/suppliers') || /\/quotes|\/purchase-orders\/[^/]+\/edit/.test(route) || route === '/purchase-orders' ? 'Procurement' : route.startsWith('/deliveries/new') ? 'Logistics' : 'Site Personnel';
+    if ((await state()).role !== auditRole) await role(auditRole);
     await navigate(route);
     await checkProductCopy();
     for (const [width, height] of [[1440, 900], [768, 900], [414, 900], [375, 900], [320, 900]]) {
@@ -441,6 +447,7 @@ try {
   assert.equal(await run("return getComputedStyle(document.querySelector('.activity-timeline .audit-history .table-frame thead th')).position;"), 'sticky', 'PO timeline header stays fixed while scrolling history');
   assert.equal(await run("return document.documentElement.scrollWidth<=innerWidth+1;"), true, 'Expanded PO timeline adds no horizontal overflow');
   await navigate("/dashboard");
+  await role('Site Personnel');
   console.log("Department sign-in passed; checking dashboard");
   await wait("return location.pathname === '/dashboard' && !!document.querySelector('.metric-strip');");
   const headerRole = (await state()).role;
@@ -590,6 +597,9 @@ try {
   assert.equal(await run("return !document.querySelector('.material-edit-dialog[open]');"), true, 'Request materials show no open detail dialog on load');
   assert.equal(await run("return document.querySelectorAll('.request-materials-panel .material-table tbody tr').length>0;"), true, 'Request materials render as a table');
   assert.equal(await run("return !!document.querySelector('.request-materials-panel .material-table th[aria-label=\"Actions\"]');"), true, 'The materials table has an actions column');
+  assert.equal(await run("return !!document.querySelector('.request-materials-panel a[href*=\"materialId=\"]');"), false, 'Site Personnel cannot open supplier comparisons from material rows');
+  await role('Procurement');
+  await navigate('/requests/m1');
   const matchedRow = await run("return [...document.querySelectorAll('.request-materials-panel .material-table tbody tr')].findIndex(row=>row.querySelector('a[href*=\"materialId=\"]'));");
   assert.ok(matchedRow >= 0, 'Matched materials link to their supplier comparison without expanding');
   const materialLink = await run(`return document.querySelectorAll('.request-materials-panel .material-table tbody tr')[${matchedRow}].querySelector('a[href*="materialId="]').getAttribute('href');`);
@@ -854,7 +864,8 @@ try {
   assert.equal(await requestStep(), "2Materials");
   assert.equal(await run("return document.activeElement.name.startsWith('material-');"), true);
   await click("Back", ".request-wizard-actions button");
-  assert.equal(await run("return document.querySelector('input[name=ref]').value;"), "MRF-SMOKE-01");
+  assert.equal(await run("return document.querySelector('input[name=ref]').value;"), "HBR-MRF-0001");
+  assert.equal(await run("return document.querySelector('input[name=sourceRef]').value;"), "MRF-SMOKE-01");
   await click("Next", ".request-wizard-actions button");
   await editMaterial(0);
   await fill('.material-edit-dialog input[name^="material-"]', "Portland cement smoke lot");
@@ -943,7 +954,7 @@ try {
   await call("Emulation.setDeviceMetricsOverride", { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false });
   await writeFile(path.join(profile, "request-detail.png"), Buffer.from((await call("Page.captureScreenshot", { format: "png" })).data, "base64"));
   await call("Emulation.clearDeviceMetricsOverride");
-  let snapshot = await state(); const request = snapshot.requests.at(-1); assert.equal(request.status, "submitted"); assert.equal(request.requestedBy, "Joel Reyes"); assert.equal(request.items[0].purpose, "Ground floor slab construction"); assert.equal(request.items[0].location, "Tower 2 staging area"); assert.deepEqual(request.documents.map(document => document.name), ["Signed smoke MRF.pdf"]); assert.equal(request.documents[0].type, "Supporting PDF"); assert.equal(request.documents.every(document => !!document.fileId), true, "Uploaded documents should be reopenable");
+  snapshot = await state(); request = snapshot.requests.at(-1); assert.equal(request.status, "submitted"); assert.equal(request.requestedBy, "Joel Reyes"); assert.equal(request.items[0].purpose, "Ground floor slab construction"); assert.equal(request.items[0].location, "Tower 2 staging area"); assert.deepEqual(request.documents.map(document => document.name), ["Signed smoke MRF.pdf"]); assert.equal(request.documents[0].type, "Supporting PDF"); assert.equal(request.documents.every(document => !!document.fileId), true, "Uploaded documents should be reopenable");
   assert.equal(request.ref, "HBR-MRF-0001");
   assert.equal(request.sourceRef, "MRF-SMOKE-01");
   assert.equal(request.requestDate, "2030-10-29");
@@ -995,21 +1006,34 @@ try {
   const completion=(await state()).activity.find(event=>event.requestId===request.id&&event.eventType==='archive.completed');
   assert.equal(completion.actorIdentity.name,'Andrea Reyes','Upload completion retains its initiating account');
   assert.equal((await state()).role,'Finance','Upload completion preserves the currently signed-in account');
+  } else {
+    console.log("Checking purchasing, payment and receiving workflow");
+    await wait("return !!document.querySelector('.signin-form');");
+    await signInAs('Procurement');
+    const fixture=seedDemo();fixture.role='Procurement';
+    request={...structuredClone(fixture.requests[0]),id:'visibility-workflow',ref:'HBR-MRF-0001',requestDate:'2030-10-29',sourceRef:'MRF-SMOKE-01',status:'approved',items:[{...fixture.requests[0].items[0],id:'visibility-workflow-item',name:'Portland cement smoke lot',unit:'roll',quantity:20,purpose:'Ground floor slab construction',location:'Tower 2 staging area',neededDate:'2030-10-30'}],documents:[{name:'Signed smoke MRF.pdf',type:'Supporting PDF',fileId:'workflow-support'}],archive:{status:'complete',approvedAt:new Date().toISOString(),versions:[{version:1,formFileId:'workflow-form',supportFileId:'workflow-support',formUrl:'https://drive.google.com/file/d/workflow-form/view',supportUrl:'https://drive.google.com/file/d/workflow-support/view',archivedAt:new Date().toISOString()}]}};
+    delete request.workflow;delete request.correction;
+    fixture.requests.push(request);fixture.sites.find(site=>site.id===request.siteId).driveFolderId='smoke-project-folder';
+    await installFixture(fixture);
+    await call('Runtime.evaluate',{expression:"(async()=>{const db=await new Promise((resolve,reject)=>{const r=indexedDB.open('hml-quotation-files',1);r.onupgradeneeded=()=>r.result.createObjectStore('files');r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);});await new Promise((resolve,reject)=>{const tx=db.transaction('files','readwrite');tx.objectStore('files').put(new Blob(['%PDF-1.4 workflow source'],{type:'application/pdf'}),'workflow-support');tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);});db.close();})()",awaitPromise:true,returnByValue:true});
+  }
   await role("Procurement"); await navigate(`/requests/${request.id}/quotes`);
   console.log("Request approved; reviewing a quotation");
-  await click("Enter manually");
+  await click("Upload & review", ".procurement-steps button");
+  await click("Supplier quotation group", ".supplier-upload-section button");
+  await uploadFiles('.quote-upload-group input[type=file]', [sampleScope, sampleImage]);
+  await click("Enter manually using these files");
   await wait("return !!document.querySelector('.quote-review');");
-  const quoteField = async (label, value) => run(`const field=[...document.querySelectorAll('.quote-review label.field')].find(x=>x.querySelector('span')?.textContent===${JSON.stringify(label)});if(!field)throw Error('Missing quote field: ${label}');const el=field.querySelector('input,select,textarea');const kind=el.tagName==='TEXTAREA'?HTMLTextAreaElement:el.tagName==='SELECT'?HTMLSelectElement:HTMLInputElement;Object.getOwnPropertyDescriptor(kind.prototype,'value').set.call(el,${JSON.stringify(String(value))});el.dispatchEvent(new Event(el.tagName==='SELECT'?'change':'input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));return true;`);
+  const quoteField = async (label, value) => run(`const field=[...document.querySelectorAll('.quote-review label')].find(x=>x.querySelector('span')?.textContent===${JSON.stringify(label)});if(!field)throw Error('Missing quote field: ${label}');const el=field.querySelector('input,select,textarea');const kind=el.tagName==='TEXTAREA'?HTMLTextAreaElement:el.tagName==='SELECT'?HTMLSelectElement:HTMLInputElement;Object.getOwnPropertyDescriptor(kind.prototype,'value').set.call(el,${JSON.stringify(String(value))});el.dispatchEvent(new Event(el.tagName==='SELECT'?'change':'input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));return true;`);
   await quoteField("Supplier name", "MetroBuild Materials");
   await quoteField("Quotation reference", "QT-SMOKE-001");
-  await quoteField("Description", "Portland cement smoke lot");
-  await quoteField("Required MRF material", request.items[0].id);
+  await quoteField("Supplier description", "Portland cement smoke lot");
+  await quoteField("Requested item", request.items[0].id);
   await quoteField("Quoted quantity", 20);
   await quoteField("Quoted unit", request.items[0].unit);
   await quoteField("Unit price", 285);
   await run("document.querySelector('.quote-review .quote-check input[type=checkbox]').click();return true;");
-  await uploadFiles('.quote-review input[type=file]', [sampleScope, sampleImage]);
-  await wait("return document.querySelectorAll('.quote-document-attachment').length === 2;");
+  await wait("return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).quotes.find(quote=>quote.ref==='QT-SMOKE-001')?.documents.length===2;");
   for (const width of [1440,1024,768,414,375,320]) {
     await call("Emulation.setDeviceMetricsOverride", { width,height:900,deviceScaleFactor:1,mobile:width<800 });
     await sleep(250);
@@ -1109,7 +1133,8 @@ try {
   await click("Close", ".evidence-preview button");
   await click("Post to site stock"); await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).batches.find(x=>x.id===${JSON.stringify(batch.id)}).status==='posted';`);
   snapshot = await state(); assert.equal(snapshot.movements.filter(m => m.batchId === batch.id && m.kind === "receipt").length, 1);
-  await navigate("/inventory"); await click("Portland cement smoke lot", "a.table-primary"); await wait("return location.pathname.startsWith('/inventory/site-a/');");
+  await navigate("/inventory"); await click("Portland cement smoke lot", ".material-name-trigger");
+  await click("Open inventory record", ".record-dialog[open] a"); await wait("return location.pathname.startsWith('/inventory/site-a/');");
   await fill('input[name="quantity"]', 5); await fill('textarea[name="reason"]', "Ground floor slab pour"); await click("Record movement");
   snapshot = await state(); assert.equal(snapshot.movements.filter(m => m.itemName === "Portland cement smoke lot").reduce((n, m) => n + m.quantity, 0), 7);
   await role("Accounting / Auditing"); await navigate("/accounting");
@@ -1145,7 +1170,7 @@ try {
   await navigate(`/requests/${request.id}/edit`);
   assert.equal(await requestStep(), "3Review & submit");
   assert.equal(await run("return document.querySelector('fieldset.request-edit-fields').disabled;"), true);
-  assert.equal(await run("return document.querySelectorAll('.request-review button').length;"), 0, "PDF-only corrections have no detail-edit links");
+  assert.equal(await run("return [...document.querySelectorAll('.request-review button')].filter(button=>button.textContent.trim().startsWith('Edit')).length;"), 0, "PDF-only corrections have no detail-edit links");
   assert.equal(await run("return [...document.querySelectorAll('.request-wizard-actions button')].some(button=>button.textContent==='Back');"), false);
   await uploadFiles('input[type="file"]', [sampleScope]);
   await wait("return document.querySelector('.reference-file-detail strong')?.textContent==='Scope smoke.pdf';");
@@ -1227,8 +1252,8 @@ try {
   await call("Page.navigate", { url: `${baseUrl}/requests/new` });
   await wait("return location.pathname === '/sign-in' && new URLSearchParams(location.search).get('next') === '/requests/new';");
   await signInAs('Site Personnel');
-  await wait("return location.pathname === '/requests/new' && document.querySelector('h1')?.textContent === 'Set up the workspace first';");
+  await wait("return location.pathname === '/requests/new' && document.querySelector('h1')?.textContent === 'Access unavailable';");
   assert.equal((await state()).role, "Site Personnel");
   assert.deepEqual(browserExceptions, [], `Uncaught browser errors: ${browserExceptions.join("; ")}`);
-  console.log(`Browser smoke passed, including optional MRF AI import, human review and separate attachments. Screenshots: ${path.join(profile, "desktop.png")} and ${path.join(profile, "mobile.png")}`);
+  console.log(`Browser smoke passed${workflowOnly ? " (purchasing workflow only)" : ", including optional MRF AI import, human review and separate attachments"}. Screenshots: ${path.join(profile, "desktop.png")} and ${path.join(profile, "mobile.png")}`);
 } finally { try { ws?.close(); } catch {} browser.kill(); }

@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { RecordLink as Link } from "@/src/components/ui/RecordLink";
 import { useEffect, useMemo, useRef } from "react";
 import { AuditHistory } from "@/src/components/ui/AuditHistory";
 import { CollapsibleSection } from "@/src/components/ui/CollapsibleSection";

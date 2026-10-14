@@ -27,7 +27,7 @@ export function ExternalPaymentVerification({ po }: { po: PO }) {
   const proofs = po.paymentProofs || [], verified = po.externalPayment;
   const blocked = releaseBlocker(state, po);
   const archive = async (proof: PaymentProof, snapshot = state) => {
-    await perform(`proof-${proof.id}`, `Payment proof: ${proof.name}`, async () => archivePaymentProof(snapshot, po.id, proof, await beginOperation({ kind: "payment-proof", poId: po.id, documentId: proof.id })));
+    await perform(`proof-${proof.id}`, `Payment proof: ${proof.name}`, async () => archivePaymentProof(snapshot, po.id, proof, await beginOperation({ kind: "payment-proof", poId: po.id, documentId: proof.id })), {kind:"payment-proof",poId:po.id,documentId:proof.id});
   };
   const attach = async (files: File[]) => {
     setBusy(true); setError("");

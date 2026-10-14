@@ -18,27 +18,27 @@ import type { AccountingDocument, DemoSnapshot } from "@/src/domain/types";
 import { Badge, Field, InlineError } from "@/src/components/ui/Primitives";
 import { archiveAccountingDocument, attachAccountingFiles, readAccountingDocument } from "./accounting-files";
 
-export function AccountingDocuments({ poId, batchId }: { poId: string; batchId?: string }) {
-  const { snapshot, beginOperation, run } = useDemo(), { perform, jobs } = useArchive();
+export function AccountingDocuments({ poId, batchId, readOnly = false }: { poId: string; batchId?: string; readOnly?: boolean }) {
+  const { snapshot, beginOperation, run, access } = useDemo(), { perform, jobs } = useArchive();
   const { notify, update } = useActionFeedback();
   const [kind, setKind] = useState<AccountingDocument["kind"]>(batchId ? "Signed delivery receipt" : "Invoice"), [busy, setBusy] = useState(false), [error, setError] = useState(""), [preview, setPreview] = useState<AccountingDocument | null>(null);
   const [selectedBatch, setSelectedBatch] = useState(batchId || "");
   const inProgress = useRef(false);
-  if (!snapshot) return null;
+  if (!snapshot || !access.canReadRecord(poId)) return null;
   const documents = snapshot.accounting.find(value => value.poId === poId)?.documents?.filter(value => !batchId || value.batchId === batchId) || [];
   const batch = snapshot.batches.find(value => value.id === batchId);
-  const accounting = snapshot.role === "Accounting / Auditing";
+  const accounting = !readOnly && snapshot.role === "Accounting / Auditing";
   const attachmentBatch = batchId || selectedBatch || undefined;
   const batches = snapshot.batches.filter(value => value.poId === poId && receivedDelivery(value));
-  const canUpload = canAttachDelivery(snapshot, poId, attachmentBatch, snapshot.role);
-  const canRetry = ["Site Personnel", "Procurement", "Accounting / Auditing", "Administrator"].includes(snapshot.role);
+  const canUpload = !readOnly && canAttachDelivery(snapshot, poId, attachmentBatch, snapshot.role);
+  const canRetry = !readOnly && ["Site Personnel", "Procurement", "Accounting / Auditing", "Administrator"].includes(snapshot.role);
   const isArchiving = (id: string) => jobs.some(job => job.id === `accounting-${id}` && job.phase !== "complete" && !job.error);
   const archive = async (document: AccountingDocument, state = snapshot, pipeline?: CommandRunner) => perform(`accounting-${document.id}`, document.name, async progress => {
     const target = { kind: "evidence" as const, poId, documentId: document.id };
     const runner = pipeline || await beginOperation(target);
     if (pipeline) { const started = await runner({type:"startOperation",target}); if (!started.ok) throw new Error(started.message); }
     return archiveAccountingDocument(state, poId, document, runner, progress);
-  });
+  }, { kind: "evidence", poId, documentId: document.id });
   const upload = async (files: File[]) => {
     if (inProgress.current || !canUpload) return;
     inProgress.current = true; setBusy(true); setError("");
@@ -77,7 +77,7 @@ export function AccountingDocuments({ poId, batchId }: { poId: string; batchId?:
       const earlierFiles = files.filter(document => !!document.receiptVersion && document.receiptVersion !== version);
       return <details className="delivery-evidence-group" key={delivery.id} open={!!batchId || batches.length <= 2}>
         <summary><span><strong>{delivery.ref}</strong><small>{legLabel(delivery)} / {files.length} uploaded files</small></span><Badge>{signed ? "Signed receipt archived" : "Signed receipt needed"}</Badge><span className="section-chevron" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" focusable="false"><path d="m6 9 6 6 6-6"/></svg></span></summary>
-        <DeliveryReceiptArchive batch={delivery}/>
+        <DeliveryReceiptArchive batch={delivery} readOnly={readOnly}/>
         {!signed && <p className="helper-note">Upload a signed delivery receipt for the current quantities. Accounting checks its signature and contents.</p>}
         <h4 className="subheading">Uploaded evidence</h4><div className="evidence-files">{currentFiles.map(renderFile)}</div>{earlierFiles.length > 0 && <details className="receipt-history"><summary>Earlier uploaded receipt versions ({earlierFiles.length})</summary>{earlierFiles.map(renderFile)}</details>}
       </details>;

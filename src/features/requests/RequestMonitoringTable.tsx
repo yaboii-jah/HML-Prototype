@@ -1,7 +1,8 @@
 "use client";
 
 import { Fragment, useMemo, useState } from "react";
-import Link from "next/link";
+import { RecordLink as Link } from "@/src/components/ui/RecordLink";
+import { useDemo } from "@/src/app-state/DemoProvider";
 import { Register } from "@/src/components/ui/Register";
 import { RecordModal } from "@/src/components/ui/RecordModal";
 import { Badge } from "@/src/components/ui/Primitives";
@@ -38,8 +39,9 @@ function RelatedRecords({ row, state }: { row: RequestMonitoring; state: DemoSna
 }
 
 export function RequestMonitoringTable({state,siteId,title="MRF lifecycle checklist"}:{state:DemoSnapshot;siteId?:string;title?:string}) {
+  const { access } = useDemo();
   const [search,setSearch]=useState(""),[filter,setFilter]=useState("all"),[selected,setSelected]=useState<string|null>(null);
-  const all = useMemo(() => monitoringRequests(state, siteId), [state, siteId]);
+  const all = useMemo(() => monitoringRequests(state, siteId).filter(row => access.canReadProject(row.request.siteId)), [state, siteId, access]);
   const rows = useMemo(() => all.filter(row => {
     const text = `${row.request.ref} ${row.projectName} ${row.scopeName} ${row.pos.map(po => `${po.ref} ${supplierName(state, po)}`).join(" ")}`.toLowerCase();
     const matches = filter === "all" || filter === "attention" && row.flags.needsAttention || filter === "finance" && row.flags.forFinance || filter === "logistics" && row.flags.forLogistics || filter === "delivered" && row.delivered.state === "complete" || filter === "partial" && [row.served, row.finance, row.delivered, row.stock].some(value => value.state === "partial") || row.request.status === filter;

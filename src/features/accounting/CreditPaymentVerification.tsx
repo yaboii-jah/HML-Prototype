@@ -43,7 +43,7 @@ export function CreditPaymentVerification({ po }: { po: PO }) {
     finally { pending.current = false; setBusy(false); }
   };
   const archive = async (proof: PaymentProof, snapshot = state) => {
-    await perform(`proof-${proof.id}`, `Payment proof: ${proof.name}`, async () => archivePaymentProof(snapshot, po.id, proof, await beginOperation({ kind: "payment-proof", poId: po.id, documentId: proof.id })));
+    await perform(`proof-${proof.id}`, `Payment proof: ${proof.name}`, async () => archivePaymentProof(snapshot, po.id, proof, await beginOperation({ kind: "payment-proof", poId: po.id, documentId: proof.id })), {kind:"payment-proof",poId:po.id,documentId:proof.id});
   };
   const record = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault(); const form = event.currentTarget, data = new FormData(form), amount = parseBudgetInput(String(data.get("amount") || ""));

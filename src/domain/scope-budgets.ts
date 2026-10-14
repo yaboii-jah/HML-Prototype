@@ -35,6 +35,6 @@ export function scopeBudgetFor(state: DemoSnapshot, scopeId: string) {
 }
 export function scopeValidationError(state: DemoSnapshot, siteId: string, scopeId?: string, checkFunds = true) {
   if (!scopeId || !state.scopes?.some(scope => scope.id === scopeId && scope.siteId === siteId)) return "Choose a scope of work belonging to this project.";
-  if (checkFunds && scopeBudgetFor(state, scopeId).available <= 0) return "This scope has no remaining budget. Ask an Administrator to review its allocation.";
+  if (checkFunds && scopeBudgetFor(state, scopeId).available <= 0) return "This scope has no remaining budget. Ask a Project Manager or Administrator to review its allocation.";
   return "";
 }

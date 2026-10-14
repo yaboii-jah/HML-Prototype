@@ -1,6 +1,7 @@
 "use client";
 
-import Link from "next/link";
+import { RecordLink as Link } from "./RecordLink";
+import { useDemo } from "@/src/app-state/DemoProvider";
 import { useMemo, useState } from "react";
 import { actorName, auditTime, type AuditRecord } from "@/src/domain/audit";
 import { groupAuditEvents, type AuditGroup } from "@/src/domain/request-lifecycle";
@@ -16,21 +17,23 @@ function HistoryTable({ groups, records, visible }: { groups: AuditGroup[]; reco
 }
 
 export function AuditHistory({ entries, records, paginated = false }: { entries: Activity[]; records: Map<string, AuditRecord>; paginated?: boolean }) {
+  const { access } = useDemo();
+  const visibleEntries = useMemo(() => entries.filter(access.canReadActivity), [entries, access]);
   const [limit, setLimit] = useState(50);
-  const [paging, setPaging] = useState({ key: String(entries.length), page: 1, size: 10 });
-  const groups = useMemo(() => groupAuditEvents(entries), [entries]);
+  const [paging, setPaging] = useState({ key: String(visibleEntries.length), page: 1, size: 10 });
+  const groups = useMemo(() => groupAuditEvents(visibleEntries), [visibleEntries]);
   const pages = Math.max(1, Math.ceil(groups.length / paging.size));
-  const page = paging.key === String(entries.length) ? Math.min(paging.page, pages) : 1;
+  const page = paging.key === String(visibleEntries.length) ? Math.min(paging.page, pages) : 1;
   const start = (page - 1) * paging.size;
   const visible = new Set(groups.slice(start, start + paging.size).map(group => group.id));
   return <div className={`audit-history ${paginated ? "is-paginated" : ""}`}>
     <p className="helper-note">Recorded times are shown in Philippine time. Automatic saves can be expanded to view each saved change.</p>
     {!groups.length ? <p className="muted">No activity recorded yet.</p> : paginated ? <>
       <HistoryTable groups={groups} records={records} visible={visible}/>
-      <footer className="audit-history-footer register-footer"><label>Per page <select aria-label="History rows per page" value={paging.size} onChange={event => setPaging({ key: String(entries.length), page: 1, size: Number(event.target.value) })}>{[10, 25, 50].map(size => <option key={size}>{size}</option>)}</select></label><span>{start + 1}–{Math.min(start + paging.size, groups.length)} of {groups.length} history rows · {entries.length} recorded events</span><div className="register-page-controls"><button type="button" className="button secondary" disabled={page <= 1} aria-label="Previous history page" onClick={() => setPaging({ key: String(entries.length), page: page - 1, size: paging.size })}>Previous</button><span>{page} / {pages}</span><button type="button" className="button secondary" disabled={page >= pages} aria-label="Next history page" onClick={() => setPaging({ key: String(entries.length), page: page + 1, size: paging.size })}>Next</button></div></footer>
+      <footer className="audit-history-footer register-footer"><label>Per page <select aria-label="History rows per page" value={paging.size} onChange={event => setPaging({ key: String(visibleEntries.length), page: 1, size: Number(event.target.value) })}>{[10, 25, 50].map(size => <option key={size}>{size}</option>)}</select></label><span>{start + 1}–{Math.min(start + paging.size, groups.length)} of {groups.length} history rows · {visibleEntries.length} recorded events</span><div className="register-page-controls"><button type="button" className="button secondary" disabled={page <= 1} aria-label="Previous history page" onClick={() => setPaging({ key: String(visibleEntries.length), page: page - 1, size: paging.size })}>Previous</button><span>{page} / {pages}</span><button type="button" className="button secondary" disabled={page >= pages} aria-label="Next history page" onClick={() => setPaging({ key: String(visibleEntries.length), page: page + 1, size: paging.size })}>Next</button></div></footer>
     </> : <>
       <HistoryTable groups={groups.slice(0, limit)} records={records}/>
-      <div className="audit-history-footer"><small>{Math.min(limit, groups.length)} of {groups.length} history rows · {entries.length} recorded events</small>{limit < groups.length && <button className="button secondary" type="button" onClick={() => setLimit(value => value + 50)}>Load more history</button>}</div>
+      <div className="audit-history-footer"><small>{Math.min(limit, groups.length)} of {groups.length} history rows · {visibleEntries.length} recorded events</small>{limit < groups.length && <button className="button secondary" type="button" onClick={() => setLimit(value => value + 50)}>Load more history</button>}</div>
     </>}
   </div>;
 }
