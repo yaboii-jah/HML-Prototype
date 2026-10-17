@@ -6,7 +6,7 @@ export const entities = [
   { id: "proc", name: "Procurement", input: "Reviewed quotes / POs / transfers / warehouse receipts", output: "Sourcing / PO / delivery records" },
   { id: "supplier", name: "Supplier", input: "Supplier quotations", output: "Issued purchase orders" },
   { id: "finance", name: "Finance", input: "Payment plans / priorities", output: "Payable / settled balances" },
-  { id: "accounting", name: "Accounting / Auditing", input: "Reviews / payment verification", output: "PO / payment / evidence records" },
+  { id: "accounting", name: "Accounting", input: "Reviews / payment verification", output: "PO / payment / evidence records" },
   { id: "logistics", name: "Logistics", input: "Schedules / dispatch details", output: "Authorized delivery quantities" },
   { id: "ai", name: "AI Extraction Service", input: "Extracted fields / match suggestions", output: "Source pages / MRF context" },
   { id: "drive", name: "Google Drive", input: "Folder / file refs and archive results", output: "Folder data / files / retrieval requests" },
@@ -25,7 +25,7 @@ const actor = (id, input, output, inputData, outputData) => ({ id, input, output
 const store = (id, write, read) => ({ id, write, read });
 export const processes = [
   {
-    id: "P1", number: "1.0", name: "Manage Users & Projects", display: ["Manage Users", "& Projects"], position: [10, 10],
+    id: "P1", number: "1.0", name: "Manage Users & Projects", display: ["Manage", "Users &", "Projects"], position: [10, 10],
     actors: [
       actor("admin", "User settings", "Directory", ["user-details", "project-settings", "scope-budgets"], ["user-directory", "project-status"]),
       actor("pm", "Budgets", "Project status", ["project-details", "scope-allocations"], ["project-budget-status"]),
@@ -78,8 +78,8 @@ export const processes = [
 ];
 
 export const diagrams = {
-  context: { width: 1400, height: 650, fontSize: 22, printWidthMm: 277, minimumPoints: 12 },
-  level1: { width: 2200, height: 1500, fontSize: 30, printWidthMm: 277, minimumPoints: 10.5 },
+  context: { width: 1400, height: 750, fontSize: 24, printWidthMm: 277, minimumPoints: 13 },
+  level1: { width: 2200, height: 1500, fontSize: 31, printWidthMm: 277, minimumPoints: 11 },
 };
 
 export const supplierExchangeNote = "Supplier quotations and issued purchase orders are exchanged through Procurement; suppliers do not directly access the application.";

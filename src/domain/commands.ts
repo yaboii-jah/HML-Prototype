@@ -1,3 +1,4 @@
+import { archiveReady, validArchiveFileLink } from "./archive-destination.ts";
 import { applyTransferCommand, isTransferCommand, requestSourcing, sourceStockAvailable, transferQuantityFor, transfersForRequest, type TransferCommand } from "./stock-transfers.ts";
 import { applyStockSourcingCommand, invalidateStockReviews, isStockSourcingCommand, suitabilityQuantityFor, type StockSourcingCommand } from "./stock-suitability.ts";
 import { siteActionProject } from "./site-access.ts";
@@ -17,7 +18,6 @@ import { operationEntity, operationError, operationRetry } from "./operations.ts
 import type { AuditIdentity, OperationTarget } from "./types.ts";
 import { validAccountingDocument, MAX_ACCOUNTING_BATCH } from "./accounting-documents.ts";
 import type { AccountingDocument } from "./types.ts";
-import { validDriveFileLink } from "./drive-links.ts";
 import { initializePoDocument } from "./po-document.ts";
 import { resolveComparisonSelections } from "./comparison-report.ts";
 import type { ComparisonSelections } from "./types.ts";
@@ -310,10 +310,10 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       if (command.type === "failBidGeneration") { if (!artifact.sha256) { artifact.generationError = command.error; log(report.id, "Comparison generation failed", command.error); } return done("Workbook generation needs retry."); }
       if (artifact.archive.status === "complete") return done("Bid comparison already archived.");
       if (command.type === "completeBidArchive") {
-        if (!artifact.sha256 || !command.fileId || !validDriveFileLink(command.url, command.fileId)) return fail("The workbook archive is invalid.");
+        if (!artifact.sha256 || !command.fileId || !validArchiveFileLink(state, command.url, command.fileId)) return fail("The workbook archive is invalid.");
         artifact.archive = { status: "complete", fileId: command.fileId, url: command.url };
         log(report.id, `Bid comparison v${report.version} archived`);
-        return done("Bid comparison archived to Google Drive.");
+        return done("Bid comparison archived.");
       }
       artifact.archive.error = command.error;
       log(report.id, "Comparison archive failed", command.error);
@@ -385,7 +385,7 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       if (!request || request.status !== "submitted" && !(request.status === "approved" && request.correction?.status === "submitted")) return fail(`This MRF is no longer awaiting ${reviewer} review.`);
       if (command.decision !== "approve" && !reasonOK(command.reason)) return fail("Enter a reason of at least five characters.", "reason");
       if (command.decision === "approve" && request.correction?.scope !== "documents") { const error = scopeValidationError(state, request.siteId, request.scopeId); if (error) return fail(error, "scopeId"); }
-      if (command.decision === "approve" && !state.sites.find(site => site.id === request.siteId)?.driveFolderId) return fail("Map this project's Google Drive folder before approval.");
+      if (command.decision === "approve" && !archiveReady(state.sites.find(site => site.id === request.siteId))) return fail("Map this project's Google Drive folder before approval.");
       if (command.decision === "approve" && !supportingPdf(request)) return fail("A combined supporting PDF is required before approval.");
       if (request.correction) {
         if (command.decision === "reject") return fail("Return the correction to Site Personnel instead.");
@@ -423,8 +423,8 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       request.archive.status = "complete";
       request.archive.error = undefined;
       request.updatedAt = at;
-      log(request.id, "MRF archived to Google Drive");
-      return done("MRF archived to Google Drive. Procurement can continue.");
+      log(request.id, "MRF archived");
+      return done("MRF archived. Procurement can continue.");
     }
     case "failRequestArchive": {
       if (!permit("Procurement", "Administrator") && !(permit("Project Manager") && requiresPMReview(state.requests.find(r => r.id === command.id)))) return fail("Sign in with the MRF reviewing department or Administrator to update its archive.");
@@ -502,8 +502,8 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       if (!quote || quote.reviewStatus !== "finalized" || quote.archive?.status !== "pending") return fail("This quotation is not awaiting a Drive archive.");
       if (quote.documents.length !== command.files.length || quote.documents.some(document => !command.files.some(file => file.localFileId === document.fileId && file.driveFileId && file.url))) return fail("The quotation archive is incomplete.");
       quote.archive = { status: "complete", files: command.files };
-      log(quote.id, "Supplier quotation archived to Google Drive");
-      return done("Supplier quotation archived to Google Drive.");
+      log(quote.id, "Supplier quotation archived");
+      return done("Supplier quotation archived.");
     }
     case "failQuoteArchive": {
       if (!permit("Procurement", "Administrator")) return fail("Sign in as Procurement or Administrator to update a quotation archive.");
@@ -836,7 +836,7 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       if (command.type === "completePaymentProofArchive" && proof?.archive.status === "complete" && proof.archive.fileId === command.fileId && proof.archive.url === command.url) return done("Payment proof already archived.");
       if (!po || !isExternalPayment(po) || !proof || proof.archive.status !== "pending") return fail("This proof has no pending archive.");
       if (command.type === "completePaymentProofArchive") {
-        if (!validDriveFileLink(command.url, command.fileId)) return fail("The proof archive link is invalid.");
+        if (!validArchiveFileLink(state, command.url, command.fileId)) return fail("The proof archive link is invalid.");
         proof.archive = { status: "complete", fileId: command.fileId, url: command.url };
         log(po.id, "Payment proof archived"); return done("Payment proof archived.");
       }
@@ -924,8 +924,8 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       if (po?.archive?.status === "complete" && po.archive.fileId === command.fileId && po.archive.url === command.url) return done("PO already archived.");
       if (!po || po.status !== "approved" || po.archive?.status !== "pending" || !command.fileId || !command.url) return fail("This PO is not awaiting a Drive archive.");
       po.archive = { status: "complete", fileId: command.fileId, url: command.url };
-      log(po.id, "Purchase order archived to Google Drive");
-      return done("Purchase order archived to Google Drive.");
+      log(po.id, "Purchase order archived");
+      return done("Purchase order archived.");
     }
     case "failPOArchive": {
       if (!permit("Accounting / Auditing", "Administrator")) return fail("Sign in as Accounting or Administrator to update a PO archive.");
@@ -1057,10 +1057,10 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       if (!document) return fail("Accounting document not found.");
       if (document.archive.status === "complete") return done("Accounting document already archived.");
       if (command.type === "completeAccountingArchive") {
-        if (!validDriveFileLink(command.url, command.fileId)) return fail("The accounting document archive is invalid.");
+        if (!validArchiveFileLink(state, command.url, command.fileId)) return fail("The accounting document archive is invalid.");
         document.archive = { status: "complete", fileId: command.fileId, url: command.url };
         log(document.id, "Accounting document archived");
-        return done("Accounting document archived to Google Drive.");
+        return done("Accounting document archived.");
       }
       document.archive.error = command.error;
       log(document.id, "Evidence archive failed", command.error);
@@ -1079,7 +1079,7 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       if (!batch || !receipt || !permit("Accounting / Auditing", "Administrator", isSiteBatch(batch) ? "Site Personnel" : "Procurement")) return fail("This receipt archive is not available to this department.");
       if (receipt.archive.status === "complete") return done("Delivery receipt already archived.");
       if (command.type === "completeDeliveryReceiptArchive") {
-        if (!validDriveFileLink(command.url, command.fileId)) return fail("Invalid delivery receipt Drive link.");
+        if (!validArchiveFileLink(state, command.url, command.fileId)) return fail("Invalid delivery receipt Drive link.");
         receipt.archive = { status: "complete", fileId: command.fileId, url: command.url };
         log(batch.id, `Generated delivery receipt v${receipt.version} archived`);
       } else { receipt.archive.error = command.error; log(batch.id, "Delivery receipt archive failed", command.error); }
@@ -1158,7 +1158,7 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       const codeError = projectCodeValidation(state, documentCode);
       if (codeError) return fail(codeError, "documentCode");
       const siteId = id("site");
-      state.sites.push({ id: siteId, documentCode, name, location: command.location.trim(), budget: command.budget, personnel: "", driveFolderSetup: { status: "pending" } });
+      state.sites.push({ id: siteId, documentCode, name, location: command.location.trim(), budget: command.budget, personnel: "", ...(state.showcase ? { localArchiveId: state.showcase.installationId } : {}), driveFolderSetup: { status: "pending" } });
       log(siteId, "Project added");
       return done("Project added. Site Personnel can now create an MRF.", siteId);
     }

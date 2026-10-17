@@ -2,7 +2,7 @@ import type { CommandRunner } from "@/src/app-state/command-gateway";
 import type { OperationTarget, Site } from "@/src/domain/types";
 const pending = new Map<string, Promise<boolean>>();
 export function setupProjectFolder(site: Site, beginOperation: (target: OperationTarget) => Promise<CommandRunner>) {
-  if (site.driveFolderId) return Promise.resolve(true);
+  if (site.localArchiveId || site.driveFolderId) return Promise.resolve(true);
   const prior = pending.get(site.id);
   if (prior) return prior;
   const task = (async () => {

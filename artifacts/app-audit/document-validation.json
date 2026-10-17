@@ -1,0 +1,66 @@
+{
+  "passed": true,
+  "findings": [
+    {
+      "id": "AUD-01",
+      "priority": "P1"
+    },
+    {
+      "id": "AUD-02",
+      "priority": "P2"
+    },
+    {
+      "id": "AUD-03",
+      "priority": "P2"
+    },
+    {
+      "id": "AUD-04",
+      "priority": "P2"
+    },
+    {
+      "id": "AUD-05",
+      "priority": "P2"
+    },
+    {
+      "id": "AUD-06",
+      "priority": "P2"
+    },
+    {
+      "id": "AUD-07",
+      "priority": "P2"
+    },
+    {
+      "id": "AUD-08",
+      "priority": "P2"
+    },
+    {
+      "id": "AUD-09",
+      "priority": "P2"
+    },
+    {
+      "id": "AUD-10",
+      "priority": "P2"
+    },
+    {
+      "id": "AUD-14",
+      "priority": "P2"
+    },
+    {
+      "id": "AUD-11",
+      "priority": "P3"
+    },
+    {
+      "id": "AUD-12",
+      "priority": "P3"
+    },
+    {
+      "id": "AUD-13",
+      "priority": "P3"
+    }
+  ],
+  "linkedArtifactsChecked": true,
+  "suites": 25,
+  "auditCopies": 9,
+  "visits": 95,
+  "responsive": 264
+}

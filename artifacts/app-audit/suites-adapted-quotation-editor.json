@@ -1,0 +1,44 @@
+[
+  {
+    "name": "adapted-quotation-editor",
+    "code": 1,
+    "durationMs": 28723,
+    "log": "logs/adapted-quotation-editor.log",
+    "tail": "Reparsing as ES module because module syntax was detected. This incurs a performance overhead.\nTo eliminate this warning, add \"type\": \"module\" to \\\\?\\C:\\Users\\Jahmell Dorias\\Desktop\\Projects\\buildsync-prototype\\package.json.\n(Use `node --trace-warnings ...` to show where the warning was created)\nfile:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/artifacts/app-audit/adapted-quotation-editor.mjs:40\r\n  const wait = async code => { for (let i = 0; i < 100; i++) { if (await run(code)) return; await sleep(100); } throw new Error(`Timed out: ${code}`); };\r\n                                                                                                                      ^\r\n\r\nError: Timed out: return !!document.querySelector('.quote-review');\r\n    at wait (file:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/artifacts/app-audit/adapted-quotation-editor.mjs:40:119)\r\n    at async file:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/artifacts/app-audit/adapted-quotation-editor.mjs:98:48\r\n\r\nNode.js v24.19.0"
+  },
+  {
+    "name": "adapted-quotation-worksheet",
+    "code": 0,
+    "durationMs": 22703,
+    "log": "logs/adapted-quotation-worksheet.log",
+    "tail": "(node:8148) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/src/app-state/demo-session.ts is not specified and it doesn't parse as CommonJS.\nReparsing as ES module because module syntax was detected. This incurs a performance overhead.\nTo eliminate this warning, add \"type\": \"module\" to \\\\?\\C:\\Users\\Jahmell Dorias\\Desktop\\Projects\\buildsync-prototype\\package.json.\n(Use `node --trace-warnings ...` to show where the warning was created)\nQuotation worksheet smoke passed: bulk confirmation, exclusions, concurrent updates, keyboard, stable PDF/image preview, missing files and responsive themes. Warning text contrast: 4.60:1 minimum. Screenshots: C:\\Users\\JAHMEL~1\\AppData\\Local\\Temp\\constructsync-worksheet-LvSIiT"
+  },
+  {
+    "name": "adapted-supplier-upload",
+    "code": 0,
+    "durationMs": 30151,
+    "log": "logs/adapted-supplier-upload.log",
+    "tail": "(node:15184) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/src/app-state/demo-session.ts is not specified and it doesn't parse as CommonJS.\nReparsing as ES module because module syntax was detected. This incurs a performance overhead.\nTo eliminate this warning, add \"type\": \"module\" to \\\\?\\C:\\Users\\Jahmell Dorias\\Desktop\\Projects\\buildsync-prototype\\package.json.\n(Use `node --trace-warnings ...` to show where the warning was created)\nSupplier upload workbench smoke passed. Screenshots: C:\\Users\\JAHMEL~1\\AppData\\Local\\Temp\\constructsync-registers-GRmtpy"
+  },
+  {
+    "name": "adapted-quotation-financial-review",
+    "code": 1,
+    "durationMs": 37130,
+    "log": "logs/adapted-quotation-financial-review.log",
+    "tail": "Reparsing as ES module because module syntax was detected. This incurs a performance overhead.\nTo eliminate this warning, add \"type\": \"module\" to \\\\?\\C:\\Users\\Jahmell Dorias\\Desktop\\Projects\\buildsync-prototype\\package.json.\n(Use `node --trace-warnings ...` to show where the warning was created)\nfile:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/artifacts/app-audit/adapted-quotation-financial-review.mjs:40\r\n  const wait = async code => { for (let i = 0; i < 200; i++) { if (await run(code)) return; await sleep(100); } throw new Error(`Timed out: ${code}`); };\r\n                                                                                                                      ^\r\n\r\nError: Timed out: return !!document.querySelector('.quote-financial-card');\r\n    at wait (file:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/artifacts/app-audit/adapted-quotation-financial-review.mjs:40:119)\r\n    at async file:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/artifacts/app-audit/adapted-quotation-financial-review.mjs:98:48\r\n\r\nNode.js v24.19.0"
+  },
+  {
+    "name": "adapted-quotation-extraction",
+    "code": 1,
+    "durationMs": 33252,
+    "log": "logs/adapted-quotation-extraction.log",
+    "tail": "To eliminate this warning, add \"type\": \"module\" to \\\\?\\C:\\Users\\Jahmell Dorias\\Desktop\\Projects\\buildsync-prototype\\package.json.\n(Use `node --trace-warnings ...` to show where the warning was created)\nfile:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/artifacts/app-audit/adapted-quotation-extraction.mjs:40\r\n  const wait = async code => { for (let i = 0; i < 200; i++) { if (await run(code)) return; await sleep(100); } throw new Error(`Timed out: ${code}\\n${JSON.stringify(await run(\"return {url:location.href,text:document.body.innerText.slice(-1800),role:JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')||'null')?.role};\"))}`); };\r\n                                                                                                                      ^\r\n\r\nError: Timed out: return !!document.querySelector('.supplier-upload-section');\r\n{\"url\":\"http://127.0.0.1:3100/requests/m1/quotes\",\"text\":\"Workspace\\n/\\nMaterial requests\\nAll sites\\nHarbor Residences · Site A\\nNorthline Warehouse · Site B\\n2\\nAR\\nAndrea Reyes\\nProcurement\\n← MRF-2026-001\\nPROCUREMENT Â· QUOTATION REVIEW\\nSource requested materials\\nApproved\\n\\nReview each supplier offer, confirm its MRF matches, allocate quantities, and prepare supplier purchase orders.\\n\\n01\\nCheck site stock\\nStock transfer sourcing\\n02\\nUpload & review\\n0 draft Â· 2 finalized\\n03\\nCompare & award\\n2 suppliers Â· 0 saved awards\\n04\\nPO preparation\\n1 POs\\nCheck site stock\\n\\nUse spare materials from another project. Purchase only the balance that remains.\\n\\nSupplier quotations\\nSource project\\nNorthline Warehouse · Site B\\nTransfer note (optional)\\n\\nChoose stock with the same description and unit. After your final verification, the source site confirms how much it can release.\\n\\nRequested material\\tRequested\\tAlready sourced\\tStill to source\\tStock at source project\\tAvailable\\tTransfer quantity\\tMatch\\n\\nPortland cement\\nbag\\n\\t100\\nbag\\n\\t\\nTransfers: 0\\nSite review: 0\\nOrders: 100\\nAwards: 0\\n\\t0\\nbag\\n\\t\\nChoose stock\\n\\t\\nChoose stock first\\n\\t\\nEnter quantity after selecting stock\\n\\t\\n\\nDrafts save on this browser. No stock or demand is held until requests are sent.\\n\\nReview selections\",\"role\":\"Procurement\"}\r\n    at wait (file:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/artifacts/app-audit/adapted-quotation-extraction.mjs:40:119)\r\n    at async file:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/artifacts/app-audit/adapted-quotation-extraction.mjs:53:3\r\n\r\nNode.js v24.19.0"
+  },
+  {
+    "name": "adapted-quotation-confirmations",
+    "code": 1,
+    "durationMs": 26563,
+    "log": "logs/adapted-quotation-confirmations.log",
+    "tail": "Reparsing as ES module because module syntax was detected. This incurs a performance overhead.\nTo eliminate this warning, add \"type\": \"module\" to \\\\?\\C:\\Users\\Jahmell Dorias\\Desktop\\Projects\\buildsync-prototype\\package.json.\n(Use `node --trace-warnings ...` to show where the warning was created)\nfile:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/artifacts/app-audit/adapted-quotation-confirmations.mjs:40\r\n  const wait = async code => { for (let i = 0; i < 100; i++) { if (await run(code)) return; await sleep(100); } throw new Error(`Timed out: ${code}`); };\r\n                                                                                                                      ^\r\n\r\nError: Timed out: return [...document.querySelector('.quote-editor-header').querySelectorAll('button')].some(b=>b.textContent==='Retry Drive archive');\r\n    at wait (file:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/artifacts/app-audit/adapted-quotation-confirmations.mjs:40:119)\r\n    at async file:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/artifacts/app-audit/adapted-quotation-confirmations.mjs:103:16\r\n\r\nNode.js v24.19.0"
+  }
+]

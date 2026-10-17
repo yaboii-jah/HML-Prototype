@@ -61,14 +61,14 @@ function build(name) {
   };
 
   if (name === "context") {
-    const system = node("system","P0","process",20,300,1360,90,["ConstructSync"],"0");
+    const system = node("system","P0","process",20,330,1360,90,["ConstructSync"],"0");
     for (let i = 0; i < entities.length; i++) {
       const entity = entities[i], top = i < 5, column = top ? i : i - 5;
       const count = top ? 5 : entities.length - 5, x = 20 + (5-count)*140 + column * 280;
-      const actor = node(entity.id,entity.id,"entity",x,top ? 20 : 560,240,65,entity.name);
+      const actor = node(entity.id,entity.id,"entity",x,top ? 20 : 665,240,65,entity.name);
       const incoming = contextFlows.find(flow => flow.from === entity.id), outgoing = contextFlows.find(flow => flow.to === entity.id);
-      flow(actor.id,system.id,incoming.label,top ? [[x+55,85],[x+55,300]] : [[x+55,560],[x+55,390]],x+55,top ? 190 : 475,110);
-      flow(system.id,actor.id,outgoing.label,top ? [[x+185,300],[x+185,85]] : [[x+185,390],[x+185,560]],x+185,top ? 190 : 475,110);
+      flow(actor.id,system.id,incoming.label,top ? [[x+55,85],[x+55,330]] : [[x+55,665],[x+55,420]],x+55,top ? 207.5 : 542.5,118);
+      flow(system.id,actor.id,outgoing.label,top ? [[x+185,330],[x+185,85]] : [[x+185,420],[x+185,665]],x+185,top ? 207.5 : 542.5,118);
     }
   } else {
     const uses = new Map();
@@ -81,7 +81,7 @@ function build(name) {
         const cy = oy+70+index*spacing+(5-count)*spacing/2;
         const left = kind === "entity", x = ox+(left ? 0 : 890), w = left ? 230 : 200;
         const used = uses.get(definition.id)||0; uses.set(definition.id,used+1);
-        const instance = node(process.id+"-"+definition.id,definition.id,kind,x,cy-37,w,74,left ? definition.name : definition.display,undefined,used>0);
+        const instance = node(process.id+"-"+definition.id,definition.id,kind,x,cy-41,w,82,left ? definition.name : definition.display,undefined,used>0);
         const near = left ? x+w : x, port = left ? core.x : core.x+core.w;
         const cx = (near+port)/2, width = Math.abs(near-port)-12;
         if(input) flow(instance.id,core.id,input,[[near,cy-11],[port,cy-11]],cx,cy-32,width);
@@ -183,7 +183,7 @@ try {
 } finally { await browser.close(); }
 await writeFile(path.join(directory,"VALIDATION.md"),`# DFD validation
 
-Verified against the revised workflow on 2026-10-13.
+Verified against the current workflow on ${new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Manila" })}.
 
 ${reports.join("\n")}
 

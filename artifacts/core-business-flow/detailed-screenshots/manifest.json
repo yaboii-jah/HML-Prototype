@@ -1,0 +1,1608 @@
+[
+  {
+    "number": 1,
+    "group": "00-login-and-project-creation",
+    "title": "ConstructSync Account Sign-In Page",
+    "role": "Public",
+    "route": "/sign-in",
+    "refs": {},
+    "purpose": "ConstructSync Account Sign-In Page",
+    "importance": "core",
+    "loginStage": "blank",
+    "file": "screenshots/00-login-and-project-creation/01-constructsync-account-sign-in-page.png",
+    "caption": "Figure 1. ConstructSync Account Sign-In Page",
+    "sha256": "cf74277e06c6d19a7a0eeb73c1a6f91cb914c9f43141a1516be47c8c1205e5dd"
+  },
+  {
+    "number": 2,
+    "group": "00-login-and-project-creation",
+    "title": "Project Manager Login with Masked Password",
+    "role": "Public",
+    "route": "/sign-in",
+    "refs": {},
+    "purpose": "Project Manager Login with Masked Password",
+    "importance": "core",
+    "loginStage": "credentials",
+    "file": "screenshots/00-login-and-project-creation/02-project-manager-login-with-masked-password.png",
+    "caption": "Figure 2. Project Manager Login with Masked Password",
+    "sha256": "90459b3de951a6cadf1f47a3f3de8cedc6a7cefc58f5148cf81043dd2085ad83"
+  },
+  {
+    "number": 3,
+    "group": "00-login-and-project-creation",
+    "title": "Project Manager Dashboard Before Project Setup",
+    "role": "Project Manager",
+    "route": "/dashboard",
+    "refs": {},
+    "purpose": "Project Manager Dashboard Before Project Setup",
+    "importance": "core",
+    "file": "screenshots/00-login-and-project-creation/03-project-manager-dashboard-before-project-setup.png",
+    "caption": "Figure 3. Project Manager Dashboard Before Project Setup",
+    "sha256": "9926cc773f67691ca3f0c6e03b52bc1efc0df11d97124531cffc7c7be7b18817"
+  },
+  {
+    "number": 4,
+    "group": "00-login-and-project-creation",
+    "title": "Project Directory Before Creating the Project",
+    "role": "Project Manager",
+    "route": "/projects",
+    "refs": {},
+    "purpose": "Project Directory Before Creating the Project",
+    "importance": "core",
+    "file": "screenshots/00-login-and-project-creation/04-project-directory-before-creating-the-project.png",
+    "caption": "Figure 4. Project Directory Before Creating the Project",
+    "sha256": "48246cdbe4ac6a5a384b4d2f9be04baca8e1de561354729189114cc7ab847d25"
+  },
+  {
+    "number": 5,
+    "group": "00-login-and-project-creation",
+    "title": "New Project Name Code Location and Allocated Budget",
+    "role": "Project Manager",
+    "route": "/projects",
+    "refs": {},
+    "purpose": "New Project Name Code Location and Allocated Budget",
+    "importance": "core",
+    "file": "screenshots/00-login-and-project-creation/05-new-project-name-code-location-and-allocated-budget.png",
+    "caption": "Figure 5. New Project Name Code Location and Allocated Budget",
+    "sha256": "fa0f35f1853fff443868a6879f420dfd05e9950586e42ba374277121c474aafe"
+  },
+  {
+    "number": 6,
+    "group": "00-login-and-project-creation",
+    "title": "Confirmation of New Marina Skyline Project Creation",
+    "role": "Project Manager",
+    "route": "/projects",
+    "refs": {},
+    "purpose": "Confirmation of New Marina Skyline Project Creation",
+    "importance": "core",
+    "file": "screenshots/00-login-and-project-creation/06-confirmation-of-new-marina-skyline-project-creation.png",
+    "caption": "Figure 6. Confirmation of New Marina Skyline Project Creation",
+    "sha256": "d369c048749439fe83e7815421c5956397a49a479a54ea12f1ea62d084a9465a"
+  },
+  {
+    "number": 7,
+    "group": "00-login-and-project-creation",
+    "title": "Created Project and Initial Unallocated Budget",
+    "role": "Project Manager",
+    "route": "/projects/mrf372-site-1",
+    "refs": {},
+    "purpose": "Created Project and Initial Unallocated Budget",
+    "importance": "core",
+    "file": "screenshots/00-login-and-project-creation/07-created-project-and-initial-unallocated-budget.png",
+    "caption": "Figure 7. Created Project and Initial Unallocated Budget",
+    "sha256": "8a90c904bd57e14247485de7689fdaf8bd12e25395bba0be0cb7a6c7840f5503"
+  },
+  {
+    "number": 8,
+    "group": "00-login-and-project-creation",
+    "title": "Creating the Architectural Scope and Budget Allocation",
+    "role": "Project Manager",
+    "route": "/projects/mrf372-site-1",
+    "refs": {},
+    "purpose": "Creating the Architectural Scope and Budget Allocation",
+    "importance": "core",
+    "file": "screenshots/00-login-and-project-creation/08-creating-the-architectural-scope-and-budget-allocation.png",
+    "caption": "Figure 8. Creating the Architectural Scope and Budget Allocation",
+    "sha256": "bd73f6f0d4d04d414ee7aab529399dd83c333161f8133ad7ec0e7f46273cb71e"
+  },
+  {
+    "number": 9,
+    "group": "00-login-and-project-creation",
+    "title": "Confirmation of Architectural Scope Budget Allocation",
+    "role": "Project Manager",
+    "route": "/projects/mrf372-site-1",
+    "refs": {},
+    "purpose": "Confirmation of Architectural Scope Budget Allocation",
+    "importance": "core",
+    "file": "screenshots/00-login-and-project-creation/09-confirmation-of-architectural-scope-budget-allocation.png",
+    "caption": "Figure 9. Confirmation of Architectural Scope Budget Allocation",
+    "sha256": "4c40cbc16b6d12d399a400b9ab50b027ca0dc052360faa5b805239b171128372"
+  },
+  {
+    "number": 10,
+    "group": "00-login-and-project-creation",
+    "title": "Assigning Site Personnel to the Created Project",
+    "role": "Administrator",
+    "route": "/admin",
+    "refs": {},
+    "purpose": "Assigning Site Personnel to the Created Project",
+    "importance": "core",
+    "file": "screenshots/00-login-and-project-creation/10-assigning-site-personnel-to-the-created-project.png",
+    "caption": "Figure 10. Assigning Site Personnel to the Created Project",
+    "sha256": "5215f94b7a539d9d419acf3a30d6531b694dfa90b4c5a4cb8dd5f50340c144a8"
+  },
+  {
+    "number": 11,
+    "group": "01-project-and-request",
+    "title": "Marina Skyline Project Budget and Architectural Scope",
+    "role": "Project Manager",
+    "route": "/projects/mrf372-site-1",
+    "refs": {},
+    "purpose": "Marina Skyline Project Budget and Architectural Scope",
+    "importance": "core",
+    "file": "screenshots/01-project-and-request/11-marina-skyline-project-budget-and-architectural-scope.png",
+    "caption": "Figure 11. Marina Skyline Project Budget and Architectural Scope",
+    "sha256": "8457e09dea1ac70a28a97a7d978c76e99345b51afbb807ca65916bf88e88e171"
+  },
+  {
+    "number": 12,
+    "group": "01-project-and-request",
+    "title": "Architectural Scope Budget Allocation Settings",
+    "role": "Project Manager",
+    "route": "/projects/mrf372-site-1",
+    "refs": {},
+    "purpose": "Architectural Scope Budget Allocation Settings",
+    "importance": "core",
+    "file": "screenshots/01-project-and-request/12-architectural-scope-budget-allocation-settings.png",
+    "caption": "Figure 12. Architectural Scope Budget Allocation Settings",
+    "sha256": "d4cf83f021d02914edffe70484b81bb01da4750a87793aea64ae7b3211796aea"
+  },
+  {
+    "number": 13,
+    "group": "01-project-and-request",
+    "title": "Imported MRF 372 Project Signatories and Source Reference",
+    "role": "Site Personnel",
+    "route": "/requests/mrf372-mrf-9/edit",
+    "refs": {
+      "sourceMRF": "MRF-372",
+      "mrf": "MSR-MRF-0001"
+    },
+    "purpose": "Imported MRF 372 Project Signatories and Source Reference",
+    "importance": "core",
+    "file": "screenshots/01-project-and-request/13-imported-mrf-372-project-signatories-and-source-reference.png",
+    "caption": "Figure 13. Imported MRF 372 Project Signatories and Source Reference",
+    "sha256": "747eb77e7f3c5d13e67943de9f921bb968f2c3b40e808813207ba952dc7653bf"
+  },
+  {
+    "number": 14,
+    "group": "01-project-and-request",
+    "title": "Eight Requested Materials Quantities and Required Dates",
+    "role": "Site Personnel",
+    "route": "/requests/mrf372-mrf-9/edit",
+    "refs": {
+      "sourceMRF": "MRF-372",
+      "mrf": "MSR-MRF-0001"
+    },
+    "purpose": "Eight Requested Materials Quantities and Required Dates",
+    "importance": "core",
+    "file": "screenshots/01-project-and-request/14-eight-requested-materials-quantities-and-required-dates.png",
+    "caption": "Figure 14. Eight Requested Materials Quantities and Required Dates",
+    "sha256": "e6fce1cd3d2f4472eba018354b5f4d20c58312c7a4b64cd9bcfec09d0efb8c50"
+  },
+  {
+    "number": 15,
+    "group": "01-project-and-request",
+    "title": "Material Specification Purpose and Delivery Location",
+    "role": "Site Personnel",
+    "route": "/requests/mrf372-mrf-9/edit",
+    "refs": {
+      "sourceMRF": "MRF-372",
+      "mrf": "MSR-MRF-0001"
+    },
+    "purpose": "Material Specification Purpose and Delivery Location",
+    "importance": "core",
+    "file": "screenshots/01-project-and-request/15-material-specification-purpose-and-delivery-location.png",
+    "caption": "Figure 15. Material Specification Purpose and Delivery Location",
+    "sha256": "c66e1aa28638beed456dce8755e1a8ca0cf20475007f4ec07c4abdccac623dde"
+  },
+  {
+    "number": 16,
+    "group": "01-project-and-request",
+    "title": "Original MRF and Key Plan Attached as Supporting PDF",
+    "role": "Site Personnel",
+    "route": "/requests/mrf372-mrf-9/edit",
+    "refs": {
+      "sourceMRF": "MRF-372",
+      "mrf": "MSR-MRF-0001"
+    },
+    "purpose": "Original MRF and Key Plan Attached as Supporting PDF",
+    "importance": "core",
+    "file": "screenshots/01-project-and-request/16-original-mrf-and-key-plan-attached-as-supporting-pdf.png",
+    "caption": "Figure 16. Original MRF and Key Plan Attached as Supporting PDF",
+    "sha256": "945f93a14786b3b53ba770eb3950bec0f261377c5a935853942c7734a1273a58"
+  },
+  {
+    "number": 17,
+    "group": "01-project-and-request",
+    "title": "MRF Review of Eight Material Lines Before Submission",
+    "role": "Site Personnel",
+    "route": "/requests/mrf372-mrf-9/edit",
+    "refs": {
+      "sourceMRF": "MRF-372",
+      "mrf": "MSR-MRF-0001"
+    },
+    "purpose": "MRF Review of Eight Material Lines Before Submission",
+    "importance": "core",
+    "file": "screenshots/01-project-and-request/17-mrf-review-of-eight-material-lines-before-submission.png",
+    "caption": "Figure 17. MRF Review of Eight Material Lines Before Submission",
+    "sha256": "ed5d483ea1cb5325779f67af9b7ce4a2d3df75792e131eaa4a775c7df9c258e4"
+  },
+  {
+    "number": 18,
+    "group": "01-project-and-request",
+    "title": "Project Manager Review of MRF 372 and Original Attachment",
+    "role": "Project Manager",
+    "route": "/requests/mrf372-mrf-9",
+    "refs": {
+      "sourceMRF": "MRF-372",
+      "mrf": "MSR-MRF-0001"
+    },
+    "purpose": "Project Manager Review of MRF 372 and Original Attachment",
+    "importance": "core",
+    "file": "screenshots/01-project-and-request/18-project-manager-review-of-mrf-372-and-original-attachment.png",
+    "caption": "Figure 18. Project Manager Review of MRF 372 and Original Attachment",
+    "sha256": "ef4a6140f7661661fad5908453df4e599663c156ad0f545e1b4861d2bfb4eb91"
+  },
+  {
+    "number": 19,
+    "group": "01-project-and-request",
+    "title": "Project Manager Material Quantities and Approval Decision",
+    "role": "Project Manager",
+    "route": "/requests/mrf372-mrf-9",
+    "refs": {
+      "sourceMRF": "MRF-372",
+      "mrf": "MSR-MRF-0001"
+    },
+    "purpose": "Project Manager Material Quantities and Approval Decision",
+    "importance": "core",
+    "file": "screenshots/01-project-and-request/19-project-manager-material-quantities-and-approval-decision.png",
+    "caption": "Figure 19. Project Manager Material Quantities and Approval Decision",
+    "sha256": "9c5ff1a5b56efecd36b54637c0912d1f907e677d23d032c0829fe852957c6a99"
+  },
+  {
+    "number": 20,
+    "group": "01-project-and-request",
+    "title": "Archived MRF 372 Supporting Key Plan Attachment",
+    "role": "Project Manager",
+    "route": "/demo-files/local-mrf372-detailed-8",
+    "refs": {
+      "sourceMRF": "MRF-372",
+      "mrf": "MSR-MRF-0001"
+    },
+    "purpose": "Archived MRF 372 Supporting Key Plan Attachment",
+    "importance": "core",
+    "file": "screenshots/01-project-and-request/20-archived-mrf-372-supporting-key-plan-attachment.png",
+    "caption": "Figure 20. Archived MRF 372 Supporting Key Plan Attachment",
+    "sha256": "43d39538843ab854e7c3c53305f84fa12b6eac697a7f2e54fe1cd2591ef8dac1"
+  },
+  {
+    "number": 21,
+    "group": "02-stock-sourcing",
+    "title": "Procurement Check of Source Project Stock",
+    "role": "Procurement",
+    "route": "/requests/mrf372-mrf-9/quotes",
+    "refs": {
+      "sourceMRF": "MRF-372",
+      "mrf": "MSR-MRF-0001"
+    },
+    "purpose": "Procurement Check of Source Project Stock",
+    "importance": "core",
+    "file": "screenshots/02-stock-sourcing/21-procurement-check-of-source-project-stock.png",
+    "caption": "Figure 21. Procurement Check of Source Project Stock",
+    "sha256": "669caf429f8e1a7e33df23b320a446fd057d577180dcc275eb8078d6e5689293"
+  },
+  {
+    "number": 22,
+    "group": "02-stock-sourcing",
+    "title": "Matching Glass Clamps and Four-Piece Transfer Quantity",
+    "role": "Procurement",
+    "route": "/requests/mrf372-mrf-9/quotes",
+    "refs": {
+      "sourceMRF": "MRF-372",
+      "mrf": "MSR-MRF-0001"
+    },
+    "purpose": "Matching Glass Clamps and Four-Piece Transfer Quantity",
+    "importance": "core",
+    "file": "screenshots/02-stock-sourcing/22-matching-glass-clamps-and-four-piece-transfer-quantity.png",
+    "caption": "Figure 22. Matching Glass Clamps and Four-Piece Transfer Quantity",
+    "sha256": "77445a88e257c02e32082b75cbed80a430cfcf7fc583bbbd90db04f7b59d02bd"
+  },
+  {
+    "number": 23,
+    "group": "02-stock-sourcing",
+    "title": "Verified Source Stock Selection Before Release Request",
+    "role": "Procurement",
+    "route": "/requests/mrf372-mrf-9/quotes",
+    "refs": {
+      "sourceMRF": "MRF-372",
+      "mrf": "MSR-MRF-0001"
+    },
+    "purpose": "Verified Source Stock Selection Before Release Request",
+    "importance": "core",
+    "file": "screenshots/02-stock-sourcing/23-verified-source-stock-selection-before-release-request.png",
+    "caption": "Figure 23. Verified Source Stock Selection Before Release Request",
+    "sha256": "1933aa9d1fa1cd0e1f9c8ea9f49662e0c3a88c620581daf70e4a99de0f02f49d"
+  },
+  {
+    "number": 24,
+    "group": "02-stock-sourcing",
+    "title": "Source Site Approval of Four Glass Clamps",
+    "role": "Site Personnel",
+    "route": "/stock-transfers/mrf372-transfer-15",
+    "refs": {
+      "sourceMRF": "MRF-372",
+      "mrf": "MSR-MRF-0001",
+      "transfer": "MSR-TRF-0001"
+    },
+    "purpose": "Source Site Approval of Four Glass Clamps",
+    "importance": "core",
+    "file": "screenshots/02-stock-sourcing/24-source-site-approval-of-four-glass-clamps.png",
+    "caption": "Figure 24. Source Site Approval of Four Glass Clamps",
+    "sha256": "bb40a382311038456d7faf39a99b332c127794aef6b9783cf891ba0615ab9540"
+  },
+  {
+    "number": 25,
+    "group": "03-four-supplier-quotations",
+    "title": "MERIDIAN Quotation Material Matching and Original PDF",
+    "role": "Procurement",
+    "route": "/requests/mrf372-mrf-9/quotes",
+    "refs": {
+      "sourceMRF": "MRF-372",
+      "mrf": "MSR-MRF-0001",
+      "transfer": "MSR-TRF-0001",
+      "quotation": "MDF-Q-2411"
+    },
+    "purpose": "MERIDIAN Quotation Material Matching and Original PDF",
+    "importance": "core",
+    "file": "screenshots/03-four-supplier-quotations/25-meridian-quotation-material-matching-and-original-pdf.png",
+    "caption": "Figure 25. MERIDIAN Quotation Material Matching and Original PDF",
+    "sha256": "06e0855394f398922595cf706592257da52d609c9ee126f0b5b76e40dd97b8f4"
+  },
+  {
+    "number": 26,
+    "group": "03-four-supplier-quotations",
+    "title": "Supplier Quotation Header Contact Details and Commercial Terms",
+    "role": "Procurement",
+    "route": "/requests/mrf372-mrf-9/quotes",
+    "refs": {
+      "sourceMRF": "MRF-372",
+      "mrf": "MSR-MRF-0001",
+      "transfer": "MSR-TRF-0001",
+      "quotation": "MDF-Q-2411"
+    },
+    "purpose": "Supplier Quotation Header Contact Details and Commercial Terms",
+    "importance": "core",
+    "file": "screenshots/03-four-supplier-quotations/26-supplier-quotation-header-contact-details-and-commercial-terms.png",
+    "caption": "Figure 26. Supplier Quotation Header Contact Details and Commercial Terms",
+    "sha256": "694818aa9cf89fac68b10ad2366d503961ee80b2bd93895f5824094afb1c8937"
+  },
+  {
+    "number": 27,
+    "group": "03-four-supplier-quotations",
+    "title": "MERIDIAN Quotation Middle Material Lines",
+    "role": "Procurement",
+    "route": "/requests/mrf372-mrf-9/quotes",
+    "refs": {
+      "sourceMRF": "MRF-372",
+      "mrf": "MSR-MRF-0001",
+      "transfer": "MSR-TRF-0001",
+      "quotation": "MDF-Q-2411"
+    },
+    "purpose": "MERIDIAN Quotation Middle Material Lines",
+    "importance": "core",
+    "file": "screenshots/03-four-supplier-quotations/27-meridian-quotation-middle-material-lines.png",
+    "caption": "Figure 27. MERIDIAN Quotation Middle Material Lines",
+    "sha256": "5e208da1236addccbbe7be95111c333aa700b410410dd5e290f3ad90ee923c9f"
+  },
+  {
+    "number": 28,
+    "group": "03-four-supplier-quotations",
+    "title": "MERIDIAN Quotation Remaining Material Lines",
+    "role": "Procurement",
+    "route": "/requests/mrf372-mrf-9/quotes",
+    "refs": {
+      "sourceMRF": "MRF-372",
+      "mrf": "MSR-MRF-0001",
+      "transfer": "MSR-TRF-0001",
+      "quotation": "MDF-Q-2411"
+    },
+    "purpose": "MERIDIAN Quotation Remaining Material Lines",
+    "importance": "core",
+    "file": "screenshots/03-four-supplier-quotations/28-meridian-quotation-remaining-material-lines.png",
+    "caption": "Figure 28. MERIDIAN Quotation Remaining Material Lines",
+    "sha256": "de54c76fa1d591ff70399118b69ada4acf4851b67a823fae9c58b04e24aa17fd"
+  },
+  {
+    "number": 29,
+    "group": "03-four-supplier-quotations",
+    "title": "MERIDIAN VAT-Inclusive Quotation Computations",
+    "role": "Procurement",
+    "route": "/requests/mrf372-mrf-9/quotes",
+    "refs": {
+      "sourceMRF": "MRF-372",
+      "mrf": "MSR-MRF-0001",
+      "transfer": "MSR-TRF-0001",
+      "quotation": "MDF-Q-2411"
+    },
+    "purpose": "MERIDIAN VAT-Inclusive Quotation Computations",
+    "importance": "core",
+    "file": "screenshots/03-four-supplier-quotations/29-meridian-vat-inclusive-quotation-computations.png",
+    "caption": "Figure 29. MERIDIAN VAT-Inclusive Quotation Computations",
+    "sha256": "685f682dce75fe782ec94dfea067624befc120e0db2ef48ddad3efe32727f1ce"
+  },
+  {
+    "number": 30,
+    "group": "03-four-supplier-quotations",
+    "title": "APEX Quotation Material Matching and Original PDF",
+    "role": "Procurement",
+    "route": "/requests/mrf372-mrf-9/quotes",
+    "refs": {
+      "sourceMRF": "MRF-372",
+      "mrf": "MSR-MRF-0001",
+      "transfer": "MSR-TRF-0001",
+      "quotation": "AAH-2026-8842"
+    },
+    "purpose": "APEX Quotation Material Matching and Original PDF",
+    "importance": "core",
+    "file": "screenshots/03-four-supplier-quotations/30-apex-quotation-material-matching-and-original-pdf.png",
+    "caption": "Figure 30. APEX Quotation Material Matching and Original PDF",
+    "sha256": "8b4e1647e328b3c923ef3f42abc36a25b1035190207e51ae24ecfcd735589d94"
+  },
+  {
+    "number": 31,
+    "group": "03-four-supplier-quotations",
+    "title": "APEX Quotation Middle Material Lines",
+    "role": "Procurement",
+    "route": "/requests/mrf372-mrf-9/quotes",
+    "refs": {
+      "sourceMRF": "MRF-372",
+      "mrf": "MSR-MRF-0001",
+      "transfer": "MSR-TRF-0001",
+      "quotation": "AAH-2026-8842"
+    },
+    "purpose": "APEX Quotation Middle Material Lines",
+    "importance": "core",
+    "file": "screenshots/03-four-supplier-quotations/31-apex-quotation-middle-material-lines.png",
+    "caption": "Figure 31. APEX Quotation Middle Material Lines",
+    "sha256": "d0b86631159e65ad873bf2563ab37e895c264e94afcde3624ea4fc245e446401"
+  },
+  {
+    "number": 32,
+    "group": "03-four-supplier-quotations",
+    "title": "APEX Quotation Remaining Material Lines",
+    "role": "Procurement",
+    "route": "/requests/mrf372-mrf-9/quotes",
+    "refs": {
+      "sourceMRF": "MRF-372",
+      "mrf": "MSR-MRF-0001",
+      "transfer": "MSR-TRF-0001",
+      "quotation": "AAH-2026-8842"
+    },
+    "purpose": "APEX Quotation Remaining Material Lines",
+    "importance": "core",
+    "file": "screenshots/03-four-supplier-quotations/32-apex-quotation-remaining-material-lines.png",
+    "caption": "Figure 32. APEX Quotation Remaining Material Lines",
+    "sha256": "dda91ff1f7bf49f5d4a5f24a005612669c7b3d2b484107cdb1cc9b05cb481092"
+  },
+  {
+    "number": 33,
+    "group": "03-four-supplier-quotations",
+    "title": "APEX VAT-Inclusive Quotation Computations",
+    "role": "Procurement",
+    "route": "/requests/mrf372-mrf-9/quotes",
+    "refs": {
+      "sourceMRF": "MRF-372",
+      "mrf": "MSR-MRF-0001",
+      "transfer": "MSR-TRF-0001",
+      "quotation": "AAH-2026-8842"
+    },
+    "purpose": "APEX VAT-Inclusive Quotation Computations",
+    "importance": "core",
+    "file": "screenshots/03-four-supplier-quotations/33-apex-vat-inclusive-quotation-computations.png",
+    "caption": "Figure 33. APEX VAT-Inclusive Quotation Computations",
+    "sha256": "8334471611a092a5c57464b00b54d3de55da78fad905cb7894f040ed27325e38"
+  },
+  {
+    "number": 34,
+    "group": "03-four-supplier-quotations",
+    "title": "SUMMIT Quotation Material Matching and Original PDF",
+    "role": "Procurement",
+    "route": "/requests/mrf372-mrf-9/quotes",
+    "refs": {
+      "sourceMRF": "MRF-372",
+      "mrf": "MSR-MRF-0001",
+      "transfer": "MSR-TRF-0001",
+      "quotation": "SBST-552-26"
+    },
+    "purpose": "SUMMIT Quotation Material Matching and Original PDF",
+    "importance": "core",
+    "file": "screenshots/03-four-supplier-quotations/34-summit-quotation-material-matching-and-original-pdf.png",
+    "caption": "Figure 34. SUMMIT Quotation Material Matching and Original PDF",
+    "sha256": "99773dc4a402310d90e3d695b243e91f98792aa026c2d00f7c39cbdb7bf3652f"
+  },
+  {
+    "number": 35,
+    "group": "03-four-supplier-quotations",
+    "title": "SUMMIT Quotation Middle Material Lines",
+    "role": "Procurement",
+    "route": "/requests/mrf372-mrf-9/quotes",
+    "refs": {
+      "sourceMRF": "MRF-372",
+      "mrf": "MSR-MRF-0001",
+      "transfer": "MSR-TRF-0001",
+      "quotation": "SBST-552-26"
+    },
+    "purpose": "SUMMIT Quotation Middle Material Lines",
+    "importance": "core",
+    "file": "screenshots/03-four-supplier-quotations/35-summit-quotation-middle-material-lines.png",
+    "caption": "Figure 35. SUMMIT Quotation Middle Material Lines",
+    "sha256": "88efb65fbf8251e1f725d6c15132c0756bdc9dcde94c8f86f9501f43e4cd2e1c"
+  },
+  {
+    "number": 36,
+    "group": "03-four-supplier-quotations",
+    "title": "SUMMIT Quotation Remaining Material Lines",
+    "role": "Procurement",
+    "route": "/requests/mrf372-mrf-9/quotes",
+    "refs": {
+      "sourceMRF": "MRF-372",
+      "mrf": "MSR-MRF-0001",
+      "transfer": "MSR-TRF-0001",
+      "quotation": "SBST-552-26"
+    },
+    "purpose": "SUMMIT Quotation Remaining Material Lines",
+    "importance": "core",
+    "file": "screenshots/03-four-supplier-quotations/36-summit-quotation-remaining-material-lines.png",
+    "caption": "Figure 36. SUMMIT Quotation Remaining Material Lines",
+    "sha256": "007da3eb50cb026e95bf81ce4cb4e0b351c0a5ba0e0fe7959cac7e6b81c0cbec"
+  },
+  {
+    "number": 37,
+    "group": "03-four-supplier-quotations",
+    "title": "SUMMIT VAT-Inclusive Quotation Computations",
+    "role": "Procurement",
+    "route": "/requests/mrf372-mrf-9/quotes",
+    "refs": {
+      "sourceMRF": "MRF-372",
+      "mrf": "MSR-MRF-0001",
+      "transfer": "MSR-TRF-0001",
+      "quotation": "SBST-552-26"
+    },
+    "purpose": "SUMMIT VAT-Inclusive Quotation Computations",
+    "importance": "core",
+    "file": "screenshots/03-four-supplier-quotations/37-summit-vat-inclusive-quotation-computations.png",
+    "caption": "Figure 37. SUMMIT VAT-Inclusive Quotation Computations",
+    "sha256": "52d813736a2bf4d972f43d47120cd8c137b57014c4051fbe80102b34a379ac55"
+  },
+  {
+    "number": 38,
+    "group": "03-four-supplier-quotations",
+    "title": "KESTREL Quotation Material Matching and Original PDF",
+    "role": "Procurement",
+    "route": "/requests/mrf372-mrf-9/quotes",
+    "refs": {
+      "sourceMRF": "MRF-372",
+      "mrf": "MSR-MRF-0001",
+      "transfer": "MSR-TRF-0001",
+      "quotation": "KGS-Q-0917"
+    },
+    "purpose": "KESTREL Quotation Material Matching and Original PDF",
+    "importance": "core",
+    "file": "screenshots/03-four-supplier-quotations/38-kestrel-quotation-material-matching-and-original-pdf.png",
+    "caption": "Figure 38. KESTREL Quotation Material Matching and Original PDF",
+    "sha256": "5b6d1395eedb6d26ab610698253129650bbac269a8201091fba3f383a0c65eee"
+  },
+  {
+    "number": 39,
+    "group": "03-four-supplier-quotations",
+    "title": "KESTREL Quotation Middle Material Lines",
+    "role": "Procurement",
+    "route": "/requests/mrf372-mrf-9/quotes",
+    "refs": {
+      "sourceMRF": "MRF-372",
+      "mrf": "MSR-MRF-0001",
+      "transfer": "MSR-TRF-0001",
+      "quotation": "KGS-Q-0917"
+    },
+    "purpose": "KESTREL Quotation Middle Material Lines",
+    "importance": "core",
+    "file": "screenshots/03-four-supplier-quotations/39-kestrel-quotation-middle-material-lines.png",
+    "caption": "Figure 39. KESTREL Quotation Middle Material Lines",
+    "sha256": "70e2584e2d09890089b492f06c6bfd226e4876ce25a827cc5b6c3c6de398bf2c"
+  },
+  {
+    "number": 40,
+    "group": "03-four-supplier-quotations",
+    "title": "KESTREL Quotation Remaining Material Lines",
+    "role": "Procurement",
+    "route": "/requests/mrf372-mrf-9/quotes",
+    "refs": {
+      "sourceMRF": "MRF-372",
+      "mrf": "MSR-MRF-0001",
+      "transfer": "MSR-TRF-0001",
+      "quotation": "KGS-Q-0917"
+    },
+    "purpose": "KESTREL Quotation Remaining Material Lines",
+    "importance": "core",
+    "file": "screenshots/03-four-supplier-quotations/40-kestrel-quotation-remaining-material-lines.png",
+    "caption": "Figure 40. KESTREL Quotation Remaining Material Lines",
+    "sha256": "056b67836ae32badaa696a755c6d44684d65cb441fd616a1b6e86850fc6d0ec4"
+  },
+  {
+    "number": 41,
+    "group": "03-four-supplier-quotations",
+    "title": "KESTREL VAT-Inclusive Quotation Computations",
+    "role": "Procurement",
+    "route": "/requests/mrf372-mrf-9/quotes",
+    "refs": {
+      "sourceMRF": "MRF-372",
+      "mrf": "MSR-MRF-0001",
+      "transfer": "MSR-TRF-0001",
+      "quotation": "KGS-Q-0917"
+    },
+    "purpose": "KESTREL VAT-Inclusive Quotation Computations",
+    "importance": "core",
+    "file": "screenshots/03-four-supplier-quotations/41-kestrel-vat-inclusive-quotation-computations.png",
+    "caption": "Figure 41. KESTREL VAT-Inclusive Quotation Computations",
+    "sha256": "591ba7c345643a06a6787928c188757aa2b98e721317a9394a7805562623e4ab"
+  },
+  {
+    "number": 42,
+    "group": "04-comparison-and-purchase-orders",
+    "title": "Four-Supplier Comparison First Material Rows",
+    "role": "Procurement",
+    "route": "/requests/mrf372-mrf-9/quotes",
+    "refs": {
+      "sourceMRF": "MRF-372",
+      "mrf": "MSR-MRF-0001",
+      "transfer": "MSR-TRF-0001"
+    },
+    "purpose": "Four-Supplier Comparison First Material Rows",
+    "importance": "core",
+    "file": "screenshots/04-comparison-and-purchase-orders/42-four-supplier-comparison-first-material-rows.png",
+    "caption": "Figure 42. Four-Supplier Comparison First Material Rows",
+    "sha256": "bbe9e80b26e485699c494ef9a7d8383dfc66d67ebdc0f479b8fba0c98ecff9f8"
+  },
+  {
+    "number": 43,
+    "group": "04-comparison-and-purchase-orders",
+    "title": "Four-Supplier Comparison Remaining Material Rows",
+    "role": "Procurement",
+    "route": "/requests/mrf372-mrf-9/quotes",
+    "refs": {
+      "sourceMRF": "MRF-372",
+      "mrf": "MSR-MRF-0001",
+      "transfer": "MSR-TRF-0001"
+    },
+    "purpose": "Four-Supplier Comparison Remaining Material Rows",
+    "importance": "core",
+    "file": "screenshots/04-comparison-and-purchase-orders/43-four-supplier-comparison-remaining-material-rows.png",
+    "caption": "Figure 43. Four-Supplier Comparison Remaining Material Rows",
+    "sha256": "d65fd5e5f4873866c58cd7ea6658e213bd79ef07999eb07841eabe0be66f450d"
+  },
+  {
+    "number": 44,
+    "group": "04-comparison-and-purchase-orders",
+    "title": "Four-Supplier Comparison Remaining Supplier Columns",
+    "role": "Procurement",
+    "route": "/requests/mrf372-mrf-9/quotes",
+    "refs": {
+      "sourceMRF": "MRF-372",
+      "mrf": "MSR-MRF-0001",
+      "transfer": "MSR-TRF-0001"
+    },
+    "purpose": "Four-Supplier Comparison Remaining Supplier Columns",
+    "importance": "core",
+    "file": "screenshots/04-comparison-and-purchase-orders/44-four-supplier-comparison-remaining-supplier-columns.png",
+    "caption": "Figure 44. Four-Supplier Comparison Remaining Supplier Columns",
+    "sha256": "674e404c84cd3d33c7d5601ca7a47c4a6733b68fb346d5b78647aab89660a98a"
+  },
+  {
+    "number": 45,
+    "group": "04-comparison-and-purchase-orders",
+    "title": "Comparison Final Rows and Remaining Supplier Columns",
+    "role": "Procurement",
+    "route": "/requests/mrf372-mrf-9/quotes",
+    "refs": {
+      "sourceMRF": "MRF-372",
+      "mrf": "MSR-MRF-0001",
+      "transfer": "MSR-TRF-0001"
+    },
+    "purpose": "Comparison Final Rows and Remaining Supplier Columns",
+    "importance": "core",
+    "file": "screenshots/04-comparison-and-purchase-orders/45-comparison-final-rows-and-remaining-supplier-columns.png",
+    "caption": "Figure 45. Comparison Final Rows and Remaining Supplier Columns",
+    "sha256": "1f89dca39130d74ec2fdd2b9e601e2b1917c41611d612f06ea375b71b3a04d6b"
+  },
+  {
+    "number": 46,
+    "group": "04-comparison-and-purchase-orders",
+    "title": "Supplier Quotation Financial Summaries",
+    "role": "Procurement",
+    "route": "/requests/mrf372-mrf-9/quotes",
+    "refs": {
+      "sourceMRF": "MRF-372",
+      "mrf": "MSR-MRF-0001",
+      "transfer": "MSR-TRF-0001"
+    },
+    "purpose": "Supplier Quotation Financial Summaries",
+    "importance": "core",
+    "file": "screenshots/04-comparison-and-purchase-orders/46-supplier-quotation-financial-summaries.png",
+    "caption": "Figure 46. Supplier Quotation Financial Summaries",
+    "sha256": "e27f489de71c7e56443584e8bbdb7b6d9e1a62e50b294021fdbabc54e1d598c1"
+  },
+  {
+    "number": 47,
+    "group": "04-comparison-and-purchase-orders",
+    "title": "Lowest Compliant Supplier Awards and Remaining Purchase Quantities",
+    "role": "Procurement",
+    "route": "/requests/mrf372-mrf-9/quotes",
+    "refs": {
+      "sourceMRF": "MRF-372",
+      "mrf": "MSR-MRF-0001",
+      "transfer": "MSR-TRF-0001"
+    },
+    "purpose": "Lowest Compliant Supplier Awards and Remaining Purchase Quantities",
+    "importance": "core",
+    "file": "screenshots/04-comparison-and-purchase-orders/47-lowest-compliant-supplier-awards-and-remaining-purchase-quantities.png",
+    "caption": "Figure 47. Lowest Compliant Supplier Awards and Remaining Purchase Quantities",
+    "sha256": "1722fc09cff181b77b886cffbb26692ee8a6caae73105ebfe7133e40ad973cc7"
+  },
+  {
+    "number": 48,
+    "group": "04-comparison-and-purchase-orders",
+    "title": "Kestrel Purchase Order Awarded Materials and Quantities",
+    "role": "Procurement",
+    "route": "/purchase-orders/mrf372-po-95/edit",
+    "refs": {
+      "sourceMRF": "MRF-372",
+      "mrf": "MSR-MRF-0001",
+      "transfer": "MSR-TRF-0001",
+      "po": "MSR-PO-0001"
+    },
+    "purpose": "Kestrel Purchase Order Awarded Materials and Quantities",
+    "importance": "core",
+    "file": "screenshots/04-comparison-and-purchase-orders/48-kestrel-purchase-order-awarded-materials-and-quantities.png",
+    "caption": "Figure 48. Kestrel Purchase Order Awarded Materials and Quantities",
+    "sha256": "1207d00339d2f8a3dc2f1fa1ebb57a8232db1220650be90fc95ab97a0ae7eede"
+  },
+  {
+    "number": 49,
+    "group": "04-comparison-and-purchase-orders",
+    "title": "Kestrel Purchase Order Remaining Materials and Commercial Adjustments",
+    "role": "Procurement",
+    "route": "/purchase-orders/mrf372-po-95/edit",
+    "refs": {
+      "sourceMRF": "MRF-372",
+      "mrf": "MSR-MRF-0001",
+      "transfer": "MSR-TRF-0001",
+      "po": "MSR-PO-0001"
+    },
+    "purpose": "Kestrel Purchase Order Remaining Materials and Commercial Adjustments",
+    "importance": "core",
+    "file": "screenshots/04-comparison-and-purchase-orders/49-kestrel-purchase-order-remaining-materials-and-commercial-adjustments.png",
+    "caption": "Figure 49. Kestrel Purchase Order Remaining Materials and Commercial Adjustments",
+    "sha256": "eecb451aae171776d9ea50b259586f5e0b31469d89bbdc0fa229f056f6416cb4"
+  },
+  {
+    "number": 50,
+    "group": "04-comparison-and-purchase-orders",
+    "title": "Kestrel Purchase Order Document and Supplier Terms",
+    "role": "Procurement",
+    "route": "/purchase-orders/mrf372-po-95/edit",
+    "refs": {
+      "sourceMRF": "MRF-372",
+      "mrf": "MSR-MRF-0001",
+      "transfer": "MSR-TRF-0001",
+      "po": "MSR-PO-0001"
+    },
+    "purpose": "Kestrel Purchase Order Document and Supplier Terms",
+    "importance": "core",
+    "file": "screenshots/04-comparison-and-purchase-orders/50-kestrel-purchase-order-document-and-supplier-terms.png",
+    "caption": "Figure 50. Kestrel Purchase Order Document and Supplier Terms",
+    "sha256": "7eab1a49c835df2b0743955f0c054144ccba46f73c34c770ae3c6a7bf3152aa2"
+  },
+  {
+    "number": 51,
+    "group": "04-comparison-and-purchase-orders",
+    "title": "Apex Purchase Order Awarded Materials and Quantities",
+    "role": "Procurement",
+    "route": "/purchase-orders/mrf372-po-97/edit",
+    "refs": {
+      "sourceMRF": "MRF-372",
+      "mrf": "MSR-MRF-0001",
+      "transfer": "MSR-TRF-0001",
+      "po": "MSR-PO-0002"
+    },
+    "purpose": "Apex Purchase Order Awarded Materials and Quantities",
+    "importance": "core",
+    "file": "screenshots/04-comparison-and-purchase-orders/51-apex-purchase-order-awarded-materials-and-quantities.png",
+    "caption": "Figure 51. Apex Purchase Order Awarded Materials and Quantities",
+    "sha256": "fe11640284c9886a47b096a00b7f81415a762a0965821841b816eedfa1eebe85"
+  },
+  {
+    "number": 52,
+    "group": "04-comparison-and-purchase-orders",
+    "title": "Apex Purchase Order Document and Supplier Terms",
+    "role": "Procurement",
+    "route": "/purchase-orders/mrf372-po-97/edit",
+    "refs": {
+      "sourceMRF": "MRF-372",
+      "mrf": "MSR-MRF-0001",
+      "transfer": "MSR-TRF-0001",
+      "po": "MSR-PO-0002"
+    },
+    "purpose": "Apex Purchase Order Document and Supplier Terms",
+    "importance": "core",
+    "file": "screenshots/04-comparison-and-purchase-orders/52-apex-purchase-order-document-and-supplier-terms.png",
+    "caption": "Figure 52. Apex Purchase Order Document and Supplier Terms",
+    "sha256": "c474ef3aee8824a95ee78a2fb7600554c231a2e74a5bb96a2b992c94e8b4f9ba"
+  },
+  {
+    "number": 53,
+    "group": "05-upfront-payment",
+    "title": "Accounting Kestrel Purchase Order VAT and Withholding Review",
+    "role": "Accounting",
+    "route": "/accounting/mrf372-po-95",
+    "refs": {
+      "sourceMRF": "MRF-372",
+      "mrf": "MSR-MRF-0001",
+      "transfer": "MSR-TRF-0001",
+      "po": "MSR-PO-0001"
+    },
+    "purpose": "Accounting Kestrel Purchase Order VAT and Withholding Review",
+    "importance": "core",
+    "file": "screenshots/05-upfront-payment/53-accounting-kestrel-purchase-order-vat-and-withholding-review.png",
+    "caption": "Figure 53. Accounting Kestrel Purchase Order VAT and Withholding Review",
+    "sha256": "b439afdbe12315b343f590bf8d6f63573a04681531be8ab115778aa0125942f5"
+  },
+  {
+    "number": 54,
+    "group": "05-upfront-payment",
+    "title": "Accounting Upfront Arrangement and Financial Review",
+    "role": "Accounting",
+    "route": "/accounting/mrf372-po-95",
+    "refs": {
+      "sourceMRF": "MRF-372",
+      "mrf": "MSR-MRF-0001",
+      "transfer": "MSR-TRF-0001",
+      "po": "MSR-PO-0001"
+    },
+    "purpose": "Accounting Upfront Arrangement and Financial Review",
+    "importance": "core",
+    "file": "screenshots/05-upfront-payment/54-accounting-upfront-arrangement-and-financial-review.png",
+    "caption": "Figure 54. Accounting Upfront Arrangement and Financial Review",
+    "sha256": "fa29e3eeaf811ffb09e4a08cbeaf20b520626838ab76f80563ce32329412a1ad"
+  },
+  {
+    "number": 55,
+    "group": "05-upfront-payment",
+    "title": "Accounting Project Scope Budget Check and PO Approval",
+    "role": "Accounting",
+    "route": "/accounting/mrf372-po-95",
+    "refs": {
+      "sourceMRF": "MRF-372",
+      "mrf": "MSR-MRF-0001",
+      "transfer": "MSR-TRF-0001",
+      "po": "MSR-PO-0001"
+    },
+    "purpose": "Accounting Project Scope Budget Check and PO Approval",
+    "importance": "core",
+    "file": "screenshots/05-upfront-payment/55-accounting-project-scope-budget-check-and-po-approval.png",
+    "caption": "Figure 55. Accounting Project Scope Budget Check and PO Approval",
+    "sha256": "e9ddc12f4f03fa8096ba4dd7c023a0269f9422b8ac95cc416a15bce1e34815fc"
+  },
+  {
+    "number": 56,
+    "group": "05-upfront-payment",
+    "title": "Approved Kestrel PO and Completed Document Archive",
+    "role": "Accounting",
+    "route": "/accounting/mrf372-po-95",
+    "refs": {
+      "sourceMRF": "MRF-372",
+      "mrf": "MSR-MRF-0001",
+      "transfer": "MSR-TRF-0001",
+      "po": "MSR-PO-0001"
+    },
+    "purpose": "Approved Kestrel PO and Completed Document Archive",
+    "importance": "core",
+    "file": "screenshots/05-upfront-payment/56-approved-kestrel-po-and-completed-document-archive.png",
+    "caption": "Figure 56. Approved Kestrel PO and Completed Document Archive",
+    "sha256": "1d9e271a7ede5462df54f32140b3c07fde0d9763a2642f7fe4d5a2c0b08c1c58"
+  },
+  {
+    "number": 57,
+    "group": "05-upfront-payment",
+    "title": "Procurement Issuance of Approved Kestrel Purchase Order",
+    "role": "Procurement",
+    "route": "/purchase-orders/mrf372-po-95",
+    "refs": {
+      "sourceMRF": "MRF-372",
+      "mrf": "MSR-MRF-0001",
+      "transfer": "MSR-TRF-0001",
+      "po": "MSR-PO-0001"
+    },
+    "purpose": "Procurement Issuance of Approved Kestrel Purchase Order",
+    "importance": "core",
+    "file": "screenshots/05-upfront-payment/57-procurement-issuance-of-approved-kestrel-purchase-order.png",
+    "caption": "Figure 57. Procurement Issuance of Approved Kestrel Purchase Order",
+    "sha256": "45cd10d1eef97cffc8e2077d87c45a49fb634cc110ada92d1e2a59cb96765a93"
+  },
+  {
+    "number": 58,
+    "group": "05-upfront-payment",
+    "title": "Finance Upfront Payable and Payment Coordination Summary",
+    "role": "Finance",
+    "route": "/finance/mrf372-po-95",
+    "refs": {
+      "sourceMRF": "MRF-372",
+      "mrf": "MSR-MRF-0001",
+      "transfer": "MSR-TRF-0001",
+      "po": "MSR-PO-0001"
+    },
+    "purpose": "Finance Upfront Payable and Payment Coordination Summary",
+    "importance": "core",
+    "file": "screenshots/05-upfront-payment/58-finance-upfront-payable-and-payment-coordination-summary.png",
+    "caption": "Figure 58. Finance Upfront Payable and Payment Coordination Summary",
+    "sha256": "d632ee7a1cf416f379b2111329647c151cdbd0d422283b1573deb1ddc30501ed"
+  },
+  {
+    "number": 59,
+    "group": "05-upfront-payment",
+    "title": "Finance Payment Priority Schedule and Coordination Notes",
+    "role": "Finance",
+    "route": "/finance/mrf372-po-95",
+    "refs": {
+      "sourceMRF": "MRF-372",
+      "mrf": "MSR-MRF-0001",
+      "transfer": "MSR-TRF-0001",
+      "po": "MSR-PO-0001"
+    },
+    "purpose": "Finance Payment Priority Schedule and Coordination Notes",
+    "importance": "core",
+    "file": "screenshots/05-upfront-payment/59-finance-payment-priority-schedule-and-coordination-notes.png",
+    "caption": "Figure 59. Finance Payment Priority Schedule and Coordination Notes",
+    "sha256": "71059a3dbbde0216642974d6f38080cdf2587fa3f0c3e75c9c7926f835c0e62e"
+  },
+  {
+    "number": 60,
+    "group": "05-upfront-payment",
+    "title": "Archived Payment Proof and Full Supplier Payment Verification",
+    "role": "Accounting",
+    "route": "/accounting/mrf372-po-95",
+    "refs": {
+      "sourceMRF": "MRF-372",
+      "mrf": "MSR-MRF-0001",
+      "transfer": "MSR-TRF-0001",
+      "po": "MSR-PO-0001"
+    },
+    "purpose": "Archived Payment Proof and Full Supplier Payment Verification",
+    "importance": "core",
+    "file": "screenshots/05-upfront-payment/60-archived-payment-proof-and-full-supplier-payment-verification.png",
+    "caption": "Figure 60. Archived Payment Proof and Full Supplier Payment Verification",
+    "sha256": "5db332d0b44be8a332bb8ca5d9ab12bf52dffebc7239f98be5a744c94d83dc7f"
+  },
+  {
+    "number": 61,
+    "group": "05-upfront-payment",
+    "title": "Confirmation of Actual Upfront Payment Verification",
+    "role": "Accounting",
+    "route": "/accounting/mrf372-po-95",
+    "refs": {
+      "sourceMRF": "MRF-372",
+      "mrf": "MSR-MRF-0001",
+      "transfer": "MSR-TRF-0001",
+      "po": "MSR-PO-0001"
+    },
+    "purpose": "Confirmation of Actual Upfront Payment Verification",
+    "importance": "core",
+    "file": "screenshots/05-upfront-payment/61-confirmation-of-actual-upfront-payment-verification.png",
+    "caption": "Figure 61. Confirmation of Actual Upfront Payment Verification",
+    "sha256": "987326d15d82370bcd42f81f1f8371f7f7f1cb15898fb96391dec9912712ce68"
+  },
+  {
+    "number": 62,
+    "group": "05-upfront-payment",
+    "title": "Verified Full Payment and Accounting Delivery Clearance",
+    "role": "Accounting",
+    "route": "/accounting/mrf372-po-95",
+    "refs": {
+      "sourceMRF": "MRF-372",
+      "mrf": "MSR-MRF-0001",
+      "transfer": "MSR-TRF-0001",
+      "po": "MSR-PO-0001"
+    },
+    "purpose": "Verified Full Payment and Accounting Delivery Clearance",
+    "importance": "core",
+    "file": "screenshots/05-upfront-payment/62-verified-full-payment-and-accounting-delivery-clearance.png",
+    "caption": "Figure 62. Verified Full Payment and Accounting Delivery Clearance",
+    "sha256": "38b07b1bc815804da862a31b14f9d2ccbbd6fd6c5c0cc51a12b9a3c361d87194"
+  },
+  {
+    "number": 63,
+    "group": "06-upfront-delivery-and-stock",
+    "title": "Kestrel Supplier Delivery Route Schedule and Quantities",
+    "role": "Logistics",
+    "route": "/deliveries/new?poId=mrf372-po-95",
+    "refs": {
+      "sourceMRF": "MRF-372",
+      "mrf": "MSR-MRF-0001",
+      "transfer": "MSR-TRF-0001",
+      "po": "MSR-PO-0001"
+    },
+    "purpose": "Kestrel Supplier Delivery Route Schedule and Quantities",
+    "importance": "core",
+    "file": "screenshots/06-upfront-delivery-and-stock/63-kestrel-supplier-delivery-route-schedule-and-quantities.png",
+    "caption": "Figure 63. Kestrel Supplier Delivery Route Schedule and Quantities",
+    "sha256": "3f9e1610d8c1f3c7f61f79e6175e988448bdd9de1831b9a1d0faeda20b3c5a46"
+  },
+  {
+    "number": 64,
+    "group": "06-upfront-delivery-and-stock",
+    "title": "Kestrel Scheduled Delivery and Dispatch Action",
+    "role": "Logistics",
+    "route": "/deliveries/mrf372-batch-113",
+    "refs": {
+      "sourceMRF": "MRF-372",
+      "mrf": "MSR-MRF-0001",
+      "transfer": "MSR-TRF-0001",
+      "po": "MSR-PO-0001",
+      "delivery": "MSR-DEL-0001"
+    },
+    "purpose": "Kestrel Scheduled Delivery and Dispatch Action",
+    "importance": "core",
+    "file": "screenshots/06-upfront-delivery-and-stock/64-kestrel-scheduled-delivery-and-dispatch-action.png",
+    "caption": "Figure 64. Kestrel Scheduled Delivery and Dispatch Action",
+    "sha256": "6a355f80916c983ca7faa3688d5223422945d9954e32ef6cbfd76fa1f3c27677"
+  },
+  {
+    "number": 65,
+    "group": "06-upfront-delivery-and-stock",
+    "title": "Kestrel Site Receiving and Accepted Material Quantities",
+    "role": "Site Personnel",
+    "route": "/deliveries/mrf372-batch-113",
+    "refs": {
+      "sourceMRF": "MRF-372",
+      "mrf": "MSR-MRF-0001",
+      "transfer": "MSR-TRF-0001",
+      "po": "MSR-PO-0001",
+      "delivery": "MSR-DEL-0001"
+    },
+    "purpose": "Kestrel Site Receiving and Accepted Material Quantities",
+    "importance": "core",
+    "file": "screenshots/06-upfront-delivery-and-stock/65-kestrel-site-receiving-and-accepted-material-quantities.png",
+    "caption": "Figure 65. Kestrel Site Receiving and Accepted Material Quantities",
+    "sha256": "e97f28d39acac49e131a2272adcfb4e99b09686d9bbe2f635b3262fb76b96182"
+  },
+  {
+    "number": 66,
+    "group": "06-upfront-delivery-and-stock",
+    "title": "Kestrel Received Material Quantities and Stock Posting",
+    "role": "Site Personnel",
+    "route": "/deliveries/mrf372-batch-113",
+    "refs": {
+      "sourceMRF": "MRF-372",
+      "mrf": "MSR-MRF-0001",
+      "transfer": "MSR-TRF-0001",
+      "po": "MSR-PO-0001",
+      "delivery": "MSR-DEL-0001"
+    },
+    "purpose": "Kestrel Received Material Quantities and Stock Posting",
+    "importance": "core",
+    "file": "screenshots/06-upfront-delivery-and-stock/66-kestrel-received-material-quantities-and-stock-posting.png",
+    "caption": "Figure 66. Kestrel Received Material Quantities and Stock Posting",
+    "sha256": "9fb9e1fb49ce1f933f9484e19dadc4657c8f9bee258842081a87ff2837058977"
+  },
+  {
+    "number": 67,
+    "group": "06-upfront-delivery-and-stock",
+    "title": "Kestrel Generated Delivery Receipt and Signed Evidence",
+    "role": "Site Personnel",
+    "route": "/deliveries/mrf372-batch-113",
+    "refs": {
+      "sourceMRF": "MRF-372",
+      "mrf": "MSR-MRF-0001",
+      "transfer": "MSR-TRF-0001",
+      "po": "MSR-PO-0001",
+      "delivery": "MSR-DEL-0001"
+    },
+    "purpose": "Kestrel Generated Delivery Receipt and Signed Evidence",
+    "importance": "core",
+    "file": "screenshots/06-upfront-delivery-and-stock/67-kestrel-generated-delivery-receipt-and-signed-evidence.png",
+    "caption": "Figure 67. Kestrel Generated Delivery Receipt and Signed Evidence",
+    "sha256": "a579a6cf72756d2236f435fe3bc2cf249b7cb31b5aa5dff0f87242624917b6c4"
+  },
+  {
+    "number": 68,
+    "group": "06-upfront-delivery-and-stock",
+    "title": "Kestrel Accounting Document Review and Linked Delivery",
+    "role": "Accounting",
+    "route": "/accounting/mrf372-po-95",
+    "refs": {
+      "sourceMRF": "MRF-372",
+      "mrf": "MSR-MRF-0001",
+      "transfer": "MSR-TRF-0001",
+      "po": "MSR-PO-0001",
+      "delivery": "MSR-DEL-0001"
+    },
+    "purpose": "Kestrel Accounting Document Review and Linked Delivery",
+    "importance": "core",
+    "file": "screenshots/06-upfront-delivery-and-stock/68-kestrel-accounting-document-review-and-linked-delivery.png",
+    "caption": "Figure 68. Kestrel Accounting Document Review and Linked Delivery",
+    "sha256": "dfe2ddbcb65300ce49e59293d9402e3f53ab0e2acda1c9c7e865ffc929173910"
+  },
+  {
+    "number": 69,
+    "group": "06-upfront-delivery-and-stock",
+    "title": "Glass Panel Inventory Posting Usage and Movement History",
+    "role": "Site Personnel",
+    "route": "/inventory/mrf372-site-1/mat-41007",
+    "refs": {
+      "sourceMRF": "MRF-372",
+      "mrf": "MSR-MRF-0001",
+      "transfer": "MSR-TRF-0001",
+      "po": "MSR-PO-0001",
+      "delivery": "MSR-DEL-0001"
+    },
+    "purpose": "Glass Panel Inventory Posting Usage and Movement History",
+    "importance": "core",
+    "file": "screenshots/06-upfront-delivery-and-stock/69-glass-panel-inventory-posting-usage-and-movement-history.png",
+    "caption": "Figure 69. Glass Panel Inventory Posting Usage and Movement History",
+    "sha256": "2267105102b682d3332c24883bb947ad4f926cb2f6b6edfc3a311a97097b163f"
+  },
+  {
+    "number": 70,
+    "group": "07-credit-terms-and-settlement",
+    "title": "Apex Credit Terms and Agreed Supplier Payment Due Date",
+    "role": "Accounting",
+    "route": "/accounting/mrf372-po-97",
+    "refs": {
+      "sourceMRF": "MRF-372",
+      "mrf": "MSR-MRF-0001",
+      "transfer": "MSR-TRF-0001",
+      "po": "MSR-PO-0002"
+    },
+    "purpose": "Apex Credit Terms and Agreed Supplier Payment Due Date",
+    "importance": "core",
+    "file": "screenshots/07-credit-terms-and-settlement/70-apex-credit-terms-and-agreed-supplier-payment-due-date.png",
+    "caption": "Figure 70. Apex Credit Terms and Agreed Supplier Payment Due Date",
+    "sha256": "3e816a790d5667f49d37254d31d296237b0f73065c6215c58d205983ff014ec9"
+  },
+  {
+    "number": 71,
+    "group": "07-credit-terms-and-settlement",
+    "title": "Apex Credit Delivery Clearance Before Any Payment",
+    "role": "Accounting",
+    "route": "/accounting/mrf372-po-97",
+    "refs": {
+      "sourceMRF": "MRF-372",
+      "mrf": "MSR-MRF-0001",
+      "transfer": "MSR-TRF-0001",
+      "po": "MSR-PO-0002"
+    },
+    "purpose": "Apex Credit Delivery Clearance Before Any Payment",
+    "importance": "core",
+    "file": "screenshots/07-credit-terms-and-settlement/71-apex-credit-delivery-clearance-before-any-payment.png",
+    "caption": "Figure 71. Apex Credit Delivery Clearance Before Any Payment",
+    "sha256": "2b514784d89c4350ab26a683dcd02fbc8b3dd891f3a6d0ea8db0b28501f53c46"
+  },
+  {
+    "number": 72,
+    "group": "07-credit-terms-and-settlement",
+    "title": "Apex Credit Supplier Delivery Route Schedule and Quantities",
+    "role": "Logistics",
+    "route": "/deliveries/new?poId=mrf372-po-97",
+    "refs": {
+      "sourceMRF": "MRF-372",
+      "mrf": "MSR-MRF-0001",
+      "transfer": "MSR-TRF-0001",
+      "po": "MSR-PO-0002"
+    },
+    "purpose": "Apex Credit Supplier Delivery Route Schedule and Quantities",
+    "importance": "core",
+    "file": "screenshots/07-credit-terms-and-settlement/72-apex-credit-supplier-delivery-route-schedule-and-quantities.png",
+    "caption": "Figure 72. Apex Credit Supplier Delivery Route Schedule and Quantities",
+    "sha256": "3d31b41c1de892414e4f4577fa7710eb7d48e9dd8d7125c51e6a6740ed872020"
+  },
+  {
+    "number": 73,
+    "group": "07-credit-terms-and-settlement",
+    "title": "Apex Credit Scheduled Delivery and Dispatch Action",
+    "role": "Logistics",
+    "route": "/deliveries/mrf372-batch-146",
+    "refs": {
+      "sourceMRF": "MRF-372",
+      "mrf": "MSR-MRF-0001",
+      "transfer": "MSR-TRF-0001",
+      "po": "MSR-PO-0002",
+      "delivery": "MSR-DEL-0002"
+    },
+    "purpose": "Apex Credit Scheduled Delivery and Dispatch Action",
+    "importance": "core",
+    "file": "screenshots/07-credit-terms-and-settlement/73-apex-credit-scheduled-delivery-and-dispatch-action.png",
+    "caption": "Figure 73. Apex Credit Scheduled Delivery and Dispatch Action",
+    "sha256": "7650f3662f7afa8ca34506adfcc04434feaa6444e8c27200f8e80b30e67a76ba"
+  },
+  {
+    "number": 74,
+    "group": "07-credit-terms-and-settlement",
+    "title": "Apex Credit Site Receiving and Accepted Material Quantities",
+    "role": "Site Personnel",
+    "route": "/deliveries/mrf372-batch-146",
+    "refs": {
+      "sourceMRF": "MRF-372",
+      "mrf": "MSR-MRF-0001",
+      "transfer": "MSR-TRF-0001",
+      "po": "MSR-PO-0002",
+      "delivery": "MSR-DEL-0002"
+    },
+    "purpose": "Apex Credit Site Receiving and Accepted Material Quantities",
+    "importance": "core",
+    "file": "screenshots/07-credit-terms-and-settlement/74-apex-credit-site-receiving-and-accepted-material-quantities.png",
+    "caption": "Figure 74. Apex Credit Site Receiving and Accepted Material Quantities",
+    "sha256": "9559cafdc28acec1f9e860d0c2f908b88e038bedc0b7c59e3d48b46cdb77e1a6"
+  },
+  {
+    "number": 75,
+    "group": "07-credit-terms-and-settlement",
+    "title": "Apex Credit Received Material Quantities and Stock Posting",
+    "role": "Site Personnel",
+    "route": "/deliveries/mrf372-batch-146",
+    "refs": {
+      "sourceMRF": "MRF-372",
+      "mrf": "MSR-MRF-0001",
+      "transfer": "MSR-TRF-0001",
+      "po": "MSR-PO-0002",
+      "delivery": "MSR-DEL-0002"
+    },
+    "purpose": "Apex Credit Received Material Quantities and Stock Posting",
+    "importance": "core",
+    "file": "screenshots/07-credit-terms-and-settlement/75-apex-credit-received-material-quantities-and-stock-posting.png",
+    "caption": "Figure 75. Apex Credit Received Material Quantities and Stock Posting",
+    "sha256": "9e195d1e0992ad67b8829a57bff9de18794b4f9d7a7eb3e4ffbed002e3ce1bc5"
+  },
+  {
+    "number": 76,
+    "group": "07-credit-terms-and-settlement",
+    "title": "Apex Credit Generated Delivery Receipt and Signed Evidence",
+    "role": "Site Personnel",
+    "route": "/deliveries/mrf372-batch-146",
+    "refs": {
+      "sourceMRF": "MRF-372",
+      "mrf": "MSR-MRF-0001",
+      "transfer": "MSR-TRF-0001",
+      "po": "MSR-PO-0002",
+      "delivery": "MSR-DEL-0002"
+    },
+    "purpose": "Apex Credit Generated Delivery Receipt and Signed Evidence",
+    "importance": "core",
+    "file": "screenshots/07-credit-terms-and-settlement/76-apex-credit-generated-delivery-receipt-and-signed-evidence.png",
+    "caption": "Figure 76. Apex Credit Generated Delivery Receipt and Signed Evidence",
+    "sha256": "2bb7a1c989e4fad91a306a76f44910e18b7c9e6a93251c90c888eddd226f92dd"
+  },
+  {
+    "number": 77,
+    "group": "07-credit-terms-and-settlement",
+    "title": "Apex Credit Accounting Document Review and Linked Delivery",
+    "role": "Accounting",
+    "route": "/accounting/mrf372-po-97",
+    "refs": {
+      "sourceMRF": "MRF-372",
+      "mrf": "MSR-MRF-0001",
+      "transfer": "MSR-TRF-0001",
+      "po": "MSR-PO-0002",
+      "delivery": "MSR-DEL-0002"
+    },
+    "purpose": "Apex Credit Accounting Document Review and Linked Delivery",
+    "importance": "core",
+    "file": "screenshots/07-credit-terms-and-settlement/77-apex-credit-accounting-document-review-and-linked-delivery.png",
+    "caption": "Figure 77. Apex Credit Accounting Document Review and Linked Delivery",
+    "sha256": "b8aefbe5258f0cb90c648d9861ebb8d3b5630927538d777c3c7dd00f1c9e8113"
+  },
+  {
+    "number": 78,
+    "group": "07-credit-terms-and-settlement",
+    "title": "Finance Credit Payment Coordination After Delivery",
+    "role": "Finance",
+    "route": "/finance/mrf372-po-97",
+    "refs": {
+      "sourceMRF": "MRF-372",
+      "mrf": "MSR-MRF-0001",
+      "transfer": "MSR-TRF-0001",
+      "po": "MSR-PO-0002",
+      "delivery": "MSR-DEL-0002"
+    },
+    "purpose": "Finance Credit Payment Coordination After Delivery",
+    "importance": "core",
+    "file": "screenshots/07-credit-terms-and-settlement/78-finance-credit-payment-coordination-after-delivery.png",
+    "caption": "Figure 78. Finance Credit Payment Coordination After Delivery",
+    "sha256": "15ec6b4cf08344040f946086fee088a2564c643f365cc503b7a8efe953b725c8"
+  },
+  {
+    "number": 79,
+    "group": "07-credit-terms-and-settlement",
+    "title": "Archived Credit Payment Proof and First Installment Verification",
+    "role": "Accounting",
+    "route": "/accounting/mrf372-po-97",
+    "refs": {
+      "sourceMRF": "MRF-372",
+      "mrf": "MSR-MRF-0001",
+      "transfer": "MSR-TRF-0001",
+      "po": "MSR-PO-0002",
+      "delivery": "MSR-DEL-0002"
+    },
+    "purpose": "Archived Credit Payment Proof and First Installment Verification",
+    "importance": "core",
+    "file": "screenshots/07-credit-terms-and-settlement/79-archived-credit-payment-proof-and-first-installment-verification.png",
+    "caption": "Figure 79. Archived Credit Payment Proof and First Installment Verification",
+    "sha256": "d96612417b8cab9e3ff74812c6cfd108e1dafa4901785a4b3d9c7c08fd138367"
+  },
+  {
+    "number": 80,
+    "group": "07-credit-terms-and-settlement",
+    "title": "Verified Credit Installment and Outstanding Balance",
+    "role": "Accounting",
+    "route": "/accounting/mrf372-po-97",
+    "refs": {
+      "sourceMRF": "MRF-372",
+      "mrf": "MSR-MRF-0001",
+      "transfer": "MSR-TRF-0001",
+      "po": "MSR-PO-0002",
+      "delivery": "MSR-DEL-0002"
+    },
+    "purpose": "Verified Credit Installment and Outstanding Balance",
+    "importance": "core",
+    "file": "screenshots/07-credit-terms-and-settlement/80-verified-credit-installment-and-outstanding-balance.png",
+    "caption": "Figure 80. Verified Credit Installment and Outstanding Balance",
+    "sha256": "a8383348e3cbff1c57579d8b9bd45ff42d9ae951d47f020eab74073c971a47d9"
+  },
+  {
+    "number": 81,
+    "group": "07-credit-terms-and-settlement",
+    "title": "Settled Credit Balance and Both Verified Installments",
+    "role": "Accounting",
+    "route": "/accounting/mrf372-po-97",
+    "refs": {
+      "sourceMRF": "MRF-372",
+      "mrf": "MSR-MRF-0001",
+      "transfer": "MSR-TRF-0001",
+      "po": "MSR-PO-0002",
+      "delivery": "MSR-DEL-0002"
+    },
+    "purpose": "Settled Credit Balance and Both Verified Installments",
+    "importance": "core",
+    "file": "screenshots/07-credit-terms-and-settlement/81-settled-credit-balance-and-both-verified-installments.png",
+    "caption": "Figure 81. Settled Credit Balance and Both Verified Installments",
+    "sha256": "a291ded3afe502f674ff38f3b63aacb1b8378fa5586c994a2ac4b52cd9a4225b"
+  },
+  {
+    "number": 82,
+    "group": "08-transfer-delivery-and-evidence",
+    "title": "Scheduling the Approved Four-Piece Stock Transfer",
+    "role": "Logistics",
+    "route": "/stock-transfers/mrf372-transfer-15",
+    "refs": {
+      "sourceMRF": "MRF-372",
+      "mrf": "MSR-MRF-0001",
+      "transfer": "MSR-TRF-0001",
+      "source": "Cavite Warehouse Expansion",
+      "destination": "MARINA SKYLINE RESIDENCES - TOWER B"
+    },
+    "purpose": "Scheduling the Approved Four-Piece Stock Transfer",
+    "importance": "core",
+    "file": "screenshots/08-transfer-delivery-and-evidence/82-scheduling-the-approved-four-piece-stock-transfer.png",
+    "caption": "Figure 82. Scheduling the Approved Four-Piece Stock Transfer",
+    "sha256": "35a3b29343d363b7d881056fed28e5db9903062bc5bd2c6ffcf21e3491529c75"
+  },
+  {
+    "number": 83,
+    "group": "08-transfer-delivery-and-evidence",
+    "title": "Stock Transfer Trip Dispatch from Source Site",
+    "role": "Logistics",
+    "route": "/stock-transfers/mrf372-transfer-15",
+    "refs": {
+      "sourceMRF": "MRF-372",
+      "mrf": "MSR-MRF-0001",
+      "transfer": "MSR-TRF-0001",
+      "source": "Cavite Warehouse Expansion",
+      "destination": "MARINA SKYLINE RESIDENCES - TOWER B"
+    },
+    "purpose": "Stock Transfer Trip Dispatch from Source Site",
+    "importance": "core",
+    "file": "screenshots/08-transfer-delivery-and-evidence/83-stock-transfer-trip-dispatch-from-source-site.png",
+    "caption": "Figure 83. Stock Transfer Trip Dispatch from Source Site",
+    "sha256": "70999a78e7e7099a65bfa8366c62eb262ef47c9bf67ac2c51fd8e36882521a07"
+  },
+  {
+    "number": 84,
+    "group": "08-transfer-delivery-and-evidence",
+    "title": "Source Inventory After Transfer Dispatch Deduction",
+    "role": "Site Personnel",
+    "route": "/inventory/mrf372-site-5/mat-108t91g",
+    "refs": {
+      "sourceMRF": "MRF-372",
+      "mrf": "MSR-MRF-0001",
+      "transfer": "MSR-TRF-0001",
+      "source": "Cavite Warehouse Expansion",
+      "destination": "MARINA SKYLINE RESIDENCES - TOWER B"
+    },
+    "purpose": "Source Inventory After Transfer Dispatch Deduction",
+    "importance": "core",
+    "file": "screenshots/08-transfer-delivery-and-evidence/84-source-inventory-after-transfer-dispatch-deduction.png",
+    "caption": "Figure 84. Source Inventory After Transfer Dispatch Deduction",
+    "sha256": "159b83c62a91450fedc8397bffd265736cef52b6f6d8aa7af59a48cf6198cbbb"
+  },
+  {
+    "number": 85,
+    "group": "08-transfer-delivery-and-evidence",
+    "title": "Destination Confirmation of Transferred Glass Clamps",
+    "role": "Site Personnel",
+    "route": "/stock-transfers/mrf372-transfer-15",
+    "refs": {
+      "sourceMRF": "MRF-372",
+      "mrf": "MSR-MRF-0001",
+      "transfer": "MSR-TRF-0001",
+      "source": "Cavite Warehouse Expansion",
+      "destination": "MARINA SKYLINE RESIDENCES - TOWER B"
+    },
+    "purpose": "Destination Confirmation of Transferred Glass Clamps",
+    "importance": "core",
+    "file": "screenshots/08-transfer-delivery-and-evidence/85-destination-confirmation-of-transferred-glass-clamps.png",
+    "caption": "Figure 85. Destination Confirmation of Transferred Glass Clamps",
+    "sha256": "52d4325cfe53a98cee91f31fa135bf564734f9b020c54353b3b5f212c33c30fe"
+  },
+  {
+    "number": 86,
+    "group": "08-transfer-delivery-and-evidence",
+    "title": "Posting Four Transferred Glass Clamps to Destination Stock",
+    "role": "Site Personnel",
+    "route": "/stock-transfers/mrf372-transfer-15",
+    "refs": {
+      "sourceMRF": "MRF-372",
+      "mrf": "MSR-MRF-0001",
+      "transfer": "MSR-TRF-0001",
+      "source": "Cavite Warehouse Expansion",
+      "destination": "MARINA SKYLINE RESIDENCES - TOWER B"
+    },
+    "purpose": "Posting Four Transferred Glass Clamps to Destination Stock",
+    "importance": "core",
+    "file": "screenshots/08-transfer-delivery-and-evidence/86-posting-four-transferred-glass-clamps-to-destination-stock.png",
+    "caption": "Figure 86. Posting Four Transferred Glass Clamps to Destination Stock",
+    "sha256": "af49bb89fff00bf6743a8bca3cb2e545ae0304bc46f93f8ea61fdd6a67e6d79f"
+  },
+  {
+    "number": 87,
+    "group": "08-transfer-delivery-and-evidence",
+    "title": "Generated Transfer Receipt and Signed Receiving Evidence",
+    "role": "Site Personnel",
+    "route": "/stock-transfers/mrf372-transfer-15",
+    "refs": {
+      "sourceMRF": "MRF-372",
+      "mrf": "MSR-MRF-0001",
+      "transfer": "MSR-TRF-0001",
+      "source": "Cavite Warehouse Expansion",
+      "destination": "MARINA SKYLINE RESIDENCES - TOWER B"
+    },
+    "purpose": "Generated Transfer Receipt and Signed Receiving Evidence",
+    "importance": "core",
+    "file": "screenshots/08-transfer-delivery-and-evidence/87-generated-transfer-receipt-and-signed-receiving-evidence.png",
+    "caption": "Figure 87. Generated Transfer Receipt and Signed Receiving Evidence",
+    "sha256": "a6fbee3a0a7eb88f714390f2c061c8caf728edda0b084018d5a9f5a88c9f259d"
+  },
+  {
+    "number": 88,
+    "group": "08-transfer-delivery-and-evidence",
+    "title": "Accounting Completed Review of Stock Transfer Documents",
+    "role": "Accounting",
+    "route": "/stock-transfers/mrf372-transfer-15",
+    "refs": {
+      "sourceMRF": "MRF-372",
+      "mrf": "MSR-MRF-0001",
+      "transfer": "MSR-TRF-0001",
+      "source": "Cavite Warehouse Expansion",
+      "destination": "MARINA SKYLINE RESIDENCES - TOWER B"
+    },
+    "purpose": "Accounting Completed Review of Stock Transfer Documents",
+    "importance": "core",
+    "file": "screenshots/08-transfer-delivery-and-evidence/88-accounting-completed-review-of-stock-transfer-documents.png",
+    "caption": "Figure 88. Accounting Completed Review of Stock Transfer Documents",
+    "sha256": "13e855dc4f1ce47979374f5ef9e431acf8352b01eb70520918d3724ddc95a7d3"
+  },
+  {
+    "number": 89,
+    "group": "08-transfer-delivery-and-evidence",
+    "title": "Destination Stock Combining Purchased and Transferred Clamps",
+    "role": "Site Personnel",
+    "route": "/inventory/mrf372-site-1/mat-108t91g",
+    "refs": {
+      "sourceMRF": "MRF-372",
+      "mrf": "MSR-MRF-0001",
+      "transfer": "MSR-TRF-0001",
+      "source": "Cavite Warehouse Expansion",
+      "destination": "MARINA SKYLINE RESIDENCES - TOWER B"
+    },
+    "purpose": "Destination Stock Combining Purchased and Transferred Clamps",
+    "importance": "core",
+    "file": "screenshots/08-transfer-delivery-and-evidence/89-destination-stock-combining-purchased-and-transferred-clamps.png",
+    "caption": "Figure 89. Destination Stock Combining Purchased and Transferred Clamps",
+    "sha256": "3af39081bff658c87614ef28cf4e3435f50f06b1cac979cadd4a73abdab73576"
+  },
+  {
+    "number": 90,
+    "group": "09-management-reports",
+    "title": "Completed MRF 372 Lifecycle and Linked Purchasing Records",
+    "role": "Project Manager",
+    "route": "/requests/mrf372-mrf-9",
+    "refs": {
+      "sourceMRF": "MRF-372",
+      "mrf": "MSR-MRF-0001",
+      "transfer": "MSR-TRF-0001"
+    },
+    "purpose": "Completed MRF 372 Lifecycle and Linked Purchasing Records",
+    "importance": "core",
+    "file": "screenshots/09-management-reports/90-completed-mrf-372-lifecycle-and-linked-purchasing-records.png",
+    "caption": "Figure 90. Completed MRF 372 Lifecycle and Linked Purchasing Records",
+    "sha256": "f69052d9274e63bef023e3918c4e6ad8810d9854eb607da19d0cae0f3def898e"
+  },
+  {
+    "number": 91,
+    "group": "09-management-reports",
+    "title": "Management Purchasing Budget and Workflow Report",
+    "role": "Project Manager",
+    "route": "/reports",
+    "refs": {
+      "sourceMRF": "MRF-372",
+      "mrf": "MSR-MRF-0001",
+      "transfer": "MSR-TRF-0001"
+    },
+    "purpose": "Management Purchasing Budget and Workflow Report",
+    "importance": "core",
+    "file": "screenshots/09-management-reports/91-management-purchasing-budget-and-workflow-report.png",
+    "caption": "Figure 91. Management Purchasing Budget and Workflow Report",
+    "sha256": "b4377f669d007f21a1e1a47f6b7dc2852566185c221bd69c82f140d45220c41c"
+  },
+  {
+    "number": 92,
+    "group": "09-management-reports",
+    "title": "Accounting Document Gaps After Completed Transactions",
+    "role": "Project Manager",
+    "route": "/reports",
+    "refs": {
+      "sourceMRF": "MRF-372",
+      "mrf": "MSR-MRF-0001",
+      "transfer": "MSR-TRF-0001"
+    },
+    "purpose": "Accounting Document Gaps After Completed Transactions",
+    "importance": "core",
+    "file": "screenshots/09-management-reports/92-accounting-document-gaps-after-completed-transactions.png",
+    "caption": "Figure 92. Accounting Document Gaps After Completed Transactions",
+    "sha256": "1a7cc8634508642098be305e506fe6b80550f460b44c633e07ea3151882fae90"
+  },
+  {
+    "number": 93,
+    "group": "09-management-reports",
+    "title": "Current Site Stock After Deliveries Transfer and Usage",
+    "role": "Project Manager",
+    "route": "/reports",
+    "refs": {
+      "sourceMRF": "MRF-372",
+      "mrf": "MSR-MRF-0001",
+      "transfer": "MSR-TRF-0001"
+    },
+    "purpose": "Current Site Stock After Deliveries Transfer and Usage",
+    "importance": "core",
+    "file": "screenshots/09-management-reports/93-current-site-stock-after-deliveries-transfer-and-usage.png",
+    "caption": "Figure 93. Current Site Stock After Deliveries Transfer and Usage",
+    "sha256": "87340a26ea07aed1342dc89898f764fe4e80edb63e55adb742c705234585fcaa"
+  }
+]

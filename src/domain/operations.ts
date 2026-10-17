@@ -12,7 +12,10 @@ export function operationEntity(target: OperationTarget): string {
 }
 // Bind to the document/version being processed, not just a reusable record ID.
 export function operationFingerprint(state: DemoSnapshot, target: OperationTarget): string {
-  const project = (requestId?: string) => { const request = state.requests.find(value => value.id === requestId); return [request?.ref, request?.siteId, state.sites.find(value => value.id === request?.siteId)?.driveFolderId]; };
+  return JSON.stringify([state.showcase?.installationId, recordFingerprint(state, target)]);
+}
+function recordFingerprint(state: DemoSnapshot, target: OperationTarget): string {
+  const project = (requestId?: string) => { const request = state.requests.find(value => value.id === requestId); return [request?.ref, request?.siteId, state.sites.find(value => value.id === request?.siteId)?.driveFolderId, state.sites.find(value => value.id === request?.siteId)?.localArchiveId]; };
   switch (target.kind) {
     case "transfer-receipt": { const delivery = state.transferDeliveries?.find(value => value.id === target.deliveryId), receipt = delivery?.receiptVersions?.find(value => value.id === target.receiptId); return JSON.stringify([receipt?.data, receipt?.id, project(receipt?.data.request.id)]); }
     case "transfer-evidence": { const transfer = state.stockTransfers?.find(value => value.id === target.transferId), doc = transfer?.documents?.find(value => value.id === target.documentId); return JSON.stringify([doc?.id, doc?.deliveryId, doc?.receiptVersion, doc?.sha256, doc?.size, doc?.localFileId, project(transfer?.requestId)]); }

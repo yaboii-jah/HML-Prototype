@@ -1,0 +1,366 @@
+{
+  "generatedAt": "2026-10-16T08:58:27.886Z",
+  "head": "c62142118b243fab1abbc42984d81117cb20edef",
+  "baseline": [
+    {
+      "command": "npm test",
+      "result": "passed",
+      "tests": 295,
+      "evidence": "Initial non-mutating planning checks in the conversation; no test source changed by audit."
+    },
+    {
+      "command": "npm run lint",
+      "result": "passed",
+      "evidence": "Initial checks and a final run after audit scripts were added (exec exit 0)."
+    },
+    {
+      "command": "npx tsc --noEmit --incremental false",
+      "result": "passed",
+      "evidence": "Initial planning checks; production build also completed TypeScript."
+    },
+    {
+      "command": "npm run build",
+      "result": "passed after network retry",
+      "log": "logs/build-network-retry.log",
+      "initialFailure": "Sandbox could not fetch Google Fonts; see logs/build.log."
+    }
+  ],
+  "browser": {
+    "visits": 95,
+    "roleListChecks": 77,
+    "additionalRouteChecks": 18,
+    "responsive": 264,
+    "widths": [
+      320,
+      375,
+      414,
+      768,
+      1280,
+      1440
+    ],
+    "themes": [
+      "light",
+      "dark"
+    ],
+    "overflowFailures": 0,
+    "unnamedControlCandidates": 0,
+    "uncaughtExceptions": [],
+    "navigationMs": {
+      "minimum": 293,
+      "median": 350,
+      "p95": 596,
+      "maximum": 877,
+      "mean": 384
+    },
+    "harnessFailure": null
+  },
+  "originalSuites": {
+    "passed": 9,
+    "failed": 16,
+    "results": [
+      {
+        "name": "showcase",
+        "code": 0,
+        "durationMs": 71176,
+        "log": "logs/showcase.log",
+        "tail": "To eliminate this warning, add \"type\": \"module\" to \\\\?\\C:\\Users\\Jahmell Dorias\\Desktop\\Projects\\buildsync-prototype\\package.json.\n(Use `node --trace-warnings ...` to show where the warning was created)\nChecking local documents, role screens and persisted edits\nChecking department Site Personnel\nChecking department Project Manager\nChecking department Procurement\nChecking department Finance\nChecking department Logistics\nChecking department Accounting\nContinuing upfront payment, credit settlement and transfer receipt workflows\nChecking interrupted installation, storage failure and clearing without reseeding\nShowcase smoke passed: initial population, local PDF/XLSX, department work, local approval archive, preservation and replacement backup. Screenshots: C:\\Users\\JAHMEL~1\\AppData\\Local\\Temp\\constructsync-showcase-Dorgy5"
+      },
+      {
+        "name": "shell-controls",
+        "code": 0,
+        "durationMs": 22191,
+        "log": "logs/shell-controls.log",
+        "tail": "(node:15744) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/src/app-state/demo-session.ts is not specified and it doesn't parse as CommonJS.\nReparsing as ES module because module syntax was detected. This incurs a performance overhead.\nTo eliminate this warning, add \"type\": \"module\" to \\\\?\\C:\\Users\\Jahmell Dorias\\Desktop\\Projects\\buildsync-prototype\\package.json.\n(Use `node --trace-warnings ...` to show where the warning was created)\nChecking short-screen navigation and notification overflow\nShell controls smoke passed. Screenshots: C:\\Users\\JAHMEL~1\\AppData\\Local\\Temp\\constructsync-shell-gtlf6W"
+      },
+      {
+        "name": "register",
+        "code": 1,
+        "durationMs": 23431,
+        "log": "logs/register.log",
+        "tail": "file:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/scripts/register-smoke.mjs:36\r\n    if (result.exceptionDetails) throw new Error(result.exceptionDetails.exception?.description || result.exceptionDetails.text);\r\n                                       ^\r\n\r\nError: TypeError: Cannot read properties of null (reading 'focus')\r\n    at <anonymous>:1:88\r\n    at <anonymous>:1:121\r\n    at run (file:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/scripts/register-smoke.mjs:36:40)\r\n    at async click (file:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/scripts/register-smoke.mjs:42:37)\r\n    at async file:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/scripts/register-smoke.mjs:164:7\r\n\r\nNode.js v24.19.0"
+      },
+      {
+        "name": "user-management",
+        "code": 1,
+        "durationMs": 31626,
+        "log": "logs/user-management.log",
+        "tail": "To eliminate this warning, add \"type\": \"module\" to \\\\?\\C:\\Users\\Jahmell Dorias\\Desktop\\Projects\\buildsync-prototype\\package.json.\n(Use `node --trace-warnings ...` to show where the warning was created)\nfile:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/scripts/user-management-smoke.mjs:39\r\n  const wait = async code => { for (let i = 0; i < 100; i++) { if (await run(code)) return; await sleep(100); } throw new Error(`Timed out: ${code}: ${await run(\"return JSON.stringify({body:document.body.innerText.slice(-1600),role:JSON.parse(localStorage.getItem(\\\"hml-constructsync-demo-v12\\\"))?.role});\")}`); };\r\n                                                                                                                      ^\r\n\r\nError: Timed out: return !!document.querySelector('.confirm-dialog[open]');: {\"body\":\"ConstructSync\\nDashboard\\nMaterial requests\\nProjects\\nPurchase orders\\nReports\\nSuppliers\\nAccounting\\nFinance\\nDeliveries\\nSite inventory\\nAdministration\\nWorkspace\\n/\\nProjects\\nProject\\nAll sites\\nBm\\nBrowser manager\\nProject Manager\\nProjects and sites\\n\\nProject budgets, material requests and purchasing.\\n\\nAdd project\\nAdd project / site\\nProject name\\nProject code\\nUnique uppercase letters, numbers or hyphens. Locked after its first use.\\nLocation\\nAllocated budget (PHP)\\n\\nDocument examples: CODE-MRF-0001 / CODE-PO-0001\\n\\nAdd project\\nCancel\\nProject\\tLocation\\tAllocated\\tAvailable\\tMRFs\\tPOs\\tSettings\\nNo records found\\n\\nNo projects yet. A Project Manager or Administrator can add a project.\\n\\nPer page\\n10\\n25\\n50\\n0–0 of 0 projects\\nPrevious\\n1 / 1\\nNext\",\"role\":\"Project Manager\"}\r\n    at wait (file:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/scripts/user-management-smoke.mjs:39:119)\r\n    at async add (file:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/scripts/user-management-smoke.mjs:53:1345)\r\n    at async file:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/scripts/user-management-smoke.mjs:73:31\r\n\r\nNode.js v24.19.0"
+      },
+      {
+        "name": "site-visibility",
+        "code": 0,
+        "durationMs": 28142,
+        "log": "logs/site-visibility.log",
+        "tail": "(node:19784) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/src/app-state/demo-session.ts is not specified and it doesn't parse as CommonJS.\nReparsing as ES module because module syntax was detected. This incurs a performance overhead.\nTo eliminate this warning, add \"type\": \"module\" to \\\\?\\C:\\Users\\Jahmell Dorias\\Desktop\\Projects\\buildsync-prototype\\package.json.\n(Use `node --trace-warnings ...` to show where the warning was created)\nChecking assigned-project lists and budget visibility\nChecking direct URLs, cross-project transfers and safe defaults\nChecking account changes, stale previews and archive-job visibility\nChecking account changes during PDF worker initialization\nChecking assignment removal and retained financial data\nSite visibility smoke passed: assigned records, hidden budgets, retained PO prices/documents, routes, transfer context, empty assignments, themes, account changes and stale reads. Screenshots: C:\\Users\\JAHMEL~1\\AppData\\Local\\Temp\\constructsync-site-visibility-FaMD1f"
+      },
+      {
+        "name": "skeleton-loading",
+        "code": 0,
+        "durationMs": 31449,
+        "log": "logs/skeleton-loading.log",
+        "tail": "(node:9840) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/src/app-state/demo-session.ts is not specified and it doesn't parse as CommonJS.\nReparsing as ES module because module syntax was detected. This incurs a performance overhead.\nTo eliminate this warning, add \"type\": \"module\" to \\\\?\\C:\\Users\\Jahmell Dorias\\Desktop\\Projects\\buildsync-prototype\\package.json.\n(Use `node --trace-warnings ...` to show where the warning was created)\nSkeleton loading smoke passed. Screenshots: C:\\Users\\JAHMEL~1\\AppData\\Local\\Temp\\constructsync-skeleton-E8AzUt"
+      },
+      {
+        "name": "browser",
+        "code": 1,
+        "durationMs": 25555,
+        "log": "logs/browser.log",
+        "tail": "  },\r\n  expected: {\r\n    email: 'hml.constructsync.site@gmail.com',\r\n    role: 'Site Personnel',\r\n    userId: 'bootstrap-site-personnel',\r\n    revision: 1\r\n  },\r\n  operator: 'deepStrictEqual',\r\n  diff: 'simple'\r\n}\r\n\r\nNode.js v24.19.0"
+      },
+      {
+        "name": "quotation",
+        "code": 1,
+        "durationMs": 30680,
+        "log": "logs/quotation.log",
+        "tail": "(Use `node --trace-warnings ...` to show where the warning was created)\nfile:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/scripts/quotation-smoke.mjs:37\r\n  const wait = async code => { for (let attempt = 0; attempt < 120; attempt++) { try { if (await run(code)) return; } catch {} await sleep(125); } throw new Error(`Timed out: ${code}; report context: ${JSON.stringify(await run(\"return {page:location.pathname+location.search,session:localStorage.getItem('hml-constructsync-session-v2'),signInError:document.querySelector('.signin-error')?.textContent,downloads:window.__bidDownloads?.length,rows:document.querySelectorAll('.bid-report-row').length,errors:[...document.querySelectorAll('.field-error,.inline-error')].map(el=>el.textContent)};\"))}`); };\r\n                                                                                                                                                         ^\r\n\r\nError: Timed out: return [...document.querySelectorAll('.quote-review label.field')].some(x=>x.querySelector('span')?.textContent===\"Description\");; report context: {\"page\":\"/requests/quote-smoke/quotes\",\"session\":\"{\\\"email\\\":\\\"hml.constructsync.procurement@gmail.com\\\",\\\"role\\\":\\\"Procurement\\\",\\\"userId\\\":\\\"bootstrap-procurement\\\",\\\"revision\\\":1}\",\"downloads\":0,\"rows\":0,\"errors\":[\"Enter the material description.\",\"Enter quantity\",\"Enter unit\",\"Enter price\"]}\r\n    at wait (file:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/scripts/quotation-smoke.mjs:37:154)\r\n    at async fillLabel (file:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/scripts/quotation-smoke.mjs:43:47)\r\n    at async review (file:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/scripts/quotation-smoke.mjs:75:5)\r\n    at async file:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/scripts/quotation-smoke.mjs:90:3\r\n\r\nNode.js v24.19.0"
+      },
+      {
+        "name": "compare-allocate",
+        "code": 0,
+        "durationMs": 51495,
+        "log": "logs/compare-allocate.log",
+        "tail": "(node:6076) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/src/app-state/demo-session.ts is not specified and it doesn't parse as CommonJS.\nReparsing as ES module because module syntax was detected. This incurs a performance overhead.\nTo eliminate this warning, add \"type\": \"module\" to \\\\?\\C:\\Users\\Jahmell Dorias\\Desktop\\Projects\\buildsync-prototype\\package.json.\n(Use `node --trace-warnings ...` to show where the warning was created)\nComparative bid browser smoke passed: 100 materials, 5 suppliers, normalized prices, splits, bulk gaps/cancellation, atomic save, stale removal, persistence, PO confirmation and responsive light/dark layouts. Screenshots: C:\\Users\\JAHMEL~1\\AppData\\Local\\Temp\\constructsync-registers-ObKh7z"
+      },
+      {
+        "name": "full-disbursement",
+        "code": 0,
+        "durationMs": 19466,
+        "log": "logs/full-disbursement.log",
+        "tail": "(node:9732) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/src/app-state/demo-session.ts is not specified and it doesn't parse as CommonJS.\nReparsing as ES module because module syntax was detected. This incurs a performance overhead.\nTo eliminate this warning, add \"type\": \"module\" to \\\\?\\C:\\Users\\Jahmell Dorias\\Desktop\\Projects\\buildsync-prototype\\package.json.\n(Use `node --trace-warnings ...` to show where the warning was created)\nFull disbursement smoke passed: PM review and automatic MRF archive, issuance cancellation/confirmation, proof failure/retry, verification, reopening, separate clearance, persistence and responsive light/dark controls. Screenshot: C:\\Users\\JAHMEL~1\\AppData\\Local\\Temp\\constructsync-registers-uqnkTL\\payment-verification.png"
+      },
+      {
+        "name": "credit-terms",
+        "code": 0,
+        "durationMs": 24799,
+        "log": "logs/credit-terms.log",
+        "tail": "(node:11312) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/src/app-state/demo-session.ts is not specified and it doesn't parse as CommonJS.\nReparsing as ES module because module syntax was detected. This incurs a performance overhead.\nTo eliminate this warning, add \"type\": \"module\" to \\\\?\\C:\\Users\\Jahmell Dorias\\Desktop\\Projects\\buildsync-prototype\\package.json.\n(Use `node --trace-warnings ...` to show where the warning was created)\nCredit terms and Finance coordination smoke passed: due-date approval, issuance, unpaid delivery clearance, post-clearance proof failure/retry, partial/full payment, void history, overdue reporting, Finance restrictions, persistence and responsive controls. Screenshot: C:\\Users\\JAHMEL~1\\AppData\\Local\\Temp\\constructsync-registers-JXNeuw\\credit-payments.png"
+      },
+      {
+        "name": "site-stock-transfers",
+        "code": 1,
+        "durationMs": 17358,
+        "log": "logs/site-stock-transfers.log",
+        "tail": "Checking /admin\nfile:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/scripts/site-stock-transfers-smoke.mjs:37\r\n    if (result.exceptionDetails) throw new Error(result.exceptionDetails.exception?.description || result.exceptionDetails.text);\r\n                                       ^\r\n\r\nError: TypeError: Cannot read properties of null (reading 'click')\r\n    at <anonymous>:1:148\r\n    at <anonymous>:1:171\r\n    at run (file:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/scripts/site-stock-transfers-smoke.mjs:37:40)\r\n    at async file:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/scripts/site-stock-transfers-smoke.mjs:77:3\r\n\r\nNode.js v24.19.0"
+      },
+      {
+        "name": "delivery-documents",
+        "code": 1,
+        "durationMs": 38191,
+        "log": "logs/delivery-documents.log",
+        "tail": "Reparsing as ES module because module syntax was detected. This incurs a performance overhead.\nTo eliminate this warning, add \"type\": \"module\" to \\\\?\\C:\\Users\\Jahmell Dorias\\Desktop\\Projects\\buildsync-prototype\\package.json.\n(Use `node --trace-warnings ...` to show where the warning was created)\nfile:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/scripts/delivery-documents-smoke.mjs:39\r\n  const wait = async code => { for (let i = 0; i < 200; i++) { if (await run(code)) return; await sleep(100); } throw new Error(`Timed out: ${code}: ${await run(\"return JSON.stringify({body:document.body.innerText.slice(-1600),role:JSON.parse(localStorage.getItem(\\\"hml-constructsync-demo-v12\\\"))?.role});\")}`); };\r\n                                                                                                                      ^\r\n\r\nError: Timed out: return [...document.querySelectorAll('button')].some(b=>b.textContent.trim()==='Confirm received quantities');: {\"body\":\"Workspace\\n/\\nDeliveries\\nAll assigned projects\\nMS\\nMiguel Santos\\nSite Personnel\\nPROJECT ACCESS\\nAccess unavailable\\n\\nThis page is outside your assigned projects or role. Ask an Administrator to review your project access.\\n\\nBack to dashboard\",\"role\":\"Site Personnel\"}\r\n    at wait (file:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/scripts/delivery-documents-smoke.mjs:39:119)\r\n    at async file:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/scripts/delivery-documents-smoke.mjs:59:3\r\n\r\nNode.js v24.19.0"
+      },
+      {
+        "name": "document-gallery",
+        "code": 0,
+        "durationMs": 29353,
+        "log": "logs/document-gallery.log",
+        "tail": "(node:19652) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/src/app-state/demo-session.ts is not specified and it doesn't parse as CommonJS.\nReparsing as ES module because module syntax was detected. This incurs a performance overhead.\nTo eliminate this warning, add \"type\": \"module\" to \\\\?\\C:\\Users\\Jahmell Dorias\\Desktop\\Projects\\buildsync-prototype\\package.json.\n(Use `node --trace-warnings ...` to show where the warning was created)\nDocument gallery smoke passed. Screenshots: C:\\Users\\JAHMEL~1\\AppData\\Local\\Temp\\constructsync-registers-jcxarC"
+      },
+      {
+        "name": "quotation-editor",
+        "code": 1,
+        "durationMs": 22272,
+        "log": "logs/quotation-editor.log",
+        "tail": "To eliminate this warning, add \"type\": \"module\" to \\\\?\\C:\\Users\\Jahmell Dorias\\Desktop\\Projects\\buildsync-prototype\\package.json.\n(Use `node --trace-warnings ...` to show where the warning was created)\nfile:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/scripts/quotation-editor-smoke.mjs:39\r\n  const wait = async code => { for (let i = 0; i < 100; i++) { if (await run(code)) return; await sleep(100); } throw new Error(`Timed out: ${code}`); };\r\n                                                                                                                      ^\r\n\r\nError: Timed out: return !!document.querySelector('.quote-review');\r\n    at wait (file:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/scripts/quotation-editor-smoke.mjs:39:119)\r\n    at async visible (file:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/scripts/quotation-editor-smoke.mjs:52:27)\r\n    at async file:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/scripts/quotation-editor-smoke.mjs:52:198\r\n\r\nNode.js v24.19.0"
+      },
+      {
+        "name": "quotation-worksheet",
+        "code": 1,
+        "durationMs": 34146,
+        "log": "logs/quotation-worksheet.log",
+        "tail": "Reparsing as ES module because module syntax was detected. This incurs a performance overhead.\nTo eliminate this warning, add \"type\": \"module\" to \\\\?\\C:\\Users\\Jahmell Dorias\\Desktop\\Projects\\buildsync-prototype\\package.json.\n(Use `node --trace-warnings ...` to show where the warning was created)\nfile:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/scripts/quotation-worksheet-smoke.mjs:40\r\n  const wait = async code => { for (let i = 0; i < 200; i++) { if (await run(code)) return; await sleep(100); } throw new Error(`Timed out: ${code}`); };\r\n                                                                                                                      ^\r\n\r\nError: Timed out: return !!document.querySelector('.quote-source-panel .pdf-document-toolbar input:not(:disabled)');\r\n    at wait (file:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/scripts/quotation-worksheet-smoke.mjs:40:119)\r\n    at async file:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/scripts/quotation-worksheet-smoke.mjs:80:3\r\n\r\nNode.js v24.19.0"
+      },
+      {
+        "name": "supplier-upload",
+        "code": 1,
+        "durationMs": 10796,
+        "log": "logs/supplier-upload.log",
+        "tail": "file:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/scripts/supplier-upload-smoke.mjs:36\r\n    if (result.exceptionDetails) throw new Error(result.exceptionDetails.exception?.description || result.exceptionDetails.text);\r\n                                       ^\r\n\r\nError: TypeError: Cannot read properties of null (reading 'focus')\r\n    at <anonymous>:1:116\r\n    at <anonymous>:1:149\r\n    at run (file:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/scripts/supplier-upload-smoke.mjs:36:40)\r\n    at async click (file:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/scripts/supplier-upload-smoke.mjs:42:37)\r\n    at async file:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/scripts/supplier-upload-smoke.mjs:53:5\r\n\r\nNode.js v24.19.0"
+      },
+      {
+        "name": "quotation-financial-review",
+        "code": 1,
+        "durationMs": 10217,
+        "log": "logs/quotation-financial-review.log",
+        "tail": "0 !== 13\r\n\r\n    at file:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/scripts/quotation-financial-review-smoke.mjs:57:10 {\r\n  generatedMessage: false,\r\n  code: 'ERR_ASSERTION',\r\n  actual: 0,\r\n  expected: 13,\r\n  operator: 'strictEqual',\r\n  diff: 'simple'\r\n}\r\n\r\nNode.js v24.19.0"
+      },
+      {
+        "name": "quotation-extraction",
+        "code": 1,
+        "durationMs": 32532,
+        "log": "logs/quotation-extraction.log",
+        "tail": "To eliminate this warning, add \"type\": \"module\" to \\\\?\\C:\\Users\\Jahmell Dorias\\Desktop\\Projects\\buildsync-prototype\\package.json.\n(Use `node --trace-warnings ...` to show where the warning was created)\nfile:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/scripts/quotation-extraction-smoke.mjs:39\r\n  const wait = async code => { for (let i = 0; i < 200; i++) { if (await run(code)) return; await sleep(100); } throw new Error(`Timed out: ${code}\\n${JSON.stringify(await run(\"return {url:location.href,text:document.body.innerText.slice(-1800),role:JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')||'null')?.role};\"))}`); };\r\n                                                                                                                      ^\r\n\r\nError: Timed out: return !!document.querySelector('.supplier-upload-section');\r\n{\"url\":\"http://127.0.0.1:3100/requests/m1/quotes\",\"text\":\"Workspace\\n/\\nMaterial requests\\nAll sites\\nHarbor Residences · Site A\\nNorthline Warehouse · Site B\\n2\\nAR\\nAndrea Reyes\\nProcurement\\n← MRF-2026-001\\nPROCUREMENT Â· QUOTATION REVIEW\\nSource requested materials\\nApproved\\n\\nReview each supplier offer, confirm its MRF matches, allocate quantities, and prepare supplier purchase orders.\\n\\n01\\nCheck site stock\\nStock transfer sourcing\\n02\\nUpload & review\\n0 draft Â· 2 finalized\\n03\\nCompare & award\\n2 suppliers Â· 0 saved awards\\n04\\nPO preparation\\n1 POs\\nCheck site stock\\n\\nUse spare materials from another project. Purchase only the balance that remains.\\n\\nSupplier quotations\\nSource project\\nNorthline Warehouse · Site B\\nTransfer note (optional)\\n\\nChoose stock with the same description and unit. After your final verification, the source site confirms how much it can release.\\n\\nRequested material\\tRequested\\tAlready sourced\\tStill to source\\tStock at source project\\tAvailable\\tTransfer quantity\\tMatch\\n\\nPortland cement\\nbag\\n\\t100\\nbag\\n\\t\\nTransfers: 0\\nSite review: 0\\nOrders: 100\\nAwards: 0\\n\\t0\\nbag\\n\\t\\nChoose stock\\n\\t\\nChoose stock first\\n\\t\\nEnter quantity after selecting stock\\n\\t\\n\\nDrafts save on this browser. No stock or demand is held until requests are sent.\\n\\nReview selections\",\"role\":\"Procurement\"}\r\n    at wait (file:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/scripts/quotation-extraction-smoke.mjs:39:119)\r\n    at async file:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/scripts/quotation-extraction-smoke.mjs:52:3\r\n\r\nNode.js v24.19.0"
+      },
+      {
+        "name": "quotation-confirmations",
+        "code": 1,
+        "durationMs": 21576,
+        "log": "logs/quotation-confirmations.log",
+        "tail": "To eliminate this warning, add \"type\": \"module\" to \\\\?\\C:\\Users\\Jahmell Dorias\\Desktop\\Projects\\buildsync-prototype\\package.json.\n(Use `node --trace-warnings ...` to show where the warning was created)\nfile:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/scripts/quotation-confirmations-smoke.mjs:39\r\n  const wait = async code => { for (let i = 0; i < 100; i++) { if (await run(code)) return; await sleep(100); } throw new Error(`Timed out: ${code}`); };\r\n                                                                                                                      ^\r\n\r\nError: Timed out: return document.querySelector('.quote-review')?.dataset.quotationId==='confirm-draft'&&!!document.querySelector('.supplier-upload-workbench');\r\n    at wait (file:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/scripts/quotation-confirmations-smoke.mjs:39:119)\r\n    at async load (file:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/scripts/quotation-confirmations-smoke.mjs:60:182)\r\n    at async file:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/scripts/quotation-confirmations-smoke.mjs:61:3\r\n\r\nNode.js v24.19.0"
+      },
+      {
+        "name": "suggestions",
+        "code": 0,
+        "durationMs": 16708,
+        "log": "logs/suggestions.log",
+        "tail": "(node:3928) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/src/app-state/demo-session.ts is not specified and it doesn't parse as CommonJS.\nReparsing as ES module because module syntax was detected. This incurs a performance overhead.\nTo eliminate this warning, add \"type\": \"module\" to \\\\?\\C:\\Users\\Jahmell Dorias\\Desktop\\Projects\\buildsync-prototype\\package.json.\n(Use `node --trace-warnings ...` to show where the warning was created)\nSuggestions smoke passed: combined scope/unit/stock/search filters, pooled balances, project reset, scope names, saved read-only PDF preview, failure handling, focus restore and desktop/mobile themes. Screenshots: C:\\Users\\JAHMEL~1\\AppData\\Local\\Temp\\constructsync-registers-DlOcRb"
+      },
+      {
+        "name": "project-folder",
+        "code": 1,
+        "durationMs": 21637,
+        "log": "logs/project-folder.log",
+        "tail": "To eliminate this warning, add \"type\": \"module\" to \\\\?\\C:\\Users\\Jahmell Dorias\\Desktop\\Projects\\buildsync-prototype\\package.json.\n(Use `node --trace-warnings ...` to show where the warning was created)\nfile:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/scripts/project-folder-smoke.mjs:39\r\n  const wait = async code => { for (let i = 0; i < 100; i++) { if (await run(code)) return; await sleep(100); } throw new Error(`Timed out: ${code}: ${await run(\"return JSON.stringify({body:document.body.innerText.slice(-1600),role:JSON.parse(localStorage.getItem(\\\"hml-constructsync-demo-v12\\\"))?.role});\")}`); };\r\n                                                                                                                      ^\r\n\r\nError: Timed out: return !!document.querySelector('.confirm-dialog[open]');: {\"body\":\"Workspace\\n/\\nAdministration\\nAll sites\\nDG\\nDaniel Garcia\\nAdministrator\\nAdministration\\n\\nProjects, user access and recorded workspace changes.\\n\\nAdd project\\nProjects\\nActivity\\nUsers\\nAdd project / site\\nProject name\\nProject code\\nUnique uppercase letters, numbers or hyphens. Locked after its first use.\\nLocation\\nAllocated budget (PHP)\\n\\nDocument examples: CODE-MRF-0001 / CODE-PO-0001\\n\\nAdd project\\nCancel\\nProject\\tLocation\\tBudget\\tScopes\\tDrive\\tDetails\\nNo records found\\n\\nNo projects yet. Add a project to configure its folder and scopes.\\n\\nPer page\\n10\\n25\\n50\\n0–0 of 0 projects\\nPrevious\\n1 / 1\\nNext\",\"role\":\"Administrator\"}\r\n    at wait (file:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/scripts/project-folder-smoke.mjs:39:119)\r\n    at async add (file:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/scripts/project-folder-smoke.mjs:53:1345)\r\n    at async file:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/scripts/project-folder-smoke.mjs:55:3\r\n\r\nNode.js v24.19.0"
+      },
+      {
+        "name": "document-numbering",
+        "code": 1,
+        "durationMs": 13306,
+        "log": "logs/document-numbering.log",
+        "tail": "(Use `node --trace-warnings ...` to show where the warning was created)\nfile:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/scripts/document-numbering-smoke.mjs:37\r\n    if (result.exceptionDetails) throw new Error(result.exceptionDetails.exception?.description || result.exceptionDetails.text);\r\n                                       ^\r\n\r\nError: TypeError: Cannot read properties of null (reading 'tagName')\r\n    at <anonymous>:1:65\r\n    at <anonymous>:1:340\r\n    at run (file:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/scripts/document-numbering-smoke.mjs:37:40)\r\n    at async file:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/scripts/document-numbering-smoke.mjs:89:3\r\n\r\nNode.js v24.19.0"
+      },
+      {
+        "name": "material-rows",
+        "code": 1,
+        "durationMs": 24212,
+        "log": "logs/material-rows.log",
+        "tail": "(Use `node --trace-warnings ...` to show where the warning was created)\nfile:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/scripts/material-rows-smoke.mjs:39\r\n  const wait = async code => { for (let i = 0; i < 100; i++) { if (await run(code)) return; await sleep(100); } throw new Error(`Timed out: ${code}\\n${JSON.stringify(await run(\"return {url:location.href,text:document.body.innerText.slice(-1800),role:JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')||'null')?.role};\"))}`); };\r\n                                                                                                                      ^\r\n\r\nError: Timed out: return location.pathname+location.search===\"/requests/new\"&&!!document.querySelector('h1');\r\n{\"url\":\"http://127.0.0.1:3100/sign-in?next=%2Frequests%2Fnew\",\"text\":\"HML CONSTRUCTSYNC / 02\\nKeep decisions moving.\\nRequest\\nReview\\nProcure\\nReceive\\nPause\\nH\\nHML ConstructSync\\nSign in to your workspace\\n\\nManage requests, purchases and deliveries.\\n\\nEmail\\nPassword\\nSign in\",\"role\":\"Site Personnel\"}\r\n    at wait (file:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/scripts/material-rows-smoke.mjs:39:119)\r\n    at async load (file:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/scripts/material-rows-smoke.mjs:61:5)\r\n    at async file:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/scripts/material-rows-smoke.mjs:83:3\r\n\r\nNode.js v24.19.0"
+      },
+      {
+        "name": "qa-fixes",
+        "code": 1,
+        "durationMs": 32479,
+        "log": "logs/qa-fixes.log",
+        "tail": "QA browser failure; isolated profile: C:\\Users\\JAHMEL~1\\AppData\\Local\\Temp\\constructsync-qa-DOd0Gk\nfile:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/scripts/qa-fixes-smoke.mjs:41\r\n  const wait = async code => { for (let i = 0; i < 100; i++) { if (await run(code)) return; await sleep(100); } throw new Error(`Timed out: ${code}`); };\r\n                                                                                                                      ^\r\n\r\nError: Timed out: return location.pathname===\"/requests/new\"&&!!document.querySelector('h1');\r\n    at wait (file:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/scripts/qa-fixes-smoke.mjs:41:119)\r\n    at async navigate (file:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/scripts/qa-fixes-smoke.mjs:42:89)\r\n    at async load (file:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/scripts/qa-fixes-smoke.mjs:50:203)\r\n    at async file:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/scripts/qa-fixes-smoke.mjs:97:3\r\n\r\nNode.js v24.19.0"
+      }
+    ]
+  },
+  "auditCopies": {
+    "passed": 6,
+    "failed": 3,
+    "results": [
+      {
+        "name": "adapted-quotation-editor",
+        "code": 0,
+        "durationMs": 37447,
+        "log": "logs/adapted-quotation-editor.log",
+        "tail": "(node:14428) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/src/app-state/demo-session.ts is not specified and it doesn't parse as CommonJS.\nReparsing as ES module because module syntax was detected. This incurs a performance overhead.\nTo eliminate this warning, add \"type\": \"module\" to \\\\?\\C:\\Users\\Jahmell Dorias\\Desktop\\Projects\\buildsync-prototype\\package.json.\n(Use `node --trace-warnings ...` to show where the warning was created)\nTabbed quotation editor smoke passed: 25 suppliers, 100 lines, issue navigation, pricing details, readonly versions, pagination, persistence and responsive themes. Screenshots: C:\\Users\\JAHMEL~1\\AppData\\Local\\Temp\\constructsync-registers-oiKJKu"
+      },
+      {
+        "name": "adapted-quotation-worksheet",
+        "code": 0,
+        "durationMs": 22703,
+        "log": "logs/adapted-quotation-worksheet.log",
+        "tail": "(node:8148) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/src/app-state/demo-session.ts is not specified and it doesn't parse as CommonJS.\nReparsing as ES module because module syntax was detected. This incurs a performance overhead.\nTo eliminate this warning, add \"type\": \"module\" to \\\\?\\C:\\Users\\Jahmell Dorias\\Desktop\\Projects\\buildsync-prototype\\package.json.\n(Use `node --trace-warnings ...` to show where the warning was created)\nQuotation worksheet smoke passed: bulk confirmation, exclusions, concurrent updates, keyboard, stable PDF/image preview, missing files and responsive themes. Warning text contrast: 4.60:1 minimum. Screenshots: C:\\Users\\JAHMEL~1\\AppData\\Local\\Temp\\constructsync-worksheet-LvSIiT"
+      },
+      {
+        "name": "adapted-supplier-upload",
+        "code": 0,
+        "durationMs": 30151,
+        "log": "logs/adapted-supplier-upload.log",
+        "tail": "(node:15184) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/src/app-state/demo-session.ts is not specified and it doesn't parse as CommonJS.\nReparsing as ES module because module syntax was detected. This incurs a performance overhead.\nTo eliminate this warning, add \"type\": \"module\" to \\\\?\\C:\\Users\\Jahmell Dorias\\Desktop\\Projects\\buildsync-prototype\\package.json.\n(Use `node --trace-warnings ...` to show where the warning was created)\nSupplier upload workbench smoke passed. Screenshots: C:\\Users\\JAHMEL~1\\AppData\\Local\\Temp\\constructsync-registers-GRmtpy"
+      },
+      {
+        "name": "adapted-quotation-financial-review",
+        "code": 0,
+        "durationMs": 23971,
+        "log": "logs/adapted-quotation-financial-review.log",
+        "tail": "(node:3756) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/src/app-state/demo-session.ts is not specified and it doesn't parse as CommonJS.\nReparsing as ES module because module syntax was detected. This incurs a performance overhead.\nTo eliminate this warning, add \"type\": \"module\" to \\\\?\\C:\\Users\\Jahmell Dorias\\Desktop\\Projects\\buildsync-prototype\\package.json.\n(Use `node --trace-warnings ...` to show where the warning was created)\nQuotation financial review smoke passed: VAT above adjustments, compact computations (532.640625px with no adjustments), radio controls, reconciled totals, confirmation resets, removals, focus, legacy records and responsive themes. Screenshots: C:\\Users\\JAHMEL~1\\AppData\\Local\\Temp\\constructsync-quotation-review-77AVi0"
+      },
+      {
+        "name": "adapted-quotation-extraction",
+        "code": 1,
+        "durationMs": 34931,
+        "log": "logs/adapted-quotation-extraction.log",
+        "tail": "To eliminate this warning, add \"type\": \"module\" to \\\\?\\C:\\Users\\Jahmell Dorias\\Desktop\\Projects\\buildsync-prototype\\package.json.\n(Use `node --trace-warnings ...` to show where the warning was created)\nfile:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/artifacts/app-audit/adapted-quotation-extraction.mjs:40\r\n  const wait = async code => { for (let i = 0; i < 200; i++) { if (await run(code)) return; await sleep(100); } throw new Error(`Timed out: ${code}\\n${JSON.stringify(await run(\"return {url:location.href,text:document.body.innerText.slice(-1800),role:JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')||'null')?.role};\"))}`); };\r\n                                                                                                                      ^\r\n\r\nError: Timed out: return !!document.querySelector('.quote-review');\r\n{\"url\":\"http://127.0.0.1:3100/requests/m1/quotes\",\"text\":\"Workspace\\n/\\nMaterial requests\\nAll sites\\nHarbor Residences · Site A\\nNorthline Warehouse · Site B\\n2\\nAR\\nAndrea Reyes\\nProcurement\\n← MRF-2026-001\\nPROCUREMENT Â· QUOTATION REVIEW\\nSource requested materials\\nApproved\\n\\nReview each supplier offer, confirm its MRF matches, allocate quantities, and prepare supplier purchase orders.\\n\\n01\\nCheck site stock\\nStock transfer sourcing\\n02\\nUpload & review\\n0 draft Â· 3 finalized\\n03\\nCompare & award\\n3 suppliers Â· 0 saved awards\\n04\\nPO preparation\\n1 POs\\nCheck site stock\\n\\nUse spare materials from another project. Purchase only the balance that remains.\\n\\nSupplier quotations\\nSource project\\nNorthline Warehouse · Site B\\nTransfer note (optional)\\n\\nChoose stock with the same description and unit. After your final verification, the source site confirms how much it can release.\\n\\nRequested material\\tRequested\\tAlready sourced\\tStill to source\\tStock at source project\\tAvailable\\tTransfer quantity\\tMatch\\n\\nPortland cement\\nbag\\n\\t100\\nbag\\n\\t\\nTransfers: 0\\nSite review: 0\\nOrders: 100\\nAwards: 0\\n\\t0\\nbag\\n\\t\\nChoose stock\\n\\t\\nChoose stock first\\n\\t\\nEnter quantity after selecting stock\\n\\t\\n\\nDrafts save on this browser. No stock or demand is held until requests are sent.\\n\\nReview selections\",\"role\":\"Procurement\"}\r\n    at wait (file:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/artifacts/app-audit/adapted-quotation-extraction.mjs:40:119)\r\n    at async file:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/artifacts/app-audit/adapted-quotation-extraction.mjs:82:64\r\n\r\nNode.js v24.19.0"
+      },
+      {
+        "name": "adapted-quotation-confirmations",
+        "code": 1,
+        "durationMs": 19026,
+        "log": "logs/adapted-quotation-confirmations.log",
+        "tail": "file:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/artifacts/app-audit/adapted-quotation-confirmations.mjs:37\r\n    if (result.exceptionDetails) throw new Error(result.exceptionDetails.exception?.description || result.exceptionDetails.text);\r\n                                       ^\r\n\r\nError: TypeError: Cannot read properties of null (reading 'click')\r\n    at <anonymous>:1:61\r\n    at <anonymous>:1:84\r\n    at run (file:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/artifacts/app-audit/adapted-quotation-confirmations.mjs:37:40)\r\n    at async prompt (file:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/artifacts/app-audit/adapted-quotation-confirmations.mjs:70:5)\r\n    at async file:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/artifacts/app-audit/adapted-quotation-confirmations.mjs:113:3\r\n\r\nNode.js v24.19.0"
+      },
+      {
+        "name": "adapted-user-management",
+        "code": 0,
+        "durationMs": 21300,
+        "log": "logs/adapted-user-management.log",
+        "tail": "(node:8256) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/src/app-state/demo-session.ts is not specified and it doesn't parse as CommonJS.\nReparsing as ES module because module syntax was detected. This incurs a performance overhead.\nTo eliminate this warning, add \"type\": \"module\" to \\\\?\\C:\\Users\\Jahmell Dorias\\Desktop\\Projects\\buildsync-prototype\\package.json.\n(Use `node --trace-warnings ...` to show where the warning was created)\nUser management smoke passed: add, reset, deactivate/reactivate, responsive controls in both themes, named presenter switching, PM project/folder/budget/scope controls, Reports, access restrictions, password sign-in and cross-tab invalidation."
+      },
+      {
+        "name": "adapted-project-folder",
+        "code": 1,
+        "durationMs": 16263,
+        "log": "logs/adapted-project-folder.log",
+        "tail": "(Use `node --trace-warnings ...` to show where the warning was created)\nfile:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/artifacts/app-audit/adapted-project-folder.mjs:37\r\n    if (result.exceptionDetails) throw new Error(result.exceptionDetails.exception?.description || result.exceptionDetails.text);\r\n                                       ^\r\n\r\nError: TypeError: Cannot read properties of undefined (reading 'tagName')\r\n    at <anonymous>:1:118\r\n    at <anonymous>:1:362\r\n    at run (file:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/artifacts/app-audit/adapted-project-folder.mjs:37:40)\r\n    at async file:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/artifacts/app-audit/adapted-project-folder.mjs:78:25\r\n\r\nNode.js v24.19.0"
+      },
+      {
+        "name": "adapted-material-rows",
+        "code": 0,
+        "durationMs": 21847,
+        "log": "logs/adapted-material-rows.log",
+        "tail": "(node:19536) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/src/app-state/demo-session.ts is not specified and it doesn't parse as CommonJS.\nReparsing as ES module because module syntax was detected. This incurs a performance overhead.\nTo eliminate this warning, add \"type\": \"module\" to \\\\?\\C:\\Users\\Jahmell Dorias\\Desktop\\Projects\\buildsync-prototype\\package.json.\n(Use `node --trace-warnings ...` to show where the warning was created)\nRequest creation, review and request details passed.\nQuotation row clicks, buttons, inline fields and delete isolation passed.\nSupplier comparison and allocation modal restoration passed.\nDelivery scheduling, receiving and stock posting details passed.\nAccounting PO material details and action isolation passed.\nMaterial rows smoke passed: every targeted table, retained buttons, live details, control isolation, text selection, keyboard/focus and responsive modals. Screenshots: C:\\Users\\JAHMEL~1\\AppData\\Local\\Temp\\constructsync-material-rows-uxj980"
+      }
+    ]
+  },
+  "routes": [
+    "app/(workspace)/accounting/page.tsx",
+    "app/(workspace)/accounting/[poId]/page.tsx",
+    "app/(workspace)/admin/maintenance/page.tsx",
+    "app/(workspace)/admin/page.tsx",
+    "app/(workspace)/dashboard/page.tsx",
+    "app/(workspace)/deliveries/new/page.tsx",
+    "app/(workspace)/deliveries/page.tsx",
+    "app/(workspace)/deliveries/[id]/page.tsx",
+    "app/(workspace)/demo-files/[fileId]/page.tsx",
+    "app/(workspace)/finance/page.tsx",
+    "app/(workspace)/finance/[poId]/page.tsx",
+    "app/(workspace)/inventory/page.tsx",
+    "app/(workspace)/inventory/[siteId]/[materialId]/page.tsx",
+    "app/(workspace)/projects/page.tsx",
+    "app/(workspace)/projects/[siteId]/page.tsx",
+    "app/(workspace)/purchase-orders/page.tsx",
+    "app/(workspace)/purchase-orders/[id]/edit/page.tsx",
+    "app/(workspace)/purchase-orders/[id]/page.tsx",
+    "app/(workspace)/reports/page.tsx",
+    "app/(workspace)/requests/new/page.tsx",
+    "app/(workspace)/requests/page.tsx",
+    "app/(workspace)/requests/[id]/edit/page.tsx",
+    "app/(workspace)/requests/[id]/page.tsx",
+    "app/(workspace)/requests/[id]/quotes/page.tsx",
+    "app/(workspace)/stock-transfers/[id]/page.tsx",
+    "app/(workspace)/suppliers/page.tsx",
+    "app/api/bid-comparisons/route.ts",
+    "app/api/documents/preview/route.ts",
+    "app/api/drive/accounting-documents/chunk/route.ts",
+    "app/api/drive/accounting-documents/route.ts",
+    "app/api/drive/archive/chunk/route.ts",
+    "app/api/drive/archive/route.ts",
+    "app/api/drive/bid-comparisons/chunk/route.ts",
+    "app/api/drive/bid-comparisons/route.ts",
+    "app/api/drive/delivery-receipts/route.ts",
+    "app/api/drive/files/route.ts",
+    "app/api/drive/payment-proof/chunk/route.ts",
+    "app/api/drive/payment-proof/route.ts",
+    "app/api/drive/projects/route.ts",
+    "app/api/drive/purchase-orders/route.ts",
+    "app/api/drive/quotes/chunk/route.ts",
+    "app/api/drive/quotes/route.ts",
+    "app/api/drive/transfer-evidence/chunk/route.ts",
+    "app/api/drive/transfer-evidence/route.ts",
+    "app/api/drive/transfer-receipts/route.ts",
+    "app/api/drive/validate/route.ts",
+    "app/api/quotes/extract/route.ts",
+    "app/api/requests/extract/route.ts",
+    "app/page.tsx",
+    "app/sign-in/page.tsx"
+  ],
+  "findings": {
+    "P0": 0,
+    "P1": 1,
+    "P2": 10,
+    "P3": 3
+  },
+  "screenshots": 123
+}

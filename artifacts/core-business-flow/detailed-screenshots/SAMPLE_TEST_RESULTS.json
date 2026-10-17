@@ -1,0 +1,50 @@
+{
+  "passed": true,
+  "testedAt": "2026-10-15T07:17:27.437Z",
+  "mrf": {
+    "file": "sample-data/MRF 372 - Material Request and Key Plan.pdf",
+    "sha256": "a2e2e2884f4f79114746976b500702828b2a4992ad98e61226d89b2fe0135900",
+    "sourceReference": "MRF-372",
+    "materials": 8,
+    "warnings": []
+  },
+  "quotations": [
+    {
+      "file": "sample-data/372 Q01 Meridian Doors and Fittings.pdf",
+      "supplier": "MERIDIAN DOORS AND FITTINGS, INC.",
+      "reference": "MDF-Q-2411",
+      "materials": 8,
+      "verifiedGrossPHP": 438680,
+      "vatInclusive": true,
+      "sha256": "865a01b3811a23eb87bcc8e658474eec990711952252cc25e252883d6de5fe5d"
+    },
+    {
+      "file": "sample-data/372 Q02 Apex Architectural Hardware Corp.pdf",
+      "supplier": "APEX ARCHITECTURAL HARDWARE CORP.",
+      "reference": "AAH-2026-8842",
+      "materials": 8,
+      "verifiedGrossPHP": 451548,
+      "vatInclusive": true,
+      "sha256": "41d541b47889908878f5da28804721b000774c0529cb305b73766c35d92d77fd"
+    },
+    {
+      "file": "sample-data/372 Q03 Summit Building Supply Trading.pdf",
+      "supplier": "SUMMIT BUILDING SUPPLY TRADING",
+      "reference": "SBST-552-26",
+      "materials": 8,
+      "verifiedGrossPHP": 425900,
+      "vatInclusive": true,
+      "sha256": "16a58ab74ab00c6428146e429aa35c8bc60647de431ba18a490ecb6c93e24878"
+    },
+    {
+      "file": "sample-data/372 Q04 Kestrel Glass Systems Co.pdf",
+      "supplier": "KESTREL GLASS SYSTEMS CO.",
+      "reference": "KGS-Q-0917",
+      "materials": 8,
+      "verifiedGrossPHP": 414242,
+      "vatInclusive": true,
+      "sha256": "33ad8a6b7b58eb3989bff5242c3d8c3d413b352bd7f189b4191475ec03861c96"
+    }
+  ],
+  "errors": []
+}

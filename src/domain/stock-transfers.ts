@@ -1,10 +1,10 @@
+import { validArchiveFileLink } from "./archive-destination.ts";
 import { exactStockMatch, reviewIsCurrent, suitabilityQuantityFor } from "./stock-suitability.ts";
 import { materialId } from "./ids.ts";
 import { normalizedQuantity, orderedQuantity } from "./delivery-flow.ts";
 import { procurementReady } from "./request-archive.ts";
 import { projectCodeRequired, issueDocumentReference } from "./document-numbering.ts";
 import { copyIdentity } from "./audit.ts";
-import { validDriveFileLink } from "./drive-links.ts";
 import type { CommandContext, CommandResult } from "./commands.ts";
 import type { DemoSnapshot, Item, MRF, StockTransfer, TransferDelivery, TransferEvidence, TransferReceiptData, TransferReceiptVersion } from "./types.ts";
 
@@ -215,7 +215,7 @@ export function applyTransferCommand(state: DemoSnapshot, command: TransferComma
     if (!canArchive || !receipt) return fail("This transfer receipt cannot be archived by this account.");
     if (receipt.archive.status === "complete") return { ok: true, snapshot: state, message: "Receipt already archived." };
     if (command.type === "completeTransferReceiptArchive") {
-      if (!validDriveFileLink(command.url, command.fileId)) return fail("Invalid receipt archive link.");
+      if (!validArchiveFileLink(state, command.url, command.fileId)) return fail("Invalid receipt archive link.");
       receipt.archive = { status: "complete", fileId: command.fileId, url: command.url };
     } else receipt.archive.error = command.error.slice(0, 300);
     return done(command.type === "completeTransferReceiptArchive" ? "Transfer receipt archived." : "Transfer receipt archive needs retry.", delivery!.id, transfer);
@@ -238,7 +238,7 @@ export function applyTransferCommand(state: DemoSnapshot, command: TransferComma
     if (!canArchive || !doc) return fail("Evidence archive not available to this account.");
     if (doc.archive.status === "complete") return { ok: true, snapshot: state, message: "Evidence already archived." };
     if (command.type === "completeTransferEvidenceArchive") {
-      if (!validDriveFileLink(command.url, command.fileId)) return fail("Invalid evidence archive link.");
+      if (!validArchiveFileLink(state, command.url, command.fileId)) return fail("Invalid evidence archive link.");
       doc.archive = { status: "complete", fileId: command.fileId, url: command.url };
     } else doc.archive.error = command.error.slice(0, 300);
     return done(command.type === "completeTransferEvidenceArchive" ? "Transfer evidence archived." : "Transfer evidence archive needs retry.", transfer.id, transfer);

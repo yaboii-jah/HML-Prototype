@@ -28,7 +28,7 @@ Rectangles are activities; diamonds are decisions; rounded symbols are entries o
 - Starting events and named process handoffs replace figure letters, so each flow can be understood independently of its caption or position in the paper.
 - Entry and handoff shapes are resized, and their connector ports are adjusted, to keep the longer descriptive labels readable.
 - Purchasing and PO approval remain separate from payment coordination and clearance, making responsibility and payment gates easier to follow.
-- Required destination suitability review precedes Procurement's release proposal. Reduced/rejected releases and transfer shortages return explicitly to material sourcing.
+- Procurement verifies matching descriptions and units, rechecks availability and requests source release directly. Reduced/rejected releases and transfer shortages return explicitly to material sourcing.
 - Warehouse evidence can reach receipt review before goods arrive at the site, and site stock posting never waits for document review.
 - The overview begins with a ready project and marks purchasing/transfer quantities as applicable, preserving purchase-only, transfer-only and mixed requests.
 
@@ -61,9 +61,9 @@ The payment flow separates upfront and credit arrangements after PO issuance. Up
 
 ## Inter-site stock transfer
 
-The transfer flow begins with materials allocated for site transfer and Procurement's suitability confirmation. Destination personnel review uncertain matches when required, after which Procurement rechecks stock and proposes release. Source personnel authorize available quantities. Released quantities proceed to Logistics, while rejected or reduced quantities return to material sourcing. Dispatch deducts source stock before the dispatched trip proceeds to destination receiving.
+The transfer flow begins with materials allocated for site transfer. Procurement verifies matching material descriptions and units, rechecks available quantities, and requests release directly from the source project. Source Site Personnel authorize the quantities their project can spare. Approved quantities proceed to Logistics for scheduling and dispatch, while rejected or unreleased quantities return to material sourcing. Dispatch deducts source stock before the trip proceeds to destination receiving and inventory posting.
 
-- Suitability approval never authorizes source release. Procurement rechecks availability before requesting release.
+- Procurement verifies matching descriptions and units before requesting source release. Destination suitability reviews retained for previously submitted requests are outside this current workflow figure.
 - Source proposals reserve stock and MRF demand. Only confirmed release quantities continue to Logistics; unreleased quantities return to material sourcing.
 - No supplier quotation, PO, payment, budget charge or purchase delivery clearance applies.
 - Repeat for multiple sites and trips. Dispatch deducts source stock once; destination receiving posts accepted site stock once. Cancellation of undispatched allocations remains in the workflow notes.

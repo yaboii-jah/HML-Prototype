@@ -1,0 +1,57 @@
+[
+  {
+    "name": "Quotation extraction with foreign Origin",
+    "status": 200,
+    "providerCalls": 1,
+    "body": {
+      "extraction": {
+        "supplier": "Audit supplier",
+        "lines": [
+          {
+            "description": "Audit material",
+            "quantity": 1,
+            "unitPrice": 1
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "MRF extraction with foreign Origin",
+    "status": 403,
+    "providerCalls": 0,
+    "body": {
+      "error": "A same-origin request is required."
+    }
+  },
+  {
+    "name": "Quotation extraction with forged PDF MIME",
+    "status": 200,
+    "providerCalls": 1,
+    "body": {
+      "extraction": {
+        "supplier": "Audit supplier",
+        "lines": [
+          {
+            "description": "Audit material",
+            "quantity": 1,
+            "unitPrice": 1
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "MRF extraction with forged PDF MIME",
+    "status": 400,
+    "providerCalls": 0,
+    "body": {
+      "error": "A source file does not match its PDF or image type. Choose a valid file."
+    }
+  },
+  {
+    "name": "Quotation extraction with malformed multipart",
+    "thrown": "TypeError: Failed to parse body as FormData.",
+    "providerCalls": 0
+  }
+]

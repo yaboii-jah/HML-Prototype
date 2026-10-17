@@ -22,7 +22,7 @@ export function DataGate({ children }: { children: ReactNode }) {
   if (status === "loading") return <WorkspaceSkeleton variant={skeletonVariant(pathname)}/>;
   if (!snapshot || status === "recovery") return <><div className="state-screen"><div className="state-card"><span className="eyebrow">WORKSPACE RECOVERY</span><h1>Saved data needs attention</h1><p>{message}</p>{session.role === "Administrator" ? <button className="button primary" onClick={() => void (async () => { if (await confirm("Clear this workspace?", "Saved records and uploaded files will be removed and replaced with an empty workspace.", "Clear workspace", true)) await reset(); })()}>Clear workspace</button> : <Link href="/sign-in" className="button primary">Sign in as Administrator</Link>}</div></div>{confirmation}</>;
   if (session.status === "loading" || directory.status === "loading" || !session.role || snapshot.role !== session.role) return <WorkspaceSkeleton variant={skeletonVariant(pathname)}/>;
-  return <Fragment key={`${session.userId}:${session.revision}`}>{status === "volatile" && <div className="storage-warning" role="status">{message}</div>}{children}</Fragment>;
+  return <Fragment key={`${snapshot.showcase?.installationId || "workspace"}:${session.userId}:${session.revision}`}>{status === "volatile" && <div className="storage-warning" role="status">{message}</div>}{children}</Fragment>;
 }
 
 export function WorkspaceAccess({ children }: { children: ReactNode }) {

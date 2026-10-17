@@ -1,9 +1,9 @@
 # DFD validation
 
-Verified against the revised workflow on 2026-10-13.
+Verified against the current workflow on 2026-10-15.
 
-- **context**: 11 visible symbols; 20 labeled flows; minimum 12.34 pt at 277 mm width. PNG 5600 × 2600 pixels. Exactly one selectable-text PDF page.
-- **level1**: 38 visible symbols; 59 labeled flows; minimum 10.71 pt at 277 mm width. PNG 8800 × 6000 pixels. Exactly one selectable-text PDF page, A4 landscape.
+- **context**: 11 visible symbols; 20 labeled flows; minimum 13.46 pt at 277 mm width. PNG 5600 × 3000 pixels. Exactly one selectable-text PDF page.
+- **level1**: 38 visible symbols; 59 labeled flows; minimum 11.06 pt at 277 mm width. PNG 8800 × 6000 pixels. Exactly one selectable-text PDF page, A4 landscape.
 
 - Context contains one process and ten external entities; no stores or internal sub-processes.
 - Level 1 contains six distinct processes, six distinct logical stores and ten external entities. Repeated symbols retain canonical identities.

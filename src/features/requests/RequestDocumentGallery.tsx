@@ -96,7 +96,7 @@ export function RequestDocumentGallery({ request }: { request: MRF }) {
   const attachments = [...(request.scopeDocument ? [request.scopeDocument] : []), ...request.documents];
   const support = supportingPdf(request);
   const archive = request.status === "approved" && request.archive?.status === "complete" && !request.correction ? request.archive.versions.at(-1) : undefined;
-  const documents: GalleryDocument[] = attachments.map(document => document === support && archive ? { ...document, driveUrl: archive.supportUrl, drivePreviewUrl: `https://drive.google.com/file/d/${encodeURIComponent(archive.supportFileId)}/preview` } : document);
+  const documents: GalleryDocument[] = attachments.map(document => document === support && archive ? { ...document, driveUrl: archive.supportUrl, drivePreviewUrl: archive.supportUrl.startsWith("/demo-files/") ? undefined : `https://drive.google.com/file/d/${encodeURIComponent(archive.supportFileId)}/preview` } : document);
   const [index, setIndex] = useState(0);
   const track = useRef<HTMLDivElement>(null), swiping = useRef(false), pointerStart = useRef<{ x: number; y: number } | null>(null);
   const active = Math.min(index, Math.max(0, documents.length - 1));

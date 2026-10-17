@@ -1,0 +1,235 @@
+{
+  "clock": {
+    "instant": "2026-10-15T16:30:00.000Z",
+    "paymentDefault": "2026-10-15",
+    "philippineCalendarDay": "2026-10-16"
+  },
+  "localFiles": {
+    "count": 210,
+    "mismatchedCount": 59,
+    "mismatches": [
+      {
+        "id": "local-audit-installation-2026-64",
+        "listedName": "PCH-MRF-0001.pdf",
+        "actualName": "PCH supporting request 1.pdf",
+        "ownerId": "showcase-audit-installation-2026-mrf-65"
+      },
+      {
+        "id": "local-audit-installation-2026-97",
+        "listedName": "CWE-MRF-0001.pdf",
+        "actualName": "CWE supporting request 2.pdf",
+        "ownerId": "showcase-audit-installation-2026-mrf-98"
+      },
+      {
+        "id": "local-audit-installation-2026-130",
+        "listedName": "LCF-MRF-0001.pdf",
+        "actualName": "LCF supporting request 3.pdf",
+        "ownerId": "showcase-audit-installation-2026-mrf-131"
+      },
+      {
+        "id": "local-audit-installation-2026-166",
+        "listedName": "QOR-MRF-0001.pdf",
+        "actualName": "QOR supporting request 4.pdf",
+        "ownerId": "showcase-audit-installation-2026-mrf-167"
+      },
+      {
+        "id": "local-audit-installation-2026-202",
+        "listedName": "BUU-MRF-0001.pdf",
+        "actualName": "BUU supporting request 5.pdf",
+        "ownerId": "showcase-audit-installation-2026-mrf-203"
+      },
+      {
+        "id": "local-audit-installation-2026-241",
+        "listedName": "PCH-MRF-0002.pdf",
+        "actualName": "PCH supporting request 6.pdf",
+        "ownerId": "showcase-audit-installation-2026-mrf-242"
+      },
+      {
+        "id": "local-audit-installation-2026-280",
+        "listedName": "CWE-MRF-0002.pdf",
+        "actualName": "CWE supporting request 7.pdf",
+        "ownerId": "showcase-audit-installation-2026-mrf-281"
+      },
+      {
+        "id": "local-audit-installation-2026-322",
+        "listedName": "LCF-MRF-0002.pdf",
+        "actualName": "LCF supporting request 8.pdf",
+        "ownerId": "showcase-audit-installation-2026-mrf-323"
+      },
+      {
+        "id": "local-audit-installation-2026-370",
+        "listedName": "QOR-MRF-0002.pdf",
+        "actualName": "QOR supporting request 9.pdf",
+        "ownerId": "showcase-audit-installation-2026-mrf-371"
+      },
+      {
+        "id": "local-audit-installation-2026-426",
+        "listedName": "BUU-MRF-0002.pdf",
+        "actualName": "BUU supporting request 10.pdf",
+        "ownerId": "showcase-audit-installation-2026-mrf-427"
+      },
+      {
+        "id": "local-audit-installation-2026-488",
+        "listedName": "PCH-MRF-0003.pdf",
+        "actualName": "PCH supporting request 11.pdf",
+        "ownerId": "showcase-audit-installation-2026-mrf-489"
+      },
+      {
+        "id": "local-audit-installation-2026-1217",
+        "listedName": "PCH-DEL-0001-receipt-v1.pdf",
+        "actualName": "PCH-DEL-0001 receipt v1.pdf",
+        "ownerId": "showcase-audit-installation-2026-po-500"
+      },
+      {
+        "id": "local-audit-installation-2026-1218",
+        "listedName": "PCH-DEL-0002-receipt-v1.pdf",
+        "actualName": "PCH-DEL-0002 receipt v1.pdf",
+        "ownerId": "showcase-audit-installation-2026-po-500"
+      },
+      {
+        "id": "local-audit-installation-2026-1221",
+        "listedName": "PCH-DEL-0003-receipt-v1.pdf",
+        "actualName": "PCH-DEL-0003 receipt v1.pdf",
+        "ownerId": "showcase-audit-installation-2026-po-500"
+      }
+    ],
+    "duplicateLabels": [
+      {
+        "projectId": "showcase-project-1",
+        "name": "PCH-MRF-0001.pdf",
+        "count": 2,
+        "fileIds": [
+          "local-audit-installation-2026-64",
+          "local-audit-installation-2026-68"
+        ]
+      },
+      {
+        "projectId": "showcase-project-1",
+        "name": "Metrospan Building Supply quotation.pdf",
+        "count": 2,
+        "fileIds": [
+          "local-audit-installation-2026-71",
+          "local-audit-installation-2026-495"
+        ]
+      },
+      {
+        "projectId": "showcase-project-1",
+        "name": "Bayanihan Concrete Products quotation.pdf",
+        "count": 2,
+        "fileIds": [
+          "local-audit-installation-2026-79",
+          "local-audit-installation-2026-515"
+        ]
+      },
+      {
+        "projectId": "showcase-project-1",
+        "name": "Summitline Steel Trading quotation.pdf",
+        "count": 2,
+        "fileIds": [
+          "local-audit-installation-2026-87",
+          "local-audit-installation-2026-536"
+        ]
+      },
+      {
+        "projectId": "showcase-project-2",
+        "name": "CWE-MRF-0001.pdf",
+        "count": 2,
+        "fileIds": [
+          "local-audit-installation-2026-97",
+          "local-audit-installation-2026-101"
+        ]
+      },
+      {
+        "projectId": "showcase-project-2",
+        "name": "Bayanihan Concrete Products quotation.pdf",
+        "count": 2,
+        "fileIds": [
+          "local-audit-installation-2026-104",
+          "local-audit-installation-2026-565"
+        ]
+      },
+      {
+        "projectId": "showcase-project-2",
+        "name": "Summitline Steel Trading quotation.pdf",
+        "count": 2,
+        "fileIds": [
+          "local-audit-installation-2026-112",
+          "local-audit-installation-2026-580"
+        ]
+      },
+      {
+        "projectId": "showcase-project-2",
+        "name": "Eastbank Electrical Supply quotation.pdf",
+        "count": 2,
+        "fileIds": [
+          "local-audit-installation-2026-120",
+          "local-audit-installation-2026-600"
+        ]
+      },
+      {
+        "projectId": "showcase-project-3",
+        "name": "LCF-MRF-0001.pdf",
+        "count": 2,
+        "fileIds": [
+          "local-audit-installation-2026-130",
+          "local-audit-installation-2026-134"
+        ]
+      },
+      {
+        "projectId": "showcase-project-3",
+        "name": "Summitline Steel Trading quotation.pdf",
+        "count": 2,
+        "fileIds": [
+          "local-audit-installation-2026-137",
+          "local-audit-installation-2026-630"
+        ]
+      },
+      {
+        "projectId": "showcase-project-3",
+        "name": "Eastbank Electrical Supply quotation.pdf",
+        "count": 2,
+        "fileIds": [
+          "local-audit-installation-2026-146",
+          "local-audit-installation-2026-650"
+        ]
+      },
+      {
+        "projectId": "showcase-project-3",
+        "name": "Greenfield Architectural Products quotation.pdf",
+        "count": 2,
+        "fileIds": [
+          "local-audit-installation-2026-155",
+          "local-audit-installation-2026-671"
+        ]
+      }
+    ]
+  },
+  "coreFlow": {
+    "checkpoints": {
+      "length": 36,
+      "sample": [
+        "Project Budget and Scope Allocations",
+        "Material Request Project and Signatories",
+        "Requested Material Specifications and Quantity"
+      ]
+    },
+    "documents": {
+      "length": 233,
+      "sample": [
+        "local-paper-core-flow-64",
+        "local-paper-core-flow-68",
+        "local-paper-core-flow-71"
+      ]
+    },
+    "commands": {
+      "length": 77,
+      "sample": [
+        "saveRequest",
+        "saveRequest",
+        "reviewRequest"
+      ]
+    },
+    "final": "object",
+    "verified": "object"
+  }
+}

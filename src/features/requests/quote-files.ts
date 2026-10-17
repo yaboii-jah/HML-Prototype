@@ -100,3 +100,15 @@ export async function clearQuoteFiles() {
     });
   } finally { database.close(); }
 }
+
+export async function listLocalFiles(): Promise<{ id: string; blob: Blob }[]> {
+  const database = await openFiles();
+  try {
+    return await new Promise((resolve, reject) => {
+      const transaction = database.transaction(STORE, "readonly"), store = transaction.objectStore(STORE);
+      const keys = store.getAllKeys(), values = store.getAll();
+      transaction.oncomplete = () => resolve(keys.result.map((key, index) => ({ id: String(key), blob: values.result[index] as Blob })));
+      transaction.onerror = () => reject(transaction.error);
+    });
+  } finally { database.close(); }
+}

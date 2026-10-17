@@ -1,0 +1,43 @@
+{
+  "captured": 36,
+  "expected": 36,
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "commandCount": 77,
+  "scenarios": {
+    "upfront": {
+      "mrf": "PCH-MRF-0007",
+      "po": "PCH-PO-0010",
+      "delivery": "PCH-DEL-0012"
+    },
+    "credit": {
+      "mrf": "PCH-MRF-0008",
+      "po": "PCH-PO-0011"
+    },
+    "transfer": {
+      "mrf": "PCH-MRF-0009",
+      "source": "Cavite Warehouse Expansion",
+      "destination": "Pasig Community Health Center",
+      "transfer": "PCH-TRF-0001"
+    },
+    "sourceDeduction": 10,
+    "destinationPosting": 10,
+    "upfrontReceived": 20,
+    "upfrontUsage": 5
+  },
+  "browserExceptions": [],
+  "externalDriveRequests": [],
+  "source": "Connected demonstration snapshots advanced through application domain commands; native UI controls, no altered page layout.",
+  "capturedAt": "2026-10-15T07:05:50.716Z",
+  "pngValidation": {
+    "passed": true,
+    "count": 36,
+    "uniqueImages": 36,
+    "width": 1440,
+    "height": 900
+  },
+  "coreFigures": 30,
+  "supportingFigures": 6
+}

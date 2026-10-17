@@ -1,0 +1,44 @@
+[
+  {
+    "name": "showcase",
+    "code": 0,
+    "durationMs": 71176,
+    "log": "logs/showcase.log",
+    "tail": "To eliminate this warning, add \"type\": \"module\" to \\\\?\\C:\\Users\\Jahmell Dorias\\Desktop\\Projects\\buildsync-prototype\\package.json.\n(Use `node --trace-warnings ...` to show where the warning was created)\nChecking local documents, role screens and persisted edits\nChecking department Site Personnel\nChecking department Project Manager\nChecking department Procurement\nChecking department Finance\nChecking department Logistics\nChecking department Accounting\nContinuing upfront payment, credit settlement and transfer receipt workflows\nChecking interrupted installation, storage failure and clearing without reseeding\nShowcase smoke passed: initial population, local PDF/XLSX, department work, local approval archive, preservation and replacement backup. Screenshots: C:\\Users\\JAHMEL~1\\AppData\\Local\\Temp\\constructsync-showcase-Dorgy5"
+  },
+  {
+    "name": "shell-controls",
+    "code": 0,
+    "durationMs": 22191,
+    "log": "logs/shell-controls.log",
+    "tail": "(node:15744) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/src/app-state/demo-session.ts is not specified and it doesn't parse as CommonJS.\nReparsing as ES module because module syntax was detected. This incurs a performance overhead.\nTo eliminate this warning, add \"type\": \"module\" to \\\\?\\C:\\Users\\Jahmell Dorias\\Desktop\\Projects\\buildsync-prototype\\package.json.\n(Use `node --trace-warnings ...` to show where the warning was created)\nChecking short-screen navigation and notification overflow\nShell controls smoke passed. Screenshots: C:\\Users\\JAHMEL~1\\AppData\\Local\\Temp\\constructsync-shell-gtlf6W"
+  },
+  {
+    "name": "register",
+    "code": 1,
+    "durationMs": 23431,
+    "log": "logs/register.log",
+    "tail": "file:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/scripts/register-smoke.mjs:36\r\n    if (result.exceptionDetails) throw new Error(result.exceptionDetails.exception?.description || result.exceptionDetails.text);\r\n                                       ^\r\n\r\nError: TypeError: Cannot read properties of null (reading 'focus')\r\n    at <anonymous>:1:88\r\n    at <anonymous>:1:121\r\n    at run (file:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/scripts/register-smoke.mjs:36:40)\r\n    at async click (file:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/scripts/register-smoke.mjs:42:37)\r\n    at async file:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/scripts/register-smoke.mjs:164:7\r\n\r\nNode.js v24.19.0"
+  },
+  {
+    "name": "user-management",
+    "code": 1,
+    "durationMs": 31626,
+    "log": "logs/user-management.log",
+    "tail": "To eliminate this warning, add \"type\": \"module\" to \\\\?\\C:\\Users\\Jahmell Dorias\\Desktop\\Projects\\buildsync-prototype\\package.json.\n(Use `node --trace-warnings ...` to show where the warning was created)\nfile:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/scripts/user-management-smoke.mjs:39\r\n  const wait = async code => { for (let i = 0; i < 100; i++) { if (await run(code)) return; await sleep(100); } throw new Error(`Timed out: ${code}: ${await run(\"return JSON.stringify({body:document.body.innerText.slice(-1600),role:JSON.parse(localStorage.getItem(\\\"hml-constructsync-demo-v12\\\"))?.role});\")}`); };\r\n                                                                                                                      ^\r\n\r\nError: Timed out: return !!document.querySelector('.confirm-dialog[open]');: {\"body\":\"ConstructSync\\nDashboard\\nMaterial requests\\nProjects\\nPurchase orders\\nReports\\nSuppliers\\nAccounting\\nFinance\\nDeliveries\\nSite inventory\\nAdministration\\nWorkspace\\n/\\nProjects\\nProject\\nAll sites\\nBm\\nBrowser manager\\nProject Manager\\nProjects and sites\\n\\nProject budgets, material requests and purchasing.\\n\\nAdd project\\nAdd project / site\\nProject name\\nProject code\\nUnique uppercase letters, numbers or hyphens. Locked after its first use.\\nLocation\\nAllocated budget (PHP)\\n\\nDocument examples: CODE-MRF-0001 / CODE-PO-0001\\n\\nAdd project\\nCancel\\nProject\\tLocation\\tAllocated\\tAvailable\\tMRFs\\tPOs\\tSettings\\nNo records found\\n\\nNo projects yet. A Project Manager or Administrator can add a project.\\n\\nPer page\\n10\\n25\\n50\\n0–0 of 0 projects\\nPrevious\\n1 / 1\\nNext\",\"role\":\"Project Manager\"}\r\n    at wait (file:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/scripts/user-management-smoke.mjs:39:119)\r\n    at async add (file:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/scripts/user-management-smoke.mjs:53:1345)\r\n    at async file:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/scripts/user-management-smoke.mjs:73:31\r\n\r\nNode.js v24.19.0"
+  },
+  {
+    "name": "site-visibility",
+    "code": 0,
+    "durationMs": 28142,
+    "log": "logs/site-visibility.log",
+    "tail": "(node:19784) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/src/app-state/demo-session.ts is not specified and it doesn't parse as CommonJS.\nReparsing as ES module because module syntax was detected. This incurs a performance overhead.\nTo eliminate this warning, add \"type\": \"module\" to \\\\?\\C:\\Users\\Jahmell Dorias\\Desktop\\Projects\\buildsync-prototype\\package.json.\n(Use `node --trace-warnings ...` to show where the warning was created)\nChecking assigned-project lists and budget visibility\nChecking direct URLs, cross-project transfers and safe defaults\nChecking account changes, stale previews and archive-job visibility\nChecking account changes during PDF worker initialization\nChecking assignment removal and retained financial data\nSite visibility smoke passed: assigned records, hidden budgets, retained PO prices/documents, routes, transfer context, empty assignments, themes, account changes and stale reads. Screenshots: C:\\Users\\JAHMEL~1\\AppData\\Local\\Temp\\constructsync-site-visibility-FaMD1f"
+  },
+  {
+    "name": "skeleton-loading",
+    "code": 0,
+    "durationMs": 31449,
+    "log": "logs/skeleton-loading.log",
+    "tail": "(node:9840) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/src/app-state/demo-session.ts is not specified and it doesn't parse as CommonJS.\nReparsing as ES module because module syntax was detected. This incurs a performance overhead.\nTo eliminate this warning, add \"type\": \"module\" to \\\\?\\C:\\Users\\Jahmell Dorias\\Desktop\\Projects\\buildsync-prototype\\package.json.\n(Use `node --trace-warnings ...` to show where the warning was created)\nSkeleton loading smoke passed. Screenshots: C:\\Users\\JAHMEL~1\\AppData\\Local\\Temp\\constructsync-skeleton-E8AzUt"
+  }
+]

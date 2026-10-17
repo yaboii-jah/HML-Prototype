@@ -1,0 +1,561 @@
+[
+  {
+    "number": 1,
+    "title": "Project Budget and Scope Allocations",
+    "role": "Project Manager",
+    "route": "/projects/showcase-project-1",
+    "importance": "core",
+    "purpose": "Establish the project and scope budgets governing purchasing.",
+    "refs": {
+      "project": "Pasig Community Health Center"
+    },
+    "file": "screenshots/01-project-budget-and-scope-allocations.png",
+    "caption": "Figure 1. Project Budget and Scope Allocations",
+    "sha256": "15608f8be16d1d51da69bfd05447ee8918458523aad52a8ce4fee928b56cb17c"
+  },
+  {
+    "number": 2,
+    "title": "Material Request Project and Signatories",
+    "role": "Site Personnel",
+    "route": "/requests/paper-mrf-3/edit",
+    "importance": "supporting",
+    "purpose": "Identify the project, work scope and responsible personnel.",
+    "refs": {
+      "mrf": "PCH-MRF-0007"
+    },
+    "file": "screenshots/02-material-request-project-and-signatories.png",
+    "caption": "Figure 2. Material Request Project and Signatories",
+    "sha256": "cbd6b9f5bab2e4817f959fa0b16c8e66e7662eee5fa9f76fdcff8d0e7905ca0b"
+  },
+  {
+    "number": 3,
+    "title": "Requested Material Specifications and Quantity",
+    "role": "Site Personnel",
+    "route": "/requests/paper-mrf-3/edit",
+    "importance": "core",
+    "purpose": "Specify the required cement quantity and delivery location.",
+    "refs": {
+      "mrf": "PCH-MRF-0007"
+    },
+    "file": "screenshots/03-requested-material-specifications-and-quantity.png",
+    "caption": "Figure 3. Requested Material Specifications and Quantity",
+    "sha256": "15a7cdbbbfc59415ebf9e41b5445056c55741ba68d26e2a236fceda189aaf74c"
+  },
+  {
+    "number": 4,
+    "title": "Supporting PDF and Material Request Submission",
+    "role": "Site Personnel",
+    "route": "/requests/paper-mrf-3/edit",
+    "importance": "core",
+    "purpose": "Review the attached supporting PDF before submitting the request.",
+    "refs": {
+      "mrf": "PCH-MRF-0007"
+    },
+    "file": "screenshots/04-supporting-pdf-and-material-request-submission.png",
+    "caption": "Figure 4. Supporting PDF and Material Request Submission",
+    "sha256": "26fbac9c60cfce2efc429e52e8898570a42bca7758c2bdf096e9c98c2a07c95c"
+  },
+  {
+    "number": 5,
+    "title": "Project Manager Material Request Approval",
+    "role": "Project Manager",
+    "route": "/requests/paper-mrf-3",
+    "importance": "core",
+    "purpose": "Review the submitted quantities and approve the MRF.",
+    "refs": {
+      "mrf": "PCH-MRF-0007",
+      "po": "PCH-PO-0010",
+      "delivery": "PCH-DEL-0012"
+    },
+    "file": "screenshots/05-project-manager-material-request-approval.png",
+    "caption": "Figure 5. Project Manager Material Request Approval",
+    "sha256": "27541440c143c78cc689da217fb03db4daebb4a12bc6ce484f2c012535d07669"
+  },
+  {
+    "number": 6,
+    "title": "Procurement Check of Available Site Stock",
+    "role": "Procurement",
+    "route": "/requests/paper-mrf-3/quotes",
+    "importance": "core",
+    "purpose": "Check existing project stock before sourcing the remaining material requirement.",
+    "refs": {
+      "mrf": "PCH-MRF-0007",
+      "po": "PCH-PO-0010",
+      "delivery": "PCH-DEL-0012"
+    },
+    "file": "screenshots/06-procurement-check-of-available-site-stock.png",
+    "caption": "Figure 6. Procurement Check of Available Site Stock",
+    "sha256": "3cceff1a1a307a9b297f6298835232946e21bebaf71e567f099b71c585f3af23"
+  },
+  {
+    "number": 7,
+    "title": "Supplier Quotation Review and Material Matching",
+    "role": "Procurement",
+    "route": "/requests/paper-mrf-3/quotes",
+    "importance": "core",
+    "purpose": "Review the supplier offer, linked requested material, quantity, price and VAT treatment.",
+    "refs": {
+      "mrf": "PCH-MRF-0007"
+    },
+    "file": "screenshots/07-supplier-quotation-review-and-material-matching.png",
+    "caption": "Figure 7. Supplier Quotation Review and Material Matching",
+    "sha256": "633f4f5025ab00459b1cc6746877e20597fdc18a99d1eb540f128d2669cda630"
+  },
+  {
+    "number": 8,
+    "title": "Comparison of Three Supplier Quotations",
+    "role": "Procurement",
+    "route": "/requests/paper-mrf-3/quotes",
+    "importance": "core",
+    "purpose": "Compare compliant supplier prices and lead times for the same requested material.",
+    "refs": {
+      "mrf": "PCH-MRF-0007"
+    },
+    "file": "screenshots/08-comparison-of-three-supplier-quotations.png",
+    "caption": "Figure 8. Comparison of Three Supplier Quotations",
+    "sha256": "bc18ce6017087cc6cd91774bce20a7a8ec1353f5eb0669a7868bf7b9787b2438"
+  },
+  {
+    "number": 9,
+    "title": "Supplier Comparison Remaining Columns and Award Choices",
+    "role": "Procurement",
+    "route": "/requests/paper-mrf-3/quotes",
+    "importance": "supporting",
+    "purpose": "Show the remaining supplier prices and award controls beyond the first comparison view.",
+    "refs": {
+      "mrf": "PCH-MRF-0007"
+    },
+    "file": "screenshots/09-supplier-comparison-remaining-columns-and-award-choices.png",
+    "caption": "Figure 9. Supplier Comparison Remaining Columns and Award Choices",
+    "sha256": "1f4d43a5f2fe75567c40e5b770f4a2287ee5757e8b7a207768f6f8e7dd8dede4"
+  },
+  {
+    "number": 10,
+    "title": "Saved Supplier Award and Purchase Quantity",
+    "role": "Procurement",
+    "route": "/requests/paper-mrf-3/quotes",
+    "importance": "supporting",
+    "purpose": "Show the saved supplier allocation before creating a purchase order.",
+    "refs": {
+      "mrf": "PCH-MRF-0007"
+    },
+    "file": "screenshots/10-saved-supplier-award-and-purchase-quantity.png",
+    "caption": "Figure 10. Saved Supplier Award and Purchase Quantity",
+    "sha256": "9284306e0333d9ac861a23f920bb6006720a19b58dd50a6dab994a7ffda12070"
+  },
+  {
+    "number": 11,
+    "title": "Purchase Order Preparation from Awarded Quotation",
+    "role": "Procurement",
+    "route": "/purchase-orders/paper-po-29/edit",
+    "importance": "core",
+    "purpose": "Prepare the PO using the saved supplier award.",
+    "refs": {
+      "mrf": "PCH-MRF-0007",
+      "po": "PCH-PO-0010",
+      "delivery": "PCH-DEL-0012"
+    },
+    "file": "screenshots/11-purchase-order-preparation-from-awarded-quotation.png",
+    "caption": "Figure 11. Purchase Order Preparation from Awarded Quotation",
+    "sha256": "9069b526e6defa1f38747574242c910cbeca5c3b6d1084dd4396a159c3372537"
+  },
+  {
+    "number": 12,
+    "title": "Accounting Review of Purchase Order Taxes",
+    "role": "Accounting",
+    "route": "/accounting/paper-po-29",
+    "importance": "supporting",
+    "purpose": "Review VAT and withholding before approving the supplier payable.",
+    "refs": {
+      "mrf": "PCH-MRF-0007",
+      "po": "PCH-PO-0010",
+      "delivery": "PCH-DEL-0012"
+    },
+    "file": "screenshots/12-accounting-review-of-purchase-order-taxes.png",
+    "caption": "Figure 12. Accounting Review of Purchase Order Taxes",
+    "sha256": "601b356501574430ff01aa0c7327907fd9756ac299ac259c3fe81cb9b0a2cd9d"
+  },
+  {
+    "number": 13,
+    "title": "Accounting Budget Check and Purchase Order Approval",
+    "role": "Accounting",
+    "route": "/accounting/paper-po-29",
+    "importance": "core",
+    "purpose": "Check the supplier payable and available project and scope budgets before PO approval.",
+    "refs": {
+      "mrf": "PCH-MRF-0007",
+      "po": "PCH-PO-0010",
+      "delivery": "PCH-DEL-0012"
+    },
+    "file": "screenshots/13-accounting-budget-check-and-purchase-order-approval.png",
+    "caption": "Figure 13. Accounting Budget Check and Purchase Order Approval",
+    "sha256": "a0bd13c478a5f245a854988d9bb39d95709484e45326d0f49d8c0d9e60f312cd"
+  },
+  {
+    "number": 14,
+    "title": "Approved Purchase Order Issuance to Supplier",
+    "role": "Procurement",
+    "route": "/purchase-orders/paper-po-29",
+    "importance": "core",
+    "purpose": "Issue the approved and archived PO to the selected supplier.",
+    "refs": {
+      "mrf": "PCH-MRF-0007",
+      "po": "PCH-PO-0010",
+      "delivery": "PCH-DEL-0012"
+    },
+    "file": "screenshots/14-approved-purchase-order-issuance-to-supplier.png",
+    "caption": "Figure 14. Approved Purchase Order Issuance to Supplier",
+    "sha256": "e62bf363bddd4b117ea321d1307c20791019d2981b563accae089a7afa49f437"
+  },
+  {
+    "number": 15,
+    "title": "Finance Coordination of Supplier Payment",
+    "role": "Finance",
+    "route": "/finance/paper-po-29",
+    "importance": "core",
+    "purpose": "Set payment priority, status, planned date and coordination notes.",
+    "refs": {
+      "mrf": "PCH-MRF-0007",
+      "po": "PCH-PO-0010",
+      "delivery": "PCH-DEL-0012"
+    },
+    "file": "screenshots/15-finance-coordination-of-supplier-payment.png",
+    "caption": "Figure 15. Finance Coordination of Supplier Payment",
+    "sha256": "d8e3a1c9dad1cd253c28b2f63ddadef23e6777f5ee72f61bd53a59fd778801c4"
+  },
+  {
+    "number": 16,
+    "title": "Accounting Payment Proof and Full Payment Verification",
+    "role": "Accounting",
+    "route": "/accounting/paper-po-29",
+    "importance": "core",
+    "purpose": "Check archived proof before verifying full net payment.",
+    "refs": {
+      "mrf": "PCH-MRF-0007",
+      "po": "PCH-PO-0010",
+      "delivery": "PCH-DEL-0012"
+    },
+    "file": "screenshots/16-accounting-payment-proof-and-full-payment-verification.png",
+    "caption": "Figure 16. Accounting Payment Proof and Full Payment Verification",
+    "sha256": "1b42f75b3a3c36f6cab78415ccc0419cdc63ed8f2bf56ad5772434178010bee7"
+  },
+  {
+    "number": 17,
+    "title": "Verified Full Payment and Delivery Clearance",
+    "role": "Accounting",
+    "route": "/accounting/paper-po-29",
+    "importance": "core",
+    "purpose": "Show full payment verification and the remaining delivery-clearance action.",
+    "refs": {
+      "mrf": "PCH-MRF-0007",
+      "po": "PCH-PO-0010",
+      "delivery": "PCH-DEL-0012"
+    },
+    "file": "screenshots/17-verified-full-payment-and-delivery-clearance.png",
+    "caption": "Figure 17. Verified Full Payment and Delivery Clearance",
+    "sha256": "9f9c7a787ff8f452f740528379b3920d0f378637a81e189c4a514a44e2856068"
+  },
+  {
+    "number": 18,
+    "title": "Supplier Delivery Scheduling",
+    "role": "Logistics",
+    "route": "/deliveries/new?poId=paper-po-29",
+    "importance": "core",
+    "purpose": "Schedule the supplier-to-site delivery and expected material quantity.",
+    "refs": {
+      "mrf": "PCH-MRF-0007",
+      "po": "PCH-PO-0010",
+      "delivery": "PCH-DEL-0012"
+    },
+    "file": "screenshots/18-supplier-delivery-scheduling.png",
+    "caption": "Figure 18. Supplier Delivery Scheduling",
+    "sha256": "00e8d31743f8bc7be885d387f9ceca63cf2d4fd66c55c8410f31103e4ece455d"
+  },
+  {
+    "number": 19,
+    "title": "Scheduled Delivery and Dispatch Action",
+    "role": "Logistics",
+    "route": "/deliveries/paper-batch-44",
+    "importance": "core",
+    "purpose": "Record when the scheduled shipment leaves the supplier.",
+    "refs": {
+      "mrf": "PCH-MRF-0007",
+      "po": "PCH-PO-0010",
+      "delivery": "PCH-DEL-0012"
+    },
+    "file": "screenshots/19-scheduled-delivery-and-dispatch-action.png",
+    "caption": "Figure 19. Scheduled Delivery and Dispatch Action",
+    "sha256": "9832206c642f4c6f25f2c2be024fc0ef30c6d48f286fa66f4c0600355efbc49d"
+  },
+  {
+    "number": 20,
+    "title": "Site Receiving and Accepted Quantities",
+    "role": "Site Personnel",
+    "route": "/deliveries/paper-batch-44",
+    "importance": "core",
+    "purpose": "Confirm actual accepted quantities at the destination site.",
+    "refs": {
+      "mrf": "PCH-MRF-0007",
+      "po": "PCH-PO-0010",
+      "delivery": "PCH-DEL-0012"
+    },
+    "file": "screenshots/20-site-receiving-and-accepted-quantities.png",
+    "caption": "Figure 20. Site Receiving and Accepted Quantities",
+    "sha256": "72b3fd2adca7233b25da4bfd8a128ef1d0695252ff7d1c6344178fa802e2248a"
+  },
+  {
+    "number": 21,
+    "title": "Received Delivery and Site Stock Posting",
+    "role": "Site Personnel",
+    "route": "/deliveries/paper-batch-44",
+    "importance": "core",
+    "purpose": "Post the accepted material quantity into site inventory.",
+    "refs": {
+      "mrf": "PCH-MRF-0007",
+      "po": "PCH-PO-0010",
+      "delivery": "PCH-DEL-0012"
+    },
+    "file": "screenshots/21-received-delivery-and-site-stock-posting.png",
+    "caption": "Figure 21. Received Delivery and Site Stock Posting",
+    "sha256": "dbb323e4fc8bb267a4f8bd487e03872acd5d24e441a071a9e916fdfc46a2511b"
+  },
+  {
+    "number": 22,
+    "title": "Completed Accounting Review of Delivery Documents",
+    "role": "Accounting",
+    "route": "/accounting/paper-po-29",
+    "importance": "core",
+    "purpose": "Review the supplier invoice and archived receiving evidence.",
+    "refs": {
+      "mrf": "PCH-MRF-0007",
+      "po": "PCH-PO-0010",
+      "delivery": "PCH-DEL-0012"
+    },
+    "file": "screenshots/22-completed-accounting-review-of-delivery-documents.png",
+    "caption": "Figure 22. Completed Accounting Review of Delivery Documents",
+    "sha256": "1eba70d8a13789b3ff1feab122138bcc51f91264eed85dd372015f056292d5cb"
+  },
+  {
+    "number": 23,
+    "title": "Site Inventory Usage and Stock Movement History",
+    "role": "Site Personnel",
+    "route": "/inventory/showcase-project-1/mat-oxkn2z",
+    "importance": "core",
+    "purpose": "Trace the delivery posting and subsequent material usage.",
+    "refs": {
+      "mrf": "PCH-MRF-0007",
+      "po": "PCH-PO-0010",
+      "delivery": "PCH-DEL-0012"
+    },
+    "file": "screenshots/23-site-inventory-usage-and-stock-movement-history.png",
+    "caption": "Figure 23. Site Inventory Usage and Stock Movement History",
+    "sha256": "be1d24774476eaeb911aaed8e926496959af480ac35acc55ac222eedea462800"
+  },
+  {
+    "number": 24,
+    "title": "Credit Terms and Agreed Payment Due Date",
+    "role": "Accounting",
+    "route": "/accounting/paper-po-92",
+    "importance": "core",
+    "purpose": "Set credit terms and the agreed due date instead of upfront payment.",
+    "refs": {
+      "mrf": "PCH-MRF-0008",
+      "po": "PCH-PO-0011"
+    },
+    "file": "screenshots/24-credit-terms-and-agreed-payment-due-date.png",
+    "caption": "Figure 24. Credit Terms and Agreed Payment Due Date",
+    "sha256": "c4b6b06c180f53117311636db027a452b1bf7d79b00db320ec10d58ef99d27a7"
+  },
+  {
+    "number": 25,
+    "title": "Credit Delivery Clearance with an Unpaid Balance",
+    "role": "Accounting",
+    "route": "/accounting/paper-po-92",
+    "importance": "core",
+    "purpose": "Show that credit delivery can be cleared before settlement.",
+    "refs": {
+      "mrf": "PCH-MRF-0008",
+      "po": "PCH-PO-0011"
+    },
+    "file": "screenshots/25-credit-delivery-clearance-with-an-unpaid-balance.png",
+    "caption": "Figure 25. Credit Delivery Clearance with an Unpaid Balance",
+    "sha256": "784d2c02bb7307492717c60b2b66a2eda225de38d2a402ed193de010555229ca"
+  },
+  {
+    "number": 26,
+    "title": "Verified Credit Installment and Remaining Balance",
+    "role": "Accounting",
+    "route": "/accounting/paper-po-92",
+    "importance": "core",
+    "purpose": "Show a verified installment while an outstanding balance remains.",
+    "refs": {
+      "mrf": "PCH-MRF-0008",
+      "po": "PCH-PO-0011"
+    },
+    "file": "screenshots/26-verified-credit-installment-and-remaining-balance.png",
+    "caption": "Figure 26. Verified Credit Installment and Remaining Balance",
+    "sha256": "c12288e85d61481e6f89ae70f486bff2693d4b96332a07db092c01f92e445c04"
+  },
+  {
+    "number": 27,
+    "title": "Fully Settled Credit Purchase and Payment History",
+    "role": "Accounting",
+    "route": "/accounting/paper-po-92",
+    "importance": "core",
+    "purpose": "Show the two verified installments and zero remaining balance.",
+    "refs": {
+      "mrf": "PCH-MRF-0008",
+      "po": "PCH-PO-0011"
+    },
+    "file": "screenshots/27-fully-settled-credit-purchase-and-payment-history.png",
+    "caption": "Figure 27. Fully Settled Credit Purchase and Payment History",
+    "sha256": "01fe3ccbf9caebfb0ba8614e462a03be8ebc4dbc402d64934c2bf31f651070c7"
+  },
+  {
+    "number": 28,
+    "title": "Matching Source Stock for an Interproject Transfer",
+    "role": "Procurement",
+    "route": "/requests/paper-mrf-116/quotes",
+    "importance": "core",
+    "purpose": "Verify the source project, matching material and ten-sheet transfer quantity before sending the release request.",
+    "refs": {
+      "mrf": "PCH-MRF-0009",
+      "source": "Cavite Warehouse Expansion",
+      "destination": "Pasig Community Health Center",
+      "transfer": "PCH-TRF-0001"
+    },
+    "file": "screenshots/28-matching-source-stock-for-an-interproject-transfer.png",
+    "caption": "Figure 28. Matching Source Stock for an Interproject Transfer",
+    "sha256": "30c2c9e7ff58e1d04b01002d56fade7c9dfd849c7012bf74e3b621504d4fc560"
+  },
+  {
+    "number": 29,
+    "title": "Source Site Review and Stock Release Approval",
+    "role": "Site Personnel",
+    "route": "/stock-transfers/paper-transfer-121",
+    "importance": "core",
+    "purpose": "The source site confirms the quantity it can release.",
+    "refs": {
+      "mrf": "PCH-MRF-0009",
+      "source": "Cavite Warehouse Expansion",
+      "destination": "Pasig Community Health Center",
+      "transfer": "PCH-TRF-0001"
+    },
+    "file": "screenshots/29-source-site-review-and-stock-release-approval.png",
+    "caption": "Figure 29. Source Site Review and Stock Release Approval",
+    "sha256": "d6a71f1339b7aa400ef00a28519f4e0a72e2466c0163d37d388aac1382ca93c1"
+  },
+  {
+    "number": 30,
+    "title": "Scheduling the Approved Site Stock Transfer",
+    "role": "Logistics",
+    "route": "/stock-transfers/paper-transfer-121",
+    "importance": "supporting",
+    "purpose": "Schedule a transfer trip for the approved stock quantity.",
+    "refs": {
+      "mrf": "PCH-MRF-0009",
+      "source": "Cavite Warehouse Expansion",
+      "destination": "Pasig Community Health Center",
+      "transfer": "PCH-TRF-0001"
+    },
+    "file": "screenshots/30-scheduling-the-approved-site-stock-transfer.png",
+    "caption": "Figure 30. Scheduling the Approved Site Stock Transfer",
+    "sha256": "52a1e568858a49d295d565c333a7fce7e315b9a3f41283a3eb99e94bdd3af89c"
+  },
+  {
+    "number": 31,
+    "title": "Transfer Dispatch and Source Stock Deduction",
+    "role": "Logistics",
+    "route": "/stock-transfers/paper-transfer-121",
+    "importance": "core",
+    "purpose": "Dispatch the scheduled trip; source stock is deducted at this step.",
+    "refs": {
+      "mrf": "PCH-MRF-0009",
+      "source": "Cavite Warehouse Expansion",
+      "destination": "Pasig Community Health Center",
+      "transfer": "PCH-TRF-0001"
+    },
+    "file": "screenshots/31-transfer-dispatch-and-source-stock-deduction.png",
+    "caption": "Figure 31. Transfer Dispatch and Source Stock Deduction",
+    "sha256": "c52117d09d0772cb81eef8c6e54ea513eb4c3c9d5246b8537ac5d2086d50318b"
+  },
+  {
+    "number": 32,
+    "title": "Destination Receiving of Transferred Materials",
+    "role": "Site Personnel",
+    "route": "/stock-transfers/paper-transfer-121",
+    "importance": "core",
+    "purpose": "Confirm the material quantity accepted by the destination site.",
+    "refs": {
+      "mrf": "PCH-MRF-0009",
+      "source": "Cavite Warehouse Expansion",
+      "destination": "Pasig Community Health Center",
+      "transfer": "PCH-TRF-0001"
+    },
+    "file": "screenshots/32-destination-receiving-of-transferred-materials.png",
+    "caption": "Figure 32. Destination Receiving of Transferred Materials",
+    "sha256": "727af1aa6792e38198c605a3599868fbf64f14eeee66b62fc4a010416d9b5ca8"
+  },
+  {
+    "number": 33,
+    "title": "Posting Transferred Stock into Destination Inventory",
+    "role": "Site Personnel",
+    "route": "/stock-transfers/paper-transfer-121",
+    "importance": "core",
+    "purpose": "Post accepted stock at the destination without supplier payment.",
+    "refs": {
+      "mrf": "PCH-MRF-0009",
+      "source": "Cavite Warehouse Expansion",
+      "destination": "Pasig Community Health Center",
+      "transfer": "PCH-TRF-0001"
+    },
+    "file": "screenshots/33-posting-transferred-stock-into-destination-inventory.png",
+    "caption": "Figure 33. Posting Transferred Stock into Destination Inventory",
+    "sha256": "24416e41066b23ee8f1b38c24a0c5885a3f75a59f3b23b3c0abf96f6ce46b760"
+  },
+  {
+    "number": 34,
+    "title": "Accounting Review of Completed Stock Transfer Documents",
+    "role": "Accounting",
+    "route": "/stock-transfers/paper-transfer-121",
+    "importance": "core",
+    "purpose": "Verify transfer evidence without an invoice or supplier payment.",
+    "refs": {
+      "mrf": "PCH-MRF-0009",
+      "source": "Cavite Warehouse Expansion",
+      "destination": "Pasig Community Health Center",
+      "transfer": "PCH-TRF-0001"
+    },
+    "file": "screenshots/34-accounting-review-of-completed-stock-transfer-documents.png",
+    "caption": "Figure 34. Accounting Review of Completed Stock Transfer Documents",
+    "sha256": "e18dcd098bf3a3895ddba8daa0eeda799144c7bb7e7c48548a841e82ca4971ba"
+  },
+  {
+    "number": 35,
+    "title": "Management Report of Project Purchasing and Budgets",
+    "role": "Project Manager",
+    "route": "/reports",
+    "importance": "core",
+    "purpose": "Review the project budget and purchasing outcome.",
+    "refs": {
+      "project": "Pasig Community Health Center"
+    },
+    "file": "screenshots/35-management-report-of-project-purchasing-and-budgets.png",
+    "caption": "Figure 35. Management Report of Project Purchasing and Budgets",
+    "sha256": "0d7bf55299f92f8333061e9054efa46c945b156d658e2f559e315b53f43406e1"
+  },
+  {
+    "number": 36,
+    "title": "Management Report of Current Site Stock",
+    "role": "Project Manager",
+    "route": "/reports",
+    "importance": "supporting",
+    "purpose": "Review current stock after delivery, transfer and material usage.",
+    "refs": {
+      "project": "Pasig Community Health Center"
+    },
+    "file": "screenshots/36-management-report-of-current-site-stock.png",
+    "caption": "Figure 36. Management Report of Current Site Stock",
+    "sha256": "e998da57f4361b6e5ded0a2e993efba8f700d62f09330fdc8ccb9a24fd6beb14"
+  }
+]

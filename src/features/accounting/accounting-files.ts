@@ -1,3 +1,5 @@
+import { archiveLocal } from "../requests/local-archive.ts";
+import { archiveReady } from "../../domain/archive-destination.ts";
 import type { Command, CommandResult } from "../../domain/commands.ts";
 import type { AccountingDocument, DemoSnapshot } from "../../domain/types.ts";
 import type { ArchiveProgressListener } from "../../domain/archive-progress.ts";
@@ -32,9 +34,15 @@ export async function archiveAccountingDocument(state: DemoSnapshot, poId: strin
   try {
     progress?.({ phase: "preparing" });
     const po = state.pos.find(value => value.id === poId), batch = state.batches.find(value => value.id === document.batchId), mrf = state.requests.find(value => value.id === po?.mrfId), site = state.sites.find(value => value.id === mrf?.siteId);
-    if (!po || document.batchId && (!batch || batch.poId !== poId) || !mrf || !site?.driveFolderId) throw new Error("Map this project's Google Drive folder before archiving the evidence.");
+    if (!po || document.batchId && (!batch || batch.poId !== poId) || !mrf || !site || !archiveReady(site)) throw new Error("Map this project's Google Drive folder before archiving the evidence.");
     const blob = await readQuoteFile(document.localFileId);
     if (!blob || await workbookDigest(blob) !== document.sha256) throw new Error("The original evidence file is unavailable or changed. Attach it again as new evidence.");
+    if (site.localArchiveId) {
+      const local = await archiveLocal(site, blob);
+      const saved = await run({ type: "completeAccountingArchive", poId, documentId: document.id, fileId: local.fileId, url: local.url });
+      if (!saved.ok) throw new Error(saved.message);
+      return;
+    }
     const start = await responseJson(await fetch("/api/drive/accounting-documents", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ document, po, batch, mrf, projectFolderId: site.driveFolderId }) }));
     const finish = start.driveFileId && start.url ? start : start.ticket && Number.isInteger(start.offset) ? await uploadDocument(blob, start.ticket, start.offset!, "/api/drive/accounting-documents/chunk", progress) : undefined;
     if (!finish?.driveFileId || !finish.url) throw new Error("Drive did not confirm the evidence upload.");
@@ -51,8 +59,9 @@ export async function readAccountingDocument(state: DemoSnapshot, poId: string, 
   try { blob = await readQuoteFile(document.localFileId); } catch {}
   if (blob && await workbookDigest(blob) === document.sha256) return blob;
   const po = state.pos.find(value => value.id === poId), mrf = state.requests.find(value => value.id === po?.mrfId), site = state.sites.find(value => value.id === mrf?.siteId);
-  if (document.archive.status !== "complete" || !document.archive.fileId || !mrf || !site?.driveFolderId) throw new Error("The file is unavailable and has no completed Drive copy.");
-  const query = new URLSearchParams({ projectFolderId: site.driveFolderId, requestId: mrf.id, poId, batchId: document.batchId || "", documentId: document.id, fileId: document.archive.fileId });
+  if (site?.localArchiveId) { const copy = document.archive.fileId ? await readQuoteFile(document.archive.fileId) : undefined; if (copy && await workbookDigest(copy) === document.sha256) return copy; throw new Error("The local archived copy is unavailable. Attach the document again."); }
+  if (document.archive.status !== "complete" || !document.archive.fileId || !mrf || !site || !archiveReady(site)) throw new Error("The file is unavailable and has no completed Drive copy.");
+  const query = new URLSearchParams({ projectFolderId: site.driveFolderId!, requestId: mrf.id, poId, batchId: document.batchId || "", documentId: document.id, fileId: document.archive.fileId });
   const response = await fetch(`/api/drive/accounting-documents?${query}`);
   if (!response.ok) { const result = await response.json(); throw new Error(result.error || "The evidence could not be restored."); }
   blob = await response.blob();

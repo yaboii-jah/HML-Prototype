@@ -1,0 +1,750 @@
+﻿ M CONTEXT.md
+ M app/(workspace)/admin/maintenance/page.tsx
+ M app/api/bid-comparisons/route.ts
+ M docs/APP_CONTEXT.md
+ M docs/thesis/PRODUCTION_DESIGN.md
+ M docs/thesis/chapter-2-integrated-procurement-management.md
+ M docs/thesis/dfd/FLOW_REGISTER.md
+ M docs/thesis/dfd/README.md
+ M docs/thesis/dfd/VALIDATION.md
+ M docs/thesis/dfd/constructsync-context.mmd
+ M docs/thesis/dfd/constructsync-context.pdf
+ M docs/thesis/dfd/constructsync-context.png
+ M docs/thesis/dfd/constructsync-context.svg
+ M docs/thesis/dfd/constructsync-level1.mmd
+ M docs/thesis/dfd/constructsync-level1.pdf
+ M docs/thesis/dfd/constructsync-level1.png
+ M docs/thesis/dfd/constructsync-level1.svg
+ M docs/thesis/dfd/export.mjs
+ M docs/thesis/dfd/generate.mjs
+ M docs/thesis/dfd/model.mjs
+ M docs/thesis/pfd/PAPER_DESCRIPTIONS.md
+ M docs/thesis/pfd/README.md
+ M docs/thesis/pfd/VALIDATION.md
+ M docs/thesis/pfd/constructsync-delivery-receiving.pdf
+ M docs/thesis/pfd/constructsync-document-review.pdf
+ M docs/thesis/pfd/constructsync-overview.pdf
+ M docs/thesis/pfd/constructsync-payments.pdf
+ M docs/thesis/pfd/constructsync-purchasing.pdf
+ M docs/thesis/pfd/constructsync-stock-transfer.mmd
+ M docs/thesis/pfd/constructsync-stock-transfer.pdf
+ M docs/thesis/pfd/constructsync-stock-transfer.png
+ M docs/thesis/pfd/constructsync-stock-transfer.svg
+ M docs/thesis/pfd/export.mjs
+ M docs/thesis/pfd/flows.mjs
+ M docs/thesis/pfd/generate.mjs
+ M docs/thesis/research/integrated-procurement-sources.md
+ D "sample-data/taguig-city-rehabilitation/MRF TCR-SAMPLE-001 - Material Request and Key Plan.pdf"
+ D "sample-data/taguig-city-rehabilitation/TCR Q01 Northbridge Building Materials.pdf"
+ D "sample-data/taguig-city-rehabilitation/TCR Q02 Harborline Finishes Trading.pdf"
+ D "sample-data/taguig-city-rehabilitation/TCR Q03 Pillarstone Construction Supply.pdf"
+ D "sample-data/taguig-city-rehabilitation/TCR Q04 Crestmark Architectural Products.pdf"
+ M scripts/skeleton-loading-smoke.mjs
+ M src/app-state/DemoProvider.tsx
+ M src/app-state/user-directory.ts
+ M src/components/ui/ArchiveStatus.tsx
+ M src/components/ui/States.tsx
+ M src/domain/bid-reports.ts
+ M src/domain/commands.ts
+ M src/domain/operations.ts
+ M src/domain/read-access.ts
+ M src/domain/stock-transfers.ts
+ M src/domain/types.ts
+ M src/features/accounting/Accounting.tsx
+ M src/features/accounting/AccountingDocuments.tsx
+ M src/features/accounting/AccountingPOReview.tsx
+ M src/features/accounting/ExternalPaymentVerification.tsx
+ M src/features/accounting/accounting-files.ts
+ M src/features/accounting/payment-proof-files.ts
+ M src/features/admin/Admin.tsx
+ M src/features/admin/AdminProjectSettings.tsx
+ M src/features/admin/AdminUsers.tsx
+ M src/features/admin/project-folder.ts
+ M src/features/deliveries/DeliveryReceiptArchive.tsx
+ M src/features/projects/DriveProjectFiles.tsx
+ M src/features/projects/Projects.tsx
+ M src/features/purchase/ProcurementIssuance.tsx
+ M src/features/purchase/PurchaseOrders.tsx
+ M src/features/reports/Reports.tsx
+ M src/features/requests/BidComparisonReports.tsx
+ M src/features/requests/QuotationWorkspace.tsx
+ M src/features/requests/RequestDocumentGallery.tsx
+ M src/features/requests/Requests.tsx
+ M src/features/requests/archive-purchasing.ts
+ M src/features/requests/archive-request.ts
+ M src/features/requests/bid-report-files.ts
+ M src/features/requests/quote-files.ts
+ M src/features/transfers/TransferDocuments.tsx
+ M src/features/transfers/transfer-files.ts
+ M src/mock/repository.ts
+ M src/styles/registers.css
+?? app/(workspace)/demo-files/[fileId]/page.tsx
+?? artifacts/COVERAGE.md
+?? artifacts/FIGURE_CAPTIONS.csv
+?? artifacts/FIGURE_INDEX.md
+?? artifacts/app-audit/head.txt
+?? artifacts/app-audit/status-before.txt
+?? artifacts/app-screenshots.zip
+?? artifacts/core-business-flow/CONTACT_SHEET.png
+?? artifacts/core-business-flow/FIGURE_CAPTIONS.csv
+?? artifacts/core-business-flow/FIGURE_INDEX.md
+?? artifacts/core-business-flow/README.md
+?? artifacts/core-business-flow/VALIDATION.json
+?? artifacts/core-business-flow/core-business-flow-screenshots.zip
+?? artifacts/core-business-flow/detailed-screenshots/CONTACT_SHEET.png
+?? artifacts/core-business-flow/detailed-screenshots/FIGURE_CAPTIONS.csv
+?? artifacts/core-business-flow/detailed-screenshots/FIGURE_INDEX.md
+?? artifacts/core-business-flow/detailed-screenshots/README.md
+?? artifacts/core-business-flow/detailed-screenshots/SAMPLE_TEST_RESULTS.json
+?? artifacts/core-business-flow/detailed-screenshots/VALIDATION.json
+?? artifacts/core-business-flow/detailed-screenshots/index.html
+?? artifacts/core-business-flow/detailed-screenshots/manifest.json
+?? artifacts/core-business-flow/detailed-screenshots/mrf372-detailed-screenshots.zip
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/00-login-and-project-creation/01-constructsync-account-sign-in-page.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/00-login-and-project-creation/02-project-manager-login-with-masked-password.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/00-login-and-project-creation/03-project-manager-dashboard-before-project-setup.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/00-login-and-project-creation/04-project-directory-before-creating-the-project.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/00-login-and-project-creation/05-new-project-name-code-location-and-allocated-budget.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/00-login-and-project-creation/06-confirmation-of-new-marina-skyline-project-creation.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/00-login-and-project-creation/07-created-project-and-initial-unallocated-budget.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/00-login-and-project-creation/08-creating-the-architectural-scope-and-budget-allocation.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/00-login-and-project-creation/09-confirmation-of-architectural-scope-budget-allocation.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/00-login-and-project-creation/10-assigning-site-personnel-to-the-created-project.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/01-project-and-request/11-marina-skyline-project-budget-and-architectural-scope.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/01-project-and-request/12-architectural-scope-budget-allocation-settings.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/01-project-and-request/13-imported-mrf-372-project-signatories-and-source-reference.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/01-project-and-request/14-eight-requested-materials-quantities-and-required-dates.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/01-project-and-request/15-material-specification-purpose-and-delivery-location.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/01-project-and-request/16-original-mrf-and-key-plan-attached-as-supporting-pdf.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/01-project-and-request/17-mrf-review-of-eight-material-lines-before-submission.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/01-project-and-request/18-project-manager-review-of-mrf-372-and-original-attachment.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/01-project-and-request/19-project-manager-material-quantities-and-approval-decision.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/01-project-and-request/20-archived-mrf-372-supporting-key-plan-attachment.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/02-stock-sourcing/21-procurement-check-of-source-project-stock.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/02-stock-sourcing/22-matching-glass-clamps-and-four-piece-transfer-quantity.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/02-stock-sourcing/23-verified-source-stock-selection-before-release-request.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/02-stock-sourcing/24-source-site-approval-of-four-glass-clamps.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/03-four-supplier-quotations/25-meridian-quotation-material-matching-and-original-pdf.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/03-four-supplier-quotations/26-supplier-quotation-header-contact-details-and-commercial-terms.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/03-four-supplier-quotations/27-meridian-quotation-middle-material-lines.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/03-four-supplier-quotations/28-meridian-quotation-remaining-material-lines.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/03-four-supplier-quotations/29-meridian-vat-inclusive-quotation-computations.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/03-four-supplier-quotations/30-apex-quotation-material-matching-and-original-pdf.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/03-four-supplier-quotations/31-apex-quotation-middle-material-lines.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/03-four-supplier-quotations/32-apex-quotation-remaining-material-lines.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/03-four-supplier-quotations/33-apex-vat-inclusive-quotation-computations.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/03-four-supplier-quotations/34-summit-quotation-material-matching-and-original-pdf.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/03-four-supplier-quotations/35-summit-quotation-middle-material-lines.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/03-four-supplier-quotations/36-summit-quotation-remaining-material-lines.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/03-four-supplier-quotations/37-summit-vat-inclusive-quotation-computations.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/03-four-supplier-quotations/38-kestrel-quotation-material-matching-and-original-pdf.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/03-four-supplier-quotations/39-kestrel-quotation-middle-material-lines.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/03-four-supplier-quotations/40-kestrel-quotation-remaining-material-lines.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/03-four-supplier-quotations/41-kestrel-vat-inclusive-quotation-computations.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/04-comparison-and-purchase-orders/42-four-supplier-comparison-first-material-rows.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/04-comparison-and-purchase-orders/43-four-supplier-comparison-remaining-material-rows.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/04-comparison-and-purchase-orders/44-four-supplier-comparison-remaining-supplier-columns.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/04-comparison-and-purchase-orders/45-comparison-final-rows-and-remaining-supplier-columns.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/04-comparison-and-purchase-orders/46-supplier-quotation-financial-summaries.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/04-comparison-and-purchase-orders/47-lowest-compliant-supplier-awards-and-remaining-purchase-quantities.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/04-comparison-and-purchase-orders/48-kestrel-purchase-order-awarded-materials-and-quantities.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/04-comparison-and-purchase-orders/49-kestrel-purchase-order-remaining-materials-and-commercial-adjustments.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/04-comparison-and-purchase-orders/50-kestrel-purchase-order-document-and-supplier-terms.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/04-comparison-and-purchase-orders/51-apex-purchase-order-awarded-materials-and-quantities.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/04-comparison-and-purchase-orders/52-apex-purchase-order-document-and-supplier-terms.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/05-upfront-payment/53-accounting-kestrel-purchase-order-vat-and-withholding-review.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/05-upfront-payment/54-accounting-upfront-arrangement-and-financial-review.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/05-upfront-payment/55-accounting-project-scope-budget-check-and-po-approval.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/05-upfront-payment/56-approved-kestrel-po-and-completed-document-archive.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/05-upfront-payment/57-procurement-issuance-of-approved-kestrel-purchase-order.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/05-upfront-payment/58-finance-upfront-payable-and-payment-coordination-summary.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/05-upfront-payment/59-finance-payment-priority-schedule-and-coordination-notes.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/05-upfront-payment/60-archived-payment-proof-and-full-supplier-payment-verification.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/05-upfront-payment/61-confirmation-of-actual-upfront-payment-verification.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/05-upfront-payment/62-verified-full-payment-and-accounting-delivery-clearance.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/06-upfront-delivery-and-stock/63-kestrel-supplier-delivery-route-schedule-and-quantities.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/06-upfront-delivery-and-stock/64-kestrel-scheduled-delivery-and-dispatch-action.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/06-upfront-delivery-and-stock/65-kestrel-site-receiving-and-accepted-material-quantities.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/06-upfront-delivery-and-stock/66-kestrel-received-material-quantities-and-stock-posting.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/06-upfront-delivery-and-stock/67-kestrel-generated-delivery-receipt-and-signed-evidence.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/06-upfront-delivery-and-stock/68-kestrel-accounting-document-review-and-linked-delivery.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/06-upfront-delivery-and-stock/69-glass-panel-inventory-posting-usage-and-movement-history.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/07-credit-terms-and-settlement/70-apex-credit-terms-and-agreed-supplier-payment-due-date.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/07-credit-terms-and-settlement/71-apex-credit-delivery-clearance-before-any-payment.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/07-credit-terms-and-settlement/72-apex-credit-supplier-delivery-route-schedule-and-quantities.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/07-credit-terms-and-settlement/73-apex-credit-scheduled-delivery-and-dispatch-action.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/07-credit-terms-and-settlement/74-apex-credit-site-receiving-and-accepted-material-quantities.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/07-credit-terms-and-settlement/75-apex-credit-received-material-quantities-and-stock-posting.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/07-credit-terms-and-settlement/76-apex-credit-generated-delivery-receipt-and-signed-evidence.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/07-credit-terms-and-settlement/77-apex-credit-accounting-document-review-and-linked-delivery.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/07-credit-terms-and-settlement/78-finance-credit-payment-coordination-after-delivery.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/07-credit-terms-and-settlement/79-archived-credit-payment-proof-and-first-installment-verification.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/07-credit-terms-and-settlement/80-verified-credit-installment-and-outstanding-balance.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/07-credit-terms-and-settlement/81-settled-credit-balance-and-both-verified-installments.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/08-transfer-delivery-and-evidence/82-scheduling-the-approved-four-piece-stock-transfer.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/08-transfer-delivery-and-evidence/83-stock-transfer-trip-dispatch-from-source-site.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/08-transfer-delivery-and-evidence/84-source-inventory-after-transfer-dispatch-deduction.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/08-transfer-delivery-and-evidence/85-destination-confirmation-of-transferred-glass-clamps.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/08-transfer-delivery-and-evidence/86-posting-four-transferred-glass-clamps-to-destination-stock.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/08-transfer-delivery-and-evidence/87-generated-transfer-receipt-and-signed-receiving-evidence.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/08-transfer-delivery-and-evidence/88-accounting-completed-review-of-stock-transfer-documents.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/08-transfer-delivery-and-evidence/89-destination-stock-combining-purchased-and-transferred-clamps.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/09-management-reports/90-completed-mrf-372-lifecycle-and-linked-purchasing-records.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/09-management-reports/91-management-purchasing-budget-and-workflow-report.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/09-management-reports/92-accounting-document-gaps-after-completed-transactions.png
+?? artifacts/core-business-flow/detailed-screenshots/screenshots/09-management-reports/93-current-site-stock-after-deliveries-transfer-and-usage.png
+?? artifacts/core-business-flow/index.html
+?? artifacts/core-business-flow/manifest.json
+?? artifacts/core-business-flow/screenshots/01-project-budget-and-scope-allocations.png
+?? artifacts/core-business-flow/screenshots/02-material-request-project-and-signatories.png
+?? artifacts/core-business-flow/screenshots/03-requested-material-specifications-and-quantity.png
+?? artifacts/core-business-flow/screenshots/04-supporting-pdf-and-material-request-submission.png
+?? artifacts/core-business-flow/screenshots/05-project-manager-material-request-approval.png
+?? artifacts/core-business-flow/screenshots/06-procurement-check-of-available-site-stock.png
+?? artifacts/core-business-flow/screenshots/07-supplier-quotation-review-and-material-matching.png
+?? artifacts/core-business-flow/screenshots/08-comparison-of-three-supplier-quotations.png
+?? artifacts/core-business-flow/screenshots/09-supplier-comparison-remaining-columns-and-award-choices.png
+?? artifacts/core-business-flow/screenshots/10-saved-supplier-award-and-purchase-quantity.png
+?? artifacts/core-business-flow/screenshots/11-purchase-order-preparation-from-awarded-quotation.png
+?? artifacts/core-business-flow/screenshots/12-accounting-review-of-purchase-order-taxes.png
+?? artifacts/core-business-flow/screenshots/13-accounting-budget-check-and-purchase-order-approval.png
+?? artifacts/core-business-flow/screenshots/14-approved-purchase-order-issuance-to-supplier.png
+?? artifacts/core-business-flow/screenshots/15-finance-coordination-of-supplier-payment.png
+?? artifacts/core-business-flow/screenshots/16-accounting-payment-proof-and-full-payment-verification.png
+?? artifacts/core-business-flow/screenshots/17-verified-full-payment-and-delivery-clearance.png
+?? artifacts/core-business-flow/screenshots/18-supplier-delivery-scheduling.png
+?? artifacts/core-business-flow/screenshots/19-scheduled-delivery-and-dispatch-action.png
+?? artifacts/core-business-flow/screenshots/20-site-receiving-and-accepted-quantities.png
+?? artifacts/core-business-flow/screenshots/21-received-delivery-and-site-stock-posting.png
+?? artifacts/core-business-flow/screenshots/22-completed-accounting-review-of-delivery-documents.png
+?? artifacts/core-business-flow/screenshots/23-site-inventory-usage-and-stock-movement-history.png
+?? artifacts/core-business-flow/screenshots/24-credit-terms-and-agreed-payment-due-date.png
+?? artifacts/core-business-flow/screenshots/25-credit-delivery-clearance-with-an-unpaid-balance.png
+?? artifacts/core-business-flow/screenshots/26-verified-credit-installment-and-remaining-balance.png
+?? artifacts/core-business-flow/screenshots/27-fully-settled-credit-purchase-and-payment-history.png
+?? artifacts/core-business-flow/screenshots/28-matching-source-stock-for-an-interproject-transfer.png
+?? artifacts/core-business-flow/screenshots/29-source-site-review-and-stock-release-approval.png
+?? artifacts/core-business-flow/screenshots/30-scheduling-the-approved-site-stock-transfer.png
+?? artifacts/core-business-flow/screenshots/31-transfer-dispatch-and-source-stock-deduction.png
+?? artifacts/core-business-flow/screenshots/32-destination-receiving-of-transferred-materials.png
+?? artifacts/core-business-flow/screenshots/33-posting-transferred-stock-into-destination-inventory.png
+?? artifacts/core-business-flow/screenshots/34-accounting-review-of-completed-stock-transfer-documents.png
+?? artifacts/core-business-flow/screenshots/35-management-report-of-project-purchasing-and-budgets.png
+?? artifacts/core-business-flow/screenshots/36-management-report-of-current-site-stock.png
+?? artifacts/coverage.json
+?? artifacts/index.html
+?? artifacts/manifest.json
+?? artifacts/route-coverage.json
+?? artifacts/screenshots/01-access/0001-public-account-sign-in-overview-part-01.png
+?? artifacts/screenshots/01-access/0002-public-sign-in-unrecognized-credentials-message-overview-part-01.png
+?? artifacts/screenshots/02-dashboards/0003-site-personnel-operations-dashboard-overview-part-01.png
+?? artifacts/screenshots/02-dashboards/0004-site-personnel-operations-dashboard-mrf-lifecycle-checklist-part-02.png
+?? artifacts/screenshots/02-dashboards/0005-site-personnel-operations-dashboard-waiting-for-your-role-scrolling-details-part-01.png
+?? artifacts/screenshots/02-dashboards/0006-site-personnel-operations-dashboard-waiting-for-your-role-scrolling-details-part-02.png
+?? artifacts/screenshots/02-dashboards/0007-site-personnel-operations-dashboard-waiting-for-your-role-scrolling-details-part-03.png
+?? artifacts/screenshots/02-dashboards/0008-site-personnel-operations-dashboard-waiting-for-your-role-scrolling-details-part-04.png
+?? artifacts/screenshots/02-dashboards/0009-site-personnel-operations-dashboard-waiting-for-your-role-scrolling-details-part-05.png
+?? artifacts/screenshots/02-dashboards/0010-site-personnel-operations-dashboard-mrf-project-and-review-scrolling-details-part-01.png
+?? artifacts/screenshots/02-dashboards/0011-site-personnel-operations-dashboard-mrf-project-and-review-scrolling-details-part-02.png
+?? artifacts/screenshots/02-dashboards/0012-site-personnel-operations-dashboard-mrf-project-and-review-scrolling-details-part-03.png
+?? artifacts/screenshots/02-dashboards/0013-site-personnel-operations-dashboard-mrf-project-and-review-right-hand-columns-part-01.png
+?? artifacts/screenshots/02-dashboards/0014-site-personnel-operations-dashboard-mrf-project-and-review-right-hand-columns-part-02.png
+?? artifacts/screenshots/02-dashboards/0015-site-personnel-operations-dashboard-mrf-project-and-review-right-hand-columns-part-03.png
+?? artifacts/screenshots/02-dashboards/0016-project-manager-operations-dashboard-overview-part-01.png
+?? artifacts/screenshots/02-dashboards/0017-project-manager-operations-dashboard-mrf-lifecycle-checklist-part-02.png
+?? artifacts/screenshots/02-dashboards/0018-project-manager-operations-dashboard-waiting-for-your-role-scrolling-details-part-01.png
+?? artifacts/screenshots/02-dashboards/0019-project-manager-operations-dashboard-waiting-for-your-role-scrolling-details-part-02.png
+?? artifacts/screenshots/02-dashboards/0020-project-manager-operations-dashboard-mrf-project-and-review-scrolling-details-part-01.png
+?? artifacts/screenshots/02-dashboards/0021-project-manager-operations-dashboard-mrf-project-and-review-scrolling-details-part-02.png
+?? artifacts/screenshots/02-dashboards/0022-project-manager-operations-dashboard-mrf-project-and-review-scrolling-details-part-03.png
+?? artifacts/screenshots/02-dashboards/0023-project-manager-operations-dashboard-mrf-project-and-review-right-hand-columns-part-01.png
+?? artifacts/screenshots/02-dashboards/0024-project-manager-operations-dashboard-mrf-project-and-review-right-hand-columns-part-02.png
+?? artifacts/screenshots/02-dashboards/0025-project-manager-operations-dashboard-mrf-project-and-review-right-hand-columns-part-03.png
+?? artifacts/screenshots/02-dashboards/0026-procurement-operations-dashboard-overview-part-01.png
+?? artifacts/screenshots/02-dashboards/0027-procurement-operations-dashboard-mrf-lifecycle-checklist-part-02.png
+?? artifacts/screenshots/02-dashboards/0028-procurement-operations-dashboard-waiting-for-your-role-scrolling-details-part-01.png
+?? artifacts/screenshots/02-dashboards/0029-procurement-operations-dashboard-waiting-for-your-role-scrolling-details-part-02.png
+?? artifacts/screenshots/02-dashboards/0030-procurement-operations-dashboard-waiting-for-your-role-scrolling-details-part-03.png
+?? artifacts/screenshots/02-dashboards/0031-procurement-operations-dashboard-mrf-project-and-review-scrolling-details-part-01.png
+?? artifacts/screenshots/02-dashboards/0032-procurement-operations-dashboard-mrf-project-and-review-scrolling-details-part-02.png
+?? artifacts/screenshots/02-dashboards/0033-procurement-operations-dashboard-mrf-project-and-review-scrolling-details-part-03.png
+?? artifacts/screenshots/02-dashboards/0034-procurement-operations-dashboard-mrf-project-and-review-right-hand-columns-part-01.png
+?? artifacts/screenshots/02-dashboards/0035-procurement-operations-dashboard-mrf-project-and-review-right-hand-columns-part-02.png
+?? artifacts/screenshots/02-dashboards/0036-procurement-operations-dashboard-mrf-project-and-review-right-hand-columns-part-03.png
+?? artifacts/screenshots/02-dashboards/0037-finance-operations-dashboard-overview-part-01.png
+?? artifacts/screenshots/02-dashboards/0038-finance-operations-dashboard-mrf-lifecycle-checklist-part-02.png
+?? artifacts/screenshots/02-dashboards/0039-finance-operations-dashboard-waiting-for-your-role-scrolling-details-part-01.png
+?? artifacts/screenshots/02-dashboards/0040-finance-operations-dashboard-waiting-for-your-role-scrolling-details-part-02.png
+?? artifacts/screenshots/02-dashboards/0041-finance-operations-dashboard-mrf-project-and-review-scrolling-details-part-01.png
+?? artifacts/screenshots/02-dashboards/0042-finance-operations-dashboard-mrf-project-and-review-scrolling-details-part-02.png
+?? artifacts/screenshots/02-dashboards/0043-finance-operations-dashboard-mrf-project-and-review-scrolling-details-part-03.png
+?? artifacts/screenshots/02-dashboards/0044-finance-operations-dashboard-mrf-project-and-review-right-hand-columns-part-01.png
+?? artifacts/screenshots/02-dashboards/0045-finance-operations-dashboard-mrf-project-and-review-right-hand-columns-part-02.png
+?? artifacts/screenshots/02-dashboards/0046-finance-operations-dashboard-mrf-project-and-review-right-hand-columns-part-03.png
+?? artifacts/screenshots/02-dashboards/0047-logistics-operations-dashboard-overview-part-01.png
+?? artifacts/screenshots/02-dashboards/0048-logistics-operations-dashboard-mrf-lifecycle-checklist-part-02.png
+?? artifacts/screenshots/02-dashboards/0049-logistics-operations-dashboard-waiting-for-your-role-scrolling-details-part-01.png
+?? artifacts/screenshots/02-dashboards/0050-logistics-operations-dashboard-waiting-for-your-role-scrolling-details-part-02.png
+?? artifacts/screenshots/02-dashboards/0051-logistics-operations-dashboard-mrf-project-and-review-scrolling-details-part-01.png
+?? artifacts/screenshots/02-dashboards/0052-logistics-operations-dashboard-mrf-project-and-review-scrolling-details-part-02.png
+?? artifacts/screenshots/02-dashboards/0053-logistics-operations-dashboard-mrf-project-and-review-scrolling-details-part-03.png
+?? artifacts/screenshots/02-dashboards/0054-logistics-operations-dashboard-mrf-project-and-review-right-hand-columns-part-01.png
+?? artifacts/screenshots/02-dashboards/0055-logistics-operations-dashboard-mrf-project-and-review-right-hand-columns-part-02.png
+?? artifacts/screenshots/02-dashboards/0056-logistics-operations-dashboard-mrf-project-and-review-right-hand-columns-part-03.png
+?? artifacts/screenshots/02-dashboards/0057-accounting-operations-dashboard-overview-part-01.png
+?? artifacts/screenshots/02-dashboards/0058-accounting-operations-dashboard-mrf-lifecycle-checklist-part-02.png
+?? artifacts/screenshots/02-dashboards/0059-accounting-operations-dashboard-waiting-for-your-role-scrolling-details-part-01.png
+?? artifacts/screenshots/02-dashboards/0060-accounting-operations-dashboard-waiting-for-your-role-scrolling-details-part-02.png
+?? artifacts/screenshots/02-dashboards/0061-accounting-operations-dashboard-waiting-for-your-role-scrolling-details-part-03.png
+?? artifacts/screenshots/02-dashboards/0062-accounting-operations-dashboard-waiting-for-your-role-scrolling-details-part-04.png
+?? artifacts/screenshots/02-dashboards/0063-accounting-operations-dashboard-waiting-for-your-role-scrolling-details-part-05.png
+?? artifacts/screenshots/02-dashboards/0064-accounting-operations-dashboard-mrf-project-and-review-scrolling-details-part-01.png
+?? artifacts/screenshots/02-dashboards/0065-accounting-operations-dashboard-mrf-project-and-review-scrolling-details-part-02.png
+?? artifacts/screenshots/02-dashboards/0066-accounting-operations-dashboard-mrf-project-and-review-scrolling-details-part-03.png
+?? artifacts/screenshots/02-dashboards/0067-accounting-operations-dashboard-mrf-project-and-review-right-hand-columns-part-01.png
+?? artifacts/screenshots/02-dashboards/0068-accounting-operations-dashboard-mrf-project-and-review-right-hand-columns-part-02.png
+?? artifacts/screenshots/02-dashboards/0069-accounting-operations-dashboard-mrf-project-and-review-right-hand-columns-part-03.png
+?? artifacts/screenshots/02-dashboards/0070-administrator-operations-dashboard-overview-part-01.png
+?? artifacts/screenshots/02-dashboards/0071-administrator-operations-dashboard-mrf-lifecycle-checklist-part-02.png
+?? artifacts/screenshots/02-dashboards/0072-administrator-operations-dashboard-waiting-for-your-role-scrolling-details-part-01.png
+?? artifacts/screenshots/02-dashboards/0073-administrator-operations-dashboard-waiting-for-your-role-scrolling-details-part-02.png
+?? artifacts/screenshots/02-dashboards/0074-administrator-operations-dashboard-mrf-project-and-review-scrolling-details-part-01.png
+?? artifacts/screenshots/02-dashboards/0075-administrator-operations-dashboard-mrf-project-and-review-scrolling-details-part-02.png
+?? artifacts/screenshots/02-dashboards/0076-administrator-operations-dashboard-mrf-project-and-review-scrolling-details-part-03.png
+?? artifacts/screenshots/02-dashboards/0077-administrator-operations-dashboard-mrf-project-and-review-right-hand-columns-part-01.png
+?? artifacts/screenshots/02-dashboards/0078-administrator-operations-dashboard-mrf-project-and-review-right-hand-columns-part-02.png
+?? artifacts/screenshots/02-dashboards/0079-administrator-operations-dashboard-mrf-project-and-review-right-hand-columns-part-03.png
+?? artifacts/screenshots/02-dashboards/0080-administrator-account-details-and-role-switching-dialog-overview-part-01.png
+?? artifacts/screenshots/03-projects/0478-project-manager-project-directory-with-budgets-and-management-actions-overview-part-01.png
+?? artifacts/screenshots/03-projects/0479-project-manager-project-directory-with-budgets-and-management-actions-continued-page-details-part-02.png
+?? artifacts/screenshots/03-projects/0480-project-manager-new-project-and-site-form-overview-part-01.png
+?? artifacts/screenshots/03-projects/0481-project-manager-new-project-and-site-form-continued-page-details-part-02.png
+?? artifacts/screenshots/03-projects/0482-project-manager-project-details-budgets-scopes-stock-and-document-archive-overview-part-01.png
+?? artifacts/screenshots/03-projects/0483-project-manager-project-details-budgets-scopes-stock-and-document-archive-mrf-lifecycle-checklist-part-02.png
+?? artifacts/screenshots/03-projects/0484-project-manager-project-details-budgets-scopes-stock-and-document-archive-stock-on-hand-part-03.png
+?? artifacts/screenshots/03-projects/0485-project-manager-project-details-budgets-scopes-stock-and-document-archive-project-documents-part-04.png
+?? artifacts/screenshots/03-projects/0486-project-manager-project-details-budgets-scopes-stock-and-document-archive-project-documents-part-05.png
+?? artifacts/screenshots/03-projects/0487-project-manager-project-details-budgets-scopes-stock-and-document-archive-mrf-project-and-review-right-hand-columns-part-01.png
+?? artifacts/screenshots/03-projects/0488-project-manager-project-details-budgets-scopes-stock-and-document-archive-material-and-unit-scrolling-details-part-01.png
+?? artifacts/screenshots/03-projects/0489-project-manager-project-details-budgets-scopes-stock-and-document-archive-material-and-unit-scrolling-details-part-02.png
+?? artifacts/screenshots/03-projects/0490-project-manager-project-details-budgets-scopes-stock-and-document-archive-document-name-and-file-type-scrolling-details-part-01.png
+?? artifacts/screenshots/03-projects/0491-project-manager-project-details-budgets-scopes-stock-and-document-archive-document-name-and-file-type-scrolling-details-part-02.png
+?? artifacts/screenshots/03-projects/0492-project-manager-project-settings-project-dialog-overview-part-01.png
+?? artifacts/screenshots/03-projects/0493-project-manager-project-settings-documents-dialog-overview-part-01.png
+?? artifacts/screenshots/03-projects/0494-project-manager-project-settings-documents-pasig-community-health-center-scrolling-details-part-01.png
+?? artifacts/screenshots/03-projects/0495-project-manager-project-settings-documents-pasig-community-health-center-scrolling-details-part-02.png
+?? artifacts/screenshots/03-projects/0496-project-manager-project-settings-documents-document-name-and-file-type-scrolling-details-part-01.png
+?? artifacts/screenshots/03-projects/0497-project-manager-project-settings-documents-document-name-and-file-type-scrolling-details-part-02.png
+?? artifacts/screenshots/03-projects/0498-project-manager-project-settings-scopes-dialog-overview-part-01.png
+?? artifacts/screenshots/03-projects/0499-project-manager-project-settings-scopes-pasig-community-health-center-scrolling-details-part-01.png
+?? artifacts/screenshots/03-projects/0500-project-manager-project-settings-scopes-pasig-community-health-center-scrolling-details-part-02.png
+?? artifacts/screenshots/03-projects/0501-project-manager-scope-of-work-budget-allocation-form-dialog-overview-part-01.png
+?? artifacts/screenshots/03-projects/0502-project-manager-scope-of-work-budget-allocation-form-pasig-community-health-center-scrolling-details-part-01.png
+?? artifacts/screenshots/03-projects/0503-project-manager-scope-of-work-budget-allocation-form-pasig-community-health-center-scrolling-details-part-02.png
+?? artifacts/screenshots/03-projects/0504-project-manager-edit-project-details-form-dialog-overview-part-01.png
+?? artifacts/screenshots/03-projects/0505-site-personnel-assigned-project-directory-overview-part-01.png
+?? artifacts/screenshots/03-projects/0506-site-personnel-assigned-project-directory-continued-page-details-part-02.png
+?? artifacts/screenshots/03-projects/0507-site-personnel-assigned-project-details-scopes-and-stock-overview-part-01.png
+?? artifacts/screenshots/03-projects/0508-site-personnel-assigned-project-details-scopes-and-stock-stock-on-hand-part-02.png
+?? artifacts/screenshots/03-projects/0509-site-personnel-assigned-project-details-scopes-and-stock-stock-on-hand-part-03.png
+?? artifacts/screenshots/03-projects/0510-site-personnel-assigned-project-details-scopes-and-stock-mrf-project-and-review-right-hand-columns-part-01.png
+?? artifacts/screenshots/03-projects/0511-site-personnel-assigned-project-details-scopes-and-stock-material-and-unit-scrolling-details-part-01.png
+?? artifacts/screenshots/03-projects/0512-site-personnel-assigned-project-details-scopes-and-stock-material-and-unit-scrolling-details-part-02.png
+?? artifacts/screenshots/04-requests/0111-site-personnel-material-request-register-and-site-actions-overview-part-01.png
+?? artifacts/screenshots/04-requests/0112-site-personnel-material-request-register-and-site-actions-mrf-material-and-project-scrolling-details-part-01.png
+?? artifacts/screenshots/04-requests/0113-site-personnel-material-request-register-and-site-actions-mrf-material-and-project-scrolling-details-part-02.png
+?? artifacts/screenshots/04-requests/0114-site-personnel-new-material-request-details-form-overview-part-01.png
+?? artifacts/screenshots/04-requests/0115-site-personnel-new-material-request-details-form-import-mrf-with-ai-optional-part-02.png
+?? artifacts/screenshots/04-requests/0116-site-personnel-returned-material-request-details-form-overview-part-01.png
+?? artifacts/screenshots/04-requests/0117-site-personnel-returned-material-request-details-form-request-details-part-02.png
+?? artifacts/screenshots/04-requests/0118-site-personnel-material-request-materials-and-specifications-overview-part-01.png
+?? artifacts/screenshots/04-requests/0119-site-personnel-add-requested-material-form-dialog-overview-part-01.png
+?? artifacts/screenshots/04-requests/0120-site-personnel-edit-requested-material-form-dialog-overview-part-01.png
+?? artifacts/screenshots/04-requests/0121-site-personnel-material-request-review-and-supporting-documents-overview-part-01.png
+?? artifacts/screenshots/04-requests/0122-site-personnel-material-request-review-and-supporting-documents-request-summary-and-materials-3-part-02.png
+?? artifacts/screenshots/04-requests/0123-site-personnel-approved-material-request-details-and-lifecycle-overview-part-01.png
+?? artifacts/screenshots/04-requests/0124-site-personnel-approved-material-request-details-and-lifecycle-continued-page-details-part-02.png
+?? artifacts/screenshots/04-requests/0125-site-personnel-approved-material-request-details-and-lifecycle-general-information-and-documents-and-links-part-03.png
+?? artifacts/screenshots/04-requests/0126-site-personnel-approved-material-request-details-and-lifecycle-goods-3-materials-part-04.png
+?? artifacts/screenshots/04-requests/0127-site-personnel-approved-material-request-details-and-lifecycle-goods-3-materials-part-05.png
+?? artifacts/screenshots/04-requests/0128-site-personnel-requested-material-specifications-dialog-overview-part-01.png
+?? artifacts/screenshots/04-requests/0129-site-personnel-material-request-form-print-preview-dialog-overview-part-01.png
+?? artifacts/screenshots/04-requests/0130-site-personnel-material-request-form-print-preview-pdf-document-pages-scrolling-details-part-01.png
+?? artifacts/screenshots/04-requests/0131-site-personnel-material-request-form-print-preview-pdf-document-pages-scrolling-details-part-02.png
+?? artifacts/screenshots/04-requests/0132-project-manager-material-requests-awaiting-project-manager-review-overview-part-01.png
+?? artifacts/screenshots/04-requests/0133-project-manager-material-requests-awaiting-project-manager-review-mrf-material-and-project-scrolling-details-part-01.png
+?? artifacts/screenshots/04-requests/0134-project-manager-material-requests-awaiting-project-manager-review-mrf-material-and-project-scrolling-details-part-02.png
+?? artifacts/screenshots/04-requests/0135-project-manager-submitted-material-request-approval-review-overview-part-01.png
+?? artifacts/screenshots/04-requests/0136-project-manager-submitted-material-request-approval-review-general-information-and-documents-and-links-part-02.png
+?? artifacts/screenshots/04-requests/0137-project-manager-submitted-material-request-approval-review-goods-3-materials-part-03.png
+?? artifacts/screenshots/04-requests/0138-project-manager-return-material-request-for-correction-overview-part-01.png
+?? artifacts/screenshots/04-requests/0139-project-manager-return-material-request-for-correction-general-information-and-documents-and-links-part-02.png
+?? artifacts/screenshots/04-requests/0140-project-manager-return-material-request-for-correction-goods-3-materials-and-project-manager-decision-part-03.png
+?? artifacts/screenshots/04-requests/0141-project-manager-rejected-material-request-and-decision-history-overview-part-01.png
+?? artifacts/screenshots/04-requests/0142-project-manager-rejected-material-request-and-decision-history-general-information-and-documents-and-links-part-02.png
+?? artifacts/screenshots/04-requests/0143-project-manager-rejected-material-request-and-decision-history-goods-3-materials-part-03.png
+?? artifacts/screenshots/05-procurement/0144-procurement-check-site-stock-and-source-project-selection-overview-part-01.png
+?? artifacts/screenshots/05-procurement/0145-procurement-check-site-stock-and-source-project-selection-continued-page-details-part-02.png
+?? artifacts/screenshots/05-procurement/0146-procurement-check-site-stock-and-source-project-selection-site-stock-materials-right-hand-columns-part-01.png
+?? artifacts/screenshots/05-procurement/0147-procurement-supplier-quotation-upload-review-and-draft-editor-overview-part-01.png
+?? artifacts/screenshots/05-procurement/0148-procurement-supplier-quotation-upload-review-and-draft-editor-quotation-review-1-quotation-and-airlink-mechanical-trading-part-02.png
+?? artifacts/screenshots/05-procurement/0149-procurement-supplier-quotation-upload-review-and-draft-editor-continued-page-details-part-03.png
+?? artifacts/screenshots/05-procurement/0150-procurement-supplier-quotation-upload-review-and-draft-editor-continued-page-details-part-04.png
+?? artifacts/screenshots/05-procurement/0151-procurement-supplier-quotation-upload-review-and-draft-editor-continued-page-details-part-05.png
+?? artifacts/screenshots/05-procurement/0152-procurement-supplier-quotation-upload-review-and-draft-editor-and-material-right-hand-columns-part-01.png
+?? artifacts/screenshots/05-procurement/0153-procurement-supplier-quotation-upload-review-and-draft-editor-pdf-document-pages-scrolling-details-part-01.png
+?? artifacts/screenshots/05-procurement/0154-procurement-supplier-quotation-upload-review-and-draft-editor-pdf-document-pages-scrolling-details-part-02.png
+?? artifacts/screenshots/05-procurement/0155-procurement-supplier-quotation-upload-review-and-draft-editor-pdf-document-pages-scrolling-details-part-03.png
+?? artifacts/screenshots/05-procurement/0156-procurement-supplier-quotation-material-line-details-dialog-overview-part-01.png
+?? artifacts/screenshots/05-procurement/0157-procurement-supplier-quotation-material-line-details-line-1-concrete-hollow-block-6in-scrolling-details-part-01.png
+?? artifacts/screenshots/05-procurement/0158-procurement-supplier-quotation-source-documents-dialog-overview-part-01.png
+?? artifacts/screenshots/05-procurement/0159-procurement-supplier-quotation-source-documents-pdf-document-pages-scrolling-details-part-01.png
+?? artifacts/screenshots/05-procurement/0160-procurement-supplier-quotation-comparison-financial-summaries-and-awards-overview-part-01.png
+?? artifacts/screenshots/05-procurement/0161-procurement-supplier-quotation-comparison-financial-summaries-and-awards-compare-award-part-02.png
+?? artifacts/screenshots/05-procurement/0162-procurement-supplier-quotation-comparison-financial-summaries-and-awards-continued-page-details-part-03.png
+?? artifacts/screenshots/05-procurement/0163-procurement-supplier-quotation-comparison-financial-summaries-and-awards-continued-page-details-part-04.png
+?? artifacts/screenshots/05-procurement/0164-procurement-supplier-quotation-comparison-financial-summaries-and-awards-supplier-comparison-table-scroll-horizontally-for-more-suppliers-right-hand-columns-part-01.png
+?? artifacts/screenshots/05-procurement/0165-procurement-supplier-material-offer-details-and-compliance-dialog-overview-part-01.png
+?? artifacts/screenshots/05-procurement/0166-procurement-split-material-award-quantity-allocation-dialog-overview-part-01.png
+?? artifacts/screenshots/05-procurement/0167-procurement-supplier-available-material-award-selection-dialog-overview-part-01.png
+?? artifacts/screenshots/05-procurement/0168-procurement-supplier-award-review-before-saving-dialog-overview-part-01.png
+?? artifacts/screenshots/05-procurement/0169-procurement-bid-comparison-report-pdf-preview-dialog-overview-part-01.png
+?? artifacts/screenshots/05-procurement/0170-procurement-bid-comparison-report-pdf-preview-pdf-document-pages-scrolling-details-part-01.png
+?? artifacts/screenshots/05-procurement/0171-procurement-bid-comparison-report-pdf-preview-pdf-document-pages-scrolling-details-part-02.png
+?? artifacts/screenshots/05-procurement/0172-procurement-purchase-order-preparation-from-awarded-quotations-overview-part-01.png
+?? artifacts/screenshots/06-purchase-orders/0173-procurement-purchase-order-register-and-procurement-actions-overview-part-01.png
+?? artifacts/screenshots/06-purchase-orders/0174-procurement-purchase-order-register-and-procurement-actions-po-mrf-and-project-scrolling-details-part-01.png
+?? artifacts/screenshots/06-purchase-orders/0175-procurement-purchase-order-register-and-procurement-actions-po-mrf-and-project-scrolling-details-part-02.png
+?? artifacts/screenshots/06-purchase-orders/0176-procurement-draft-purchase-order-details-and-costing-overview-part-01.png
+?? artifacts/screenshots/06-purchase-orders/0177-procurement-draft-purchase-order-details-and-costing-continued-page-details-part-02.png
+?? artifacts/screenshots/06-purchase-orders/0178-procurement-draft-purchase-order-details-and-costing-recorded-at-and-action-changes-scrolling-details-part-01.png
+?? artifacts/screenshots/06-purchase-orders/0179-procurement-draft-purchase-order-details-and-costing-recorded-at-and-action-changes-scrolling-details-part-02.png
+?? artifacts/screenshots/06-purchase-orders/0180-procurement-draft-purchase-order-details-and-costing-recorded-at-and-action-changes-scrolling-details-part-03.png
+?? artifacts/screenshots/06-purchase-orders/0181-procurement-edit-purchase-order-lines-discounts-and-supplier-terms-overview-part-01.png
+?? artifacts/screenshots/06-purchase-orders/0182-procurement-edit-purchase-order-lines-discounts-and-supplier-terms-continued-page-details-part-02.png
+?? artifacts/screenshots/06-purchase-orders/0183-procurement-edit-purchase-order-lines-discounts-and-supplier-terms-continued-page-details-part-03.png
+?? artifacts/screenshots/06-purchase-orders/0184-procurement-edit-purchase-order-lines-discounts-and-supplier-terms-payable-total-part-04.png
+?? artifacts/screenshots/06-purchase-orders/0185-procurement-approved-purchase-order-supplier-issuance-overview-part-01.png
+?? artifacts/screenshots/06-purchase-orders/0186-procurement-approved-purchase-order-supplier-issuance-supplier-issuance-and-po-document-archive-part-02.png
+?? artifacts/screenshots/06-purchase-orders/0187-procurement-approved-purchase-order-supplier-issuance-continued-page-details-part-03.png
+?? artifacts/screenshots/06-purchase-orders/0188-procurement-approved-purchase-order-supplier-issuance-recorded-at-and-action-changes-scrolling-details-part-01.png
+?? artifacts/screenshots/06-purchase-orders/0189-procurement-approved-purchase-order-supplier-issuance-recorded-at-and-action-changes-scrolling-details-part-02.png
+?? artifacts/screenshots/06-purchase-orders/0190-procurement-approved-purchase-order-supplier-issuance-recorded-at-and-action-changes-scrolling-details-part-03.png
+?? artifacts/screenshots/06-purchase-orders/0191-procurement-purchase-order-print-preview-dialog-overview-part-01.png
+?? artifacts/screenshots/06-purchase-orders/0192-procurement-purchase-order-print-preview-pdf-document-pages-scrolling-details-part-01.png
+?? artifacts/screenshots/06-purchase-orders/0193-procurement-purchase-order-print-preview-pdf-document-pages-scrolling-details-part-02.png
+?? artifacts/screenshots/06-purchase-orders/0194-procurement-purchase-order-print-preview-pdf-document-pages-scrolling-details-part-03.png
+?? artifacts/screenshots/06-purchase-orders/0195-procurement-released-purchase-order-payments-and-delivery-progress-overview-part-01.png
+?? artifacts/screenshots/06-purchase-orders/0196-procurement-released-purchase-order-payments-and-delivery-progress-supplier-issuance-and-po-document-archive-part-02.png
+?? artifacts/screenshots/06-purchase-orders/0197-procurement-released-purchase-order-payments-and-delivery-progress-po-document-archive-part-03.png
+?? artifacts/screenshots/06-purchase-orders/0198-procurement-released-purchase-order-payments-and-delivery-progress-recorded-at-and-action-changes-scrolling-details-part-01.png
+?? artifacts/screenshots/06-purchase-orders/0199-procurement-released-purchase-order-payments-and-delivery-progress-recorded-at-and-action-changes-scrolling-details-part-02.png
+?? artifacts/screenshots/06-purchase-orders/0200-procurement-released-purchase-order-payments-and-delivery-progress-recorded-at-and-action-changes-scrolling-details-part-03.png
+?? artifacts/screenshots/06-purchase-orders/0201-site-personnel-linked-purchase-order-site-personnel-view-overview-part-01.png
+?? artifacts/screenshots/06-purchase-orders/0202-site-personnel-linked-purchase-order-site-personnel-view-supplier-issuance-and-po-document-archive-part-02.png
+?? artifacts/screenshots/06-purchase-orders/0203-site-personnel-linked-purchase-order-site-personnel-view-continued-page-details-part-03.png
+?? artifacts/screenshots/06-purchase-orders/0204-site-personnel-linked-purchase-order-site-personnel-view-continued-page-details-part-04.png
+?? artifacts/screenshots/06-purchase-orders/0205-site-personnel-linked-purchase-order-site-personnel-view-continued-page-details-part-05.png
+?? artifacts/screenshots/06-purchase-orders/0206-site-personnel-linked-purchase-order-site-personnel-view-recorded-at-and-action-changes-scrolling-details-part-01.png
+?? artifacts/screenshots/06-purchase-orders/0207-site-personnel-linked-purchase-order-site-personnel-view-recorded-at-and-action-changes-scrolling-details-part-02.png
+?? artifacts/screenshots/06-purchase-orders/0208-site-personnel-linked-purchase-order-site-personnel-view-recorded-at-and-action-changes-scrolling-details-part-03.png
+?? artifacts/screenshots/07-accounting/0209-accounting-accounting-material-request-and-purchase-order-register-overview-part-01.png
+?? artifacts/screenshots/07-accounting/0210-accounting-accounting-material-request-and-purchase-order-register-stock-transfer-document-review-part-02.png
+?? artifacts/screenshots/07-accounting/0211-accounting-accounting-material-request-and-purchase-order-register-material-requests-and-po-scrolling-details-part-01.png
+?? artifacts/screenshots/07-accounting/0212-accounting-accounting-material-request-and-purchase-order-register-material-requests-and-po-scrolling-details-part-02.png
+?? artifacts/screenshots/07-accounting/0213-accounting-accounting-material-request-and-purchase-order-register-material-requests-and-po-scrolling-details-part-03.png
+?? artifacts/screenshots/07-accounting/0214-accounting-accounting-expanded-material-request-and-related-purchase-orders-overview-part-01.png
+?? artifacts/screenshots/07-accounting/0215-accounting-accounting-expanded-material-request-and-related-purchase-orders-stock-transfer-document-review-part-02.png
+?? artifacts/screenshots/07-accounting/0216-accounting-purchase-order-financial-review-and-approval-overview-part-01.png
+?? artifacts/screenshots/07-accounting/0217-accounting-purchase-order-financial-review-and-approval-continued-page-details-part-02.png
+?? artifacts/screenshots/07-accounting/0218-accounting-purchase-order-financial-review-and-approval-continued-page-details-part-03.png
+?? artifacts/screenshots/07-accounting/0219-accounting-purchase-order-financial-review-and-approval-continued-page-details-part-04.png
+?? artifacts/screenshots/07-accounting/0220-accounting-purchase-order-financial-review-and-approval-payment-requests-and-document-review-part-05.png
+?? artifacts/screenshots/07-accounting/0221-accounting-purchase-order-financial-review-and-approval-accounting-documents-part-06.png
+?? artifacts/screenshots/07-accounting/0222-accounting-held-purchase-order-and-review-reason-overview-part-01.png
+?? artifacts/screenshots/07-accounting/0223-accounting-held-purchase-order-and-review-reason-continued-page-details-part-02.png
+?? artifacts/screenshots/07-accounting/0224-accounting-held-purchase-order-and-review-reason-continued-page-details-part-03.png
+?? artifacts/screenshots/07-accounting/0225-accounting-held-purchase-order-and-review-reason-continued-page-details-part-04.png
+?? artifacts/screenshots/07-accounting/0226-accounting-held-purchase-order-and-review-reason-payment-requests-and-document-review-part-05.png
+?? artifacts/screenshots/07-accounting/0227-accounting-held-purchase-order-and-review-reason-accounting-documents-part-06.png
+?? artifacts/screenshots/07-accounting/0228-accounting-full-disbursement-payment-proof-and-verification-overview-part-01.png
+?? artifacts/screenshots/07-accounting/0229-accounting-full-disbursement-payment-proof-and-verification-finance-coordination-and-external-payment-verification-part-02.png
+?? artifacts/screenshots/07-accounting/0230-accounting-full-disbursement-payment-proof-and-verification-document-review-and-linked-delivery-records-part-03.png
+?? artifacts/screenshots/07-accounting/0231-accounting-full-disbursement-payment-proof-and-verification-accounting-documents-part-04.png
+?? artifacts/screenshots/07-accounting/0232-accounting-full-disbursement-payment-proof-and-verification-continued-page-details-part-05.png
+?? artifacts/screenshots/07-accounting/0233-accounting-full-disbursement-payment-proof-and-verification-recorded-at-and-action-changes-scrolling-details-part-01.png
+?? artifacts/screenshots/07-accounting/0234-accounting-full-disbursement-payment-proof-and-verification-recorded-at-and-action-changes-scrolling-details-part-02.png
+?? artifacts/screenshots/07-accounting/0235-accounting-verified-full-payment-and-delivery-clearance-overview-part-01.png
+?? artifacts/screenshots/07-accounting/0236-accounting-verified-full-payment-and-delivery-clearance-finance-coordination-and-external-payment-verification-part-02.png
+?? artifacts/screenshots/07-accounting/0237-accounting-verified-full-payment-and-delivery-clearance-document-review-and-linked-delivery-records-part-03.png
+?? artifacts/screenshots/07-accounting/0238-accounting-verified-full-payment-and-delivery-clearance-accounting-documents-part-04.png
+?? artifacts/screenshots/07-accounting/0239-accounting-verified-full-payment-and-delivery-clearance-continued-page-details-part-05.png
+?? artifacts/screenshots/07-accounting/0240-accounting-verified-full-payment-and-delivery-clearance-recorded-at-and-action-changes-scrolling-details-part-01.png
+?? artifacts/screenshots/07-accounting/0241-accounting-verified-full-payment-and-delivery-clearance-recorded-at-and-action-changes-scrolling-details-part-02.png
+?? artifacts/screenshots/07-accounting/0242-accounting-credit-terms-outstanding-balance-and-payment-verification-overview-part-01.png
+?? artifacts/screenshots/07-accounting/0243-accounting-credit-terms-outstanding-balance-and-payment-verification-finance-coordination-and-credit-terms-payment-part-02.png
+?? artifacts/screenshots/07-accounting/0244-accounting-credit-terms-outstanding-balance-and-payment-verification-document-review-and-linked-delivery-records-part-03.png
+?? artifacts/screenshots/07-accounting/0245-accounting-credit-terms-outstanding-balance-and-payment-verification-accounting-documents-part-04.png
+?? artifacts/screenshots/07-accounting/0246-accounting-credit-terms-outstanding-balance-and-payment-verification-continued-page-details-part-05.png
+?? artifacts/screenshots/07-accounting/0247-accounting-credit-terms-outstanding-balance-and-payment-verification-recorded-at-and-action-changes-scrolling-details-part-01.png
+?? artifacts/screenshots/07-accounting/0248-accounting-credit-terms-outstanding-balance-and-payment-verification-recorded-at-and-action-changes-scrolling-details-part-02.png
+?? artifacts/screenshots/07-accounting/0249-accounting-credit-installment-verification-and-payment-history-overview-part-01.png
+?? artifacts/screenshots/07-accounting/0250-accounting-credit-installment-verification-and-payment-history-finance-coordination-and-credit-terms-payment-part-02.png
+?? artifacts/screenshots/07-accounting/0251-accounting-credit-installment-verification-and-payment-history-continued-page-details-part-03.png
+?? artifacts/screenshots/07-accounting/0252-accounting-credit-installment-verification-and-payment-history-document-review-and-linked-delivery-records-part-04.png
+?? artifacts/screenshots/07-accounting/0253-accounting-credit-installment-verification-and-payment-history-continued-page-details-part-05.png
+?? artifacts/screenshots/07-accounting/0254-accounting-credit-installment-verification-and-payment-history-continued-page-details-part-06.png
+?? artifacts/screenshots/07-accounting/0255-accounting-credit-installment-verification-and-payment-history-recorded-at-and-action-changes-scrolling-details-part-01.png
+?? artifacts/screenshots/07-accounting/0256-accounting-credit-installment-verification-and-payment-history-recorded-at-and-action-changes-scrolling-details-part-02.png
+?? artifacts/screenshots/07-accounting/0257-accounting-credit-installment-verification-and-payment-history-recorded-at-and-action-changes-scrolling-details-part-03.png
+?? artifacts/screenshots/07-accounting/0258-accounting-completed-accounting-documents-and-delivery-evidence-overview-part-01.png
+?? artifacts/screenshots/07-accounting/0259-accounting-completed-accounting-documents-and-delivery-evidence-finance-coordination-and-external-payment-verification-part-02.png
+?? artifacts/screenshots/07-accounting/0260-accounting-completed-accounting-documents-and-delivery-evidence-document-review-and-linked-delivery-records-part-03.png
+?? artifacts/screenshots/07-accounting/0261-accounting-completed-accounting-documents-and-delivery-evidence-continued-page-details-part-04.png
+?? artifacts/screenshots/07-accounting/0262-accounting-completed-accounting-documents-and-delivery-evidence-continued-page-details-part-05.png
+?? artifacts/screenshots/07-accounting/0263-accounting-completed-accounting-documents-and-delivery-evidence-continued-page-details-part-06.png
+?? artifacts/screenshots/07-accounting/0264-accounting-completed-accounting-documents-and-delivery-evidence-continued-page-details-part-07.png
+?? artifacts/screenshots/07-accounting/0265-accounting-completed-accounting-documents-and-delivery-evidence-recorded-at-and-action-changes-scrolling-details-part-01.png
+?? artifacts/screenshots/07-accounting/0266-accounting-completed-accounting-documents-and-delivery-evidence-recorded-at-and-action-changes-scrolling-details-part-02.png
+?? artifacts/screenshots/07-accounting/0267-accounting-completed-accounting-documents-and-delivery-evidence-recorded-at-and-action-changes-scrolling-details-part-03.png
+?? artifacts/screenshots/07-accounting/0268-accounting-purchase-order-hold-decision-and-reason-overview-part-01.png
+?? artifacts/screenshots/07-accounting/0269-accounting-purchase-order-hold-decision-and-reason-continued-page-details-part-02.png
+?? artifacts/screenshots/07-accounting/0270-accounting-purchase-order-hold-decision-and-reason-payment-requests-and-document-review-part-03.png
+?? artifacts/screenshots/07-accounting/0271-accounting-purchase-order-hold-decision-and-reason-document-review-and-disbursement-history-part-04.png
+?? artifacts/screenshots/08-finance/0272-finance-active-supplier-payment-coordination-queue-overview-part-01.png
+?? artifacts/screenshots/08-finance/0273-finance-active-supplier-payment-coordination-queue-po-supplier-and-project-scrolling-details-part-01.png
+?? artifacts/screenshots/08-finance/0274-finance-active-supplier-payment-coordination-queue-po-supplier-and-project-scrolling-details-part-02.png
+?? artifacts/screenshots/08-finance/0275-finance-settled-supplier-payment-coordination-overview-part-01.png
+?? artifacts/screenshots/08-finance/0276-finance-settled-supplier-payment-coordination-po-supplier-and-project-scrolling-details-part-01.png
+?? artifacts/screenshots/08-finance/0277-finance-settled-supplier-payment-coordination-po-supplier-and-project-scrolling-details-part-02.png
+?? artifacts/screenshots/08-finance/0278-finance-legacy-payment-requests-and-filters-overview-part-01.png
+?? artifacts/screenshots/08-finance/0279-finance-full-disbursement-payment-coordination-and-status-update-overview-part-01.png
+?? artifacts/screenshots/08-finance/0280-finance-full-disbursement-payment-coordination-and-status-update-update-coordination-part-02.png
+?? artifacts/screenshots/08-finance/0281-finance-full-disbursement-payment-coordination-and-status-update-continued-page-details-part-03.png
+?? artifacts/screenshots/08-finance/0282-finance-full-disbursement-payment-coordination-and-status-update-recorded-at-and-action-changes-scrolling-details-part-01.png
+?? artifacts/screenshots/08-finance/0283-finance-full-disbursement-payment-coordination-and-status-update-recorded-at-and-action-changes-scrolling-details-part-02.png
+?? artifacts/screenshots/08-finance/0284-finance-full-disbursement-payment-coordination-and-status-update-recorded-at-and-action-changes-scrolling-details-part-03.png
+?? artifacts/screenshots/08-finance/0285-finance-credit-terms-payment-coordination-and-balance-overview-part-01.png
+?? artifacts/screenshots/08-finance/0286-finance-credit-terms-payment-coordination-and-balance-update-coordination-part-02.png
+?? artifacts/screenshots/08-finance/0287-finance-credit-terms-payment-coordination-and-balance-continued-page-details-part-03.png
+?? artifacts/screenshots/08-finance/0288-finance-credit-terms-payment-coordination-and-balance-recorded-at-and-action-changes-scrolling-details-part-01.png
+?? artifacts/screenshots/08-finance/0289-finance-credit-terms-payment-coordination-and-balance-recorded-at-and-action-changes-scrolling-details-part-02.png
+?? artifacts/screenshots/08-finance/0290-finance-credit-terms-payment-coordination-and-balance-recorded-at-and-action-changes-scrolling-details-part-03.png
+?? artifacts/screenshots/09-deliveries/0291-logistics-delivery-batch-register-and-site-stock-transfers-overview-part-01.png
+?? artifacts/screenshots/09-deliveries/0292-logistics-delivery-batch-register-and-site-stock-transfers-continued-page-details-part-02.png
+?? artifacts/screenshots/09-deliveries/0293-logistics-delivery-batch-register-and-site-stock-transfers-batch-po-mrf-and-project-supplier-scrolling-details-part-01.png
+?? artifacts/screenshots/09-deliveries/0294-logistics-delivery-batch-register-and-site-stock-transfers-batch-po-mrf-and-project-supplier-scrolling-details-part-02.png
+?? artifacts/screenshots/09-deliveries/0295-logistics-delivery-batch-register-and-site-stock-transfers-batch-po-mrf-and-project-supplier-scrolling-details-part-03.png
+?? artifacts/screenshots/09-deliveries/0296-logistics-delivery-batch-register-and-site-stock-transfers-batch-po-mrf-and-project-supplier-scrolling-details-part-04.png
+?? artifacts/screenshots/09-deliveries/0297-logistics-scheduled-delivery-details-and-dispatch-overview-part-01.png
+?? artifacts/screenshots/09-deliveries/0298-logistics-scheduled-delivery-details-and-dispatch-continued-page-details-part-02.png
+?? artifacts/screenshots/09-deliveries/0299-logistics-warehouse-receipt-and-onward-delivery-progress-overview-part-01.png
+?? artifacts/screenshots/09-deliveries/0300-logistics-warehouse-receipt-and-onward-delivery-progress-delivery-documents-part-02.png
+?? artifacts/screenshots/09-deliveries/0301-logistics-warehouse-receipt-and-onward-delivery-progress-delivery-documents-part-03.png
+?? artifacts/screenshots/09-deliveries/0302-logistics-schedule-warehouse-to-site-onward-delivery-overview-part-01.png
+?? artifacts/screenshots/09-deliveries/0303-site-personnel-delivery-site-receiving-quantities-and-shortage-notes-overview-part-01.png
+?? artifacts/screenshots/09-deliveries/0304-site-personnel-delivery-site-receiving-quantities-and-shortage-notes-confirm-received-quantities-part-02.png
+?? artifacts/screenshots/09-deliveries/0305-site-personnel-received-delivery-site-stock-posting-preview-overview-part-01.png
+?? artifacts/screenshots/09-deliveries/0306-site-personnel-received-delivery-site-stock-posting-preview-increase-site-stock-and-delivery-documents-part-02.png
+?? artifacts/screenshots/09-deliveries/0307-site-personnel-received-delivery-site-stock-posting-preview-continued-page-details-part-03.png
+?? artifacts/screenshots/09-deliveries/0308-site-personnel-posted-delivery-receipt-evidence-and-stock-history-overview-part-01.png
+?? artifacts/screenshots/09-deliveries/0309-site-personnel-posted-delivery-receipt-evidence-and-stock-history-delivery-documents-part-02.png
+?? artifacts/screenshots/09-deliveries/0310-site-personnel-posted-delivery-receipt-evidence-and-stock-history-continued-page-details-part-03.png
+?? artifacts/screenshots/09-deliveries/0311-site-personnel-delivery-receipt-print-preview-dialog-overview-part-01.png
+?? artifacts/screenshots/09-deliveries/0312-site-personnel-delivery-receipt-print-preview-pdf-document-pages-scrolling-details-part-01.png
+?? artifacts/screenshots/09-deliveries/0313-site-personnel-delivery-receipt-print-preview-pdf-document-pages-scrolling-details-part-02.png
+?? artifacts/screenshots/09-deliveries/0314-site-personnel-delivery-receipt-print-preview-pdf-document-pages-scrolling-details-part-03.png
+?? artifacts/screenshots/10-inventory/0315-site-personnel-site-inventory-balances-availability-and-material-register-overview-part-01.png
+?? artifacts/screenshots/10-inventory/0316-site-personnel-site-inventory-balances-availability-and-material-register-continued-page-details-part-02.png
+?? artifacts/screenshots/10-inventory/0317-site-personnel-site-inventory-balances-availability-and-material-register-material-and-project-scrolling-details-part-01.png
+?? artifacts/screenshots/10-inventory/0318-site-personnel-site-inventory-balances-availability-and-material-register-material-and-project-scrolling-details-part-02.png
+?? artifacts/screenshots/10-inventory/0319-site-personnel-inventory-material-balance-and-movement-details-dialog-overview-part-01.png
+?? artifacts/screenshots/10-inventory/0320-site-personnel-inventory-record-movement-history-and-site-usage-overview-part-01.png
+?? artifacts/screenshots/10-inventory/0321-site-personnel-inventory-record-movement-history-and-site-usage-date-and-type-right-hand-columns-part-01.png
+?? artifacts/screenshots/10-inventory/0322-accounting-inventory-stock-adjustment-and-audit-history-overview-part-01.png
+?? artifacts/screenshots/10-inventory/0323-accounting-inventory-stock-adjustment-and-audit-history-date-and-type-right-hand-columns-part-01.png
+?? artifacts/screenshots/11-stock-transfers/0324-site-personnel-site-stock-transfer-source-release-review-overview-part-01.png
+?? artifacts/screenshots/11-stock-transfers/0325-site-personnel-site-stock-transfer-source-release-review-transfer-history-part-02.png
+?? artifacts/screenshots/11-stock-transfers/0326-logistics-site-stock-transfer-trip-scheduling-and-dispatch-overview-part-01.png
+?? artifacts/screenshots/11-stock-transfers/0327-logistics-site-stock-transfer-trip-scheduling-and-dispatch-transfer-history-part-02.png
+?? artifacts/screenshots/11-stock-transfers/0328-logistics-site-stock-transfer-trip-scheduling-and-dispatch-transfer-history-part-03.png
+?? artifacts/screenshots/11-stock-transfers/0329-site-personnel-site-stock-transfer-destination-receiving-overview-part-01.png
+?? artifacts/screenshots/11-stock-transfers/0330-site-personnel-site-stock-transfer-destination-receiving-transfer-history-part-02.png
+?? artifacts/screenshots/11-stock-transfers/0331-site-personnel-site-stock-transfer-destination-receiving-transfer-history-part-03.png
+?? artifacts/screenshots/11-stock-transfers/0332-site-personnel-completed-site-stock-transfer-receipt-and-evidence-overview-part-01.png
+?? artifacts/screenshots/11-stock-transfers/0333-site-personnel-completed-site-stock-transfer-receipt-and-evidence-transfer-history-part-02.png
+?? artifacts/screenshots/11-stock-transfers/0334-site-personnel-completed-site-stock-transfer-receipt-and-evidence-transfer-history-part-03.png
+?? artifacts/screenshots/11-stock-transfers/0335-site-personnel-completed-site-stock-transfer-receipt-and-evidence-recorded-at-and-action-changes-scrolling-details-part-01.png
+?? artifacts/screenshots/11-stock-transfers/0336-site-personnel-completed-site-stock-transfer-receipt-and-evidence-recorded-at-and-action-changes-scrolling-details-part-02.png
+?? artifacts/screenshots/11-stock-transfers/0337-site-personnel-site-stock-transfer-receipt-print-preview-dialog-overview-part-01.png
+?? artifacts/screenshots/11-stock-transfers/0338-site-personnel-site-stock-transfer-receipt-print-preview-pdf-document-pages-scrolling-details-part-01.png
+?? artifacts/screenshots/11-stock-transfers/0339-site-personnel-site-stock-transfer-receipt-print-preview-pdf-document-pages-scrolling-details-part-02.png
+?? artifacts/screenshots/11-stock-transfers/0340-site-personnel-site-stock-transfer-receipt-print-preview-pdf-document-pages-scrolling-details-part-03.png
+?? artifacts/screenshots/11-stock-transfers/0341-site-personnel-site-stock-transfer-receipt-print-preview-pdf-document-pages-scrolling-details-part-04.png
+?? artifacts/screenshots/11-stock-transfers/0342-accounting-site-stock-transfer-accounting-document-review-overview-part-01.png
+?? artifacts/screenshots/11-stock-transfers/0343-accounting-site-stock-transfer-accounting-document-review-accounting-document-review-part-02.png
+?? artifacts/screenshots/11-stock-transfers/0344-accounting-site-stock-transfer-accounting-document-review-transfer-history-part-03.png
+?? artifacts/screenshots/11-stock-transfers/0345-accounting-site-stock-transfer-accounting-document-review-transfer-history-part-04.png
+?? artifacts/screenshots/11-stock-transfers/0346-accounting-site-stock-transfer-accounting-document-review-recorded-at-and-action-changes-scrolling-details-part-01.png
+?? artifacts/screenshots/11-stock-transfers/0347-accounting-site-stock-transfer-accounting-document-review-recorded-at-and-action-changes-scrolling-details-part-02.png
+?? artifacts/screenshots/12-suppliers-and-reports/0348-procurement-supplier-directory-contact-and-accreditation-overview-part-01.png
+?? artifacts/screenshots/12-suppliers-and-reports/0349-procurement-supplier-directory-contact-and-accreditation-continued-page-details-part-02.png
+?? artifacts/screenshots/12-suppliers-and-reports/0350-procurement-supplier-profile-contact-accreditation-and-quotation-history-dialog-overview-part-01.png
+?? artifacts/screenshots/12-suppliers-and-reports/0351-project-manager-management-reports-budgets-workflow-credit-documents-and-inventory-overview-part-01.png
+?? artifacts/screenshots/12-suppliers-and-reports/0352-project-manager-management-reports-budgets-workflow-credit-documents-and-inventory-finance-payment-coordination-part-02.png
+?? artifacts/screenshots/12-suppliers-and-reports/0353-project-manager-management-reports-budgets-workflow-credit-documents-and-inventory-credit-payment-balances-part-03.png
+?? artifacts/screenshots/12-suppliers-and-reports/0354-project-manager-reports-document-gaps-table-overview.png
+?? artifacts/screenshots/12-suppliers-and-reports/0355-project-manager-reports-document-gaps-table-remaining-rows.png
+?? artifacts/screenshots/12-suppliers-and-reports/0356-project-manager-reports-current-site-stock-table-overview.png
+?? artifacts/screenshots/12-suppliers-and-reports/0357-project-manager-reports-current-site-stock-table-remaining-rows.png
+?? artifacts/screenshots/12-suppliers-and-reports/0358-project-manager-reports-current-site-stock-table-pagination.png
+?? artifacts/screenshots/12-suppliers-and-reports/0359-project-manager-management-reports-budgets-workflow-credit-documents-and-inventory-exceptions-and-open-deliveries-part-09.png
+?? artifacts/screenshots/12-suppliers-and-reports/0360-project-manager-management-reports-budgets-workflow-credit-documents-and-inventory-exceptions-and-open-deliveries-part-10.png
+?? artifacts/screenshots/12-suppliers-and-reports/0361-project-manager-management-reports-budgets-workflow-credit-documents-and-inventory-project-and-allocated-right-hand-columns-part-01.png
+?? artifacts/screenshots/12-suppliers-and-reports/0362-project-manager-management-reports-budgets-workflow-credit-documents-and-inventory-po-supplier-and-project-scrolling-details-part-01.png
+?? artifacts/screenshots/12-suppliers-and-reports/0363-project-manager-management-reports-budgets-workflow-credit-documents-and-inventory-po-supplier-and-project-scrolling-details-part-02.png
+?? artifacts/screenshots/12-suppliers-and-reports/0364-project-manager-management-reports-budgets-workflow-credit-documents-and-inventory-po-supplier-and-delivery-scrolling-details-part-01.png
+?? artifacts/screenshots/12-suppliers-and-reports/0365-project-manager-management-reports-budgets-workflow-credit-documents-and-inventory-po-supplier-and-delivery-scrolling-details-part-02.png
+?? artifacts/screenshots/12-suppliers-and-reports/0366-project-manager-management-report-settled-payment-coordination-overview-part-01.png
+?? artifacts/screenshots/12-suppliers-and-reports/0367-project-manager-management-report-settled-payment-coordination-finance-payment-coordination-part-02.png
+?? artifacts/screenshots/12-suppliers-and-reports/0368-project-manager-management-report-settled-payment-coordination-credit-payment-balances-part-03.png
+?? artifacts/screenshots/12-suppliers-and-reports/0369-project-manager-management-report-settled-payment-coordination-document-gaps-and-current-site-stock-part-04.png
+?? artifacts/screenshots/12-suppliers-and-reports/0370-project-manager-management-report-settled-payment-coordination-continued-page-details-part-05.png
+?? artifacts/screenshots/12-suppliers-and-reports/0371-project-manager-management-report-settled-payment-coordination-continued-page-details-part-06.png
+?? artifacts/screenshots/12-suppliers-and-reports/0372-project-manager-management-report-settled-payment-coordination-continued-page-details-part-07.png
+?? artifacts/screenshots/12-suppliers-and-reports/0373-project-manager-management-report-settled-payment-coordination-continued-page-details-part-08.png
+?? artifacts/screenshots/12-suppliers-and-reports/0374-project-manager-management-report-settled-payment-coordination-exceptions-and-open-deliveries-part-09.png
+?? artifacts/screenshots/12-suppliers-and-reports/0375-project-manager-management-report-settled-payment-coordination-exceptions-and-open-deliveries-part-10.png
+?? artifacts/screenshots/12-suppliers-and-reports/0376-project-manager-management-report-settled-payment-coordination-project-and-allocated-right-hand-columns-part-01.png
+?? artifacts/screenshots/12-suppliers-and-reports/0377-project-manager-management-report-settled-payment-coordination-po-supplier-and-project-scrolling-details-part-01.png
+?? artifacts/screenshots/12-suppliers-and-reports/0378-project-manager-management-report-settled-payment-coordination-po-supplier-and-project-scrolling-details-part-02.png
+?? artifacts/screenshots/12-suppliers-and-reports/0379-project-manager-management-report-settled-payment-coordination-po-supplier-and-delivery-scrolling-details-part-01.png
+?? artifacts/screenshots/12-suppliers-and-reports/0380-project-manager-management-report-settled-payment-coordination-po-supplier-and-delivery-scrolling-details-part-02.png
+?? artifacts/screenshots/13-administration/0526-administrator-administration-project-directory-overview-part-01.png
+?? artifacts/screenshots/13-administration/0527-administrator-administration-project-directory-continued-page-details-part-02.png
+?? artifacts/screenshots/13-administration/0528-administrator-administration-workspace-activity-and-audit-filters-overview-part-01.png
+?? artifacts/screenshots/13-administration/0529-administrator-administration-workspace-activity-and-audit-filters-continued-page-details-part-02.png
+?? artifacts/screenshots/13-administration/0530-administrator-administration-workspace-activity-and-audit-filters-recorded-at-and-action-scrolling-details-part-01.png
+?? artifacts/screenshots/13-administration/0531-administrator-administration-workspace-activity-and-audit-filters-recorded-at-and-action-scrolling-details-part-02.png
+?? artifacts/screenshots/13-administration/0532-administrator-administration-activity-event-details-dialog-overview-part-01.png
+?? artifacts/screenshots/13-administration/0533-administrator-administration-user-accounts-roles-and-status-overview-part-01.png
+?? artifacts/screenshots/13-administration/0534-administrator-administration-user-accounts-roles-and-status-user-management-part-02.png
+?? artifacts/screenshots/13-administration/0535-administrator-add-user-account-role-and-project-assignments-dialog-overview-part-01.png
+?? artifacts/screenshots/13-administration/0536-administrator-add-user-account-role-and-project-assignments-add-user-scrolling-details-part-01.png
+?? artifacts/screenshots/13-administration/0537-administrator-add-user-account-role-and-project-assignments-add-user-scrolling-details-part-02.png
+?? artifacts/screenshots/13-administration/0538-administrator-edit-user-identity-role-and-assigned-projects-dialog-overview-part-01.png
+?? artifacts/screenshots/13-administration/0539-administrator-user-account-password-reset-form-dialog-overview-part-01.png
+?? artifacts/screenshots/14-archived-document-viewer/0394-project-manager-archived-purchase-order-pdf-viewer-and-download-overview-part-01.png
+?? artifacts/screenshots/14-archived-document-viewer/0395-project-manager-archived-purchase-order-pdf-viewer-and-download-pdf-document-pages-scrolling-details-part-01.png
+?? artifacts/screenshots/14-archived-document-viewer/0396-project-manager-archived-purchase-order-pdf-viewer-and-download-pdf-document-pages-scrolling-details-part-02.png
+?? artifacts/screenshots/14-archived-document-viewer/0397-project-manager-archived-purchase-order-pdf-viewer-and-download-pdf-document-pages-scrolling-details-part-03.png
+?? artifacts/screenshots/15-supporting-views/0398-finance-project-directory-shared-budget-view-overview-part-01.png
+?? artifacts/screenshots/15-supporting-views/0399-finance-project-directory-shared-budget-view-continued-page-details-part-02.png
+?? artifacts/screenshots/15-supporting-views/0400-finance-payment-coordination-delay-reason-form-overview-part-01.png
+?? artifacts/screenshots/15-supporting-views/0401-finance-payment-coordination-delay-reason-form-update-coordination-part-02.png
+?? artifacts/screenshots/15-supporting-views/0402-project-manager-supplier-quotation-comparison-read-only-management-view-overview-part-01.png
+?? artifacts/screenshots/15-supporting-views/0403-project-manager-supplier-quotation-comparison-read-only-management-view-compare-award-part-02.png
+?? artifacts/screenshots/15-supporting-views/0404-project-manager-supplier-quotation-comparison-read-only-management-view-continued-page-details-part-03.png
+?? artifacts/screenshots/15-supporting-views/0405-project-manager-supplier-quotation-comparison-read-only-management-view-continued-page-details-part-04.png
+?? artifacts/screenshots/15-supporting-views/0406-project-manager-supplier-quotation-comparison-read-only-management-view-supplier-comparison-table-scroll-horizontally-for-more-suppliers-right-hand-columns-part-01.png
+?? artifacts/screenshots/15-supporting-views/0407-site-personnel-material-request-supporting-document-preview-dialog-overview-part-01.png
+?? artifacts/screenshots/15-supporting-views/0408-site-personnel-material-request-supporting-document-preview-pdf-document-pages-scrolling-details-part-01.png
+?? artifacts/screenshots/15-supporting-views/0409-site-personnel-material-request-supporting-document-preview-pdf-document-pages-scrolling-details-part-02.png
+?? artifacts/screenshots/15-supporting-views/0410-site-personnel-material-request-supporting-document-preview-pdf-document-pages-scrolling-details-part-03.png
+?? artifacts/screenshots/15-supporting-views/0411-procurement-quotation-selection-and-supplier-review-navigation-dialog-overview-part-01.png
+?? artifacts/screenshots/15-supporting-views/0412-accounting-fully-paid-credit-terms-payment-history-and-delivery-status-overview-part-01.png
+?? artifacts/screenshots/15-supporting-views/0413-accounting-fully-paid-credit-terms-payment-history-and-delivery-status-finance-coordination-and-credit-terms-payment-part-02.png
+?? artifacts/screenshots/15-supporting-views/0414-accounting-fully-paid-credit-terms-payment-history-and-delivery-status-document-review-and-linked-delivery-records-part-03.png
+?? artifacts/screenshots/15-supporting-views/0415-accounting-fully-paid-credit-terms-payment-history-and-delivery-status-accounting-documents-part-04.png
+?? artifacts/screenshots/15-supporting-views/0416-accounting-fully-paid-credit-terms-payment-history-and-delivery-status-continued-page-details-part-05.png
+?? artifacts/screenshots/15-supporting-views/0417-accounting-fully-paid-credit-terms-payment-history-and-delivery-status-continued-page-details-part-06.png
+?? artifacts/screenshots/15-supporting-views/0418-accounting-fully-paid-credit-terms-payment-history-and-delivery-status-recorded-at-and-action-changes-scrolling-details-part-01.png
+?? artifacts/screenshots/15-supporting-views/0419-accounting-fully-paid-credit-terms-payment-history-and-delivery-status-recorded-at-and-action-changes-scrolling-details-part-02.png
+?? artifacts/screenshots/15-supporting-views/0420-accounting-fully-paid-credit-terms-payment-history-and-delivery-status-recorded-at-and-action-changes-scrolling-details-part-03.png
+?? artifacts/screenshots/15-supporting-views/0421-accounting-full-payment-verification-correction-reason-form-overview-part-01.png
+?? artifacts/screenshots/15-supporting-views/0422-accounting-full-payment-verification-correction-reason-form-finance-coordination-and-external-payment-verification-part-02.png
+?? artifacts/screenshots/15-supporting-views/0423-accounting-full-payment-verification-correction-reason-form-document-review-and-linked-delivery-records-part-03.png
+?? artifacts/screenshots/15-supporting-views/0424-accounting-full-payment-verification-correction-reason-form-accounting-documents-part-04.png
+?? artifacts/screenshots/15-supporting-views/0425-accounting-full-payment-verification-correction-reason-form-continued-page-details-part-05.png
+?? artifacts/screenshots/15-supporting-views/0426-accounting-full-payment-verification-correction-reason-form-recorded-at-and-action-changes-scrolling-details-part-01.png
+?? artifacts/screenshots/15-supporting-views/0427-accounting-full-payment-verification-correction-reason-form-recorded-at-and-action-changes-scrolling-details-part-02.png
+?? artifacts/screenshots/15-supporting-views/0428-accounting-credit-payment-correction-and-audit-reason-form-overview-part-01.png
+?? artifacts/screenshots/15-supporting-views/0429-accounting-credit-payment-correction-and-audit-reason-form-finance-coordination-and-credit-terms-payment-part-02.png
+?? artifacts/screenshots/15-supporting-views/0430-accounting-credit-payment-correction-and-audit-reason-form-continued-page-details-part-03.png
+?? artifacts/screenshots/15-supporting-views/0431-accounting-credit-payment-correction-and-audit-reason-form-document-review-and-linked-delivery-records-part-04.png
+?? artifacts/screenshots/15-supporting-views/0432-accounting-credit-payment-correction-and-audit-reason-form-accounting-documents-part-05.png
+?? artifacts/screenshots/15-supporting-views/0433-accounting-credit-payment-correction-and-audit-reason-form-continued-page-details-part-06.png
+?? artifacts/screenshots/15-supporting-views/0434-accounting-credit-payment-correction-and-audit-reason-form-recorded-at-and-action-changes-scrolling-details-part-01.png
+?? artifacts/screenshots/15-supporting-views/0435-accounting-credit-payment-correction-and-audit-reason-form-recorded-at-and-action-changes-scrolling-details-part-02.png
+?? artifacts/screenshots/15-supporting-views/0436-accounting-credit-payment-correction-and-audit-reason-form-recorded-at-and-action-changes-scrolling-details-part-03.png
+?? artifacts/screenshots/15-supporting-views/0437-accounting-accounting-invoice-and-supporting-evidence-preview-dialog-overview-part-01.png
+?? artifacts/screenshots/15-supporting-views/0438-accounting-accounting-invoice-and-supporting-evidence-preview-pdf-document-pages-scrolling-details-part-01.png
+?? artifacts/screenshots/15-supporting-views/0439-accounting-accounting-invoice-and-supporting-evidence-preview-pdf-document-pages-scrolling-details-part-02.png
+?? artifacts/screenshots/15-supporting-views/0440-accounting-accounting-invoice-and-supporting-evidence-preview-pdf-document-pages-scrolling-details-part-03.png
+?? artifacts/screenshots/16-operational-form-examples/0441-logistics-purchase-orders-ready-for-delivery-scheduling-overview-part-01.png
+?? artifacts/screenshots/16-operational-form-examples/0442-logistics-purchase-orders-ready-for-delivery-scheduling-continued-page-details-part-02.png
+?? artifacts/screenshots/16-operational-form-examples/0443-logistics-schedule-supplier-to-site-delivery-batch-overview-part-01.png
+?? artifacts/screenshots/16-operational-form-examples/0444-logistics-schedule-supplier-to-company-warehouse-delivery-overview-part-01.png
+?? artifacts/screenshots/16-operational-form-examples/0445-procurement-company-warehouse-receiving-accepted-quantities-and-shortage-notes-overview-part-01.png
+?? artifacts/screenshots/16-operational-form-examples/0446-procurement-company-warehouse-receiving-accepted-quantities-and-shortage-notes-confirm-warehouse-receipt-part-02.png
+?? artifacts/screenshots/16-operational-form-examples/0447-site-personnel-site-stock-transfer-accepted-quantity-and-stock-posting-preview-overview-part-01.png
+?? artifacts/screenshots/16-operational-form-examples/0448-site-personnel-site-stock-transfer-accepted-quantity-and-stock-posting-preview-qor-del-0007-part-02.png
+?? artifacts/screenshots/16-operational-form-examples/0449-site-personnel-site-stock-transfer-accepted-quantity-and-stock-posting-preview-transfer-history-part-03.png
+?? artifacts/screenshots/16-operational-form-examples/0450-site-personnel-site-stock-transfer-accepted-quantity-and-stock-posting-preview-recorded-at-and-action-changes-scrolling-details-part-01.png
+?? artifacts/screenshots/16-operational-form-examples/0451-site-personnel-site-stock-transfer-accepted-quantity-and-stock-posting-preview-recorded-at-and-action-changes-scrolling-details-part-02.png
+?? artifacts/screenshots/17-notification-menu/0452-administrator-notifications-and-pending-task-menu-dialog-overview-part-01.png
+?? artifacts/screenshots/18-stock-sourcing-review/0453-procurement-site-stock-transfer-quantity-validation-overview-part-01.png
+?? artifacts/screenshots/18-stock-sourcing-review/0454-procurement-site-stock-transfer-quantity-validation-continued-page-details-part-02.png
+?? artifacts/screenshots/18-stock-sourcing-review/0455-procurement-site-stock-transfer-quantity-validation-site-stock-materials-right-hand-columns-part-01.png
+?? artifacts/screenshots/18-stock-sourcing-review/0456-procurement-site-stock-material-matching-and-transfer-quantity-overview-part-01.png
+?? artifacts/screenshots/18-stock-sourcing-review/0457-procurement-site-stock-material-matching-and-transfer-quantity-continued-page-details-part-02.png
+?? artifacts/screenshots/18-stock-sourcing-review/0458-procurement-site-stock-material-matching-and-transfer-quantity-site-stock-materials-right-hand-columns-part-01.png
+?? artifacts/screenshots/18-stock-sourcing-review/0459-procurement-review-site-stock-selections-and-remaining-purchasing-needs-dialog-overview-part-01.png
+?? artifacts/screenshots/19-quotation-review-modes/0460-procurement-all-supplier-quotations-review-and-financial-worksheets-overview-part-01.png
+?? artifacts/screenshots/19-quotation-review-modes/0461-procurement-all-supplier-quotations-review-and-financial-worksheets-quotation-review-3-quotations-and-metrospan-building-supply-part-02.png
+?? artifacts/screenshots/19-quotation-review-modes/0462-procurement-all-supplier-quotations-review-and-financial-worksheets-continued-page-details-part-03.png
+?? artifacts/screenshots/19-quotation-review-modes/0463-procurement-all-supplier-quotations-review-and-financial-worksheets-continued-page-details-part-04.png
+?? artifacts/screenshots/19-quotation-review-modes/0464-procurement-all-supplier-quotations-review-and-financial-worksheets-continued-page-details-part-05.png
+?? artifacts/screenshots/19-quotation-review-modes/0465-procurement-all-supplier-quotations-review-and-financial-worksheets-continued-page-details-part-06.png
+?? artifacts/screenshots/19-quotation-review-modes/0466-procurement-all-supplier-quotations-review-and-financial-worksheets-summitline-steel-trading-part-07.png
+?? artifacts/screenshots/19-quotation-review-modes/0467-procurement-all-supplier-quotations-review-and-financial-worksheets-continued-page-details-part-08.png
+?? artifacts/screenshots/19-quotation-review-modes/0468-procurement-all-supplier-quotations-review-and-financial-worksheets-continued-page-details-part-09.png
+?? artifacts/screenshots/19-quotation-review-modes/0469-procurement-all-supplier-quotations-review-and-financial-worksheets-and-material-right-hand-columns-part-01.png
+?? artifacts/screenshots/19-quotation-review-modes/0470-procurement-all-supplier-quotations-review-and-financial-worksheets-and-material-right-hand-columns-part-01.png
+?? artifacts/screenshots/19-quotation-review-modes/0471-procurement-all-supplier-quotations-review-and-financial-worksheets-and-material-right-hand-columns-part-01.png
+?? artifacts/screenshots/20-mrf-import-sources/0472-site-personnel-material-request-ai-import-source-selection-overview-part-01.png
+?? artifacts/screenshots/20-mrf-import-sources/0473-site-personnel-material-request-ai-import-source-selection-continued-page-details-part-02.png
+?? artifacts/screenshots/20-mrf-import-sources/0474-site-personnel-material-request-ai-import-hardcopy-source-preview-dialog-overview-part-01.png
+?? artifacts/screenshots/20-mrf-import-sources/0475-site-personnel-material-request-ai-import-hardcopy-source-preview-pdf-document-pages-scrolling-details-part-01.png
+?? artifacts/screenshots/20-mrf-import-sources/0476-site-personnel-material-request-ai-import-hardcopy-source-preview-pdf-document-pages-scrolling-details-part-02.png
+?? artifacts/screenshots/20-mrf-import-sources/0477-site-personnel-material-request-ai-import-hardcopy-source-preview-pdf-document-pages-scrolling-details-part-03.png
+?? docs/DEMO_WORKSPACE.md
+?? docs/thesis/research/CONTEXT.md
+?? "sample-data/taguig-city-rehabilitation/quotation 1.pdf"
+?? "sample-data/taguig-city-rehabilitation/quotation 2.pdf"
+?? "sample-data/taguig-city-rehabilitation/quotation 3.pdf"
+?? "sample-data/taguig-city-rehabilitation/quotation 4.pdf"
+?? "sample-data/taguig-city-rehabilitation/sample mrf + key plan.pdf"
+?? scripts/capture-app-figures.mjs
+?? scripts/capture-core-business-flow.mjs
+?? scripts/core-flow-contact-sheet.mjs
+?? scripts/core-flow-scenarios.mjs
+?? scripts/inspect-docs-ui-pdf.mjs
+?? scripts/mrf372-flow-scenarios.mjs
+?? scripts/package-app-figures.py
+?? scripts/package-core-business-flow.py
+?? scripts/package-detailed-screenshots.py
+?? scripts/prepare-docs-core-ui.mjs
+?? scripts/prepare-docs-figures.mjs
+?? scripts/showcase-smoke.mjs
+?? scripts/test-mrf372-samples.mjs
+?? scripts/verify-docs-figure-pages.mjs
+?? src/domain/archive-destination.ts
+?? src/domain/local-files.ts
+?? src/features/projects/LocalArchivedDocument.tsx
+?? src/features/projects/LocalProjectFiles.tsx
+?? src/features/projects/document-type.ts
+?? src/features/requests/local-archive.ts
+?? src/mock/fixtures/showcase.ts
+?? src/mock/showcase-install.ts
+?? tests/showcase.test.mjs

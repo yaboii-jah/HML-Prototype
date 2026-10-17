@@ -1,4 +1,5 @@
 "use client";
+import { archiveLocal, previewPdf } from "../requests/local-archive";
 
 import { useState } from "react";
 import { demoRepository } from "@/src/mock/repository";
@@ -24,7 +25,14 @@ export function useDeliveryReceiptArchive() {
         try {
           progress({ phase: "preparing" });
           const request = state.requests.find(value => value.id === receipt.data.request.id);
-          const folder = state.sites.find(value => value.id === request?.siteId)?.driveFolderId;
+          const project = state.sites.find(value => value.id === request?.siteId);
+          if (project?.localArchiveId) {
+            const local = await archiveLocal(project, await previewPdf(receipt.data), progress);
+            const saved = await pipeline({ type: "completeDeliveryReceiptArchive", batchId, receiptId: receipt.id, fileId: local.fileId, url: local.url });
+            if (!saved.ok) throw new Error(saved.message);
+            progress({ phase: "complete" }); return;
+          }
+          const folder = project?.driveFolderId;
           if (!folder) throw new Error("A project Google Drive folder is required. Receipt confirmation remains saved.");
           const response = await fetch("/api/drive/delivery-receipts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ receipt, projectFolderId: folder }) });
           const result = await response.json();

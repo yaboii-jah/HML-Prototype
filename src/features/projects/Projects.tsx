@@ -6,16 +6,17 @@ import { RequestMonitoringTable } from "@/src/features/requests/RequestMonitorin
 
 import Link from "next/link";
 import { useDemo } from "@/src/app-state/DemoProvider";
-import { Badge, Empty, PageHeader, RecordHeader } from "@/src/components/ui/Primitives";
+import { Badge, PageHeader, RecordHeader } from "@/src/components/ui/Primitives";
 import { AssignmentNotice, MissingRecord } from "@/src/components/ui/States";
 import { money } from "@/src/domain/format";
-import { budgetFor, inventoryFor, requestForPO, siteName } from "@/src/domain/selectors";
+import { budgetFor, inventoryFor, requestForPO } from "@/src/domain/selectors";
 import { AdminProjectSettings, ProjectCreation } from "@/src/features/admin/AdminProjectSettings";
 import { RecordModal } from "@/src/components/ui/RecordModal";
 import { ViewTabs } from "@/src/components/ui/Register";
 import { useConfirmation } from "@/src/components/ui/ConfirmDialog";
 import type { Site } from "@/src/domain/types";
 import { ScopeBudgets } from "./ScopeBudgets";
+import { LocalProjectFiles } from "./LocalProjectFiles";
 import { DriveProjectFiles } from "./DriveProjectFiles";
 
 export function Projects() {
@@ -41,15 +42,30 @@ export function ProjectDetail({ id }: { id: string }) {
     {canEdit&&<div className="form-actions"><button className="button secondary" onClick={()=>setSettings(true)}>Project settings</button></div>}
     <section className="panel"><ScopeBudgets siteId={id} editable={canEdit}/></section>
     <RequestMonitoringTable state={state} siteId={id}/>
-    <section className="panel"><h2 className="panel-title">Stock on hand</h2>{inventoryFor(state,id).map(item=><Link className="data-link" key={item.id} href={`/inventory/${id}/${item.id}`}><div><strong>{item.name}</strong><small>{siteName(state,id)}</small></div><strong>{item.onHand} {item.unit}</strong></Link>)}{!inventoryFor(state,id).length && <Empty detail="Site stock appears after receiving and posting."/>}</section>
-    {!access.sitePersonnel && (site.driveFolderId ? <DriveProjectFiles projectFolderId={site.driveFolderId}/> : <section className="panel"><h2 className="panel-title">Google Drive documents</h2><p className="helper-note">A Project Manager or Administrator must map this project&apos;s Drive folder before approved MRFs can be archived.</p></section>)}
+    <ProjectStock siteId={id}/>
+    {!access.sitePersonnel && (site.localArchiveId ? <LocalProjectFiles siteId={site.id}/> : site.driveFolderId ? <DriveProjectFiles projectFolderId={site.driveFolderId}/> : <section className="panel"><h2 className="panel-title">Google Drive documents</h2><p className="helper-note">A Project Manager or Administrator must map this project&apos;s Drive folder before approved MRFs can be archived.</p></section>)}
     {canEdit&&<ProjectSettingsModal site={settings?site:undefined} onClose={()=>setSettings(false)}/>}
   </>;
 }
 
+function ProjectStock({ siteId }: { siteId: string }) {
+  const { snapshot: state } = useDemo();
+  const [search, setSearch] = useState("");
+  if (!state) return null;
+  const stock = inventoryFor(state, siteId);
+  const rows = stock.filter(item => `${item.name} ${item.unit}`.toLowerCase().includes(search.trim().toLowerCase()));
+  return <section className="panel project-stock"><h2 className="panel-title">Stock on hand</h2>
+    <Register embedded rows={rows} unit="materials" resetKey={siteId + search}
+      filters={<input type="search" aria-label="Search project stock" placeholder="Search material or unit" value={search} onChange={event => setSearch(event.target.value)}/>}
+      empty={stock.length ? "No materials match this search." : "Site stock appears after receiving and posting."}
+      headers={<><th scope="col">Material</th><th scope="col">Unit</th><th scope="col" className="numeric">On-hand quantity</th><th scope="col">Action</th></>}
+      renderRow={item => <tr key={item.id}><td><Link className="table-primary" href={`/inventory/${siteId}/${item.id}`}>{item.name}</Link></td><td>{item.unit}</td><td className="numeric">{item.onHand}</td><td className="register-actions"><Link className="text-link" href={`/inventory/${siteId}/${item.id}`}>View inventory</Link></td></tr>}/>
+  </section>;
+}
+
 function ProjectSettingsModal({site,onClose}:{site?:Site;onClose:()=>void}) {
   const id=useId(),[tab,setTab]=useState(0);const {confirm,confirmation}=useConfirmation();
-  return <><RecordModal open={!!site} title={site?.name||"Project settings"} onClose={onClose} tabs={<ViewTabs id={id} labels={["Project","Drive folder","Scopes"]} active={tab} onChange={setTab}/>}>
+  return <><RecordModal open={!!site} title={site?.name||"Project settings"} onClose={onClose} tabs={<ViewTabs id={id} labels={["Project","Documents","Scopes"]} active={tab} onChange={setTab}/>}>
     {site&&<AdminProjectSettings key={site.id} site={site} active tab={tab} confirm={confirm}/>}
   </RecordModal>{confirmation}</>;
 }

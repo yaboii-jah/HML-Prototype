@@ -36,7 +36,7 @@ export function BidComparisonReports({ requestId, comparisonSelections, onCompar
   const reports = snapshot.bidReports.filter(report => report.requestId === requestId).sort((a, b) => b.version - a.version);
   const process = async (report: BidReport, action: "download" | "generate" | "archive", selectedFormat: "xlsx" | "pdf" = "xlsx") => {
     setBusy(report.id); setError("");
-    const label = `Bid comparison v${report.version}${action === "download" ? ` · ${selectedFormat.toUpperCase()} download` : action === "archive" ? " · archiving to Google Drive" : " · generating"}`;
+    const label = `Bid comparison v${report.version}${action === "download" ? ` · ${selectedFormat.toUpperCase()} download` : action === "archive" ? " · saving archive copy" : " · generating"}`;
     const toast = action === "download" ? "" : notify({ tone: "progress", title: label, detail: "Preparing document" });
     try {
       const needsWrite = action !== "download" || !(selectedFormat === "pdf" ? report.pdf : report)?.sha256;
@@ -75,7 +75,7 @@ export function BidComparisonReports({ requestId, comparisonSelections, onCompar
       }
       selected = resolveComparisonSelections(currentData, active);
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Choose the comparison alternatives."); return; }
-    await confirmAction(reports.length ? "Generate a new bid comparison version?" : "Generate bid comparison?", "Save the current supplier bids and selected alternatives as PDF and a single comparison worksheet, then archive both to Google Drive. Material totals use the full requested quantity after item discounts, including VAT where applicable. Quotation-level charges, discounts and EWT are excluded. This does not save awards or create POs.", "Generate report", async () => {
+    await confirmAction(reports.length ? "Generate a new bid comparison version?" : "Generate bid comparison?", "Save the current supplier bids and selected alternatives as PDF and a single comparison worksheet, then archive both documents. Material totals use the full requested quantity after item discounts, including VAT where applicable. Quotation-level charges, discounts and EWT are excluded. This does not save awards or create POs.", "Generate report", async () => {
     setBusy("new"); setError("");
     try {
       const result = await run({ type: "createBidReport", requestId, comparisonSelections: selected });
@@ -84,7 +84,7 @@ export function BidComparisonReports({ requestId, comparisonSelections, onCompar
     } finally { setBusy(""); }
     });
   };
-  const retry = (report: BidReport, action: "generate" | "archive") => confirmAction(action === "generate" ? "Retry bid report generation?" : "Retry bid report Drive archive?", `Bid comparison v${report.version}: ${action === "generate" ? "retry preparing" : "retry uploading"} the saved ${report.pdf ? "PDF and Excel files" : "Excel workbook"} in the project Drive folder. This uses the existing saved report version.`, action === "generate" ? "Retry generation" : "Retry archive", () => process(report, action));
+  const retry = (report: BidReport, action: "generate" | "archive") => confirmAction(action === "generate" ? "Retry bid report generation?" : "Retry bid report document archive?", `Bid comparison v${report.version}: ${action === "generate" ? "retry preparing" : "retry uploading"} the saved ${report.pdf ? "PDF and Excel files" : "Excel workbook"} in the project Drive folder. This uses the existing saved report version.`, action === "generate" ? "Retry generation" : "Retry archive", () => process(report, action));
   return <section className="panel">
     <fieldset className="quotation-operation-fields" disabled={working || !!busy}>
     <div className="panel-heading"><div><h2>Bid comparison reports</h2><p className="helper-note">New PDF and Excel versions use the comparison table’s material prices: item discounts applied, VAT included where applicable, and full requested quantities. Previous versions retain their original calculations.</p></div>
@@ -94,18 +94,18 @@ export function BidComparisonReports({ requestId, comparisonSelections, onCompar
     {procurement && alternatives.length > 0 && (comparisonSelections !== undefined ? <p className="helper-note">Alternative offers use your choices in the comparison table. Choose an offer for each unresolved alternative before generating a report.</p> : <fieldset className="comparison-alternatives" disabled={!!busy}><legend>Choose comparison alternatives</legend><p className="helper-note">Choose one offer per supplier and material. These choices apply to this report and do not change PO awards.</p>{alternatives.map(({ offer, item, lines }) => <label className="field" key={`${offer.quote.id}/${item.id}`}><span>{offer.supplierName} · {item.name}</span><select value={lines.some(line => line.id === selections[offer.quote.id]?.[item.id]) ? selections[offer.quote.id][item.id] : ""} onChange={event => setSelections({ ...selections, [offer.quote.id]: { ...selections[offer.quote.id], [item.id]: event.target.value } })}><option value="">Choose an offer</option>{lines.map(line => <option key={line.id} value={line.id}>{line.description} · {line.brand} {line.specification} · PHP {line.unitPrice.toLocaleString("en-PH")} / {line.unit} · offered {line.quantity}</option>)}</select></label>)}</fieldset>)}
     {!reports.length && <p className="muted">No saved bid comparison yet.</p>}
     {reports.map(report => <article className="bid-report-row" key={report.id}>
-      <div><strong>Bid comparison v{report.version}</strong><small>{new Date(report.generatedAt).toLocaleString()} · {report.data.project.name}</small><small>{report.sha256 ? report.archive.status === "complete" ? "Archived to Google Drive" : "Workbook ready · Drive archive pending" : "Workbook generation pending"}</small>
+      <div><strong>Bid comparison v{report.version}</strong><small>{new Date(report.generatedAt).toLocaleString()} · {report.data.project.name}</small><small>{report.sha256 ? report.archive.status === "complete" ? "Archived successfully" : "Workbook ready · document archive pending" : "Workbook generation pending"}</small>
         {(report.generationError || report.archive.error) && <p className="field-error">{report.generationError || report.archive.error}</p>}
-        {report.pdf && <><small>{report.pdf.sha256 ? report.pdf.archive.status === "complete" ? "PDF archived to Google Drive" : "PDF ready · Drive archive pending" : "PDF generation pending"}</small>{(report.pdf.generationError || report.pdf.archive.error) && <p className="field-error">{report.pdf.generationError || report.pdf.archive.error}</p>}</>}
+        {report.pdf && <><small>{report.pdf.sha256 ? report.pdf.archive.status === "complete" ? "PDF archived" : "PDF ready · document archive pending" : "PDF generation pending"}</small>{(report.pdf.generationError || report.pdf.archive.error) && <p className="field-error">{report.pdf.generationError || report.pdf.archive.error}</p>}</>}
       </div>
       <div className="button-row">
         {report.pdf?.sha256 && <button className="button secondary" type="button" onClick={() => setPreview(report)}>Preview PDF</button>}
         {report.sha256 && <button className="button secondary" type="button" disabled={!!busy} onClick={() => void process(report, "download")}>Download Excel</button>}
         {report.pdf?.sha256 && <button className="button secondary" type="button" disabled={!!busy} onClick={() => void process(report, "download", "pdf")}>Download PDF</button>}
         {procurement && (!report.sha256 || report.pdf && !report.pdf.sha256) && <button className="button secondary" type="button" disabled={!!busy} onClick={() => void retry(report, "generate")}>Retry generation</button>}
-        {procurement && (report.sha256 && report.archive.status !== "complete" || report.pdf?.sha256 && report.pdf.archive.status !== "complete") && <button className="button secondary" type="button" disabled={!!busy} onClick={() => void retry(report, "archive")}>Retry Drive archive</button>}
-        {report.archive.url && <a className="text-link" href={report.archive.url} target="_blank" rel="noopener noreferrer">Open in Drive</a>}
-        {report.pdf?.archive.url && <a className="text-link" href={report.pdf.archive.url} target="_blank" rel="noopener noreferrer">Open PDF in Drive</a>}
+        {procurement && (report.sha256 && report.archive.status !== "complete" || report.pdf?.sha256 && report.pdf.archive.status !== "complete") && <button className="button secondary" type="button" disabled={!!busy} onClick={() => void retry(report, "archive")}>Retry archive</button>}
+        {report.archive.url && <a className="text-link" href={report.archive.url} target="_blank" rel="noopener noreferrer">Open archive</a>}
+        {report.pdf?.archive.url && <a className="text-link" href={report.pdf.archive.url} target="_blank" rel="noopener noreferrer">Open archived PDF</a>}
         {busy === report.id && <span role="status">Processing report…</span>}
       </div>
     </article>)}

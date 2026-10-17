@@ -68,11 +68,13 @@ export function migrateV10(value: unknown): DemoSnapshot | null {
   if (!isSnapshotShape(value) || value.version !== 10 || !Array.isArray(value.pendingAwards) || !Array.isArray(value.bidReports) || !value.bidReports.every(validBidReport)) return null;
   return normalizeKnownPlaceholders({ ...structuredClone(value), version: 11 } as unknown as DemoSnapshot);
 }
-const parseCurrent = (raw: string): DemoSnapshot | null => {
+export const parseCurrent = (raw: string): DemoSnapshot | null => {
   const saved: unknown = JSON.parse(raw);
   const parsed = isRecord(saved) && saved.role === "Management" ? { ...saved, role: "Project Manager" } : saved;
   if (!isSnapshotShape(parsed) || parsed.version !== 12 || !Array.isArray(parsed.paymentRequests) || !Array.isArray(parsed.pendingAwards) || !Array.isArray(parsed.bidReports)) return null;
   const state = parsed as DemoSnapshot;
+  if (state.showcase && (state.showcase.revision !== 1 || typeof state.showcase.installationId !== "string" || !/^[a-z0-9-]{8,80}$/.test(state.showcase.installationId) || typeof state.showcase.seededAt !== "string" || !Number.isFinite(Date.parse(state.showcase.seededAt)))) return null;
+  if (state.sites.some(site => site.localArchiveId !== undefined && (!state.showcase || site.localArchiveId !== state.showcase.installationId))) return null;
   if (!validStockReviews(state)) return null;
   if (!validTransferState(state)) return null;
   if (!validDocumentNumberingState(state)) return null;
@@ -92,6 +94,8 @@ const parseCurrent = (raw: string): DemoSnapshot | null => {
 export class LocalDemoRepository implements DemoRepository {
   private view: RepositoryView = { snapshot: null, status: "loading" };
   private initialized = false;
+  private bootstrap: Promise<RepositoryView> | undefined;
+  private bootstrapFailed = false;
   private listeners = new Set<() => void>();
 
   constructor() {
@@ -114,6 +118,9 @@ export class LocalDemoRepository implements DemoRepository {
   }
   private read(): RepositoryView {
     if (this.initialized) return this.view;
+    if (typeof window !== "undefined" && typeof indexedDB !== "undefined" && !this.bootstrapFailed) {
+      try { if (!localStorage.getItem("hml-constructsync-showcase-installed-v1")) { if (!this.bootstrap) queueMicrotask(() => { void this.load(); }); return this.view; } } catch {}
+    }
     this.initialized = true;
     if (typeof window === "undefined") return this.view;
     let current: string | null;
@@ -145,7 +152,23 @@ export class LocalDemoRepository implements DemoRepository {
       return this.view;
     }
   }
-  async load() { return this.read(); }
+  async load(): Promise<RepositoryView> {
+    if (typeof window === "undefined" || typeof indexedDB === "undefined") return this.read();
+    if (this.bootstrap) return this.bootstrap;
+    this.bootstrap = (async () => {
+      try {
+        const { installShowcase } = await import("./showcase-install.ts");
+        await installShowcase(parseCurrent);
+        this.initialized = false;
+        const result = this.read(); this.notify(); return result;
+      } catch (cause) {
+        this.bootstrapFailed = true; this.initialized = true;
+        this.view = { snapshot: null, status: "recovery", message: cause instanceof Error ? cause.message : "Workspace installation failed. Existing records were preserved." };
+        this.notify(); return this.view;
+      }
+    })();
+    return this.bootstrap;
+  }
   getSnapshot() { return this.read(); }
   subscribe(listener: () => void) { this.listeners.add(listener); return () => this.listeners.delete(listener); }
   async execute(command: Command, actor?: AuditIdentity, siteIds?: readonly string[]): Promise<CommandResult> {
@@ -156,9 +179,14 @@ export class LocalDemoRepository implements DemoRepository {
     return result;
   }
   async reset() {
+    if (typeof window !== "undefined" && typeof indexedDB !== "undefined") {
+      let prior: Record<string, unknown> = {};
+      try { const value = JSON.parse(localStorage.getItem("hml-constructsync-showcase-installed-v1") || "{}"); if (value && typeof value === "object" && !Array.isArray(value)) prior = value; } catch {}
+      localStorage.setItem("hml-constructsync-showcase-installed-v1", JSON.stringify({ ...prior, revision: 1, cleared: true }));
+    }
     this.initialized = true;
     this.view = this.write(blankWorkspace());
-    try { await clearQuoteFiles(); } catch {}
+    if (this.view.status === "ready") try { await clearQuoteFiles(); } catch {}
     if (this.view.status === "ready") try { PREVIOUS_KEYS.forEach(key => localStorage.removeItem(key)); } catch {}
     this.notify();
     return this.view;

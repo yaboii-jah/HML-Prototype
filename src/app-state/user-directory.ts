@@ -30,6 +30,15 @@ function parse(raw: string): Data {
   return data;
 }
 
+export function showcaseAssignments(raw: string, siteIds: string[], at: string): string {
+  const data = parse(raw);
+  for (const user of data.users.filter(user => user.active && user.role === "Site Personnel")) {
+    user.siteIds = [...siteIds]; user.revision++; user.updatedAt = at;
+    data.activity.unshift({ id: crypto.randomUUID(), entity: user.id, entityType: "user", entityRef: user.name, eventType: "user.changed", action: "Demonstration project assignments installed", changedFields: ["Assigned projects"], actor: "Administrator", at });
+  }
+  return JSON.stringify(data);
+}
+
 export class LocalUserDirectory {
   private data: Data | null = null;
   private view = serverUserDirectory;
