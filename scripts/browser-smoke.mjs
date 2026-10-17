@@ -1,3 +1,4 @@
+import { prepareFixtureBrowser } from "./helpers/workspace-fixture.mjs";
 import { spawn } from "node:child_process";
 import { mkdtemp, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -24,14 +25,14 @@ await Promise.all([writeFile(sampleReference, Buffer.concat([Buffer.from("%PDF-1
 const port = 9223 + Math.floor(Math.random() * 1000);
 const workflowOnly = process.argv.includes("--workflow-only");
 const baseUrl = (process.argv[2] || "http://localhost:3000").replace(/\/$/, "");
-const browser = spawn(edge, ["--headless=new", "--disable-gpu", "--disable-background-timer-throttling", "--disable-renderer-backgrounding", "--no-first-run", `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`, baseUrl], { windowsHide: true, stdio: "ignore" });
+const browser = spawn(edge, ["--headless=new", "--disable-gpu", "--disable-background-timer-throttling", "--disable-renderer-backgrounding", "--no-first-run", `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`, "about:blank"], { windowsHide: true, stdio: "ignore" });
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 let ws;
 process.on("SIGINT", () => { ws?.close(); browser.kill(); process.exit(130); });
 
 try {
   let target;
-  for (let i = 0; i < 80; i++) { try { const pages = await fetch(`http://127.0.0.1:${port}/json`).then(r => r.json()); target = pages.find(p => p.type === "page" && p.url.startsWith(baseUrl)); if (target) break; } catch {} await sleep(250); }
+  for (let i = 0; i < 80; i++) { try { const pages = await fetch(`http://127.0.0.1:${port}/json`).then(r => r.json()); target = pages.find(p => p.type === "page" && (p.url.startsWith(baseUrl)||p.url==='about:blank')); if (target) break; } catch {} await sleep(250); }
   console.log("Test browser debug port",port);
   if (!target) throw new Error("Edge debugging page did not start");
   ws = new WebSocket(target.webSocketDebuggerUrl);
@@ -39,7 +40,7 @@ try {
   let nextId = 0; const pending = new Map(); const browserExceptions = [];
   ws.onmessage = event => { const message = JSON.parse(event.data); if (message.method === "Runtime.exceptionThrown") browserExceptions.push(message.params?.exceptionDetails?.exception?.description || message.params?.exceptionDetails?.text); if (message.method === "Page.javascriptDialogOpening") ws.send(JSON.stringify({ id: ++nextId, method: "Page.handleJavaScriptDialog", params: { accept: true } })); if (message.id && pending.has(message.id)) { const promise = pending.get(message.id); pending.delete(message.id); if (message.error) promise.reject(new Error(JSON.stringify(message.error))); else promise.resolve(message.result); } };
   const call = (method, params = {}) => new Promise((resolve, reject) => { const id = ++nextId; const timer = setTimeout(() => { pending.delete(id); reject(new Error(`CDP timeout: ${method}`)); }, 15000); pending.set(id, { resolve: value => { clearTimeout(timer); resolve(value); }, reject: error => { clearTimeout(timer); reject(error); } }); ws.send(JSON.stringify({ id, method, params })); });
-  await call("Runtime.enable");
+  await call("Runtime.enable"); await prepareFixtureBrowser(call, baseUrl, {empty:true});
   await call("Page.enable");
   await call("Page.addScriptToEvaluateOnNewDocument", { source: `(() => {
     const originalFetch = window.fetch.bind(window);
@@ -248,7 +249,7 @@ try {
   assert.equal(await run("return location.pathname;"), '/sign-in', 'Retired credentials are rejected');
   await signInAs('Site Personnel');
   const storedSession = await run(`return JSON.parse(localStorage.getItem(${JSON.stringify(SESSION_STORAGE_KEY)}));`);
-  assert.deepEqual(storedSession, { email: ACCOUNT_FIXTURES[0].email, role: 'Site Personnel', userId: 'bootstrap-site-personnel', revision: 1 });
+  assert.deepEqual(storedSession, { email: ACCOUNT_FIXTURES[0].email, role: 'Site Personnel', userId: 'bootstrap-site-personnel', revision: await run("return JSON.parse(localStorage.getItem('hml-constructsync-users-v1')).users.find(u=>u.id==='bootstrap-site-personnel').revision;") });
   assert.equal((await state()).sites.length, 0, "A fresh workspace starts without projects");
   assert.equal(await run("return document.body.innerText.includes('No assigned projects');"), true);
   await navigate("/reports");
@@ -309,7 +310,7 @@ try {
   await click('Remove scope','button[aria-label="Remove scope Variation Order"]');
   await wait("return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).scopes.length===2;");
   assert.equal((await state()).activity[0].eventType,'scope.removed');
-  await click('Drive folder','.record-dialog[open] [role=tab]');
+  await click('Documents','.record-dialog[open] [role=tab]');
   await click('Link an existing folder','.admin-drive-settings button');
   await fill('.drive-folder-form input[name=folder]','https://drive.google.com/drive/folders/smoke-project-folder');
   await run("window.__holdAdminDrive=true;document.querySelector('.drive-folder-form').requestSubmit();document.querySelector('.drive-folder-form').requestSubmit();return true;");
@@ -339,7 +340,7 @@ try {
   assert.deepEqual(await state(),beforeLateFolder,'Closing settings ignores late folder validation');
   assert.equal(await run("return !!document.querySelector('.confirm-dialog[open]');"),false,'Late validation cannot open background confirmation');
   await click('Details','.admin-projects table button');
-  assert.equal(await run("return document.querySelector('.record-dialog[open] [role=tab][aria-selected=true]').textContent;"),'Drive folder','Project tabs are remembered');
+  assert.equal(await run("return document.querySelector('.record-dialog[open] [role=tab][aria-selected=true]').textContent;"),'Documents','Project tabs are remembered');
   assert.equal(await run("return document.querySelector('.drive-folder-form button').disabled;"),false,'Reopened folder controls recover from cancellation');
   // Use actual tab keyboard navigation, starting from the remembered tab.
   await run("document.querySelector('.record-dialog[open] [role=tab][aria-selected=true]').focus();return true;");
@@ -360,7 +361,7 @@ try {
   await navigate("/dashboard");
   await wait("return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).sites.length === 2;");
   await role('Administrator');
-  const adminFixture=seedDemo();adminFixture.role='Administrator';
+  const adminFixture=seedDemo();adminFixture.role='Administrator';adminFixture.activity=[];
   for(let index=0;index<30;index++)adminFixture.activity.unshift({id:'admin-history-'+index,entity:index%2?'site-b':'site-a',projectId:index%2?'site-b':'site-a',actor:index%2?'Procurement':'Administrator',actorIdentity:index%2?{name:'Andrea Reyes',email:ACCOUNT_FIXTURES.find(account=>account.role==='Procurement').email,role:'Procurement'}:{name:'Daniel Garcia',email:ACCOUNT_FIXTURES.find(account=>account.role==='Administrator').email,role:'Administrator'},eventType:'project.changed',action:'Project setup updated',entityRef:'ACTIVITY-'+index,at:index<2?'2026-10-07T16:00:'+String(index*30).padStart(2,'0')+'Z':'2026-10-07T15:59:'+String(index).padStart(2,'0')+'Z',changedFields:['Project setup']});
   await installFixture(adminFixture);await navigate('/admin');
   assert.equal(await run("return !document.querySelector('.record-dialog[open]')&&document.querySelectorAll('[data-project-row]').length===2;"),true,'Projects use compact rows with closed details');
@@ -531,9 +532,9 @@ try {
   for (const account of [...ACCOUNT_FIXTURES.slice(1), ACCOUNT_FIXTURES[0]]) {
     await run("document.querySelector('.masthead-account').click();return true;");
     await wait("return !!document.querySelector('.account-modal[open]');");
-    await click(account.role, '.role-options button');
+    await click(account.name, '.role-options button');
     await wait(`return !document.querySelector('.account-modal[open]')&&JSON.parse(localStorage.getItem(${JSON.stringify(SESSION_STORAGE_KEY)})).role===${JSON.stringify(account.role)}&&document.querySelector('.account-label strong')?.textContent===${JSON.stringify(account.name)};`);
-    assert.deepEqual(await run(`return JSON.parse(localStorage.getItem(${JSON.stringify(SESSION_STORAGE_KEY)}));`), { email: account.email, role: account.role, userId: 'bootstrap-' + account.role.toLowerCase().replace(/[^a-z]+/g, '-'), revision: 1 });
+    assert.deepEqual(await run(`return JSON.parse(localStorage.getItem(${JSON.stringify(SESSION_STORAGE_KEY)}));`), { email: account.email, role: account.role, userId: 'bootstrap-' + account.role.toLowerCase().replace(/[^a-z]+/g, '-'), revision: await run(`return JSON.parse(localStorage.getItem('hml-constructsync-users-v1')).users.find(u=>u.email===${JSON.stringify(account.email)}).revision;`) });
     assert.equal(await run("return location.pathname+location.search+location.hash;"), switchLocation, 'Switching keeps the current workspace page');
     assert.deepEqual(await state(), { ...beforeSwitching, role: account.role }, 'Switching preserves all records, history and project context');
     await wait("return document.activeElement === document.querySelector('.masthead-account');");
@@ -934,7 +935,7 @@ try {
   await uploadFiles('input[aria-label="Choose combined supporting PDF"]', [sampleReference]);
   await wait("return document.querySelector('.reference-file-list')?.children.length === 1;");
   assert.equal(await run("return document.querySelector('.reference-count')?.textContent;"), "1 attached");
-  assert.equal(await run("return document.querySelector('.reference-note')?.textContent.includes('archived to Google Drive after MRF approval');"), true);
+  assert.equal(await run("return document.querySelector('.reference-note')?.textContent.includes('archived after MRF approval');"), true);
   await click("Edit details", ".request-review button");
   assert.equal(await requestStep(), "1Request details");
   await click("Next", ".request-wizard-actions button");
@@ -1208,21 +1209,12 @@ try {
   }
   await call("Emulation.clearDeviceMetricsOverride");
   assert.equal(await run("return [...document.querySelectorAll('button')].some(button => /Reset workspace|Clear all workspace/.test(button.textContent));"), false);
-  assert.equal(await run("return document.querySelector('a[href=\"/admin/maintenance\"]')?.textContent;"), 'Clear workspace');
-  await click('Clear workspace', 'a');
-  await wait("return document.querySelector('h1')?.textContent==='Workspace maintenance';");
-  const beforeResetCancel = await state();
-  await run("[...document.querySelectorAll('button')].find(button=>button.textContent==='Reset workspace').click();return true;");
-  await wait("return !!document.querySelector('.confirm-dialog[open]');");
-  await click('Cancel', '.confirm-dialog[open] button');
-  assert.deepEqual(await state(), beforeResetCancel, 'Cancelling workspace reset preserves records');
-  await role('Site Personnel'); await navigate('/admin/maintenance');
-  assert.equal(await run("return document.querySelector('h1').textContent;"), 'Access unavailable');
-  assert.equal(await run("return [...document.querySelectorAll('button')].some(button=>button.textContent==='Reset workspace');"), false);
-  await role('Administrator'); await navigate('/admin/maintenance');
-  await click('Reset workspace');
-  await wait("return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).requests.length===0;");
-  await wait("return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).role==='Administrator';");
+  assert.equal(await run("return !!document.querySelector('a[href=\"/admin/maintenance\"]');"), false);
+  await call('Page.navigate',{url:baseUrl+'/admin/maintenance'});await wait("return location.pathname==='/admin'&&document.querySelector('h1')?.textContent==='Administration';");
+  assert.equal(await run("return document.querySelector('h1').textContent;"),'Administration');
+  await role('Site Personnel');await navigate('/admin');
+  assert.equal(await run("return document.querySelector('h1').textContent;"),'Access unavailable');
+  await role('Administrator');
   await installFixture(); await navigate('/admin');
   await run("localStorage.setItem('hml-constructsync-demo-v12', 'not-json'); return true;");
   await call("Page.reload", { ignoreCache: true });

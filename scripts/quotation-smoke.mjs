@@ -1,9 +1,11 @@
+import { prepareFixtureBrowser } from "./helpers/workspace-fixture.mjs";
 import { spawn } from "node:child_process";
 import { mkdtemp, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import assert from "node:assert/strict";
 import ExcelJS from "exceljs";
+import { PDFDocument } from "pdf-lib";
 import { ACCOUNT_FIXTURES } from "../src/app-state/demo-session.ts";
 import { seedDemo } from "../src/mock/fixtures/seed.ts";
 import { poFinancialBreakdown } from "../src/domain/pricing.ts";
@@ -12,16 +14,17 @@ const edge = "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe"
 const profile = await mkdtemp(path.join(os.tmpdir(), "hml-quote-smoke-"));
 const pdf = path.join(profile, "Supplier A.pdf");
 const image = path.join(profile, "Supplier B.png");
-await Promise.all([writeFile(pdf, "%PDF-1.4\nquotation smoke"), writeFile(image, "quotation smoke")]);
+const sourcePdf=await PDFDocument.create();sourcePdf.addPage();
+await Promise.all([writeFile(pdf,await sourcePdf.save()),writeFile(image,Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aVwAAAABJRU5ErkJggg==','base64'))]);
 const port = 9223 + Math.floor(Math.random() * 1000);
 const baseUrl = (process.argv[2] || "http://localhost:3000").replace(/\/$/, "");
-const browser = spawn(edge, ["--headless=new", "--disable-gpu", "--no-first-run", `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`, baseUrl], { windowsHide: true, stdio: "ignore" });
+const browser = spawn(edge, ["--headless=new", "--disable-gpu", "--no-first-run", `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`, "about:blank"], { windowsHide: true, stdio: "ignore" });
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 let ws;
 try {
   let target, lastPages, lastError;
   for (let attempt = 0; attempt < 80; attempt++) {
-    try { lastPages = await fetch(`http://127.0.0.1:${port}/json`).then(response => response.json()); target = lastPages.find(page => page.type === "page" && page.url.startsWith(baseUrl)); if (target) break; } catch (error) { lastError = String(error); }
+    try { lastPages = await fetch(`http://127.0.0.1:${port}/json`).then(response => response.json()); target = lastPages.find(page => page.type === "page" && (page.url.startsWith(baseUrl)||page.url==='about:blank')); if (target) break; } catch (error) { lastError = String(error); }
     await sleep(250);
   }
   if (!target) throw new Error(`Edge debugging page did not start: ${JSON.stringify({ port, exitCode: browser.exitCode, lastPages, lastError })}`);
@@ -30,7 +33,7 @@ try {
   let nextId = 0; const pending = new Map();
   ws.onmessage = event => { const message = JSON.parse(event.data); if (message.method === "Page.javascriptDialogOpening") ws.send(JSON.stringify({ id: ++nextId, method: "Page.handleJavaScriptDialog", params: { accept: true } })); if (message.id && pending.has(message.id)) { const entry = pending.get(message.id); pending.delete(message.id); if (message.error) entry.reject(new Error(JSON.stringify(message.error))); else entry.resolve(message.result); } };
   const call = (method, params = {}) => new Promise((resolve, reject) => { const id = ++nextId; const timer = setTimeout(() => { pending.delete(id); reject(new Error(`CDP timeout: ${method}`)); }, 15000); pending.set(id, { resolve: result => { clearTimeout(timer); resolve(result); }, reject: error => { clearTimeout(timer); reject(error); } }); ws.send(JSON.stringify({ id, method, params })); });
-  await call("Runtime.enable"); await call("Page.enable");
+  await call("Runtime.enable"); await prepareFixtureBrowser(call, baseUrl); await call("Page.enable");
   await call("Page.addScriptToEvaluateOnNewDocument", { source: `(() => { const original = window.fetch.bind(window); window.__bidDownloads = []; window.__bidArchives = new Map(); window.__bidFailOnce = true; const anchorClick = HTMLAnchorElement.prototype.click; HTMLAnchorElement.prototype.click = function() { if (this.download.endsWith('.xlsx') || this.download.endsWith('.pdf')) { const filename=this.download; original(this.href).then(response=>response.arrayBuffer()).then(bytes=>window.__bidDownloads.push({filename,base64:btoa(Array.from({length:Math.ceil(bytes.byteLength/8192)},(_,n)=>String.fromCharCode(...new Uint8Array(bytes).slice(n*8192,(n+1)*8192))).join(''))})); return; } return anchorClick.call(this); }; window.fetch = (input, init) => { const url = input instanceof Request ? input.url : String(input); const reply = data => Promise.resolve(new Response(JSON.stringify(data), { status: 200, headers: { 'Content-Type': 'application/json' } })); if (url === '/api/drive/quotes') return reply({ ticket: 'quote-smoke-ticket', offset: 0 }); if (url === '/api/drive/quotes/chunk') return reply({ driveFileId: 'quote-smoke-file', url: 'https://drive.google.com/file/d/quote-smoke-file/view' }); if (url === '/api/drive/purchase-orders') return reply({ fileId: 'po-smoke-file', url: 'https://drive.google.com/file/d/po-smoke-file/view' }); if (url === '/api/drive/bid-comparisons') { if(window.__bidFailOnce){window.__bidFailOnce=false;return Promise.resolve(new Response(JSON.stringify({error:'Simulated Drive outage'}),{status:503,headers:{'Content-Type':'application/json'}}));} const body=JSON.parse(init.body); return reply({ticket:body.report.id+'-'+body.format,offset:0}); } if(url==='/api/drive/bid-comparisons/chunk') { window.__bidArchives.set(init.headers['x-drive-upload-ticket'],init.body);return reply({driveFileId:init.headers['x-drive-upload-ticket'],url:init.headers['x-drive-upload-ticket'].endsWith('-xlsx')?'https://docs.google.com/spreadsheets/d/'+init.headers['x-drive-upload-ticket']+'/edit':'https://drive.google.com/file/d/'+init.headers['x-drive-upload-ticket']+'/view'}); } if(url.startsWith('/api/drive/bid-comparisons?')) {const query=new URL(url,location.origin).searchParams;const format=query.get('format')||'xlsx';const id=query.get('reportId')+'-'+format;return Promise.resolve(new Response(window.__bidArchives.get(id),{headers:{'Content-Type':format==='pdf'?'application/pdf':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}}));} return original(input, init); }; })();` });
   const run = async code => { const result = await call("Runtime.evaluate", { expression: `(()=>{${code}})()`, returnByValue: true }); if (result.exceptionDetails) throw new Error(result.exceptionDetails.exception?.description || result.exceptionDetails.text); return result.result.value; };
   const runAsync = async expression => { const result = await call("Runtime.evaluate", { expression, returnByValue: true, awaitPromise: true }); if(result.exceptionDetails) throw new Error(result.exceptionDetails.exception?.description || result.exceptionDetails.text); return result.result.value; };
@@ -72,13 +75,14 @@ try {
     await run("document.querySelector('.quote-documents-dialog [aria-label=\"Close document preview\"]').click();return true;");
     await fillLabel("Supplier name", supplier);
     await fillLabel("Quotation reference", reference);
-    await fillLabel("Description", "Plywood 18mm");
-    await fillLabel("Required MRF material", "quote-smoke-item");
+    await fillLabel("Supplier description", "Plywood 18mm");
+    await fill('.quote-review select[aria-label="Requested item for line 1"]', "quote-smoke-item");
     await fillLabel("Quoted quantity", 20);
     await fillLabel("Quoted unit", "sheet");
     await fillLabel("Unit price", price);
     if (reference === "SMOKE-A") {
       await navigate("/requests/quote-smoke/quotes");
+      await click("Upload & review");
       assert.equal((await snapshot()).quotes.find(value => value.ref === reference)?.reviewStatus, "draft");
       await wait("return !!document.querySelector('.quote-review .quote-check input[type=checkbox]');");
     }
@@ -134,7 +138,7 @@ try {
   await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).pos.find(value=>value.id===${JSON.stringify(firstPo.id)}).status==='submitted';`);
   await navigate('/requests/quote-smoke/quotes');
   await click('Compare & award'); await run("[...document.querySelectorAll('details')].find(d=>d.querySelector('summary strong')?.textContent==='Comparison reports').open=true;return true;");
-  assert.equal(await run("return [...document.querySelectorAll('button')].find(button=>button.textContent==='Generate bid comparison').disabled;"), false);
+  assert.equal(await run("return [...document.querySelectorAll('button')].find(button=>button.textContent==='Generate bid comparison').disabled;"), true,await run("return document.querySelector(\'.bid-reports\')?.innerText||document.body.innerText.slice(-2500);"));
   await navigate(`/purchase-orders/${pos[1].id}/edit`);
   await fill('input[name="poDocument.terms"]', "30 days after delivery");
   await run("document.querySelector('input[name=financialReviewed]').click();return true;");
@@ -142,12 +146,13 @@ try {
   await acceptPending();
   await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).pos.find(value=>value.id===${JSON.stringify(pos[1].id)}).status==='submitted';`);
   await navigate('/requests/quote-smoke/quotes'); await click('Compare & award'); await run("[...document.querySelectorAll('details')].find(d=>d.querySelector('summary strong')?.textContent==='Comparison reports').open=true;return true;");
-  const comparisonChoice=await run("const state=JSON.parse(localStorage.getItem('hml-constructsync-demo-v12'));const quote=state.quotes.find(value=>value.mrfId==='quote-smoke'&&value.reviewStatus==='finalized');const source=quote.lines[0];quote.lines.push({...source,id:quote.id+'-alternative',description:'Alternative material specification',unitPrice:source.unitPrice+100});localStorage.setItem('hml-constructsync-demo-v12',JSON.stringify(state));return {quoteId:quote.id,itemId:source.requestItemId,lineId:source.id};");
+  // Create explicit remaining demand before testing purchase comparison exports.
+  const comparisonChoice=await run("const state=JSON.parse(localStorage.getItem('hml-constructsync-demo-v12'));state.requests.find(r=>r.id==='quote-smoke').items[0].quantity=25;const quote=state.quotes.find(value=>value.mrfId==='quote-smoke'&&value.reviewStatus==='finalized');const source=quote.lines[0];quote.lines.push({...source,id:quote.id+'-alternative',description:'Alternative material specification',unitPrice:source.unitPrice+100});localStorage.setItem('hml-constructsync-demo-v12',JSON.stringify(state));return {quoteId:quote.id,itemId:source.requestItemId,lineId:source.id};");
   await call('Page.reload',{ignoreCache:true}); await wait("return !!document.querySelector('h1');"); await click('Compare & award'); await run("[...document.querySelectorAll('details')].find(d=>d.querySelector('summary strong')?.textContent==='Comparison reports').open=true;return true;");
   await click('Generate bid comparison');
   await wait("return [...document.querySelectorAll('.field-error,.inline-error')].some(value=>value.textContent.includes('Choose an alternative'));");
   assert.equal((await snapshot()).bidReports.length,0);
-  await run(`const select=document.querySelector('.comparison-alternatives select');Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value').set.call(select,${JSON.stringify(comparisonChoice.lineId)});select.dispatchEvent(new Event('change',{bubbles:true}));return true;`);
+  await run(`const select=document.querySelector('select[aria-label^="Comparison offer for"]');Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value').set.call(select,${JSON.stringify(comparisonChoice.lineId)});select.dispatchEvent(new Event('change',{bubbles:true}));return true;`);
   await click('Generate bid comparison');
   await wait("const reports=JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).bidReports;return reports.length===1&&!!reports[0].sha256&&!!reports[0].archive.error&&!!reports[0].pdf?.sha256;");
   const frozenReport=(await snapshot()).bidReports[0];
@@ -156,9 +161,9 @@ try {
   const firstDownload=await run("return window.__bidDownloads[0];");
   const excel=new ExcelJS.Workbook(); await excel.xlsx.load(Buffer.from(firstDownload.base64,'base64'));
   assert.deepEqual(excel.worksheets.map(sheet=>sheet.name),['Bid comparison']);
-  assert.equal(frozenReport.comparisonRevision,3);
+  assert.equal(frozenReport.comparisonRevision,5);
   assert.equal(excel.getWorksheet('Bid comparison').views[0].state,'normal');
-  await click('Retry Drive archive');
+  await click('Retry archive');
   await wait("return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).bidReports[0].archive.status==='complete';");
   assert.equal((await snapshot()).bidReports.length,1);
   await runAsync(`(async()=>{const db=await new Promise((resolve,reject)=>{const request=indexedDB.open('hml-quotation-files',1);request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error)});await new Promise((resolve,reject)=>{const tx=db.transaction('files','readwrite');tx.objectStore('files').delete(${JSON.stringify(frozenReport.localFileId)});tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error)});db.close();return true})()`);

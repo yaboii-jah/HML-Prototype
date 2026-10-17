@@ -5,7 +5,7 @@ import path from "node:path";
 import { comparisonOffers } from "../domain/comparison-report.ts";
 import type { BidReport } from "../domain/types.ts";
 import { buildComparisonTable, type ComparisonTableRow } from "./comparison-table.ts";
-import { wrapText } from "./document-template.ts";
+import { allowedDocumentLink, wrapText } from "./document-template.ts";
 
 export async function generateCurrentComparisonPdf(report: BidReport) {
   const pdf = await PDFDocument.create(); pdf.registerFontkit(fontkit);
@@ -29,7 +29,7 @@ export async function generateCurrentComparisonPdf(report: BidReport) {
         lines[index].slice(offset, offset + count).forEach((text, n) => {
           if (text) sheet.drawText(text, { x: x + (width - font.widthOfTextAtSize(text, size)) / 2, y: 612 - top - 3 - size - n * lineHeight, font, size, color: cell.url ? rgb(0, .3, .65) : rgb(0, 0, 0) });
         });
-        if (cell.url && /^https:\/\//.test(cell.url)) {
+        if (cell.url && allowedDocumentLink(cell.url)) {
           const annotation = pdf.context.register(pdf.context.obj({ Type: "Annot", Subtype: "Link", Rect: [x, 612 - top - height, x + width, 612 - top], Border: [0, 0, 0], A: { Type: "Action", S: "URI", URI: PDFString.of(cell.url) } }));
           sheet.node.addAnnot(annotation);
         }

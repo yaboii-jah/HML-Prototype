@@ -1,3 +1,4 @@
+import { prepareFixtureBrowser } from "./helpers/workspace-fixture.mjs";
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
@@ -11,14 +12,14 @@ import { applyCommand } from '../src/domain/commands.ts';
 const base = (process.argv[2] || 'http://127.0.0.1:3000').replace(/\/$/, '');
 const profile = await mkdtemp(path.join(os.tmpdir(), 'constructsync-site-visibility-'));
 const port = 12000 + Math.floor(Math.random() * 1000);
-const browser = spawn('C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe', ['--headless=new', '--disable-gpu', '--no-first-run', `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`, base], { windowsHide: true, stdio: 'ignore' });
+const browser = spawn('C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe', ['--headless=new', '--disable-gpu', '--no-first-run', `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`, "about:blank"], { windowsHide: true, stdio: 'ignore' });
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aVwAAAABJRU5ErkJggg==', 'base64');
 let ws;
 try {
   let target;
   for (let i = 0; i < 80 && !target; i++) {
-    try { target = (await fetch(`http://127.0.0.1:${port}/json`).then(response => response.json())).find(page => page.type === 'page' && page.url.startsWith(base)); } catch {}
+    try { target = (await fetch(`http://127.0.0.1:${port}/json`).then(response => response.json())).find(page => page.type === 'page' && (page.url.startsWith(base)||page.url==='about:blank')); } catch {}
     if (!target) await sleep(250);
   }
   assert.ok(target, 'Test browser starts');
@@ -45,7 +46,7 @@ try {
   const navigate = async route => { await call('Page.navigate', { url: base + route }); await wait(`return location.pathname===${JSON.stringify(route.split('?')[0])}&&!!document.querySelector('.workspace-content h1');`); };
   const fill = async (selector, value) => run(`const el=document.querySelector(${JSON.stringify(selector)});const type=el.tagName==='SELECT'?HTMLSelectElement:HTMLInputElement;Object.getOwnPropertyDescriptor(type.prototype,'value').set.call(el,${JSON.stringify(value)});el.dispatchEvent(new Event(el.tagName==='SELECT'?'change':'input',{bubbles:true}));return true;`);
   const click = selector => run(`const el=document.querySelector(${JSON.stringify(selector)});if(!el)throw Error('Missing '+${JSON.stringify(selector)});el.click();return true;`);
-  await call('Runtime.enable'); await call('Page.enable');
+  await call('Runtime.enable'); await prepareFixtureBrowser(call, base); await call('Page.enable');
   await call('Page.addScriptToEvaluateOnNewDocument', { source: `
     const realFetch=window.fetch.bind(window);
     window.__previewAborts=0;

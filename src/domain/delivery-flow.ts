@@ -1,11 +1,8 @@
+import { businessDate } from "./business-dates.ts";
 import type { Batch, DeliveryLeg, DeliveryLocation, DemoSnapshot, MRF, PO } from "./types.ts";
 
 export const DELIVERY_LEGS: DeliveryLeg[] = ["supplier-site", "supplier-warehouse", "warehouse-site"];
-export function deliveryToday(date = new Date()) {
-  const parts = new Intl.DateTimeFormat("en-PH", { timeZone: "Asia/Manila", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(date);
-  const value = (kind: Intl.DateTimeFormatPartTypes) => parts.find(part => part.type === kind)?.value;
-  return `${value("year")}-${value("month")}-${value("day")}`;
-}
+export const deliveryToday = businessDate;
 export const legFor = (batch: Batch): DeliveryLeg => batch.leg || "supplier-site";
 export const isSiteBatch = (batch: Batch) => ["supplier-site", "warehouse-site"].includes(legFor(batch));
 export const isReceivedBatch = (batch: Batch) => ["confirmed", "posted"].includes(batch.status);

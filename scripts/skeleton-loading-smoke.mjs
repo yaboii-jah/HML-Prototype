@@ -1,3 +1,4 @@
+import { prepareFixtureBrowser } from "./helpers/workspace-fixture.mjs";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { mkdtemp, writeFile } from "node:fs/promises";
@@ -48,7 +49,7 @@ try {
   };
   const fill = async (selector, value) => run(`const el=document.querySelector(${JSON.stringify(selector)});Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(el,${JSON.stringify(value)});el.dispatchEvent(new Event('input',{bubbles:true}));return true;`);
   const click = async selector => run(`const el=document.querySelector(${JSON.stringify(selector)});if(!el)throw new Error('Missing '+${JSON.stringify(selector)});el.focus();el.click();return true;`);
-  await call("Page.enable"); await call("Runtime.enable");
+  await call("Page.enable"); await call("Runtime.enable"); await prepareFixtureBrowser(call, base, {accounts:false,navigate:false});
   await call("Page.addScriptToEvaluateOnNewDocument", { source: `
     window.__loadingChecks={files:[],previews:[],accounts:[]};
     const derive=crypto.subtle.deriveBits.bind(crypto.subtle);

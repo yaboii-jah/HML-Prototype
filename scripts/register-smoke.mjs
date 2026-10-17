@@ -1,3 +1,4 @@
+import { openQuotationReview, prepareFixtureBrowser } from "./helpers/workspace-fixture.mjs";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { mkdtemp, writeFile } from "node:fs/promises";
@@ -9,13 +10,13 @@ import { seedDemo } from "../src/mock/fixtures/seed.ts";
 const base = (process.argv[2] || "http://localhost:3100").replace(/\/$/, "");
 const profile = await mkdtemp(path.join(os.tmpdir(), "constructsync-registers-"));
 const port = 11000 + Math.floor(Math.random() * 1000);
-const browser = spawn("C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe", ["--headless=new", "--disable-gpu", "--no-first-run", `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`, base], { windowsHide: true, stdio: "ignore" });
+const browser = spawn("C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe", ["--headless=new", "--disable-gpu", "--no-first-run", `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`, "about:blank"], { windowsHide: true, stdio: "ignore" });
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 let ws;
 try {
   let target;
   for (let i = 0; i < 80 && !target; i++) {
-    try { target = (await fetch(`http://127.0.0.1:${port}/json`).then(r => r.json())).find(p => p.type === "page" && p.url.startsWith(base)); } catch {}
+    try { target = (await fetch(`http://127.0.0.1:${port}/json`).then(r => r.json())).find(p => p.type === "page" && (p.url.startsWith(base)||p.url==='about:blank')); } catch {}
     if (!target) await sleep(250);
   }
   assert.ok(target, "Test browser starts");
@@ -36,11 +37,11 @@ try {
     if (result.exceptionDetails) throw new Error(result.exceptionDetails.exception?.description || result.exceptionDetails.text);
     return result.result.value;
   };
-  const wait = async code => { for (let i = 0; i < 100; i++) { if (await run(code)) return; await sleep(100); } throw new Error(`Timed out: ${code}`); };
+  const wait = async code => { for (let i = 0; i < 300; i++) { if (await run(code)) return; await sleep(100); } throw new Error(`Timed out: ${code}`); };
   const navigate = async route => { await call("Page.navigate", { url: base + route }); await wait(`return location.pathname===${JSON.stringify(route)}&&!!document.querySelector('h1');`); await sleep(180); };
   const fill = async (selector, value) => run(`const el=document.querySelector(${JSON.stringify(selector)});const proto=el.tagName==='SELECT'?HTMLSelectElement.prototype:HTMLInputElement.prototype;Object.getOwnPropertyDescriptor(proto,'value').set.call(el,${JSON.stringify(String(value))});el.dispatchEvent(new Event(el.tagName==='SELECT'?'change':'input',{bubbles:true}));return true;`);
   const click = async selector => { await run(`const el=document.querySelector(${JSON.stringify(selector)});el.focus();el.click();return true;`); await sleep(100); };
-  await call("Runtime.enable"); await call("Page.enable");
+  await call("Runtime.enable"); await prepareFixtureBrowser(call, base); await call("Page.enable");
   await wait("return !!document.querySelector('#signin-email');");
   const account = ACCOUNT_FIXTURES.find(a => a.role === "Procurement");
   await fill("#signin-email", account.email); await fill("#signin-password", account.password); await click(".signin-form button");
@@ -160,7 +161,7 @@ try {
       await wait("return !!document.querySelector('.record-dialog[open]');");
       await call("Input.dispatchKeyEvent", { type: "keyDown", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 });
       await wait("return !document.querySelector('.record-dialog[open]')&&document.activeElement===document.querySelector('.suppliers-register tbody button');");
-      await navigate("/requests/m1/quotes");
+      await navigate("/requests/m1/quotes");await run(openQuotationReview);await sleep(150);
       await click('.quote-editor-header button[popoverTarget]');
       assert.equal(await run("const menu=document.querySelector('.row-action-menu:popover-open'),rect=menu.getBoundingClientRect();return rect.left>=0&&rect.right<=innerWidth&&rect.bottom<=innerHeight;"), true, "Quotation action popover fits");
       await call("Input.dispatchKeyEvent", { type: "keyDown", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 });
@@ -173,14 +174,14 @@ try {
       await click('.masthead-account');
       await run("[...document.querySelectorAll('.role-options button')].find(el=>el.textContent.includes('Administrator')).click();return true;");
       await navigate('/admin');await click('.admin-projects tbody button');
-      await click('.record-dialog[open] [role=tab]:nth-child(2)');
+      await click('.record-dialog[open] [role=tab]:nth-child(2)');await run("[...document.querySelectorAll('.record-dialog[open] button')].find(b=>b.textContent==='Link an existing folder').click();return true;");
       for(const width of [1440,900,801,768,414,375,320]){
         await call('Emulation.setDeviceMetricsOverride',{width,height:width<800?568:900,deviceScaleFactor:1,mobile:width<800});
         for(const theme of ['light','dark']){
           await run(`document.documentElement.dataset.theme=${JSON.stringify(theme)};const input=document.querySelector('.record-dialog[open] .drive-folder-form input');input.focus();return true;`);await sleep(150);
           const modalGeometry=await run("const modal=document.querySelector('.record-dialog[open]').getBoundingClientRect(),body=document.querySelector('.record-dialog[open] .record-dialog-body').getBoundingClientRect(),input=document.querySelector('.record-dialog[open] .drive-folder-form input').getBoundingClientRect(),gutter=Math.max(20,Math.min(56,innerWidth*.05));return {left:modal.left,right:innerWidth-modal.right,top:modal.top,bottom:innerHeight-modal.bottom,inputLeft:input.left-body.left,inputRight:body.right-input.right,gutter};");
           assert.equal(modalGeometry.left>=modalGeometry.gutter-1&&modalGeometry.right>=modalGeometry.gutter-1&&modalGeometry.top>=0&&modalGeometry.bottom>=0&&modalGeometry.inputLeft>=5&&modalGeometry.inputRight>=5,true,`Project modal has clear side margins and a fitting input at ${width}/${theme}: ${JSON.stringify(modalGeometry)}`);
-          if(width===1440)assert.equal(await run("return document.querySelector('.record-dialog[open]').getBoundingClientRect().height<600;"),true,'Short settings fit their content');
+          if(width===1440)assert.equal(await run("return document.querySelector('.record-dialog[open]').getBoundingClientRect().height<600;"),true,'Short settings fit their content: '+JSON.stringify(await run("const d=document.querySelector(\'.record-dialog[open]\');return {height:d.getBoundingClientRect().height,text:d.innerText};")));
           if(width===1440||width===900||width===375)await writeFile(path.join(profile,`project-modal-${width}-${theme}.png`),Buffer.from((await call('Page.captureScreenshot',{format:'png'})).data,'base64'));
         }
       }

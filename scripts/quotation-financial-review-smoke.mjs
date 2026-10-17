@@ -1,3 +1,5 @@
+import { prepareFixtureBrowser } from "./helpers/workspace-fixture.mjs";
+import { openQuotationReview } from "./helpers/workspace-fixture.mjs";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { mkdtemp, writeFile } from "node:fs/promises";
@@ -9,13 +11,13 @@ import { seedDemo } from "../src/mock/fixtures/seed.ts";
 const base = (process.argv[2] || "http://localhost:3100").replace(/\/$/, "");
 const profile = await mkdtemp(path.join(os.tmpdir(), "constructsync-quotation-review-"));
 const port = 11000 + Math.floor(Math.random() * 1000);
-const browser = spawn("C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe", ["--headless=new", "--disable-gpu", "--no-first-run", `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`, base], { windowsHide: true, stdio: "ignore" });
+const browser = spawn("C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe", ["--headless=new", "--disable-gpu", "--no-first-run", `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`, "about:blank"], { windowsHide: true, stdio: "ignore" });
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 let ws;
 try {
   let target;
   for (let i = 0; i < 80 && !target; i++) {
-    try { target = (await fetch(`http://127.0.0.1:${port}/json`).then(r => r.json())).find(p => p.type === "page" && p.url.startsWith(base)); } catch {}
+    try { target = (await fetch(`http://127.0.0.1:${port}/json`).then(r => r.json())).find(p => p.type === "page" && (p.url.startsWith(base)||p.url==='about:blank')); } catch {}
     if (!target) await sleep(250);
   }
   assert.ok(target, "Test browser starts");
@@ -40,7 +42,7 @@ try {
   const navigate = async route => { await call("Page.navigate", { url: base + route }); await wait(`return location.pathname===${JSON.stringify(route)}&&!!document.querySelector('h1');`); await sleep(180); };
   const fill = async (selector, value) => run(`const el=document.querySelector(${JSON.stringify(selector)});const proto=el.tagName==='SELECT'?HTMLSelectElement.prototype:HTMLInputElement.prototype;Object.getOwnPropertyDescriptor(proto,'value').set.call(el,${JSON.stringify(String(value))});el.dispatchEvent(new Event(el.tagName==='SELECT'?'change':'input',{bubbles:true}));return true;`);
   const click = async selector => { await run(`const el=document.querySelector(${JSON.stringify(selector)});el.focus();el.click();return true;`); await sleep(100); };
-  await call("Runtime.enable"); await call("Page.enable");
+  await call("Runtime.enable"); await prepareFixtureBrowser(call, base); await call("Page.enable");
   await wait("return !!document.querySelector('#signin-email');");const account=ACCOUNT_FIXTURES.find(a=>a.role==='Procurement');await fill('#signin-email',account.email);await fill('#signin-password',account.password);await click('.signin-form button');await wait("return location.pathname==='/dashboard'&&!!document.querySelector('.masthead-account');");
 
 
@@ -50,7 +52,7 @@ try {
   const names=['Northbridge','Harborline','Pillarstone','Crestmark','Historical supplier'];
   for(let index=0;index<5;index++)fixture.quotes.push({...structuredClone(source),id:`review-${index}`,ref:`Q-REVIEW-${index}`,reviewStatus:index===4?'finalized':'draft',supplierDetails:{name:names[index],address:'Sample address',tin:'123-456-789',contactName:'Supplier contact',email:'sample@example.com',phone:'09123456789'},quoteDate:'2026-10-12',validity:'2026-11-12',available:'In stock',leadDays:3,terms:'30 days',documents:[{name:'Supplier quotation.pdf',type:'application/pdf',fileId:'review-source'}],financial:index===4?undefined:{vatStatus:'VAT',priceBasis:'inclusive',vatRate:12,reviewed:false},lines:[{id:`review-${index}-line`,description:'CONCRETE PRIMER, WATER-BASED, 16 L',quantity:12,unit:'PAIL',unitPrice:100,brand:'',specification:'',requestItemId:request.items[0].id,conversionFactor:1,varianceReason:'',matchConfirmed:true,matchConfidence:'high',discountType:'none',discountValue:0,taxRate:0,printedTotal:null}],adjustments:index===0?[{id:'delivery',label:'Delivery fee',kind:'shipping',calculation:'fixed',value:100},{id:'discount',label:'Quotation discount',kind:'discount',calculation:'percentage',value:10},{id:'tax',label:'Extracted VAT',kind:'tax',calculation:'percentage',value:12}]:[],archive:index===4?{status:'complete',files:[]}:undefined});
   const finalized=fixture.quotes.find(value=>value.id==='review-3');finalized.reviewStatus='finalized';finalized.financial.reviewed=true;finalized.archive={status:'complete',files:[]};
-  await run(`localStorage.setItem('hml-constructsync-demo-v12',${JSON.stringify(JSON.stringify(fixture))});return true;`);await call('Emulation.setDeviceMetricsOverride',{width:1440,height:1050,deviceScaleFactor:1,mobile:false});await navigate('/requests/m1/quotes');
+  await run(`localStorage.setItem('hml-constructsync-demo-v12',${JSON.stringify(JSON.stringify(fixture))});return true;`);await call('Emulation.setDeviceMetricsOverride',{width:1440,height:1050,deviceScaleFactor:1,mobile:false});await navigate('/requests/m1/quotes');await run(openQuotationReview);await sleep(160);
   const sheet=()=>run("return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).quotes.find(q=>q.id==='review-0');");
   const fillAny=async(selector,value)=>run(`const el=document.querySelector(${JSON.stringify(selector)});if(!el)throw Error('Missing '+${JSON.stringify(selector)});const prototype=el.tagName==='TEXTAREA'?HTMLTextAreaElement.prototype:el.tagName==='SELECT'?HTMLSelectElement.prototype:HTMLInputElement.prototype;Object.getOwnPropertyDescriptor(prototype,'value').set.call(el,${JSON.stringify(String(value))});el.dispatchEvent(new Event(el.tagName==='SELECT'?'change':'input',{bubbles:true}));return true;`);
   const totals=()=>run("return {gross:document.querySelector('.quote-summary-gross dd')?.textContent,net:document.querySelector('.quote-summary-net dd')?.textContent};");
@@ -94,7 +96,7 @@ try {
   assert.match(await run("return document.querySelector('.quote-adjustment-card:last-child').textContent;"),/Non-taxable service/);
   await fillAny('#quote-review-0-ref','');await sleep(80);await click('.quote-review-trigger');await run("[...document.querySelectorAll('.quote-editor-issues button')].find(el=>el.textContent.includes('quotation reference')).click();return true;");await wait("return document.activeElement.id==='quote-review-0-ref';");await fillAny('#quote-review-0-ref','Q-REVIEW-0');await sleep(80);
   await fillAny('#quote-review-0-contactName','Updated contact');await sleep(80);assert.equal((await sheet()).supplierDetails.contactName,'Updated contact');
-  await call('Page.reload',{ignoreCache:true});await wait("return !!document.querySelector('.quote-financial-card');");assert.equal((await sheet()).supplierDetails.contactName,'Updated contact');assert.equal((await sheet()).adjustments[2].value,50);
+  await call('Page.reload',{ignoreCache:true});await wait("return !!document.querySelector('.procurement-steps');");await run(openQuotationReview);await sleep(160);await wait("return !!document.querySelector('.quote-financial-card');");assert.equal((await sheet()).supplierDetails.contactName,'Updated contact');assert.equal((await sheet()).adjustments[2].value,50);
   assert.equal(await run("return document.querySelector('.quote-core-details').open;"),false,'Reload returns supplier details to the collapsed state');
   for(const width of [1600,1440,1280,1200,1000,900,768,414,375,320]){
     await call('Emulation.setDeviceMetricsOverride',{width,height:1050,deviceScaleFactor:1,mobile:width<=800});await sleep(140);

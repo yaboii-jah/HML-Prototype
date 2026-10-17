@@ -1,3 +1,4 @@
+import { workflowActions, type WorkflowAction } from "./workflow-actions.ts";
 import { transferQuantityFor, transfersForRequest, deliveriesForTransfer, transferUnscheduled } from "./stock-transfers.ts";
 import { creditOverdue } from "./credit-terms.ts";
 import { servedPO, requiresPMReview, isExternalPayment } from "./full-disbursement.ts";
@@ -17,6 +18,7 @@ export type RequestMonitoring = Readonly<{
   coverage: readonly MaterialCoverage[]; pos: readonly PO[]; batches: readonly Batch[]; paymentRequests: readonly PaymentRequest[];
   amounts: Readonly<{ payable: number; paid: number; outstanding: number }>;
   flags: Readonly<{ forFinance: boolean; forLogistics: boolean; needsAttention: boolean }>;
+  actions: readonly WorkflowAction[];
   latestActivity?: Activity;
 }>;
 const milestone = (state: MonitoringState, label: string, detail = ""): MonitoringMilestone => ({ state, label, detail });
@@ -75,7 +77,7 @@ export function requestMonitoring(state: DemoSnapshot, requestId: string, record
   const latestActivity = state.activity.filter(event => event.requestId ? event.requestId === requestId : records.get(event.entity)?.requestId === requestId).sort((a, b) => (Date.parse(b.at) || 0) - (Date.parse(a.at) || 0))[0];
   return {
     request, projectName: state.sites.find(site => site.id === request.siteId)?.name || "Project not recorded", scopeName: scopeName(state, request.scopeId),
-    review, served, finance, logistics, delivered, stock, coverage, pos, batches, paymentRequests,
+    review, served, finance, logistics, delivered, stock, coverage, pos, batches, paymentRequests, actions: workflowActions(state, requestId),
     amounts: { payable, paid, outstanding }, flags: { forFinance: forFinance > 0 && !paidComplete, forLogistics: forLogistics && delivered.state !== "complete", needsAttention: hasBlocker }, latestActivity,
   };
 }

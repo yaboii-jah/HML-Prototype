@@ -1,3 +1,4 @@
+import { prepareFixtureBrowser } from "./helpers/workspace-fixture.mjs";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { mkdtemp, writeFile } from "node:fs/promises";
@@ -10,13 +11,13 @@ import { applyCommand } from "../src/domain/commands.ts";
 const base = (process.argv[2] || "http://localhost:3100").replace(/\/$/, "");
 const profile = await mkdtemp(path.join(os.tmpdir(), "constructsync-registers-"));
 const port = 11000 + Math.floor(Math.random() * 1000);
-const browser = spawn("C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe", ["--headless=new", "--disable-gpu", "--no-first-run", `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`, base], { windowsHide: true, stdio: "ignore" });
+const browser = spawn("C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe", ["--headless=new", "--disable-gpu", "--no-first-run", `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`, "about:blank"], { windowsHide: true, stdio: "ignore" });
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 let ws;
 try {
   let target;
   for (let i = 0; i < 80 && !target; i++) {
-    try { target = (await fetch(`http://127.0.0.1:${port}/json`).then(r => r.json())).find(p => p.type === "page" && p.url.startsWith(base)); } catch {}
+    try { target = (await fetch(`http://127.0.0.1:${port}/json`).then(r => r.json())).find(p => p.type === "page" && (p.url.startsWith(base)||p.url==='about:blank')); } catch {}
     if (!target) await sleep(250);
   }
   assert.ok(target, "Test browser starts");
@@ -41,7 +42,7 @@ try {
   const navigate = async route => { console.log("Checking " + route); await call("Page.navigate", { url: base + route }); await wait(`return location.pathname+location.search===${JSON.stringify(route)}&&!!document.querySelector('h1');`); await sleep(180); };
   const fill = async (selector, value) => run(`const el=document.querySelector(${JSON.stringify(selector)});const proto=el.tagName==='SELECT'?HTMLSelectElement.prototype:el.tagName==='TEXTAREA'?HTMLTextAreaElement.prototype:HTMLInputElement.prototype;Object.getOwnPropertyDescriptor(proto,'value').set.call(el,${JSON.stringify(String(value))});el.dispatchEvent(new Event(el.tagName==='SELECT'?'change':'input',{bubbles:true}));return true;`);
   const click = async selector => { await run(`const el=document.querySelector(${JSON.stringify(selector)});el.focus();el.click();return true;`); await sleep(100); };
-  await call("Runtime.enable"); await call("Page.enable");
+  await call("Runtime.enable"); await prepareFixtureBrowser(call, base); await call("Page.enable");
 
   await wait("return !!document.querySelector('#signin-email');");
   const account=ACCOUNT_FIXTURES.find(a=>a.role==='Procurement');await fill('#signin-email',account.email);await fill('#signin-password',account.password);await click('.signin-form button');await wait("return location.pathname==='/dashboard'&&!!document.querySelector('.masthead-account');");
@@ -70,11 +71,13 @@ try {
   const button=async text=>{await run("const button=[...document.querySelectorAll('button')].find(b=>b.textContent.trim()==="+JSON.stringify(text)+");if(!button)throw new Error('Missing button '+ "+JSON.stringify(text)+");button.click();return true;");await sleep(150);};
   const confirm=async()=>{await wait("return !!document.querySelector('.confirm-dialog[open]');");await click('.confirm-dialog[open] .confirm-actions button:last-child');await sleep(200);};
   const switchAccount=async name=>{await click('.masthead-account');await wait("return !!document.querySelector('.role-options');");await run("const button=[...document.querySelectorAll('.role-options button')].find(b=>b.textContent.includes("+JSON.stringify(name)+"));if(!button)throw new Error('Missing account');button.click();return true;");await sleep(200);};
+  // Start with explicit empty assignments, then exercise Administrator assignment controls.
+  await run("const key='hml-constructsync-users-v1',d=JSON.parse(localStorage.getItem(key));for(const u of d.users.filter(u=>u.role==='Site Personnel'))u.siteIds=[];localStorage.setItem(key,JSON.stringify(d));return true;");
   // Assign existing source personnel and create a separately assigned destination receiver through Administrator UI.
-  await navigate('/dashboard');await switchAccount(ACCOUNT_FIXTURES.find(a=>a.role==='Administrator').name);await navigate('/admin');
+  await navigate('/dashboard');await switchAccount(ACCOUNT_FIXTURES.find(a=>a.role==='Administrator').name);await navigate('/admin');await button('Users');
   await wait("return !!document.querySelector('.user-row-actions');");
   const sourceName=ACCOUNT_FIXTURES.find(a=>a.role==='Site Personnel').name;
-  await run("const row=[...document.querySelectorAll('tr')].find(r=>r.textContent.includes("+JSON.stringify(sourceName)+"));row.querySelector('.user-row-actions button').click();return true;");
+  await run("const row=[...document.querySelectorAll('.admin-users tr')].find(r=>r.textContent.includes("+JSON.stringify(sourceName)+"));row.querySelector('.user-row-actions button').click();return true;");
   await wait("return !!document.querySelector('.user-edit-form');");
   await click('.user-edit-form input[name=siteIds][value='+sourceSite.id+']');await click('.user-edit-form .button.primary');await confirm();
   await wait("return !document.querySelector('.user-edit-form');");

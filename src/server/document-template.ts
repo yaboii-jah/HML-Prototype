@@ -3,6 +3,11 @@ import path from "node:path";
 import fontkit from "@pdf-lib/fontkit";
 import { PDFDocument, PDFString, rgb, type PDFPage, type PDFFont } from "pdf-lib";
 
+export function allowedDocumentLink(value: string): boolean {
+  try { const url = new URL(value); return !url.username && !url.password && (url.protocol === "https:" || url.protocol === "http:" && ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname)); }
+  catch { return false; }
+}
+
 export const TEMPLATE_GEOMETRY = {
   po: { width: 612, height: 792, scale: .57877815, left: 36, top: 32.4 },
   mrf: { width: 792, height: 612, scale: .3995375625, left: 50.4, top: 54 },
@@ -55,7 +60,7 @@ export async function documentTemplate(kind: TemplateKind) {
     return lines.slice(visible.length);
   };
   const link = (sheet: PDFPage, url: string | undefined, x: number, y: number, width: number, height: number) => {
-    if (!url || !/^https:\/\//.test(url)) return;
+    if (!url || !allowedDocumentLink(url)) return;
     const p = point(x, y + height);
     const annotation = pdf.context.register(pdf.context.obj({ Type: "Annot", Subtype: "Link", Rect: [p.x, p.y, p.x + width * geometry.scale, p.y + height * geometry.scale], Border: [0, 0, 0], A: { Type: "Action", S: "URI", URI: PDFString.of(url) } }));
     sheet.node.addAnnot(annotation);

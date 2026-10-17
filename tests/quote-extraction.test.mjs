@@ -12,7 +12,7 @@ const { POST } = await import("../app/api/quotes/extract/route.ts");
 
 const quotationRequest = () => {
   const form = new FormData();
-  form.append("files", new File(["sample quotation"], "quote.pdf", { type: "application/pdf" }));
+  form.append("files", new File(["%PDF-1.4\nsample quotation"], "quote.pdf", { type: "application/pdf" }));
   return new Request("http://localhost/api/quotes/extract", { method: "POST", body: form });
 };
 
@@ -60,4 +60,18 @@ test("quotation extraction explains an upstream invalid request without exposing
   assert.equal(response.status, 502);
   assert.match(result.error, /Gemini rejected the quotation request/);
   assert.doesNotMatch(result.error, /sensitive upstream details/);
+});
+
+test("quotation rejects foreign origins, disguised bytes and malformed bodies without provider work", async t => {
+  const previousKey = process.env.GEMINI_API_KEY, previousFetch = globalThis.fetch;
+  t.after(() => { globalThis.fetch = previousFetch; if (previousKey === undefined) delete process.env.GEMINI_API_KEY; else process.env.GEMINI_API_KEY = previousKey; });
+  process.env.GEMINI_API_KEY = 'test-key'; let calls = 0; globalThis.fetch = async () => { calls++; throw new Error('Provider must not run'); };
+  const foreign = quotationRequest(); foreign.headers.set('origin', 'https://outside.example');
+  assert.equal((await POST(foreign)).status, 403);
+  const form = new FormData(); form.append('files', new File(['plain text'], 'quote.pdf', {type:'application/pdf'}));
+  assert.equal((await POST(new Request('http://localhost/api/quotes/extract', {method:'POST',body:form}))).status, 400);
+  const malformed = new Request('http://localhost/api/quotes/extract', {method:'POST',headers:{'content-type':'multipart/form-data; boundary=missing'},body:'broken'});
+  const response = await POST(malformed); assert.equal(response.status,400); assert.ok((await response.json()).error);
+  const mixed = new FormData(); mixed.append('files', 'not-a-file');
+  assert.equal((await POST(new Request('http://localhost/api/quotes/extract', {method:'POST',body:mixed}))).status,400); assert.equal(calls,0);
 });

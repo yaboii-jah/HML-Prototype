@@ -1,5 +1,6 @@
 "use client";
 
+import { WorkspaceTitle } from "./WorkspaceTitle";
 import { ArchiveStatus } from "@/src/components/ui/ArchiveStatus";
 import { WorkspaceAccess } from "@/src/components/ui/States";
 import { StickyHeadings } from "@/src/components/ui/StickyHeadings";
@@ -141,7 +142,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <button ref={accountTriggerRef} className="masthead-account" onClick={() => { setAccountError(""); setAccountOpen(true); }} aria-haspopup="dialog" aria-label={`Account: ${accountName}, ${roleLabel(snapshot.role)}`}><span className="account-avatar">{initials}</span><span className="account-label"><strong title={accountName}>{accountName}</strong><small title={roleLabel(snapshot.role)}>{roleLabel(snapshot.role)}</small></span><Icon name="chevron" size={16}/></button>
         </div>
       </header>
-      <main className="workspace-content"><ArchiveStatus/><WorkspaceAccess>{children}</WorkspaceAccess></main>
+      <main className="workspace-content"><ArchiveStatus/><WorkspaceTitle/><WorkspaceAccess>{children}</WorkspaceAccess></main>
     </div>
     <dialog ref={accountDialogRef} className="modal account-modal" aria-labelledby="account-title" onCancel={() => setAccountOpen(false)} onClose={() => { setAccountOpen(false); accountTriggerRef.current?.focus({ preventScroll: true }); }} onKeyDown={event => {
       if (event.key !== "Tab") return;

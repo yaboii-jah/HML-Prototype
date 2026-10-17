@@ -20,6 +20,7 @@ export function DataGate({ children }: { children: ReactNode }) {
   }, [router, session.role, session.status, snapshot, status, signedOut]);
   if (directory.status === "recovery") return <div className="state-screen"><div className="state-card"><h1>Saved user accounts need attention</h1><p>{directory.error}</p><p>Restore the saved user directory in browser storage before continuing.</p></div></div>;
   if (status === "loading") return <WorkspaceSkeleton variant={skeletonVariant(pathname)}/>;
+  if (status === "setup-error") return <SetupFailure/>;
   if (!snapshot || status === "recovery") return <><div className="state-screen"><div className="state-card"><span className="eyebrow">WORKSPACE RECOVERY</span><h1>Saved data needs attention</h1><p>{message}</p>{session.role === "Administrator" ? <button className="button primary" onClick={() => void (async () => { if (await confirm("Clear this workspace?", "Saved records and uploaded files will be removed and replaced with an empty workspace.", "Clear workspace", true)) await reset(); })()}>Clear workspace</button> : <Link href="/sign-in" className="button primary">Sign in as Administrator</Link>}</div></div>{confirmation}</>;
   if (session.status === "loading" || directory.status === "loading" || !session.role || snapshot.role !== session.role) return <WorkspaceSkeleton variant={skeletonVariant(pathname)}/>;
   return <Fragment key={`${snapshot.showcase?.installationId || "workspace"}:${session.userId}:${session.revision}`}>{status === "volatile" && <div className="storage-warning" role="status">{message}</div>}{children}</Fragment>;
@@ -36,6 +37,11 @@ export function AssignmentNotice() {
   const { access } = useDemo();
   if (!access.sitePersonnel || access.projectIds.length) return null;
   return <section className="panel" role="status"><h2>No assigned projects</h2><p>Ask an Administrator to assign your account to a project before requesting materials, receiving deliveries or managing site stock.</p></section>;
+}
+
+export function SetupFailure() {
+  const { message, retrySetup } = useDemo();
+  return <div className="state-screen"><div className="state-card"><span className="eyebrow">WORKSPACE SETUP</span><h1>Setup could not finish</h1><p>{message}</p><p>Existing records and files have been preserved. Retry setup to continue.</p><button className="button primary" onClick={() => void retrySetup()}>Retry setup</button></div></div>;
 }
 
 export function MissingRecord({ name, listHref }: { name: string; listHref: string }) {

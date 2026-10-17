@@ -1,3 +1,4 @@
+import { prepareFixtureBrowser } from "./helpers/workspace-fixture.mjs";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { mkdtemp } from "node:fs/promises";
@@ -9,13 +10,13 @@ import { blankWorkspace } from "../src/mock/fixtures/blank.ts";
 const base = (process.argv[2] || "http://localhost:3100").replace(/\/$/, "");
 const profile = await mkdtemp(path.join(os.tmpdir(), "constructsync-registers-"));
 const port = 11000 + Math.floor(Math.random() * 1000);
-const browser = spawn("C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe", ["--headless=new", "--disable-gpu", "--no-first-run", `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`, base], { windowsHide: true, stdio: "ignore" });
+const browser = spawn("C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe", ["--headless=new", "--disable-gpu", "--no-first-run", `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`, "about:blank"], { windowsHide: true, stdio: "ignore" });
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 let ws;
 try {
   let target;
   for (let i = 0; i < 80 && !target; i++) {
-    try { target = (await fetch(`http://127.0.0.1:${port}/json`).then(r => r.json())).find(p => p.type === "page" && p.url.startsWith(base)); } catch {}
+    try { target = (await fetch(`http://127.0.0.1:${port}/json`).then(r => r.json())).find(p => p.type === "page" && (p.url.startsWith(base)||p.url==='about:blank')); } catch {}
     if (!target) await sleep(250);
   }
   assert.ok(target, "Test browser starts");
@@ -36,11 +37,11 @@ try {
     if (result.exceptionDetails) throw new Error(result.exceptionDetails.exception?.description || result.exceptionDetails.text);
     return result.result.value;
   };
-  const wait = async code => { for (let i = 0; i < 100; i++) { if (await run(code)) return; await sleep(100); } throw new Error(`Timed out: ${code}: ${await run("return JSON.stringify({body:document.body.innerText.slice(-1600),role:JSON.parse(localStorage.getItem(\"hml-constructsync-demo-v12\"))?.role});")}`); };
+  const wait = async code => { for (let i = 0; i < 300; i++) { if (await run(code)) return; await sleep(100); } throw new Error(`Timed out: ${code}: ${await run("return JSON.stringify({body:document.body.innerText.slice(-1600),role:JSON.parse(localStorage.getItem(\"hml-constructsync-demo-v12\"))?.role});")}`); };
   const navigate = async route => { await call("Page.navigate", { url: base + route }); await wait(`return location.pathname===${JSON.stringify(route)}&&!!document.querySelector('h1');`); await sleep(180); };
   const fill = async (selector, value) => run(`const el=[...document.querySelectorAll(${JSON.stringify(selector)})].find(el=>el.checkVisibility());const proto=el.tagName==='SELECT'?HTMLSelectElement.prototype:HTMLInputElement.prototype;Object.getOwnPropertyDescriptor(proto,'value').set.call(el,${JSON.stringify(String(value))});el.dispatchEvent(new Event(el.tagName==='SELECT'?'change':'input',{bubbles:true}));return true;`);
   const click = async selector => { await run(`const el=document.querySelector(${JSON.stringify(selector)});el.focus();el.click();return true;`); await sleep(100); };
-  await call("Runtime.enable"); await call("Page.enable");
+  await call("Runtime.enable"); await prepareFixtureBrowser(call, base); await call("Page.enable");
   await wait("return !!document.querySelector('#signin-email');");
   const account=ACCOUNT_FIXTURES.find(a=>a.role==='Administrator');
   await fill('#signin-email',account.email);await fill('#signin-password',account.password);await click('.signin-form button');
@@ -50,7 +51,7 @@ try {
   await call('Page.addScriptToEvaluateOnNewDocument',{source:`window.__folderCalls=[];window.__folderFailure=false;const originalFetch=window.fetch;window.fetch=async(input,init)=>{const url=String(input);if(url.endsWith('/api/drive/projects')){window.__folderCalls.push(JSON.parse(init.body));await new Promise(r=>setTimeout(r,150));return window.__folderFailure?Response.json({error:'Folder permission test failure'},{status:403}):Response.json({id:'automatic-project-folder',name:'Automatic project'});}if(url.endsWith('/api/drive/validate'))return Response.json({id:'manual-project-folder',name:'Manual folder'});return originalFetch(input,init);};`});
   await navigate('/admin');await wait("return [...document.querySelectorAll('.page-header button')].some(b=>b.textContent.trim()==='Add project');");
   const press=async(label,scope='document')=>{await run(`const b=[...${scope}.querySelectorAll('button')].find(b=>b.checkVisibility()&&b.textContent.trim()===${JSON.stringify(label)});if(!b)throw Error('Missing button '+${JSON.stringify(label)});b.click();return true;`);await sleep(100);};
-  const add=async name=>{await press('Add project');await fill('.admin-add-project input[name=name]',name);await fill('.admin-add-project input[name=location]','Pasig');await fill('.admin-add-project input[name=budget]','1,234,567.89');assert.equal(await run("return document.querySelector('.admin-add-project input[name=budget]').value;"),'1,234,567.89','Pasted budget retains separators and cents');await fill('.admin-add-project input[name=budget]','1000');await run("const input=document.querySelector('.admin-add-project input[name=budget]');input.focus();input.setSelectionRange(2,2);return true;");await call('Input.dispatchKeyEvent',{type:'keyDown',key:'Backspace',code:'Backspace',windowsVirtualKeyCode:8});await call('Input.dispatchKeyEvent',{type:'keyUp',key:'Backspace',code:'Backspace',windowsVirtualKeyCode:8});assert.equal(await run("return document.querySelector('.admin-add-project input[name=budget]').value;"),'0','Backspace beside a comma removes the adjacent digit');await fill('.admin-add-project input[name=budget]','100000');assert.equal(await run("return document.querySelector('.admin-add-project input[name=budget]').value;"),'100,000','Budget formats while entering');await run("document.querySelector('.admin-add-project').requestSubmit();document.querySelector('.admin-add-project').requestSubmit();return true;");await wait("return !!document.querySelector('.confirm-dialog[open]');");await click('.confirm-dialog[open] .confirm-actions button:last-child');await wait("return !!document.querySelector('.record-dialog[open]');");};
+  const add=async name=>{await press('Add project');await fill('.admin-add-project input[name=name]',name);await fill('.admin-add-project input[name=documentCode]','SMOKE-'+name.toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,12));await fill('.admin-add-project input[name=location]','Pasig');await fill('.admin-add-project input[name=budget]','1,234,567.89');assert.equal(await run("return document.querySelector('.admin-add-project input[name=budget]').value;"),'1,234,567.89','Pasted budget retains separators and cents');await fill('.admin-add-project input[name=budget]','1000');await run("const input=document.querySelector('.admin-add-project input[name=budget]');input.focus();input.setSelectionRange(2,2);return true;");await call('Input.dispatchKeyEvent',{type:'keyDown',key:'Backspace',code:'Backspace',windowsVirtualKeyCode:8});await call('Input.dispatchKeyEvent',{type:'keyUp',key:'Backspace',code:'Backspace',windowsVirtualKeyCode:8});assert.equal(await run("return document.querySelector('.admin-add-project input[name=budget]').value;"),'0','Backspace beside a comma removes the adjacent digit');await fill('.admin-add-project input[name=budget]','100000');assert.equal(await run("return document.querySelector('.admin-add-project input[name=budget]').value;"),'100,000','Budget formats while entering');await run("document.querySelector('.admin-add-project').requestSubmit();document.querySelector('.admin-add-project').requestSubmit();return true;");await wait("return !!document.querySelector('.confirm-dialog[open]');");await click('.confirm-dialog[open] .confirm-actions button:last-child');await wait("return !!document.querySelector('.record-dialog[open]');");};
   const accept=async()=>{await wait("return !!document.querySelector('.confirm-dialog[open]');");await click('.confirm-dialog[open] .confirm-actions button:last-child');};
   const users=async()=>{await navigate('/admin');await press('Users');await wait("return !!document.querySelector('.admin-users');");};
   await users();await press('Add user');

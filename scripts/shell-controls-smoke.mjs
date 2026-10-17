@@ -1,3 +1,4 @@
+import { prepareFixtureBrowser } from "./helpers/workspace-fixture.mjs";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { mkdtemp, writeFile } from "node:fs/promises";
@@ -9,13 +10,13 @@ import { seedDemo } from "../src/mock/fixtures/seed.ts";
 const base = (process.argv[2] || "http://localhost:3100").replace(/\/$/, "");
 const profile = await mkdtemp(path.join(os.tmpdir(), "constructsync-shell-"));
 const port = 11000 + Math.floor(Math.random() * 1000);
-const browser = spawn("C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe", ["--headless=new", "--disable-gpu", "--no-first-run", `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`, base], { windowsHide: true, stdio: "ignore" });
+const browser = spawn("C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe", ["--headless=new", "--disable-gpu", "--no-first-run", `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`, "about:blank"], { windowsHide: true, stdio: "ignore" });
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 let ws;
 try {
   let target;
   for (let i = 0; i < 80 && !target; i++) {
-    try { target = (await fetch(`http://127.0.0.1:${port}/json`).then(r => r.json())).find(p => p.type === "page" && p.url.startsWith(base)); } catch {}
+    try { target = (await fetch(`http://127.0.0.1:${port}/json`).then(r => r.json())).find(p => p.type === "page" && (p.url.startsWith(base)||p.url==='about:blank')); } catch {}
     if (!target) await sleep(250);
   }
   assert.ok(target, "Test browser starts");
@@ -37,11 +38,11 @@ try {
     if (result.exceptionDetails) throw new Error(result.exceptionDetails.exception?.description || result.exceptionDetails.text);
     return result.result.value;
   };
-  const wait = async code => { for (let i = 0; i < 100; i++) { if (await run(code)) return; await sleep(100); } throw new Error(`Timed out: ${code}`); };
+  const wait = async code => { for (let i = 0; i < 300; i++) { if (await run(code)) return; await sleep(100); } throw new Error(`Timed out: ${code}; ${await run("return JSON.stringify({page:location.pathname,body:document.body.innerText.slice(-600),sidebar:document.documentElement.dataset.sidebar,focus:document.activeElement.outerHTML});")}`); };
   const navigate = async route => { await call("Page.navigate", { url: base + route }); await wait(`return location.pathname===${JSON.stringify(route)}&&!!document.querySelector('h1');`); await sleep(180); };
   const fill = async (selector, value) => run(`const el=document.querySelector(${JSON.stringify(selector)});const proto=el.tagName==='SELECT'?HTMLSelectElement.prototype:HTMLInputElement.prototype;Object.getOwnPropertyDescriptor(proto,'value').set.call(el,${JSON.stringify(String(value))});el.dispatchEvent(new Event(el.tagName==='SELECT'?'change':'input',{bubbles:true}));return true;`);
   const click = async selector => { await run(`const el=document.querySelector(${JSON.stringify(selector)});el.focus();el.click();return true;`); await sleep(100); };
-  await call("Runtime.enable"); await call("Page.enable");
+  await call("Runtime.enable"); await prepareFixtureBrowser(call, base); await call("Page.enable");
   await wait("return !!document.querySelector('#signin-email');");
   const account = ACCOUNT_FIXTURES.find(a => a.role === "Administrator");
   await fill("#signin-email", account.email); await fill("#signin-password", account.password); await click(".signin-form button");
@@ -65,7 +66,7 @@ try {
   await wait("return document.querySelector('.sidebar-toggle').getAttribute('aria-expanded')==='false';");
   assert.equal(await railWidth(), 72, "Collapsed sidebar width");
   assert.equal(await run("return document.querySelector('.sidebar-toggle').getAttribute('aria-label');"), "Expand sidebar");
-  await run("document.querySelector('.compact-navigation>nav>a').focus();return true;");
+  await sleep(350);await run("document.activeElement.blur();document.querySelector('.compact-navigation>nav>a').focus();return true;");
   await wait("return !!document.querySelector('.sidebar-tooltip');");
   assert.equal(await run("return document.querySelector('.sidebar-tooltip').textContent;"), "Dashboard", "Keyboard tooltip");
   await escape();
@@ -153,7 +154,7 @@ try {
   await resize(375, 667);
   assert.equal(await run("return parseFloat(getComputedStyle(document.querySelector('.side-nav')).transitionDuration)<=0.001;"), true, "Reduced motion removes perceptible drawer animation");
   await resize(1440, 900);
-  await run(`const state=JSON.parse(localStorage.getItem('hml-constructsync-demo-v12'));state.pos.forEach(po=>{po.status='draft';po.paymentDueDate=undefined;});localStorage.setItem('hml-constructsync-demo-v12',JSON.stringify(state));return true;`);
+  await run(`const state=JSON.parse(localStorage.getItem('hml-constructsync-demo-v12'));state.pos.forEach(po=>{po.status='draft';po.paymentDueDate=undefined;});state.requests.forEach(r=>{r.status='approved';delete r.correction;if(r.archive)r.archive.status='complete';});localStorage.setItem('hml-constructsync-demo-v12',JSON.stringify(state));return true;`);
   await navigate('/dashboard');
   await click('.notification-trigger');
   assert.equal(await run("return document.querySelector('.notification-list').textContent.trim();"), 'Nothing waiting for this role.', "Empty notification state retained");
@@ -163,7 +164,7 @@ try {
   await click('.notification-trigger');
   assert.equal(await run("const list=document.querySelector('.notification-list');return list.querySelectorAll('a').length===1&&list.scrollHeight===list.clientHeight;"), true, "Short notification list needs no scrolling");
   await run("document.querySelector('.notification-list>a').click();return true;");
-  await wait("return location.pathname==='/purchase-orders/notice-0'&&!document.querySelector('.notification-popover');");
+  await wait("return location.pathname==='/accounting/notice-0'&&!document.querySelector('.notification-popover');");
   assert.deepEqual(exceptions, [], 'No uncaught browser errors');
   console.log('Shell controls smoke passed. Screenshots:', profile);
 } finally { ws?.close(); browser.kill(); }

@@ -26,6 +26,7 @@ import { DocumentPreview } from "@/src/components/DocumentPreview";
 import { deleteLocalFile, saveRequestFile } from "./quote-files";
 import { procurementReady } from "@/src/domain/request-archive";
 import { StockSuitabilityList } from "./StockSuitabilityList";
+import { businessDate } from "@/src/domain/business-dates";
 import { RequestLifecycle } from "./RequestLifecycle";
 import { RequestDocumentGallery } from "./RequestDocumentGallery";
 import { syncApprovedRequest } from "./archive-request";
@@ -40,7 +41,7 @@ const MATERIAL_COPY_FIELDS = [
   { key: "remarks", label: "Remarks" },
 ] as const;
 type MaterialCopyField = (typeof MATERIAL_COPY_FIELDS)[number]["key"];
-const todayLocal = () => { const date = new Date(); return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`; };
+const todayLocal = businessDate;
 const REQUEST_STEPS = ["Request details", "Materials", "Review & submit"] as const;
 const REQUEST_DETAIL_FIELDS = [
   { name: "requestedBy", label: "Requested by" },
@@ -68,7 +69,7 @@ export function RequestForm({ id }: { id?: string }) {
   const pendingFileIds = useRef(new Set<string>());
   useEffect(() => { const staged = pendingFileIds.current; return () => { for (const fileId of staged) void deleteLocalFile(fileId).catch(() => {}); }; }, []);
   const { confirm, confirmation } = useConfirmation();
-  const [items, setItems] = useState<Item[]>(() => original?.items.map(item => ({ ...item })) || [{ id: newId("item"), name: "", unit: "bag", quantity: 1, neededDate: new Date().toISOString().slice(0, 10), purpose: "", location: "", remarks: "" }]);
+  const [items, setItems] = useState<Item[]>(() => original?.items.map(item => ({ ...item })) || [{ id: newId("item"), name: "", unit: "bag", quantity: 1, neededDate: businessDate(), purpose: "", location: "", remarks: "" }]);
   const [documentState, setDocumentState] = useState<{ id?: string; touched: boolean; documents: DocumentRef[] }>(() => ({ id, touched: false, documents: [] }));
   const documents = documentState.id === id && documentState.touched ? documentState.documents : original?.documents || [];
   const [scopeState] = useState<{ id?: string; touched: boolean; document?: DocumentRef }>(() => ({ id, touched: false }));
@@ -137,7 +138,7 @@ export function RequestForm({ id }: { id?: string }) {
     markEdited();
     const previous = items[items.length - 1];
     const source = items.find(item => item.id === selectedCopySourceId) || previous;
-    const today = new Date().toISOString().slice(0, 10);
+    const today = businessDate();
     const added = {
       id: newId("item"), name: "", unit: copyFields.unit && source ? source.unit : "piece", quantity: 1,
       neededDate: copyFields.neededDate && source ? source.neededDate : today,
