@@ -4,8 +4,8 @@ Two figures describe the current revised workflow using Gane–Sarson notation. 
 
 ## Figures
 
-- [Context PDF](constructsync-context.pdf), [PNG](constructsync-context.png), [SVG](constructsync-context.svg), [Mermaid](constructsync-context.mmd): one light blue ConstructSync process with black text and lines, with five external entities above and five below. The horizontal figure measures 27.7 × 12.9 cm; insert at 27.7 cm wide on a landscape page for text of approximately 12.34 pt. The 5600 × 2600 PNG is suitable for pasting into documents; SVG/PDF preserve vector text. The figure contains no explanatory footer; supplier mediation is explained in the accompanying notes. The [previous portrait PDF](previous-portrait/constructsync-context.pdf) remains available.
-- [Level 1 PDF](constructsync-level1.pdf), [PNG](constructsync-level1.png), [SVG](constructsync-level1.svg), [Mermaid](constructsync-level1.mmd): six processes and six logical stores. The PDF uses one A4 landscape page with 10 mm margins. Insert it at 27.7 cm wide on a landscape document page: the smallest text is approximately 10.71 pt. Use SVG for sharp scaling or the 8800 × 6000 PNG for pasting into Word/Google Docs. Keep the original aspect ratio and avoid image compression; shrinking it to a portrait text column also shrinks the labels.
+- [Context PDF](constructsync-context.pdf), [PNG](constructsync-context.png), [SVG](constructsync-context.svg), [Mermaid](constructsync-context.mmd): one light blue ConstructSync process with black text and lines, with five external entities above and five below. The horizontal figure measures 27.7 × 14.8 cm; insert at 27.7 cm wide on a landscape page for text of approximately 13.46 pt. The 5600 × 3000 PNG is suitable for pasting into documents; SVG/PDF preserve vector text. The figure contains no explanatory footer; supplier mediation is explained in the accompanying notes. The [previous portrait PDF](previous-portrait/constructsync-context.pdf) remains available.
+- [Level 1 PDF](constructsync-level1.pdf), [PNG](constructsync-level1.png), [SVG](constructsync-level1.svg), [Mermaid](constructsync-level1.mmd): six processes and six logical stores. The PDF uses one A4 landscape page with 10 mm margins. Insert it at 27.7 cm wide on a landscape document page: the smallest text is approximately 11.06 pt. Use SVG for sharp scaling or the 8800 × 6000 PNG for pasting into Word/Google Docs. Keep the original aspect ratio and avoid image compression; shrinking it to a portrait text column also shrinks the labels.
 
 Suggested captions, placed outside the images: *Figure X. Context diagram of ConstructSync.* and *Figure Y. Level 1 data flow diagram of ConstructSync.*
 
@@ -17,10 +17,10 @@ Rectangles represent external entities, numbered rounded boxes represent process
 |---|---|
 | 1.0 Manage Users & Projects | Administrator, Project Manager supply or receive its business information. |
 | 2.0 Manage Requests | Site Personnel, Project Manager supply or receive its business information. |
-| 3.0 Manage Procurement | Procurement, Accounting / Auditing, Supplier supply or receive its business information. |
-| 4.0 Manage Payments | Accounting / Auditing, Finance supply or receive its business information. |
+| 3.0 Manage Procurement | Procurement, Accounting, Supplier supply or receive its business information. |
+| 4.0 Manage Payments | Accounting, Finance supply or receive its business information. |
 | 5.0 Manage Delivery & Inventory | Logistics, Site Personnel, Procurement supply or receive its business information. |
-| 6.0 Manage Documents | AI Extraction Service, Google Drive, Accounting / Auditing supply or receive its business information. |
+| 6.0 Manage Documents | AI Extraction Service, Google Drive, Accounting supply or receive its business information. |
 
 ## Important distinctions
 

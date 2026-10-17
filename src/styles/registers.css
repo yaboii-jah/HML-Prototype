@@ -129,6 +129,21 @@ html[data-theme="dark"] .quotation-summary-table{--quotation-selected-surface:co
 .admin-users td small { display: block; overflow-wrap: anywhere; }
 .admin-users td { white-space: normal; }
 .user-edit-form, .user-password-form { display: grid; gap: 18px; }
+.user-project-assignments { min-width: 0; margin: 0; padding: 16px; border: 1px solid var(--line); border-radius: 12px; }
+.user-project-assignments legend { padding: 0 6px; color: var(--ink); font-size: 15px; font-weight: 700; }
+.user-project-assignments > .helper-note { margin: 0 0 16px; line-height: 1.6; }
+.user-project-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.user-project-option { display: grid; grid-template-columns: 18px minmax(0, 1fr); align-items: start; gap: 12px; min-width: 0; padding: 14px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface); cursor: pointer; }
+.user-project-option input[type="checkbox"] { width: 18px; height: 18px; min-height: 18px; margin: 2px 0 0; accent-color: var(--brand); cursor: inherit; }
+.user-project-copy { display: grid; gap: 5px; min-width: 0; overflow-wrap: anywhere; }
+.user-project-copy strong { color: var(--ink); font-size: 13px; font-weight: 650; line-height: 1.5; }
+.user-project-copy small { color: var(--muted); font-size: 12px; line-height: 1.5; }
+.user-project-option:hover, .user-project-option:has(input:checked) { border-color: var(--brand); background: var(--paper); }
+.user-project-option:has(input:checked) .user-project-copy strong { color: var(--brand); }
+.user-project-option:has(input:focus-visible) { outline: 2px solid var(--brand); outline-offset: 2px; }
+.user-project-assignments:disabled .user-project-option { cursor: default; opacity: .65; }
+.user-project-note { margin: 14px 0 0; color: var(--muted); font-size: 12px; line-height: 1.6; }
+@media (max-width: 640px) { .user-project-grid { grid-template-columns: minmax(0, 1fr); } .user-project-assignments { padding: 12px; } }
 .role-options { max-height: 55vh; overflow-y: auto; }
 
 @media (max-width: 800px) { .user-row-actions .button { min-height: 44px; } }

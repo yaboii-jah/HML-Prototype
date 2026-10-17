@@ -125,12 +125,12 @@ try {
 
 await writeFile(path.join(directory,"VALIDATION.md"), `# Process flow validation
 
-Checked against docs/WORKFLOW.md and the delivery/payment rules on 2026-10-13.
+Checked against docs/WORKFLOW.md and the delivery/payment rules on ${new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Manila" })}.
 
 ${reports.join("\n")}
 
 - The request and fulfillment overview supports purchase-only, transfer-only and mixed MRF quantities. Existing project setup is a prerequisite. Issued supplier POs proceed to payment coordination.
-- Site transfers require suitability confirmation, any required destination review, source release and dispatch before destination receiving; transfers have no PO/payment path.
+- Site transfers require Procurement's matching-description/unit verification and availability check, followed directly by source release and dispatch before destination receiving; transfers have no destination suitability-review or PO/payment path.
 - Reduced/rejected release quantities and missing transfer quantities return to material sourcing without reversing source dispatch; accepted site quantities still reach stock posting independently.
 - Warehouse and site receipt evidence each proceeds to documentation and review. Warehouse documentation does not wait for site arrival, and receipt review never gates site stock posting.
 - All nodes are reachable, decisions have labeled outcomes, and approval returns/rejections/holds retain their meaning.

@@ -19,6 +19,8 @@ export function Reports() {
   const [siteId, setSiteId] = useState("all");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
+  const [documentSearch, setDocumentSearch] = useState("");
+  const [stockSearch, setStockSearch] = useState("");
   if (!state) return null;
   if (!["Project Manager", "Administrator"].includes(state.role)) return <PageHeader eyebrow="REPORTS" title="Access unavailable" description="Project Managers and Administrators can view operations reports." />;
 
@@ -42,6 +44,8 @@ export function Reports() {
   const creditPOs = pos.filter(po => isExternalCredit(po) && ["approved", "released"].includes(po.status));
   const documentGaps = pos.filter(po => ["approved", "released"].includes(po.status) && state.accounting.find(record => record.poId === po.id)?.review !== "Complete");
   const stockRows = budgetSites.flatMap(site => inventoryFor(state, site.id).map(item => ({ ...item, siteId: site.id })));
+  const filteredGaps = documentGaps.filter(po => `${po.ref} ${siteName(state, requestForPO(state, po)?.siteId || "")}`.toLowerCase().includes(documentSearch.trim().toLowerCase()));
+  const filteredStock = stockRows.filter(row => `${row.name} ${row.unit} ${siteName(state, row.siteId)}`.toLowerCase().includes(stockSearch.trim().toLowerCase()));
   const hasActivity = requests.length > 0 || pos.length > 0 || batches.length > 0 || stockRows.length > 0;
   const hasDateError = Boolean(from && to && from > to);
 
@@ -93,14 +97,22 @@ export function Reports() {
         <p>{from || to || selectedSite !== "all" ? "Adjust the project or date range to see requests, purchases, deliveries, and stock." : "Create an MRF as Site Personnel to begin the request, purchase, delivery, and inventory trail."}</p>
         <Link className="button secondary" href="/requests">View material requests</Link>
       </section> : <>
-        <div className="content-grid">
-          <section className="panel">
+        <div className="form-stack">
+          <section className="panel report-document-gaps">
             <div className="panel-heading"><h2>Document gaps</h2><Badge>{documentGaps.length} POs</Badge></div>
-            {documentGaps.length ? documentGaps.map(po => <Link className="data-link" href={`/accounting/${po.id}`} key={po.id}><div><strong>{po.ref}</strong><small>{siteName(state, requestForPO(state, po)?.siteId || "")}</small></div><Badge value={state.accounting.find(record => record.poId === po.id)?.review || "Incomplete"} /></Link>) : <Empty title="Documents up to date" detail="No approved PO in this view needs document review." />}
+            <Register embedded rows={filteredGaps} unit="document gaps" resetKey={selectedSite+from+to+documentSearch}
+              filters={<input type="search" aria-label="Search report document gaps" placeholder="Search PO or project" value={documentSearch} onChange={event => setDocumentSearch(event.target.value)}/>}
+              empty={documentGaps.length ? "No document gaps match this search." : "No approved PO in this view needs document review."}
+              headers={<><th>Purchase order</th><th>Project</th><th>Document review</th><th>Action</th></>}
+              renderRow={po => <tr key={po.id}><td><Link className="table-primary" href={`/accounting/${po.id}`}>{po.ref}</Link></td><td>{siteName(state, requestForPO(state, po)?.siteId || "")}</td><td><Badge value={state.accounting.find(record => record.poId === po.id)?.review || "Incomplete"}/></td><td className="register-actions"><Link className="text-link" href={`/accounting/${po.id}`}>Review documents</Link></td></tr>}/>
           </section>
-          <section className="panel">
+          <section className="panel report-site-stock">
             <h2 className="panel-title">Current site stock</h2>
-            {stockRows.length ? stockRows.map(row => <Link className="data-link" href={`/inventory/${row.siteId}/${row.id}`} key={`${row.siteId}-${row.id}`}><div><strong>{row.name}</strong><small>{siteName(state, row.siteId)}</small></div><span>{row.onHand} {row.unit}</span></Link>) : <Empty title="No posted stock" detail="Accepted deliveries appear here after Site Personnel posts them to inventory." />}
+            <Register embedded rows={filteredStock} unit="stock materials" resetKey={selectedSite+stockSearch}
+              filters={<input type="search" aria-label="Search report site stock" placeholder="Search material, project or unit" value={stockSearch} onChange={event => setStockSearch(event.target.value)}/>}
+              empty={stockRows.length ? "No stock materials match this search." : "Accepted deliveries appear here after Site Personnel posts them to inventory."}
+              headers={<><th>Material</th><th>Project</th><th>Unit</th><th className="numeric">On-hand quantity</th><th>Action</th></>}
+              renderRow={row => <tr key={`${row.siteId}-${row.id}`}><td><Link className="table-primary" href={`/inventory/${row.siteId}/${row.id}`}>{row.name}</Link></td><td>{siteName(state, row.siteId)}</td><td>{row.unit}</td><td className="numeric">{row.onHand}</td><td className="register-actions"><Link className="text-link" href={`/inventory/${row.siteId}/${row.id}`}>View inventory</Link></td></tr>}/>
           </section>
         </div>
         <section className="panel">

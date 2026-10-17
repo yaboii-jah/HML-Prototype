@@ -1,0 +1,89 @@
+{
+  "captured": 93,
+  "expected": 93,
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "commandCount": 87,
+  "scenarios": {
+    "mrf": "MSR-MRF-0001",
+    "sourceMRF": "MRF-372",
+    "originalPdfFiles": 5,
+    "materials": 8,
+    "quotations": 4,
+    "upfront": {
+      "sourceMRF": "MRF-372",
+      "mrf": "MSR-MRF-0001",
+      "transfer": "MSR-TRF-0001",
+      "po": "MSR-PO-0001",
+      "delivery": "MSR-DEL-0001",
+      "net": 388422.7
+    },
+    "credit": {
+      "sourceMRF": "MRF-372",
+      "mrf": "MSR-MRF-0001",
+      "transfer": "MSR-TRF-0001",
+      "po": "MSR-PO-0002",
+      "delivery": "MSR-DEL-0002",
+      "net": 19314
+    },
+    "transferQuantity": 4,
+    "sourceBalance": 16,
+    "destinationClamps": 60,
+    "installedGlassPanels": 2,
+    "termsNote": "Original quotations specify 30 days. Kestrel upfront terms are a subsequent fictional supplier agreement used to demonstrate the upfront branch."
+  },
+  "sampleImportTests": {
+    "passed": true,
+    "files": [
+      {
+        "file": "sample-data/MRF 372 - Material Request and Key Plan.pdf",
+        "sha256": "a2e2e2884f4f79114746976b500702828b2a4992ad98e61226d89b2fe0135900"
+      },
+      {
+        "file": "sample-data/372 Q01 Meridian Doors and Fittings.pdf",
+        "sha256": "865a01b3811a23eb87bcc8e658474eec990711952252cc25e252883d6de5fe5d",
+        "verifiedGross": 438680
+      },
+      {
+        "file": "sample-data/372 Q02 Apex Architectural Hardware Corp.pdf",
+        "sha256": "41d541b47889908878f5da28804721b000774c0529cb305b73766c35d92d77fd",
+        "verifiedGross": 451548
+      },
+      {
+        "file": "sample-data/372 Q03 Summit Building Supply Trading.pdf",
+        "sha256": "16a58ab74ab00c6428146e429aa35c8bc60647de431ba18a490ecb6c93e24878",
+        "verifiedGross": 425900
+      },
+      {
+        "file": "sample-data/372 Q04 Kestrel Glass Systems Co.pdf",
+        "sha256": "33ad8a6b7b58eb3989bff5242c3d8c3d413b352bd7f189b4191475ec03861c96",
+        "verifiedGross": 414242
+      }
+    ]
+  },
+  "browserExceptions": [],
+  "externalDriveRequests": [],
+  "source": "Connected demonstration snapshots advanced through application domain commands; native UI controls, no altered page layout.",
+  "capturedAt": "2026-10-15T08:01:01.535Z",
+  "pngValidation": {
+    "passed": true,
+    "count": 93,
+    "uniqueImages": 93,
+    "width": 1440,
+    "height": 900
+  },
+  "processGroups": {
+    "00-login-and-project-creation": 10,
+    "01-project-and-request": 10,
+    "02-stock-sourcing": 4,
+    "03-four-supplier-quotations": 17,
+    "04-comparison-and-purchase-orders": 11,
+    "05-upfront-payment": 10,
+    "06-upfront-delivery-and-stock": 7,
+    "07-credit-terms-and-settlement": 12,
+    "08-transfer-delivery-and-evidence": 8,
+    "09-management-reports": 4
+  }
+}

@@ -45,7 +45,7 @@ function DemoSessionProvider({ children }: { children: ReactNode }) {
   const view = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
   const session = useSyncExternalStore(subscribeSession, getSession, getServerSession);
   const directory = useSyncExternalStore(listener => userDirectory.subscribe(listener), () => userDirectory.getSnapshot(), () => serverUserDirectory);
-  useEffect(() => { void userDirectory.load(); }, []);
+  useEffect(() => { void userDirectory.load(); void demoRepository.load(); }, []);
   const [signedOut, setSignedOut] = useState(false);
   const snapshotRole = view.snapshot?.role;
   useEffect(() => {
@@ -95,8 +95,8 @@ function DemoSessionProvider({ children }: { children: ReactNode }) {
     if ((change.type === "add" || change.type === "edit") && change.siteIds?.some(id => !view.snapshot?.sites.some(site => site.id === id))) return { ok: false, message: "Choose projects from the current workspace." };
     return userDirectory.change(actor, change);
   };
-  const reset = async () => { if (demoSession.read().role !== "Administrator") throw new Error("Workspace reset requires an Administrator."); await demoRepository.reset(); notify({ tone: "success", title: "Workspace cleared. Start by adding a project." }); };
-  return <ArchiveProvider><DemoContext.Provider value={{ ...view, snapshot, access, run, beginOperation: gateway.beginOperation, session, signedOut, directory, siteIds, manageUser, signIn, switchRole, switchAccount, signOut, reset }}>{children}</DemoContext.Provider></ArchiveProvider>;
+  const reset = async () => { if (demoSession.read().role !== "Administrator") throw new Error("Workspace reset requires an Administrator."); const result = await demoRepository.reset(); notify(result.status === "ready" ? { tone: "success", title: "Workspace cleared. Start by adding a project." } : { tone: "warning", title: "Saved records could not be cleared. Existing files have been preserved." }); };
+  return <ArchiveProvider key={snapshot?.showcase?.installationId || "workspace"}><DemoContext.Provider value={{ ...view, snapshot, access, run, beginOperation: gateway.beginOperation, session, signedOut, directory, siteIds, manageUser, signIn, switchRole, switchAccount, signOut, reset }}>{children}</DemoContext.Provider></ArchiveProvider>;
 }
 
 export function DemoProvider({ children }: { children: ReactNode }) {

@@ -1,16 +1,16 @@
 # Process flow validation
 
-Checked against docs/WORKFLOW.md and the delivery/payment rules on 2026-10-13.
+Checked against docs/WORKFLOW.md and the delivery/payment rules on 2026-10-15.
 
 - **Request and fulfillment overview**: 11 symbols, 12 connections. One A4 portrait PDF, selectable text of at least 11.75 pt; PNG 4400 × 5520 pixels. 0 connector crossings, 0 overlapping segments and 0 connector/label collisions.
 - **Supplier purchasing and PO approval**: 9 symbols, 10 connections. One A4 portrait PDF, selectable text of at least 11.75 pt; PNG 4400 × 5760 pixels. 0 connector crossings, 0 overlapping segments and 0 connector/label collisions.
 - **Payment coordination and delivery clearance**: 14 symbols, 15 connections. One A4 landscape PDF, selectable text of at least 10.42 pt; PNG 7840 × 5360 pixels. 0 connector crossings, 0 overlapping segments and 0 connector/label collisions.
-- **Inter-site stock transfer**: 13 symbols, 14 connections. One A4 portrait PDF, selectable text of at least 11.75 pt; PNG 4400 × 6400 pixels. 0 connector crossings, 0 overlapping segments and 0 connector/label collisions.
+- **Inter-site stock transfer**: 9 symbols, 9 connections. One A4 portrait PDF, selectable text of at least 11.75 pt; PNG 4400 × 5520 pixels. 0 connector crossings, 0 overlapping segments and 0 connector/label collisions.
 - **Delivery, receiving and inventory**: 14 symbols, 14 connections. One A4 landscape PDF, selectable text of at least 10.42 pt; PNG 7840 × 5360 pixels. 0 connector crossings, 0 overlapping segments and 0 connector/label collisions.
 - **Receipt documentation and review**: 6 symbols, 6 connections. One A4 portrait PDF, selectable text of at least 11.75 pt; PNG 4400 × 4480 pixels. 0 connector crossings, 0 overlapping segments and 0 connector/label collisions.
 
 - The request and fulfillment overview supports purchase-only, transfer-only and mixed MRF quantities. Existing project setup is a prerequisite. Issued supplier POs proceed to payment coordination.
-- Site transfers require suitability confirmation, any required destination review, source release and dispatch before destination receiving; transfers have no PO/payment path.
+- Site transfers require Procurement's matching-description/unit verification and availability check, followed directly by source release and dispatch before destination receiving; transfers have no destination suitability-review or PO/payment path.
 - Reduced/rejected release quantities and missing transfer quantities return to material sourcing without reversing source dispatch; accepted site quantities still reach stock posting independently.
 - Warehouse and site receipt evidence each proceeds to documentation and review. Warehouse documentation does not wait for site arrival, and receipt review never gates site stock posting.
 - All nodes are reachable, decisions have labeled outcomes, and approval returns/rejections/holds retain their meaning.

@@ -1,3 +1,5 @@
+import { archiveLocal } from "../requests/local-archive.ts";
+import { archiveReady } from "../../domain/archive-destination.ts";
 import { isExternalCredit, proofAssigned } from "../../domain/full-disbursement.ts";
 import type { CommandRunner } from "../../app-state/command-gateway.ts";
 import type { DemoSnapshot, PaymentProof } from "../../domain/types.ts";
@@ -23,9 +25,15 @@ export async function archivePaymentProof(state: DemoSnapshot, poId: string, pro
   if (proof.archive.status === "complete") return;
   try {
     const po = state.pos.find(value => value.id === poId), mrf = state.requests.find(value => value.id === po?.mrfId), site = state.sites.find(value => value.id === mrf?.siteId);
-    if (!po || !mrf || !site?.driveFolderId) throw new Error("A project Drive folder is required.");
+    if (!po || !mrf || !site || !archiveReady(site)) throw new Error("A project Drive folder is required.");
     const blob = await readQuoteFile(proof.localFileId);
     if (!blob || await workbookDigest(blob) !== proof.sha256) throw new Error("The original proof is unavailable. Remove and attach it again.");
+    if (site.localArchiveId) {
+      const local = await archiveLocal(site, blob);
+      const saved = await run({ type: "completePaymentProofArchive", poId, documentId: proof.id, fileId: local.fileId, url: local.url });
+      if (!saved.ok) throw new Error(saved.message);
+      return;
+    }
     const response = await fetch("/api/drive/payment-proof", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ proof, po, mrf, projectFolderId: site.driveFolderId }) });
     const start = await response.json(); if (!response.ok) throw new Error(start.error || "Proof archive failed.");
     const finish = start.driveFileId && start.url ? start : start.ticket ? await uploadDocument(blob, start.ticket, start.offset || 0, "/api/drive/payment-proof/chunk") : undefined;

@@ -14,7 +14,7 @@ The figure distinguishes the payment and delivery-clearance procedures for upfro
 
 ## 4. Inter-site Stock Transfer
 
-The figure outlines the transfer process for materials sourced from another project site. Procurement confirms that the available materials are suitable for the request and obtains review from destination Site Personnel when required. Availability is rechecked before a transfer is proposed to the source site. Source Site Personnel may approve the full quantity, approve only part of it, or reject the release. Approved quantities proceed to Logistics for scheduling and dispatch, while rejected or unreleased quantities return to material sourcing. Dispatch deducts the dispatched quantities from source stock before destination receiving. This route fulfills material requirements without supplier quotation, PO preparation, or payment processing.
+The figure outlines the transfer process for materials sourced from another project site. Procurement verifies that the selected materials match the requested descriptions and units, rechecks available quantities, and requests release directly from the source project. Source Site Personnel may approve the full quantity, approve only part of it, or reject the release. Approved quantities proceed to Logistics for scheduling and dispatch, while rejected or unreleased quantities return to material sourcing. Dispatch deducts the dispatched quantities from source stock before the trip proceeds to destination receiving and inventory posting. This route fulfills material requirements without supplier quotation, PO preparation, or payment processing.
 
 ## 5. Delivery, Receiving, and Inventory
 

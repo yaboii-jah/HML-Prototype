@@ -1,3 +1,4 @@
+import { localArchiveFiles } from "./local-files.ts";
 import type { Activity, DemoSnapshot, OperationTarget, Role } from "./types.ts";
 
 /** Presentation permissions. The full snapshot remains authoritative for commands and calculations. */
@@ -65,6 +66,7 @@ export function createReadAccess(state: DemoSnapshot | null | undefined, role: R
     let parts: string[];
     try { parts = url.pathname.split("/").filter(Boolean).map(decodeURIComponent); } catch { return false; }
     const [section, id, subpage] = parts;
+    if (section === "demo-files" && parts.length === 2 && state) { const file = localArchiveFiles(state).find(file => file.id === id); return !!file && !file.purchasingOnly && canReadRecord(file.ownerId); }
     if (parts.length === 1) return ["dashboard", "projects", "requests", "deliveries", "inventory"].includes(section);
     if (section === "projects" && parts.length === 2) return canReadProject(id);
     if (section === "requests") {

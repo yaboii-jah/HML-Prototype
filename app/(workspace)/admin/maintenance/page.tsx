@@ -1,3 +1,5 @@
-import { WorkspaceMaintenance } from "@/src/features/admin/Admin";
+import { redirect } from "next/navigation";
 
-export default function WorkspaceMaintenancePage() { return <WorkspaceMaintenance/>; }
+export default function Page() {
+  redirect("/admin");
+}

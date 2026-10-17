@@ -66,7 +66,7 @@ export function TransferDocuments({ state, transfer, delivery }: { state: DemoSn
         const job = activeJob("transfer-receipt-"+receipt.id);
         return <div key={receipt.id} className="qa-document-record transfer-document-row" aria-busy={!!job}>
           <div className="transfer-document-copy"><strong>Generated receipt · v{receipt.version}</strong><Badge>{job ? "Archiving" : receipt.archive.status === "complete" ? "Archived" : receipt.archive.error ? "Needs retry" : "Pending archive"}</Badge>
-            {job && <span className="qa-upload-status" role="status"><span className="qa-spinner" aria-hidden="true"/>Archiving receipt to Google Drive…</span>}
+            {job && <span className="qa-upload-status" role="status"><span className="qa-spinner" aria-hidden="true"/>Saving receipt archive…</span>}
             {receipt.archive.error && !job && <p className="field-error">{receipt.archive.error}</p>}
           </div>
           <div className="transfer-actions transfer-document-actions">{receipt.archive.url && <a className="button secondary" href={receipt.archive.url} target="_blank" rel="noreferrer">Open receipt</a>}{eligible && receipt.archive.status !== "complete" && <button type="button" className="button secondary" disabled={busy} onClick={() => void archive(receipt.id)}>{job ? "Archiving…" : "Retry receipt archive"}</button>}</div>
@@ -76,7 +76,7 @@ export function TransferDocuments({ state, transfer, delivery }: { state: DemoSn
         const job = activeJob("transfer-evidence-"+doc.id);
         return <div key={doc.id} className="qa-document-record transfer-document-row" aria-busy={!!job}>
           <div className="transfer-document-copy"><strong>{doc.name}</strong><small>{doc.kind}{doc.receiptVersion ? " · v"+doc.receiptVersion : ""} · {Math.max(1,Math.round(doc.size/1024))} KB</small><Badge>{job ? "Archiving" : doc.archive.status === "complete" ? "Archived" : doc.archive.error ? "Needs retry" : "Pending archive"}</Badge>
-            {job && <span className="qa-upload-status" role="status"><span className="qa-spinner" aria-hidden="true"/>Archiving file to Google Drive…</span>}
+            {job && <span className="qa-upload-status" role="status"><span className="qa-spinner" aria-hidden="true"/>Saving file archive…</span>}
             {doc.archive.error && !job && <p className="field-error">{doc.archive.error}</p>}
           </div>
           <div className="transfer-actions transfer-document-actions"><button type="button" className="button secondary" disabled={busy} onClick={() => void view(doc)}>{operation?.kind === "view" && operation.id === doc.id ? "Opening…" : "View"}</button>{eligible && doc.archive.status !== "complete" && <button type="button" className="button secondary" disabled={busy} onClick={() => void retry(doc)}>{job ? "Archiving…" : "Retry evidence archive"}</button>}</div>

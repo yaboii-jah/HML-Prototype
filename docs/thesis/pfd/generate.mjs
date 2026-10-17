@@ -85,10 +85,13 @@ export function validate(diagram) {
     assert.ok(reaches(diagram,"creditPaths","creditSettled",["creditClearance","creditDelivery"]));
     assert.ok(!reaches(diagram,"creditFinance","creditDelivery"),"Credit settlement must not retrigger clearance");
   } else if(diagram.key === "D") {
-    assert.ok(reaches(diagram,"siteSuitability","proposeTransfer",["suitabilityResourcing"]));
-    assert.ok(!reaches(diagram,"siteSuitability","proposeTransfer",["suitabilityDecision"]));
-    assert.ok(reaches(diagram,"suitabilityDecision","suitabilityResourcing"));
+    assert.ok(!nodes.some(node => ["siteReviewNeeded","siteSuitability","suitabilityDecision","suitabilityResourcing"].includes(node.id)),"Current transfers request source release without destination suitability review");
+    assert.ok(edges.some(edge => edge.from==="confirmSuitability" && edge.to==="proposeTransfer"),"Matching verification proceeds directly to the source-release request");
+    assert.ok(!reaches(diagram,"transferQuantities","proposeTransfer",["confirmSuitability"]),"Procurement must verify matching stock before requesting release");
+    assert.ok(!reaches(diagram,"transferQuantities","sourceRelease",["proposeTransfer"]),"Availability must be rechecked before source authorization");
     assert.ok(!reaches(diagram,"proposeTransfer","transferReceiving",["sourceRelease"]),"Source release is required");
+    assert.deepEqual(edges.filter(edge => edge.from==="sourceRelease").map(edge => [edge.label,edge.to]),[["Reject","resourcing"],["Approve full / part","recordRelease"]]);
+    assert.ok(!reaches(diagram,"resourcing","transferReceiving"),"Rejected quantities return to sourcing without entering Logistics");
     assert.ok(reaches(diagram,"sourceRelease","resourcing"));
     assert.ok(reaches(diagram,"sourceRelease","transferReceiving"));
     assert.ok(reaches(diagram,"recordRelease","resourcing"),"Reduced release returns the remainder to sourcing");
@@ -140,7 +143,7 @@ const readme = [
   "- Starting events and named process handoffs replace figure letters, so each flow can be understood independently of its caption or position in the paper.",
   "- Entry and handoff shapes are resized, and their connector ports are adjusted, to keep the longer descriptive labels readable.",
   "- Purchasing and PO approval remain separate from payment coordination and clearance, making responsibility and payment gates easier to follow.",
-  "- Required destination suitability review precedes Procurement's release proposal. Reduced/rejected releases and transfer shortages return explicitly to material sourcing.",
+  "- Procurement verifies matching descriptions and units, rechecks availability and requests source release directly. Reduced/rejected releases and transfer shortages return explicitly to material sourcing.",
   "- Warehouse evidence can reach receipt review before goods arrive at the site, and site stock posting never waits for document review.",
   "- The overview begins with a ready project and marks purchasing/transfer quantities as applicable, preserving purchase-only, transfer-only and mixed requests.","",
   ...diagrams.flatMap(diagram => [`## ${diagram.name}`,"",diagram.explanation,"",...diagram.notes.map(note => `- ${note}`),""]),

@@ -9,12 +9,8 @@ flowchart TB
   %% Inter-site stock transfer
   %% Descriptive events identify entries; named process handoffs use off-page pentagons in publication exports.
   transferQuantities(["Materials allocated; for site transfer"])
-  confirmSuitability["Procurement; Confirm stock suitability"]
-  siteReviewNeeded{"Site review needed?"}
-  siteSuitability["Destination Site; Personnel; Review suitability"]
-  suitabilityDecision{"Suitability; approved?"}
-  suitabilityResourcing["Rejected quantities; Return to material; sourcing"]
-  proposeTransfer["Procurement; Recheck stock; Propose transfer"]
+  confirmSuitability["Procurement; Verify matching; descriptions & units"]
+  proposeTransfer["Procurement; Recheck availability; Request source release"]
   sourceRelease{"Source Site; Personnel; Release decision?"}
   recordRelease["Source Site Personnel; Record released /; unreleased quantities"]
   resourcing["Unreleased quantities; Return to material; sourcing"]
@@ -22,12 +18,7 @@ flowchart TB
   dispatchTransfer["Logistics; Dispatch & deduct; source stock"]
   transferReceiving["Proceed to; destination receiving"]
   transferQuantities --> confirmSuitability
-  confirmSuitability --> siteReviewNeeded
-  siteReviewNeeded -->|"Yes"| siteSuitability
-  siteReviewNeeded -->|"No"| proposeTransfer
-  siteSuitability --> suitabilityDecision
-  suitabilityDecision -->|"Yes"| proposeTransfer
-  suitabilityDecision -->|"No"| suitabilityResourcing
+  confirmSuitability --> proposeTransfer
   proposeTransfer --> sourceRelease
   sourceRelease -->|"Reject"| resourcing
   sourceRelease -->|"Approve full / part"| recordRelease
@@ -36,4 +27,4 @@ flowchart TB
   scheduleTransfer --> dispatchTransfer
   dispatchTransfer -->|"Dispatched trip"| transferReceiving
   classDef plain fill:#ffffff,stroke:#000000,color:#000000
-  class transferQuantities,confirmSuitability,siteReviewNeeded,siteSuitability,suitabilityDecision,suitabilityResourcing,proposeTransfer,sourceRelease,recordRelease,resourcing,scheduleTransfer,dispatchTransfer,transferReceiving plain
+  class transferQuantities,confirmSuitability,proposeTransfer,sourceRelease,recordRelease,resourcing,scheduleTransfer,dispatchTransfer,transferReceiving plain

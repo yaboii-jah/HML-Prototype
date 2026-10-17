@@ -171,8 +171,8 @@ export function QuotationWorkspace({ id, initialMaterialId = "" }: { id: string;
   const removeGroupFile = async (group: Group, position: number) => {
     await confirmAction("Remove this queued file?", `${group.files[position].name} will be removed from this supplier's upload group.`, "Remove file", () => setGroup(group.id, { files: group.files.filter((_, index) => index !== position) }), true);
   };
-  const retryArchive = (quote: Quote) => confirmAction("Retry quotation Drive archive?", `${supplierName(state, quote)} Â· ${quote.ref || "no reference"}: retry archiving ${quote.documents.length} original supplier files to the project folder.`, "Retry archive", () => archiveQuote(quote));
-  const finalize = (draft: Quote) => confirmAction(`Finalize ${supplierName(state, draft)} quotation?`, `${draft.ref || "No reference"} Â· ${draft.documents.length} supplier files. This finalizes the quotation and archives its source files to Google Drive before awards can be made.`, "Finalize quotation", async () => {
+  const retryArchive = (quote: Quote) => confirmAction("Retry quotation document archive?", `${supplierName(state, quote)} Â· ${quote.ref || "no reference"}: retry archiving ${quote.documents.length} original supplier files to the project folder.`, "Retry archive", () => archiveQuote(quote));
+  const finalize = (draft: Quote) => confirmAction(`Finalize ${supplierName(state, draft)} quotation?`, `${draft.ref || "No reference"} Â· ${draft.documents.length} supplier files. This finalizes the quotation and archives its source files to the project archive before awards can be made.`, "Finalize quotation", async () => {
     if (draft.documents.some(document => !document.fileId || !["application/pdf", "image/jpeg", "image/png", "image/webp"].includes(document.type)) || !draft.documents.length) { setError("Attach the supplier quotation PDF or image before finalizing."); return; }
     for (const document of draft.documents) if (!await readQuoteFile(document.fileId!)) { setError(`The original quotation file ${document.name} is unavailable. Remove it and attach it again.`); return; }
     const result = await run({ type: "finalizeQuote", id: draft.id });
@@ -219,8 +219,8 @@ export function QuotationWorkspace({ id, initialMaterialId = "" }: { id: string;
       actions.push(<button key="revision" type="button" className="button secondary" disabled={working} onClick={() => void revise(quote)}>Create revision</button>);
       actions.push(<button key="reanalyze" type="button" className="button secondary" disabled={working} onClick={() => void reanalyze(quote)}>Reanalyze</button>);
     }
-    if (quote.archive?.status === "pending" && (state.role === "Procurement" || state.role === "Administrator")) actions.push(<button key="retry" type="button" className="button secondary" disabled={working || !!archivingQuoteId} onClick={() => void retryArchive(quote)}>{archivingQuoteId === quote.id ? "Archiving?" : "Retry Drive archive"}</button>);
-    for (const file of quote.archive?.files || []) actions.push(<a className="button secondary" href={file.url} target="_blank" rel="noopener noreferrer" key={file.driveFileId}>Drive: {file.name}</a>);
+    if (quote.archive?.status === "pending" && (state.role === "Procurement" || state.role === "Administrator")) actions.push(<button key="retry" type="button" className="button secondary" disabled={working || !!archivingQuoteId} onClick={() => void retryArchive(quote)}>{archivingQuoteId === quote.id ? "Archiving?" : "Retry archive"}</button>);
+    for (const file of quote.archive?.files || []) actions.push(<a className="button secondary" href={file.url} target="_blank" rel="noopener noreferrer" key={file.driveFileId}>Archived: {file.name}</a>);
     return actions.length > 1 ? <RowActions><div className="quote-source-actions">{actions}</div></RowActions> : actions[0] || null;
   };
 
@@ -228,7 +228,7 @@ export function QuotationWorkspace({ id, initialMaterialId = "" }: { id: string;
     <fieldset className="quotation-operation-fields" disabled={working || preflighting}>
     <RecordHeader backHref={`/requests/${id}`} backLabel={request.ref} eyebrow="PROCUREMENT Â· QUOTATION REVIEW" title="Source requested materials" badges={<Badge value={request.status}/>}/>
     <p className="muted">Review each supplier offer, confirm its MRF matches, allocate quantities, and prepare supplier purchase orders.</p>
-    {request.status === "approved" && (request.correction || request.archive?.status === "pending") && <div className="callout warn"><strong>Purchasing is paused</strong><p>{request.correction ? "Procurement is waiting for a corrected MRF and its new Drive archive." : "The approved MRF is waiting for its Google Drive archive. Procurement or an Administrator can retry from the request page."}</p></div>}
+    {request.status === "approved" && (request.correction || request.archive?.status === "pending") && <div className="callout warn"><strong>Purchasing is paused</strong><p>{request.correction ? "Procurement is waiting for a corrected MRF and its new document archive." : "The approved MRF is waiting for its document archive. Procurement or an Administrator can retry from the request page."}</p></div>}
     <nav className="procurement-steps" aria-label="Procurement steps">{(["stock", "review", "compare", "po"] as const).map((value, index) => <button key={value} type="button" className={step === value ? "active" : ""} onClick={() => { setStep(value); setError(""); }}><span>{String(index + 1).padStart(2, "0")}</span>{({ stock: "Check site stock", review: "Upload & review", compare: "Compare & award", po: "PO preparation" })[value]}<small>{({ stock: "Stock transfer sourcing", review: `${drafts.length} draft Â· ${finalized.length} finalized`, compare: `${finalized.length} suppliers Â· ${staged.length} saved awards`, po: `${pos.length} POs` })[value]}</small></button>)}</nav>
     {step === "stock" && <StockSourcing state={state} request={request} onPurchase={() => setStep("review")}/>}
     {step === "review" && <>

@@ -9,6 +9,10 @@ _Avoid_: Demo role, role picker
 
 **Workspace:** The linked projects, requests, purchasing, delivery and stock records shared by department accounts during a walkthrough.
 
+**Demonstration workspace:** A fictional but connected set of construction projects and transactions used to demonstrate each department's work. Its records remain editable through the normal purchasing, payment, delivery and stock processes.
+
+**Local document archive:** A retained copy of a demonstration document available in its originating browser. It is distinct from a document uploaded to the company's Google Drive.
+
 **Project budget:** The total allocation available to a project. Its cap covers scope allocations and existing committed/spent funds.
 
 **Project document code:** A unique uppercase prefix chosen by Administrator or Project Manager. New document references use `CODE-TYPE-0001`, with separate continuous sequences for MRFs, POs and deliveries. The code locks when first used on a saved record or archived-copy identity. Existing references remain unchanged.

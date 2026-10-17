@@ -1,0 +1,22 @@
+(node:8700) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/src/app-state/demo-session.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to \\?\C:\Users\Jahmell Dorias\Desktop\Projects\buildsync-prototype\package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: All supplier fields share one grid
+
+0 !== 13
+
+    at file:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/scripts/quotation-financial-review-smoke.mjs:57:10 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: 0,
+  expected: 13,
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v24.19.0

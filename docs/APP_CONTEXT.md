@@ -2,13 +2,13 @@
 
 > **Living document:** This is the canonical, implementation-aligned context for the application. Update this file in the same change whenever a major implementation changes the product scope, business workflow, domain model, permissions, routes, persistence, seeded walkthrough, architecture, or verification strategy. Do not record small visual polish, copy edits, or isolated bug fixes unless they change one of those areas.
 
-**Last verified:** 2026-10-14
+**Last verified:** 2026-10-15
 **Application version:** Prototype (`package.json` 0.1.0)
 **State schema:** `DemoSnapshot` version 12
 
 ## Product in one paragraph
 
-HML ConstructSync is a browser-local construction operations prototype, also deployed on Vercel for one-presenter company demonstrations. It demonstrates the linked journey from a Material Request Form (MRF) through Project Manager review, supplier quotations and comparisons, Purchase Order (PO) preparation, Accounting approval, Procurement issuance, external full-payment verification and delivery clearance, Logistics delivery, and site receiving/usage. A fresh workspace starts empty. It uses simulated roles, browser `localStorage` for records, and IndexedDB for uploaded MRF, supplier quotation and Accounting evidence files. On MRF approval, server routes archive a generated MRF PDF and its supporting PDF to a mapped Google Drive project folder. Finalized supplier quotations and Accounting-approved POs also archive to Drive. The server can parse quotations with Gemini when configured. Department email/password sign-in simulates access in the presenter browser; it has no server-enforced account authentication, shared record database, supplier portal or payment integration.
+HML ConstructSync is a browser-local construction operations prototype, also deployed on Vercel for one-presenter company demonstrations. It demonstrates the linked journey from a Material Request Form (MRF) through Project Manager review, supplier quotations and comparisons, Purchase Order (PO) preparation, Accounting approval, Procurement issuance, external full-payment verification and delivery clearance, Logistics delivery, and site receiving/usage. A browser receives a populated, fictional current-workflow workspace once on first visit, with existing records/files backed up before replacement. Explicit workspace clearing leaves it empty and does not seed again. It uses simulated roles, browser `localStorage` for records, and IndexedDB for uploaded MRF, supplier quotation and Accounting evidence files. In ordinary workspaces, MRF approval, finalized quotations and approved POs archive through Google Drive. The automatically populated demonstration workspace instead keeps actual local archive copies and persistent access-checked document links, without contacting Drive. The server can parse quotations with Gemini when configured. Department email/password sign-in simulates access in the presenter browser; it has no server-enforced account authentication, shared record database, supplier portal or payment integration.
 
 ## Current product boundary
 
@@ -48,6 +48,10 @@ flowchart LR
 
 For newly created MRFs, upfront purchases require Procurement supplier issuance and Accounting verification of full external payment against archived proof, followed by a separate delivery clearance. Existing MRFs/POs without a workflow marker keep the prior Procurement-review and in-app Finance flow; no historical issuance or payment is inferred. Credit purchases may proceed without a payment request or Finance decision. Approval, payment approval, disbursement, release, receiving, stock posting and document review have separate states.
 
+## Automatically populated workspace
+
+See [DEMO_WORKSPACE.md](DEMO_WORKSPACE.md) for data counts, department walkthroughs and backup restoration. `showcase-install.ts` stages and validates a separate current-workflow fixture, preserves account credentials, assigns active Site Personnel and publishes a versioned one-time installation under a browser lock. Original records and files are backed up in a separate IndexedDB database. Clear workspace retains the installation marker and backups. Ordinary workspaces and the legacy `seedDemo()` automated-test fixture retain their existing behavior. Local archive readiness and URL validation are explicit; operation fingerprints include installation identity, and file viewing resolves current readable record ownership.
+
 ## Roles and implemented responsibilities
 
 | Role | Main implemented responsibilities |
@@ -58,7 +62,7 @@ For newly created MRFs, upfront purchases require Procurement supplier issuance 
 | Finance | Process revised upfront and external-credit payments outside the app. For existing Finance-managed POs, prioritize and approve/hold/return/reject payment requests; separately record actual disbursements for approved requests. Returns go to Accounting. |
 | Logistics | Schedule and dispatch source-approved site transfers without a PO/payment gate. Schedule and dispatch supplier/site or supplier/warehouse batches; forward confirmed warehouse quantities in multiple batches to their original PO/site. |
 | Accounting | Review PO finances and payment arrangement, approve within budget or return to Procurement, archive approved POs, attach/archive PO-level payment proof and verify full external payment for revised upfront POs; verify partial/full external-credit payments with proof and a due date; prepare payment requests for existing Finance-managed POs and release eligible POs to Logistics. Review delivery evidence separately; make justified stock adjustments. |
-| Administrator | Manage named users, Site Personnel project assignments, access status and password resets; view Reports and exceptions; add/edit projects, maintain scope allocations and remove unused scopes, confirm and save validated Drive mappings, inspect filtered activity, retry archives, and reset browser workspace data through the Administrator maintenance page. |
+| Administrator | Manage named users, Site Personnel project assignments, access status and password resets; view Reports and exceptions; add/edit projects, maintain scope allocations and remove unused scopes, confirm and save validated Drive mappings, inspect filtered activity, retry archives, with normal workspace clearing temporarily disabled. |
 
 The domain command layer in `src/domain/commands.ts` is the authority for permissions and transition validation. Hiding an action in the UI is not sufficient authorization.
 
@@ -68,7 +72,7 @@ The first procurement step on `/requests/[id]/quotes` is **Check site stock**. P
 
 Transfers use destination-project TRF references and separately numbered DEL trips. No financial value, budget charge, supplier invoice or payment approval is attached. Generated versioned receipts and uploaded signed/supporting evidence archive under the destination MRF in Drive; failures retain the business record and permit retries. Accounting reviews transfer documents separately from purchase orders. Queues, inventory reservations, material coverage and audit links include both project endpoints. New revision-5 comparison PDFs/XLSX files freeze quantities remaining to buy and a requested/transfer/ordered breakdown; earlier frozen revisions keep their rendering basis.
 
-Administrator user management assigns Site Personnel to projects. Existing accounts start with no assignments and receive setup guidance. Assignments restrict both operational reads and site actions, including MRF editing, receiving, posting, inventory writes and archive-operation startup. Lists, counts, searches, notifications, record links and documents follow the same read policy. Transfers involving either assigned endpoint expose the other project's transfer context and receipts without granting general project, MRF or inventory access. Other department permissions remain unchanged. Assignment changes revise sessions. Stock transfers and trips are optional additive arrays in the existing v12 snapshot, preserving older workspace records.
+Administrator user management assigns Site Personnel to projects. The one-time populated workspace assigns active Site Personnel to its five projects. In an empty workspace, accounts without valid assignments receive setup guidance. Assignments restrict both operational reads and site actions, including MRF editing, receiving, posting, inventory writes and archive-operation startup. Lists, counts, searches, notifications, record links and documents follow the same read policy. Transfers involving either assigned endpoint expose the other project's transfer context and receipts without granting general project, MRF or inventory access. Other department permissions remain unchanged. Assignment changes revise sessions. Stock transfers and trips are optional additive arrays in the existing v12 snapshot, preserving older workspace records.
 
 Site Personnel navigation contains Dashboard, Projects, Material requests, Deliveries and Inventory. Assigned-project PO details remain available through linked records, with transaction prices, payment summaries and read-only paperwork. Supplier/PO registers, PO editing, quotation comparisons, Finance, Accounting, Reports and Administration are unavailable through navigation and direct URLs. Project/scope allocations, commitments, aggregate spending, remaining funds and utilization percentages are hidden; scope names and amount-free funding validation remain available. Generic Drive browsing and folder links are hidden, while record-linked files remain as uploaded without automatic redaction. This is prototype presentation control: full records remain in browser storage, and server routes still lack account authorization.
 
@@ -224,7 +228,7 @@ This remains a single-browser prototype: it provides command validation and loca
 | Read visibility | `src/domain/read-access.ts` resolves active-account project/record ownership, operational routes, budget visibility and archive targets. The provider exposes one policy and an effective project filter; command validation and stock/financial calculations retain the full snapshot. |
 | Derived data | `src/domain/pricing.ts` calculates quotation and PO totals; `src/domain/procurement.ts` validates quote review and revisions; `src/domain/selectors.ts` calculates budgets, delivery balances, payment state, and inventory. `src/domain/queues.ts` derives role tasks and dashboard metrics. |
 | Persistence | `src/mock/repository.ts` owns local loading, saving, schema guards, recovery and explicit reset behavior. |
-| Workspace baseline | `src/mock/fixtures/blank.ts` creates an empty browser workspace. `seed.ts` remains a test fixture only. |
+| Workspace baseline | `src/mock/fixtures/showcase.ts` builds the one-time current-workflow dataset. `blank.ts` supplies explicit reset and test baselines; `seed.ts` remains the legacy test fixture. |
 | Styling | Global layers in `src/styles/` plus `app/globals.css`; `ui-direction.md` documents the visual direction. |
 | Verification | Domain tests in `tests/demo.test.mjs` and `tests/procurement.test.mjs`; extraction tests in `tests/quote-extraction.test.mjs`; grouped quotation, award, Accounting approval and credit-release browser check in `scripts/quotation-smoke.mjs`; broader browser walkthrough in `scripts/browser-smoke.mjs`. |
 
@@ -242,11 +246,11 @@ Keep business rules out of page components where practical. New state transition
 ## Persistence and recovery
 
 - Current storage key: `hml-constructsync-demo-v12`.
-- On first load, the repository creates an empty workspace if no saved state exists.
+- Once per browser, the repository stages the populated workspace after backing up prior records, accounts and files. The installation marker preserves subsequent edits and explicit clearing.
 - Account session key: `hml-constructsync-session-v2`, storing only email and derived role. The former `hml-constructsync-demo-session-v1` is discarded without touching workspace records, requiring one new sign-in. Malformed or unknown account identities require sign-in. Project Manager is available as a named account. Current v12 workspaces preserve their saved department selection and all historical actor labels; no existing MRF/PO workflow is changed. Obsolete assignment fields remain readable without assigning project access.
-- Previous workflow records (v11 and earlier) require an explicit manual workspace clear. The app shows recovery and preserves saved records/keys until confirmation; it does not migrate old transactions into the new department flow. Pure legacy conversion helpers remain for historical regression tests and are not used by the active loader.
+- After one-time installation has completed or been explicitly cleared, previous workflow records (v11 and earlier) require an explicit manual workspace clear. The app shows recovery and preserves saved records/keys until confirmation; it does not migrate old transactions into the new department flow. Pure legacy conversion helpers remain for historical regression tests and are not used by the active loader.
 - MRF and quotation originals remain browser-local. Successful MRF archival also creates numbered Drive copies; clearing browser data removes local records/files but does not delete Drive files. The Gemini Files API is not used as permanent document storage.
-- Malformed saved data enters an explicit recovery state instead of being silently overwritten.
+- The first installation backs up original raw records before replacement. After installation, malformed saved data enters an explicit recovery state instead of being silently overwritten.
 - Additive audit and reviewer/uploader/payment/stock identities preserve schema 12. Session storage still contains only email and role. Scoped operations restrict target IDs, document versions and acknowledgement types; stale ordinary UI callbacks are rejected after account changes.
 - Optional audit `projectId` metadata extends schema 12 without backfilling legacy events. Project editing and unused-scope removal preserve current IDs, historical records and document snapshots.
 - Scope budgets add a `scopes` collection and optional MRF `scopeId` within schema 12. Saved v12 records without scopes load with an empty collection without storage writes, guessed assignments or historical changes. Unassigned records display explicitly; new submissions and PO approvals require a valid scope. Existing approved/released workflows remain operational. The presenter will manually clear the prior walkthrough before fresh scope setup.
@@ -278,7 +282,7 @@ Any incompatible snapshot change requires a schema-version decision and a migrat
 | `/reports` | Project Manager and Administrator cross-project reporting. |
 | `/sign-in` | Email/password department access with no predefined account hints. |
 | `/admin` | Project creation, Drive folder mapping and activity; no workspace reset control. |
-| `/admin/maintenance` | Administrator-only confirmed workspace reset, linked from Administration. |
+| `/admin/maintenance` | Temporarily retired; redirects to `/admin`. Normal workspace clearing is hidden. |
 | `/api/drive/validate`, `/api/drive/archive`, `/api/drive/archive/chunk`, `/api/drive/files` | Protected project folder validation, resumable PDF archive, and project folder browsing/search. |
 | `/api/documents/preview` | Generates the same MRF/PO PDFs used for archival for browser preview, download and printing. |
 | `/api/bid-comparisons`, `/api/drive/bid-comparisons`, `/api/drive/bid-comparisons/chunk` | Server XLSX/PDF generation, protected report archival/download, and dedicated resumable uploads bound to artifact type. |
@@ -289,7 +293,7 @@ All workspace routes are wrapped by `app/(workspace)/layout.tsx`, which applies 
 
 ## Empty workspace baseline
 
-- A fresh browser starts with no projects, suppliers, MRFs, quotations, POs, deliveries, stock movements, payments, accounting records, or activity.
+- Explicit workspace reset starts with no projects, suppliers, MRFs, quotations, POs, deliveries, stock movements, payments, accounting records, or activity; a fresh browser instead receives the populated demonstration dataset once.
 - Administrator adds a project with its name, location and allocated budget, then creates funded scope allocations. Site Personnel can select a scope and submit the first MRF.
 - Suppliers enter the directory when Procurement finalizes a quotation.
 - The historical cement transaction remains in `src/mock/fixtures/seed.ts` for automated test fixtures only. It is never loaded for a new or cleared workspace.
@@ -366,6 +370,7 @@ When updating it:
 
 | Date | Context change |
 | --- | --- |
+| 2026-10-15 | Added automatic one-time populated workspaces, 5 projects/30 MRFs/45 POs/37 supplier batches/60 stock balances, editable current workflows, real local documents and archive adapters, preserved account assignments/credentials, original-data backups and interrupted-install recovery. |
 | 2026-10-14 | Fixed scroll-dependent register height growth, moved Accounting MRF navigation into its summary to remove PO spacing, and shortened visible Accounting labels while preserving stored role identifiers and permissions. |
 | 2026-10-14 | Increased the minimum height of shared main tables, including Delivery batches, to 480px on desktop and 420px on mobile while preserving compact embedded tables. |
 | 2026-10-14 | Added browser-persistent expanded/icons-only sidebar navigation and viewport-contained notifications with independently scrolling task lists and a visible heading/footer. |
@@ -423,7 +428,7 @@ Administrator manages browser-local users in Administration > Users, with search
 
 The seven initial accounts bootstrap once into `hml-constructsync-users-v1`; this directory and its separate user-management history survive workspace reset. The session tracks stable user ID and revision. Role, email, password and status changes invalidate existing sessions and captured business commands, including changes from another tab. Name-only changes preserve historical actor snapshots and apply to subsequent actions. Corrupt directories require recovery without silently overwriting saved accounts.
 
-Management is retired from sign-in, navigation and active commands. Existing Management audit identities remain readable; an existing workspace selected as Management loads without losing records and selects Project Manager until sign-in reconciles its role. Presenter switching lists active named users and remains password-free. Project Manager can add/edit projects, budgets, scopes and Drive setup through Projects; PM and Administrator receive reports and exception visibility. Users and maintenance remain Administrator-only. These controls simulate access within a local prototype and do not provide backend authentication.
+Management is retired from sign-in, navigation and active commands. Existing Management audit identities remain readable; an existing workspace selected as Management loads without losing records and selects Project Manager until sign-in reconciles its role. Presenter switching lists active named users and remains password-free. Project Manager can add/edit projects, budgets, scopes and Drive setup through Projects; PM and Administrator receive reports and exception visibility. User management remains Administrator-only; the normal maintenance reset is temporarily hidden and its route redirects to Administration. These controls simulate access within a local prototype and do not provide backend authentication.
 
 
 ### External credit/terms payments (2026-10-09)

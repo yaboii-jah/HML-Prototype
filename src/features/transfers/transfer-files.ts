@@ -1,3 +1,5 @@
+import { archiveLocal, previewPdf } from "../requests/local-archive.ts";
+import { archiveReady } from "../../domain/archive-destination.ts";
 import type { ArchiveProgressListener } from "../../domain/archive-progress.ts";
 import type { Command, CommandResult } from "../../domain/commands.ts";
 import type { DemoSnapshot, TransferEvidence } from "../../domain/types.ts";
@@ -37,12 +39,17 @@ export async function archiveTransferEvidence(state: DemoSnapshot, transferId: s
   progress?.({ phase:"preparing" });
   try {
     const transfer = state.stockTransfers?.find(value => value.id === transferId), delivery = state.transferDeliveries?.find(value => value.id === document.deliveryId && value.transferId === transferId), project = state.sites.find(value => value.id === transfer?.destinationSiteId);
-    if (!transfer || !delivery || !project?.driveFolderId) throw new Error("Map the destination project's Drive folder before archiving.");
+    if (!transfer || !delivery || !project || !archiveReady(project)) throw new Error("Map the destination project's Drive folder before archiving.");
     const blob = await readQuoteFile(document.localFileId);
     if (!blob || blob.size !== document.size || await workbookDigest(blob) !== document.sha256) throw new Error("Original evidence is unavailable or changed. Attach a new copy.");
     const data = document.kind === "Signed delivery receipt" ? delivery.receiptVersions?.find(value => value.version === document.receiptVersion)?.data : transferReceiptData(state, delivery);
     if (!data) throw new Error("The signed receipt's quantity version is unavailable.");
     progress?.({ phase:"uploading",loaded:0,total:blob.size });
+    if (project.localArchiveId) {
+      const local = await archiveLocal(project, blob, progress);
+      const saved = await run({ type: "completeTransferEvidenceArchive", transferId, documentId: document.id, fileId: local.fileId, url: local.url });
+      if (!saved.ok) throw new Error(saved.message); return;
+    }
     const start = await json(await fetch("/api/drive/transfer-evidence", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ document, data, projectFolderId: project.driveFolderId }) }));
     const finish = start.driveFileId && start.url ? start : start.ticket && Number.isInteger(start.offset) ? await uploadDocument(blob, start.ticket, start.offset!, "/api/drive/transfer-evidence/chunk",progress) : undefined;
     if (!finish?.driveFileId || !finish.url) throw new Error("Drive did not confirm the evidence upload.");
@@ -58,8 +65,9 @@ export async function readTransferEvidence(state: DemoSnapshot, transferId: stri
   let blob: Blob | undefined; try { blob = await readQuoteFile(document.localFileId); } catch {}
   if (blob && blob.size === document.size && await workbookDigest(blob) === document.sha256) return blob;
   const transfer = state.stockTransfers?.find(value => value.id === transferId), project = state.sites.find(value => value.id === transfer?.destinationSiteId);
-  if (!transfer || !project?.driveFolderId || !document.archive.fileId) throw new Error("No local or archived copy is available.");
-  const query = new URLSearchParams({ projectFolderId: project.driveFolderId, requestId: transfer.requestId, transferId, deliveryId: document.deliveryId, documentId: document.id, fileId: document.archive.fileId });
+  if (project?.localArchiveId) { const copy = document.archive.fileId ? await readQuoteFile(document.archive.fileId) : undefined; if (copy && await workbookDigest(copy) === document.sha256) return copy; throw new Error("The local transfer evidence copy is unavailable. Attach it again."); }
+  if (!transfer || !project || !archiveReady(project) || !document.archive.fileId) throw new Error("No local or archived copy is available.");
+  const query = new URLSearchParams({ projectFolderId: project.driveFolderId!, requestId: transfer.requestId, transferId, deliveryId: document.deliveryId, documentId: document.id, fileId: document.archive.fileId });
   const response = await fetch("/api/drive/transfer-evidence?" + query);
   if (!response.ok) throw new Error((await response.json()).error || "Evidence could not be restored.");
   blob = await response.blob();
@@ -72,7 +80,13 @@ export async function archiveTransferReceipt(state: DemoSnapshot, deliveryId: st
   if (!receipt || receipt.archive.status === "complete") return;
   progress?.({ phase:"preparing" });
   try {
-    const folder = state.sites.find(value => value.id === receipt.data.project.id)?.driveFolderId;
+    const project = state.sites.find(value => value.id === receipt.data.project.id);
+    if (project?.localArchiveId) {
+      const local = await archiveLocal(project, await previewPdf(receipt.data), progress);
+      const saved = await run({ type: "completeTransferReceiptArchive", deliveryId, receiptId, fileId: local.fileId, url: local.url });
+      if (!saved.ok) throw new Error(saved.message); return;
+    }
+    const folder = project?.driveFolderId;
     if (!folder) throw new Error("A destination-project Drive folder is required. Receiving remains saved.");
     progress?.({ phase:"uploading" });
     const finish = await json(await fetch("/api/drive/transfer-receipts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ receipt, projectFolderId: folder }) }));

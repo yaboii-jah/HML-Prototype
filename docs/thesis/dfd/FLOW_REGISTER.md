@@ -16,12 +16,12 @@ These are logical data flows, not payment transactions or workflow-control arrow
 | Project Manager | 2.0 Manage Requests | Out of system | Review MRFs | mrf-review-records |
 | Procurement | 3.0 Manage Procurement | Into system | Sourcing data | reviewed-quotation-data, material-allocations, transfer-proposals, allocation-cancellations, po-drafts, po-issuance |
 | Procurement | 3.0 Manage Procurement | Out of system | Sourcing / POs | approved-mrf-data, stock-availability, remaining-purchase-quantities, transfer-status, comparative-bids, po-documents |
-| Accounting / Auditing | 3.0 Manage Procurement | Into system | PO review | costing-tax-review, po-approval-decisions, credit-due-date |
-| Accounting / Auditing | 3.0 Manage Procurement | Out of system | PO / budget | po-costing-data, budget-data |
+| Accounting | 3.0 Manage Procurement | Into system | PO review | costing-tax-review, po-approval-decisions, credit-due-date |
+| Accounting | 3.0 Manage Procurement | Out of system | PO / budget | po-costing-data, budget-data |
 | Supplier | 3.0 Manage Procurement | Into system | Quotations | supplier-quotation-files |
 | Supplier | 3.0 Manage Procurement | Out of system | Issued POs | issued-supplier-pos |
-| Accounting / Auditing | 4.0 Manage Payments | Into system | Verified proof | payment-proof-files, payment-verification, delivery-clearance |
-| Accounting / Auditing | 4.0 Manage Payments | Out of system | Pay status | verified-payment-records, payment-balances |
+| Accounting | 4.0 Manage Payments | Into system | Verified proof | payment-proof-files, payment-verification, delivery-clearance |
+| Accounting | 4.0 Manage Payments | Out of system | Pay status | verified-payment-records, payment-balances |
 | Finance | 4.0 Manage Payments | Into system | Payment plans | payment-priority, planned-payment-date, coordination-status |
 | Finance | 4.0 Manage Payments | Out of system | Balances | served-po-details, outstanding-balances, settled-balances |
 | Logistics | 5.0 Manage Delivery & Inventory | Into system | Dispatch data | delivery-schedules, dispatch-updates, transfer-trip-schedules, transfer-dispatch-updates |
@@ -34,8 +34,8 @@ These are logical data flows, not payment transactions or workflow-control arrow
 | AI Extraction Service | 6.0 Manage Documents | Out of system | Pages/context | mrf-source-pages, quote-source-pages, requested-item-context |
 | Google Drive | 6.0 Manage Documents | Into system | Archive data | folder-identifiers, archive-file-references, retrieved-document-data, archive-results |
 | Google Drive | 6.0 Manage Documents | Out of system | Files / lookups | project-folder-data, generated-document-files, supporting-evidence-files, file-retrieval-requests |
-| Accounting / Auditing | 6.0 Manage Documents | Into system | Doc review | invoice-receipt-references, transfer-receipt-evidence, document-review-results |
-| Accounting / Auditing | 6.0 Manage Documents | Out of system | Evidence | archived-evidence, document-completion-status |
+| Accounting | 6.0 Manage Documents | Into system | Doc review | invoice-receipt-references, transfer-receipt-evidence, document-review-results |
+| Accounting | 6.0 Manage Documents | Out of system | Evidence | archived-evidence, document-completion-status |
 
 ## Store flows
 

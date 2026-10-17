@@ -1,3 +1,4 @@
+import { archiveLocal } from "./local-archive.ts";
 import type { ArchiveProgressListener } from "../../domain/archive-progress.ts";
 import type { Command, CommandResult } from "../../domain/commands.ts";
 import type { BidReport } from "../../domain/types.ts";
@@ -26,6 +27,7 @@ export async function getBidWorkbook(report: BidReport, run?: RunBidCommand, for
   try { cached = artifact.localFileId ? await readQuoteFile(artifact.localFileId) : undefined; } catch { /* An archived report can still be downloaded without a local cache. */ }
   if (cached && artifact.sha256 && await workbookDigest(cached) === artifact.sha256) return { blob: cached, report };
   if (artifact.archive.status === "complete" && artifact.archive.fileId) {
+    if (report.data.project.localArchiveId) { const local = await readQuoteFile(artifact.archive.fileId); if (local && await workbookDigest(local) === artifact.sha256) return { blob: local, report }; throw new Error("The local report copy is unavailable. Generate a new version."); }
     const query = new URLSearchParams({ projectFolderId: report.data.project.driveFolderId!, requestId: report.requestId, reportId: report.id, fileId: artifact.archive.fileId, format });
     const blob = await (await checked(await fetch(`/api/drive/bid-comparisons?${query}`))).blob();
     if (!artifact.sha256 || await workbookDigest(blob) !== artifact.sha256) throw new Error("The Drive workbook no longer matches this saved report version.");
@@ -58,6 +60,11 @@ export async function archiveBidWorkbook(report: BidReport, blob: Blob, run: Run
   try {
     progress?.({ phase: "preparing" });
     if (!artifact.sha256 || await workbookDigest(blob) !== artifact.sha256) throw new Error("The workbook does not match this saved report version.");
+    if (report.data.project.localArchiveId) {
+      const local = await archiveLocal(report.data.project, blob, progress);
+      await save({ type: "completeBidArchive", format, id: report.id, fileId: local.fileId, url: local.url }, run);
+      return;
+    }
     const response = await checked(await fetch("/api/drive/bid-comparisons", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ report, format, size: blob.size }) }));
     const start = await response.json();
     const result = start.driveFileId && start.url ? start : start.ticket && Number.isInteger(start.offset) ? await uploadDocument(blob, start.ticket, start.offset, "/api/drive/bid-comparisons/chunk", progress) : undefined;

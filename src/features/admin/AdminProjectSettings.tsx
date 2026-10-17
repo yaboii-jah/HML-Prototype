@@ -7,6 +7,7 @@ import type { ConfirmAction } from "@/src/components/ui/ConfirmDialog";
 import { BudgetInput } from "@/src/components/ui/BudgetInput";
 import { parseBudgetInput } from "@/src/domain/budget-input";
 import { Field, InlineError } from "@/src/components/ui/Primitives";
+import { LocalProjectFiles } from "@/src/features/projects/LocalProjectFiles";
 import { ScopeBudgets } from "@/src/features/projects/ScopeBudgets";
 import { projectRemovalReason } from "@/src/domain/project-removal";
 import { projectMinimumBudget } from "@/src/domain/scope-budgets";
@@ -16,7 +17,7 @@ import { setupProjectFolder } from "./project-folder";
 import type { Site } from "@/src/domain/types";
 
 export function ProjectCreation({ confirm, onCreated, onCancel }: { confirm: ConfirmAction; onCreated: (id: string) => void; onCancel: () => void }) {
-  const { run, beginOperation } = useDemo();
+  const { run, beginOperation, snapshot } = useDemo();
   const { notify, update, dismiss } = useActionFeedback();
   const [error, setError] = useState(""), [busy, setBusy] = useState(false), [creatingFolder, setCreatingFolder] = useState(false);
   const [documentCode, setDocumentCode] = useState("");
@@ -27,17 +28,17 @@ export function ProjectCreation({ confirm, onCreated, onCancel }: { confirm: Con
     pending.current = true; setBusy(true); setError("");
     const toast = notify({ tone: "progress", title: "Adding project…", detail: `${name} · ${location}` });
     try {
-      if (!await confirm("Add project?", `${name} (${documentCode}) · ${location} · ${money(budget)} allocated budget. A project folder will be created automatically in the company Google Drive folder.`, "Add project")) { dismiss(toast); return; }
+      if (!await confirm("Add project?", `${name} (${documentCode}) · ${location} · ${money(budget)} allocated budget. ${snapshot?.showcase ? "Documents will be archived locally in this browser." : "A project folder will be created automatically in the company Google Drive folder."}`, "Add project")) { dismiss(toast); return; }
       const result = await run({ type: "addSite", documentCode, name, location, budget });
       if (!result.ok) { setError(result.message); update(toast, { tone: "error", title: result.message }); }
       else if (result.recordId) {
-        update(toast, { title: "Project saved. Creating the Google Drive project folder…", detail: name });
+        update(toast, { title: snapshot?.showcase ? "Project saved. Preparing local documents…" : "Project saved. Creating the Google Drive project folder…", detail: name });
         setCreatingFolder(true);
         const site = result.snapshot.sites.find(value => value.id === result.recordId)!;
         let ready = false;
         try { ready = await setupProjectFolder(site, beginOperation); } catch { /* The saved project remains pending and can be retried. */ }
         update(toast, ready
-          ? { tone: "success", title: "Project added. Google Drive folder ready.", detail: `${name} · ${location}` }
+          ? { tone: "success", title: snapshot?.showcase ? "Project added. Local archive ready." : "Project added. Google Drive folder ready.", detail: `${name} · ${location}` }
           : { tone: "warning", title: "Project added. Folder setup is pending.", detail: "Retry or link an existing folder in Project settings." });
         onCreated(result.recordId);
       } else update(toast, { tone: "error", title: result.message });
@@ -99,6 +100,7 @@ function DriveFolderSettings({ site, active, canEdit, confirm }: { site: Site; a
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; controller.current?.abort(); }; }, []);
   const generation=useRef(0);
   useEffect(()=>{if(!active){generation.current++;controller.current?.abort();pending.current=false;}},[active]);
+  if (site.localArchiveId) return <section className="admin-drive-settings"><h3>Local document archive</h3><p>Documents for this demonstration project are stored in this browser. No Google Drive upload is performed.</p>{active && <LocalProjectFiles siteId={site.id}/>}</section>;
   const shownPhase=phase, shownMessage=message;
   const busy = ["creating", "validating", "confirming", "saving"].includes(shownPhase);
   const create = async () => {
