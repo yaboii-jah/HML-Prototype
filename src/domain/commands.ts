@@ -1,3 +1,4 @@
+import { applyUsageEntry, type RecordUsageEntry } from "./usage-entries.ts";
 import { archiveReady, validArchiveFileLink } from "./archive-destination.ts";
 import { applyTransferCommand, isTransferCommand, requestSourcing, sourceStockAvailable, transferQuantityFor, transfersForRequest, type TransferCommand } from "./stock-transfers.ts";
 import { applyStockSourcingCommand, invalidateStockReviews, isStockSourcingCommand, suitabilityQuantityFor, type StockSourcingCommand } from "./stock-suitability.ts";
@@ -34,7 +35,7 @@ import { poLineTotal } from "./pricing.ts";
 import { procurementReady, supportingPdf } from "./request-archive.ts";
 import { ROLES, type ArchivedQuoteFile, type DemoSnapshot, type DocumentRef, type DocumentStatus, type Item, type POAdjustment, type POLine, type Priority, type Quote, type Role } from "./types.ts";
 
-export type Command = StockSourcingCommand | TransferCommand
+export type Command = RecordUsageEntry | StockSourcingCommand | TransferCommand
   | { type: "savePaymentCoordination"; poId: string; revision: number; priority: PaymentCoordination["priority"]; status: PaymentCoordination["status"]; plannedDate: string; note: string }
   | { type: "recordCreditPayment"; poId: string; paymentId: string; amount: number; method: Payment["method"]; reference: string; date: string; proofIds: string[] }
   | { type: "voidCreditPayment"; poId: string; paymentId: string; reason: string }
@@ -107,7 +108,7 @@ export type Command = StockSourcingCommand | TransferCommand
   | { type: "addSupplierFromQuote"; name: string };
 
 export type CommandContext = { now: () => string; id: (prefix: string) => string; actor?: AuditIdentity; siteIds?: readonly string[] };
-export type CommandResult = { ok: true; snapshot: DemoSnapshot; recordId?: string; message: string } | { ok: false; message: string; field?: string };
+export type CommandResult = { ok: true; snapshot: DemoSnapshot; recordId?: string; message: string; persisted?: boolean } | { ok: false; message: string; field?: string; rowErrors?: Record<string, string> };
 const defaultContext: CommandContext = { now: () => new Date().toISOString(), id: newId };
 const fail = (message: string, field?: string): CommandResult => ({ ok: false, message, field });
 const positive = (n: number) => Number.isFinite(n) && n > 0;
@@ -157,6 +158,7 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
     const siteId = siteActionProject(state, command);
     if (siteId && !ctx.siteIds.includes(siteId)) return fail("Ask an Administrator to assign your account to this project before performing site actions.");
   }
+  if (command.type === "recordUsageEntry") return applyUsageEntry(state, command, ctx);
   if (isStockSourcingCommand(command)) return applyStockSourcingCommand(state, command, ctx);
   if (isTransferCommand(command)) return applyTransferCommand(state, command, ctx);
   const reopenDocumentReview = (poId: string, reason: string) => {

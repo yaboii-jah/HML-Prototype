@@ -94,6 +94,10 @@ _Avoid_: Serve PO
 
 **Inventory movement:** A project stock receipt, usage or adjustment. The inventory balance is the accumulated effect of these movements.
 
+**Usage entry:** One confirmed record of materials consumed at one project, grouping the material usage movements with their explanations, person and time. Confirming an entry consumes available project stock together.
+
+**Usage draft:** Unsubmitted material quantities and explanations for one project. A draft consumes and reserves no stock.
+
 **Stock transfer:** A Procurement request to fulfill an approved MRF using materials held at another project site. The stock screen offers matching descriptions and units and sends verified selections directly to source release; existing suitability reviews retain their approval path. Source Site Personnel confirm release quantities, and one transfer may use several delivery trips.
 
 **Matching stock description:** A stock description and unit identical to the requested material after ignoring letter case and extra description spaces. It is a suggestion that Procurement must verify, not an automatic technical approval.

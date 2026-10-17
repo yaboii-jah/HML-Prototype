@@ -121,3 +121,14 @@ Run `npm test` for directory bootstrap, salted credentials, normalized unique em
 
 
 Finance coordination regression: `npm test` covers Finance-only updates, required dates/reasons, stale revisions, immutable history, Philippine date boundaries, unchanged budget and delivery totals, partial/full/void credit verification, and upfront verification/reopening. Run `node --experimental-strip-types scripts/credit-terms-smoke.mjs http://127.0.0.1:3000` against `npm run dev` to exercise status confirmation/cancellation, active/settled filters, Accounting handoffs, retained priority, refresh persistence and mobile/desktop layouts in both themes. All Drive responses in that walkthrough are mocked.
+
+## Batch material usage
+
+- [ ] As assigned Site Personnel, enter quantities for several project materials, a shared explanation and an optional override. Search, filter, paginate, switch projects and refresh; each project/account draft stays separate. Blank/zero rows are excluded.
+- [ ] Review includes every entered material regardless of the current filters/page. Cancel retains all inputs. Confirm deducts stock together and opens read-only grouped history with immutable author/time and effective explanations. Material history links back to the group.
+- [ ] Try negative/nonfinite quantities, short explanations, unavailable materials, insufficient stock and transfer-reserved quantities. One invalid row rejects the entire entry and reveals its error. Change stock/access before confirmation to verify current-state rejection.
+- [ ] Double-submit or retry the same draft: one entry, one stock deduction and one audit event. Reusing the ID with different content fails. Refresh the saved detail and test another account?s project permissions.
+- [ ] Simulate browser-storage failure: retain inputs/draft, show the warning, retry the same entry after recovery, and confirm no duplicate deduction. Corrupt drafts remain stored until explicit discard. Workspace reset clears usage drafts.
+- [ ] Check keyboard navigation, modal focus/Escape, both themes and 320/375/414/768/1440 widths. Existing individual usage, adjustments, transfer reservations and old snapshots continue working.
+
+Automated coverage: `tests/usage-entries.test.mjs` and `scripts/usage-entries-smoke.mjs`.

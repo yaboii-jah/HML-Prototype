@@ -41,6 +41,7 @@ export function createReadAccess(state: DemoSnapshot | null | undefined, role: R
       add(delivery.id, ...transferProjects(delivery.transferId));
       for (const receipt of delivery.receiptVersions || []) add(receipt.id, ...transferProjects(delivery.transferId));
     }
+    for (const entry of state.usageEntries || []) add(entry.id, entry.siteId);
     for (const movement of state.movements) add(movement.id, movement.siteId);
   }
   const canReadRecord = (id?: string) => !!role && (!sitePersonnel || !!id && (ownership.get(id) || []).some(canReadProject));
@@ -75,6 +76,7 @@ export function createReadAccess(state: DemoSnapshot | null | undefined, role: R
     }
     if (section === "purchase-orders" && parts.length === 2) return canReadProject(poProject(id));
     if (section === "deliveries" && parts.length === 2 && id !== "new") return canReadProject(poProject(state?.batches.find(batch => batch.id === id)?.poId));
+    if (section === "inventory" && id === "usage" && parts.length === 3) return subpage === "new" ? projectIds.length > 0 : canReadRecord(subpage);
     if (section === "inventory" && parts.length === 3) return canReadProject(id);
     if (section === "stock-transfers" && parts.length === 2) return transferProjects(id).some(canReadProject);
     return false;

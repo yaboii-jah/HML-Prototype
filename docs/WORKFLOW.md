@@ -72,6 +72,14 @@ After supplier issuance, delivery and payment proceed independently:
 - Accounting completes document review after checking invoice/receipt references and archived evidence, including generated and signed receipts for each received batch.
 - Payment, delivery, inventory posting and document completion are separate milestones. There is no single automatic MRF closure rule.
 
+### Record material usage
+
+Site Personnel opens **Site inventory ? Record usage**, chooses one assigned project, and fills Quantity used across the stock list. Blank or zero means unused; fractional quantities are supported. A shared explanation is required, with optional material explanations. Search, receipt-scope filters and pagination preserve entered quantities; usage always reduces pooled project stock.
+
+Each account/project keeps a private browser draft across navigation and refresh. Drafts do not reserve stock. Review includes every entered material, including hidden rows. Confirming validates current access and stock reservations, then saves all quantities together or none. Failed validation retains the draft. Repeating the same save cannot consume stock twice.
+
+**Usage entries** shows the read-only group, author, time and individual movements. Earlier individual usage remains in material history. Saved entries cannot be edited or backdated; corrections use stock adjustments. If storage fails, keep the browser open: the entry is in memory and the draft is retained. Reopen Record usage for the project and choose **Retry saving entry**. Explicit workspace reset clears usage drafts.
+
 ## Existing Records
 
 Older MRFs retain Procurement review. Older Finance-managed POs retain Accounting payment requests → Finance approval → Finance disbursement under **Legacy payment requests**.

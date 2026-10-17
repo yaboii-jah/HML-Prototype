@@ -201,6 +201,8 @@ This remains a single-browser prototype: it provides command validation and loca
 - Posting uses accepted quantity, creates site-specific receipt movements, and is allowed once per batch.
 - Editing accepted quantities at posting time requires a reason.
 - Inventory is calculated from movements per site and per normalized material/unit pair: opening + receipts - usage +/- adjustments.
+- Site Personnel can record multiple materials through `/inventory/usage/new` for one assigned project, with a shared reason and optional row overrides. One atomic `recordUsageEntry` command revalidates current access and available stock, creates linked negative movements and an immutable usage entry, and uses a stable draft entry ID for safe retries. Group detail lives at `/inventory/usage/[entryId]`; Inventory has Stock and Usage entries views.
+- Usage drafts are private browser-local records partitioned by account, workspace installation and project. Filters/pagination never remove entered rows. Drafts reserve no stock, survive navigation/refresh, and clear only after durable save, explicit discard or workspace reset. Volatile saves retain their draft for retry. Version-12 snapshots accept an optional `usageEntries` collection and optional movement `usageEntryId`; old data is preserved without backfilling groups.
 - Usage cannot create negative stock. Usage and adjustments require a reason; Accounting is a backup role for adjustments.
 
 ### Accounting
