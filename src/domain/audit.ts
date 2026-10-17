@@ -28,7 +28,8 @@ export function auditRecords(state: DemoSnapshot): Map<string, AuditRecord> {
   for (const transfer of state.stockTransfers || []) add({ id: transfer.id, type: "allocation", ref: transfer.ref, requestId: transfer.requestId, href: "/stock-transfers/" + transfer.id });
   for (const delivery of state.transferDeliveries || []) { const transfer = state.stockTransfers?.find(value => value.id === delivery.transferId); add({ id: delivery.id, type: "batch", ref: delivery.ref, requestId: transfer?.requestId, href: transfer ? "/stock-transfers/" + transfer.id : undefined }); }
   for (const transfer of state.stockTransfers || []) for (const doc of transfer.documents || []) add({ id: doc.id, type: "evidence", ref: doc.name, requestId: transfer.requestId, href: "/stock-transfers/" + transfer.id });
-  for (const movement of state.movements) { const batch = records.get(movement.batchId || movement.transferDeliveryId || ""); add({ id: movement.id, type: "movement", ref: movement.itemName, requestId: batch?.requestId, poId: batch?.poId, href: batch?.href }); }
+  for (const entry of state.usageEntries || []) add({ id: entry.id, type: "usage-entry", ref: "Usage entry", projectId: entry.siteId, href: `/inventory/usage/${entry.id}` });
+  for (const movement of state.movements) { const batch = records.get(movement.batchId || movement.transferDeliveryId || movement.usageEntryId || ""); add({ id: movement.id, type: "movement", ref: movement.itemName, requestId: batch?.requestId, poId: batch?.poId, href: batch?.href }); }
   for (const project of state.sites) add({ id: project.id, type: "project", ref: project.name, href: `/projects/${project.id}` });
   for (const scope of state.scopes || []) add({ id: scope.id, type: "scope", ref: scope.name, href: `/projects/${scope.siteId}` });
   for (const supplier of state.suppliers) add({ id: supplier.id, type: "supplier", ref: supplier.name, href: "/suppliers" });
@@ -111,7 +112,7 @@ export function auditKind(command: Command, previous: DemoSnapshot): AuditEventT
     case "dispatchBatch": return "batch.dispatched";
     case "confirmBatch": return "batch.received";
     case "postBatch": return "batch.posted";
-    case "recordMovement": return "stock.changed";
+    case "recordMovement": case "recordUsageEntry": return "stock.changed";
     case "captureDeliveryReceipt": case "classifyAccountingDocument": case "attachAccountingDocuments": return "evidence.attached";
     case "saveDocuments": return "documents.reviewed";
     case "createBidReport": return "comparison.captured";

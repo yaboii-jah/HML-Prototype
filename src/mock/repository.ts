@@ -1,3 +1,5 @@
+import { validUsageEntries } from "../domain/usage-entries.ts";
+import { clearUsageDrafts } from "../features/inventory/usage-draft.ts";
 import { applyCommand, type Command, type CommandResult } from "../domain/commands.ts";
 import { validStockReviews } from "../domain/stock-suitability.ts";
 import { validTransferState } from "../domain/transfer-document.ts";
@@ -75,6 +77,7 @@ export const parseCurrent = (raw: string): DemoSnapshot | null => {
   const state = parsed as DemoSnapshot;
   if (state.showcase && (state.showcase.revision !== 1 || typeof state.showcase.installationId !== "string" || !/^[a-z0-9-]{8,80}$/.test(state.showcase.installationId) || typeof state.showcase.seededAt !== "string" || !Number.isFinite(Date.parse(state.showcase.seededAt)))) return null;
   if (state.sites.some(site => site.localArchiveId !== undefined && (!state.showcase || site.localArchiveId !== state.showcase.installationId))) return null;
+  if (!validUsageEntries(state)) return null;
   if (!validStockReviews(state)) return null;
   if (!validTransferState(state)) return null;
   if (!validDocumentNumberingState(state)) return null;
@@ -175,7 +178,7 @@ export class LocalDemoRepository implements DemoRepository {
     const current = this.read().snapshot;
     if (!current) return { ok: false, message: "Restore the workspace before making changes." };
     const result = applyCommand(current, command, actor ? { actor, siteIds, now: () => new Date().toISOString(), id: newId } : undefined);
-    if (result.ok) { this.view = this.write(result.snapshot); this.notify(); }
+    if (result.ok) { this.view = this.write(result.snapshot); this.notify(); return { ...result, persisted: this.view.status === "ready" }; }
     return result;
   }
   async reset() {
@@ -186,6 +189,7 @@ export class LocalDemoRepository implements DemoRepository {
     }
     this.initialized = true;
     this.view = this.write(blankWorkspace());
+    if (this.view.status === "ready") try { clearUsageDrafts(localStorage); } catch {}
     if (this.view.status === "ready") try { await clearQuoteFiles(); } catch {}
     if (this.view.status === "ready") try { PREVIOUS_KEYS.forEach(key => localStorage.removeItem(key)); } catch {}
     this.notify();

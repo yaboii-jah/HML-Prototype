@@ -1,0 +1,28 @@
+.editor { display: grid; gap: 16px; }
+.fields { border: 0; padding: 0; margin: 0; min-width: 0; display: grid; gap: 16px; }
+.actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.summary { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; }
+.summary p { margin: 0; }
+.editor .usageTable { min-width: 880px; }
+.editor .usageTable td { vertical-align: top; }
+.usageTable input { min-width: 100px; width: 120px; }
+.usageTable textarea { min-width: 160px; width: 100%; margin-top: 8px; }
+.usageTable summary { cursor: pointer; }
+.usageTable small { display: block; }
+.reviewRows { display: grid; gap: 12px; margin: 16px 0; }
+.reviewRows > div { padding: 12px; border: 1px solid var(--line); border-radius: 8px; overflow-wrap: anywhere; }
+.reviewRows span { display: block; }
+.reviewRows p { margin: 6px 0 0; white-space: pre-wrap; }
+.errorList { margin: 0; padding-left: 24px; }
+@media (max-width: 700px) {
+  .editor .usageTable { display: block; min-width: 0; width: 100%; max-width: 100%; }
+  .usageTable thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .usageTable tbody { display: grid; gap: 12px; padding: 8px; width: 100%; }
+  .usageTable tr { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  .editor .usageTable td { display: block; min-width: 0; max-width: none; padding: 10px; overflow-wrap: anywhere; }
+  .usageTable td:first-child, .usageTable td:last-child { grid-column: 1 / -1; }
+  .usageTable td::before { content: attr(data-label); display: block; font-size: 11px; margin-bottom: 6px; opacity: .75; }
+  .usageTable input, .usageTable textarea { width: 100%; min-width: 0; }
+  .summary .actions { width: 100%; }
+  .summary button { flex: 1; }
+}

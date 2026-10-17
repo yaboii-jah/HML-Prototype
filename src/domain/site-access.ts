@@ -14,7 +14,7 @@ export function siteActionProject(state: DemoSnapshot, command: Command): string
     return state.stockTransfers?.find(value => value.id === transferId)?.destinationSiteId;
   }
   if (command.type === "reviewStockSuitability") return state.stockSuitabilityReviews?.find(review => review.id === command.id)?.destinationSiteId;
-  if (command.type === "saveRequest" || command.type === "recordMovement") return command.siteId;
+  if (command.type === "saveRequest" || command.type === "recordMovement" || command.type === "recordUsageEntry") return command.siteId;
   if (command.type === "confirmBatch" || command.type === "postBatch" || command.type === "captureDeliveryReceipt") {
     const batch = state.batches.find(value => value.id === command.id);
     return state.requests.find(value => value.id === state.pos.find(po => po.id === batch?.poId)?.mrfId)?.siteId;
