@@ -1,8 +1,8 @@
 # UML class diagram validation
 
-Verified on 2026-10-14.
+Verified on 2026-10-19.
 
-- 11 classes, 53 essential attributes, 24 conceptual operations, and 17 associations match CLASS_MODEL.md.
+- 11 classes, 52 essential attributes, 24 conceptual operations, and 17 associations match CLASS_MODEL.md.
 - Attributes and types match the core ERD; all operations have documented role responsibilities.
 - 34 endpoint multiplicities; one filled composition diamond at MRF; one explicit Delivery XOR ownership note.
 - Source/destination transfer associations have separate labeled routes.

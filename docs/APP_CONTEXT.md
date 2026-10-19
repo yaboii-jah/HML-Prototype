@@ -281,7 +281,7 @@ Any incompatible snapshot change requires a schema-version decision and a migrat
 | `/deliveries/[id]` | Receiving confirmation and stock-posting flow. |
 | `/inventory`, `/inventory/[siteId]/[materialId]` | Site inventory and material movement history. |
 | `/accounting`, `/accounting/[poId]` | All POs grouped by MRF; PO/budget review, payment preparation, Logistics release and supporting documents. |
-| `/reports` | Project Manager and Administrator cross-project reporting. |
+| `/reports` | Full cross-project reporting for every signed-in role except Site Personnel; existing transaction-editing permissions still apply. |
 | `/sign-in` | Email/password department access with no predefined account hints. |
 | `/admin` | Project creation, Drive folder mapping and activity; no workspace reset control. |
 | `/admin/maintenance` | Temporarily retired; redirects to `/admin`. Normal workspace clearing is hidden. |
@@ -430,7 +430,7 @@ Administrator manages browser-local users in Administration > Users, with search
 
 The seven initial accounts bootstrap once into `hml-constructsync-users-v1`; this directory and its separate user-management history survive workspace reset. The session tracks stable user ID and revision. Role, email, password and status changes invalidate existing sessions and captured business commands, including changes from another tab. Name-only changes preserve historical actor snapshots and apply to subsequent actions. Corrupt directories require recovery without silently overwriting saved accounts.
 
-Management is retired from sign-in, navigation and active commands. Existing Management audit identities remain readable; an existing workspace selected as Management loads without losing records and selects Project Manager until sign-in reconciles its role. Presenter switching lists active named users and remains password-free. Project Manager can add/edit projects, budgets, scopes and Drive setup through Projects; PM and Administrator receive reports and exception visibility. User management remains Administrator-only; the normal maintenance reset is temporarily hidden and its route redirects to Administration. These controls simulate access within a local prototype and do not provide backend authentication.
+Management is retired from sign-in, navigation and active commands. Existing Management audit identities remain readable; an existing workspace selected as Management loads without losing records and selects Project Manager until sign-in reconciles its role. Presenter switching lists active named users and remains password-free. Project Manager can add/edit projects, budgets, scopes and Drive setup through Projects. Project Manager, Procurement, Finance, Logistics, Accounting / Auditing, and Administrator can view the same complete Operations report, including budgets, payments, stock, and exceptions; Site Personnel cannot open Reports. Report access does not grant additional transaction-editing permissions. User management remains Administrator-only; the normal maintenance reset is temporarily hidden and its route redirects to Administration. These controls simulate access within a local prototype and do not provide backend authentication.
 
 
 ### External credit/terms payments (2026-10-09)

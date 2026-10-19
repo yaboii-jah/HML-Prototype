@@ -86,7 +86,7 @@ test('returned requests expose revision and block dependent work; completed/reje
 test('all roles have consistent Reports and Administration section visibility without losing inventory reads', () => {
   const f=actionFixture();
   for(const role of ['Finance','Procurement','Logistics','Accounting / Auditing','Project Manager','Administrator']) {
-    const access=createReadAccess(f.state,role);assert.equal(access.canOpen('/admin'),role==='Administrator');assert.equal(access.canOpen('/reports'),['Project Manager','Administrator'].includes(role));assert.equal(access.canOpen('/inventory'),true);assert.equal(access.canOpen('https://outside.example/admin'),false);
+    const access=createReadAccess(f.state,role);assert.equal(access.canOpen('/admin'),role==='Administrator');assert.equal(access.canOpen('/reports'),role!=='Site Personnel');assert.equal(access.canOpen('/inventory'),true);assert.equal(access.canOpen('https://outside.example/admin'),false);
   }
 });
 test('setup retry is nondestructive, deduplicates concurrent retries and keeps corrupt data in recovery', async t => {

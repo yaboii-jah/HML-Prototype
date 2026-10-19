@@ -16,14 +16,14 @@ import { budgetFor, deliveryStatus, inventoryFor, paidTotal, paymentStatus, poTo
 import { warehouseHeldFor } from "@/src/domain/delivery-flow";
 
 export function Reports() {
-  const { snapshot: state } = useDemo();
+  const { snapshot: state, access } = useDemo();
   const [siteId, setSiteId] = useState("all");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [documentSearch, setDocumentSearch] = useState("");
   const [stockSearch, setStockSearch] = useState("");
   if (!state) return null;
-  if (!["Project Manager", "Administrator"].includes(state.role)) return <PageHeader eyebrow="REPORTS" title="Access unavailable" description="Project Managers and Administrators can view operations reports." />;
+  if (!access.canOpen("/reports")) return <PageHeader eyebrow="REPORTS" title="Access unavailable" description="Operations reports are available to signed-in users in roles other than Site Personnel." />;
 
   const selectedSite = state.siteFilter !== "all" ? state.siteFilter : siteId;
   const included = (id: string, date: string) =>

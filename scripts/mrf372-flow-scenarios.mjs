@@ -9,9 +9,10 @@ import { localArchiveUrl } from '../src/domain/archive-destination.ts';
 import { inventoryFor, paidTotal, poTotal } from '../src/domain/selectors.ts';
 import { materialId } from '../src/domain/ids.ts';
 
-export async function mrf372FlowScenarios() {
-  const tested = JSON.parse(await readFile('.next/mrf372-paper/extraction.json', 'utf8'));
+export async function mrf372FlowScenarios({ samples, groupedUsage = false } = {}) {
+  const tested = samples || JSON.parse(await readFile('.next/mrf372-paper/extraction.json', 'utf8'));
   assert.ok(tested.passed, 'Run the live sample extraction test first');
+  const manuallyReviewed = tested.method === 'manual-pdf-review';
   await Promise.all([tested.mrf, ...tested.quotations].map(async sample => {
     assert.equal(createHash('sha256').update(await readFile(sample.file)).digest('hex'), sample.sha256, `Sample changed; rerun extraction: ${sample.file}`);
   }));
@@ -57,7 +58,7 @@ export async function mrf372FlowScenarios() {
   shot('01-project-and-request', 'Marina Skyline Project Budget and Architectural Scope', 'Project Manager', `/projects/${siteId}`);
   shot('01-project-and-request', 'Architectural Scope Budget Allocation Settings', 'Project Manager', `/projects/${siteId}`, [{ click: 'Project settings' }, { click: 'Scopes', buttonSelector: '[role=tab]' }]);
   const supportId = file(path.basename(tested.mrf.file), [], tested.mrf.file);
-  const save = { type: 'saveRequest', siteId, scopeId, ref: '', sourceRef: original.details.ref, requestDate: original.details.requestDate, requestedBy: original.details.requestedBy, approvedBy: original.details.approvedBy, purchaser: original.details.purchaser, financeOfficer: original.details.financeOfficer, specialInstructions: original.details.specialInstructions, aiAssisted: true, aiReviewed: true, documents: [{ name: path.basename(tested.mrf.file), type: 'Supporting PDF', fileId: supportId }], items };
+  const save = { type: 'saveRequest', siteId, scopeId, ref: '', sourceRef: original.details.ref, requestDate: original.details.requestDate, requestedBy: original.details.requestedBy, approvedBy: original.details.approvedBy, purchaser: original.details.purchaser, financeOfficer: original.details.financeOfficer, specialInstructions: original.details.specialInstructions, aiAssisted: !manuallyReviewed, aiReviewed: !manuallyReviewed, documents: [{ name: path.basename(tested.mrf.file), type: 'Supporting PDF', fileId: supportId }], items };
   run('Site Personnel', { ...save, intent: 'draft' });
   const requestId = state.requests.at(-1).id, requestRoute = `/requests/${requestId}`, quoteRoute = `${requestRoute}/quotes`;
   const refs = { sourceMRF: 'MRF-372', mrf: state.requests.at(-1).ref };
@@ -94,7 +95,7 @@ export async function mrf372FlowScenarios() {
     }
     const supplierId = run('Procurement', { type: 'addSupplierFromQuote', name: q.supplier });
     const originalId = file(path.basename(testedQuote.file), [], testedQuote.file);
-    const quote = { id: id('quote'), mrfId: requestId, supplierId, ref: q.reference, prices: {}, available: q.available || 'Available on confirmed order', leadDays: q.leadDays, terms: q.terms, validity: q.validity, currency: q.currency || 'PHP', quoteDate: q.quoteDate, deliveryTerms: q.deliveryTerms, quoteNotes: q.quoteNotes, extraction: 'gemini', reviewStatus: 'draft', documents: [{ name: path.basename(testedQuote.file), type: 'application/pdf', fileId: originalId }], supplierDetails: { name: q.supplier, address: q.supplierAddress, tin: q.supplierTin, contactName: q.contactName, email: q.email, phone: q.phone }, financial: { vatStatus: q.vatStatus, priceBasis: q.priceBasis, vatRate: q.vatRate, reviewed: true }, adjustments: [], lines: q.lines.map((line, n) => ({ ...line, id: id('offer'), requestItemId: items[n].id, conversionFactor: 1, matchConfirmed: true, varianceReason: '', discountType: 'none', discountValue: 0, taxRate: 0 })) };
+    const quote = { id: id('quote'), mrfId: requestId, supplierId, ref: q.reference, prices: {}, available: q.available || 'Available on confirmed order', leadDays: q.leadDays, terms: q.terms, validity: q.validity, currency: q.currency || 'PHP', quoteDate: q.quoteDate, deliveryTerms: q.deliveryTerms, quoteNotes: q.quoteNotes, extraction: manuallyReviewed ? 'manual' : 'gemini', reviewStatus: 'draft', documents: [{ name: path.basename(testedQuote.file), type: 'application/pdf', fileId: originalId }], supplierDetails: { name: q.supplier, address: q.supplierAddress, tin: q.supplierTin, contactName: q.contactName, email: q.email, phone: q.phone }, financial: { vatStatus: q.vatStatus, priceBasis: q.priceBasis, vatRate: q.vatRate, reviewed: true }, adjustments: [], lines: q.lines.map((line, n) => ({ ...line, id: id('offer'), requestItemId: items[n].id, conversionFactor: 1, matchConfirmed: true, varianceReason: '', discountType: 'none', discountValue: 0, taxRate: 0 })) };
     run('Procurement', { type: 'saveQuoteDraft', quote });
     const label = q.supplier.split(' ')[0];
     shot('03-four-supplier-quotations', `${label} Quotation Material Matching and Original PDF`, 'Procurement', quoteRoute, [step(2), anchor(`[data-quotation-id="${quote.id}"]`)], { ...refs, quotation: q.reference });
@@ -194,7 +195,12 @@ export async function mrf372FlowScenarios() {
     return batch;
   };
   delivery(upfrontId, '06-upfront-delivery-and-stock', 'Kestrel', upRefs);
-  run('Site Personnel', { type: 'recordMovement', siteId, itemName: items[0].name, unit: items[0].unit, kind: 'usage', quantity: 2, reason: 'Two glass panels installed according to key plan CP-04.' });
+  if (groupedUsage) {
+    run('Site Personnel', { type: 'recordUsageEntry', entryId: 'mrf372-grouped-usage', siteId, reason: 'Third-floor glass installation according to key plan CP-04.', lines: [
+      { materialId: materialId(items[0].name, items[0].unit), quantity: 2, reason: 'Two 900 x 2100mm glass panels installed at the third-floor east wing.' },
+      { materialId: materialId(items[5].name, items[5].unit), quantity: 1, reason: 'One silicone cartridge used to seal the installed glass panels.' },
+    ] });
+  } else run('Site Personnel', { type: 'recordMovement', siteId, itemName: items[0].name, unit: items[0].unit, kind: 'usage', quantity: 2, reason: 'Two glass panels installed according to key plan CP-04.' });
   shot('06-upfront-delivery-and-stock', 'Glass Panel Inventory Posting Usage and Movement History', 'Site Personnel', `/inventory/${siteId}/${materialId(items[0].name, items[0].unit)}`, [], upRefs);
   const creditPo = state.pos.find(p => p.id === creditId);
   run('Accounting / Auditing', { type: 'saveAccountingPO', id: creditId, paymentMode: 'credit', paymentDueDate: due, financial: { ...creditPo.financial, reviewed: true } });

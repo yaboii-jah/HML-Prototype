@@ -253,7 +253,7 @@ try {
   assert.equal((await state()).sites.length, 0, "A fresh workspace starts without projects");
   assert.equal(await run("return document.body.innerText.includes('No assigned projects');"), true);
   await navigate("/reports");
-  assert.equal(await run("return document.querySelector('h1').textContent;"), "Access unavailable", "Reports require Project Manager or Administrator");
+  assert.equal(await run("return document.querySelector('h1').textContent;"), "Access unavailable", "Reports remain unavailable to Site Personnel");
   await role("Administrator"); await navigate("/reports");
   assert.equal(await run("return document.querySelector('.report-empty h2')?.textContent;"), "No projects to report yet");
   assert.equal(await run("return document.querySelectorAll('.empty').length;"), 0, "An empty report should show one useful starting state");

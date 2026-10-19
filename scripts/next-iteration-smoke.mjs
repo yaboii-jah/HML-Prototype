@@ -89,8 +89,54 @@ try {
   assert.equal(await run("return document.querySelector('#role-tasks').getBoundingClientRect().top<document.querySelector('.dashboard-metrics').getBoundingClientRect().top;"),true,'Mobile queue precedes metrics');
   await run(`localStorage.setItem(${JSON.stringify(SESSION_STORAGE_KEY)},${JSON.stringify(JSON.stringify(identity(finance)))});return true;`);
   await navigate('/dashboard');await wait("return !!document.querySelector('.side-nav');");
-  assert.equal(await run("return [...document.querySelectorAll('.side-nav a')].some(a=>['/admin','/reports'].includes(a.getAttribute('href')));"),false,'Restricted sections are absent from navigation');
-  await navigate('/reports');await wait("return document.body.innerText.includes('Access unavailable');");
+  const reportRecords = await snapshot(); delete reportRecords.role;
+  let reportBaseline;
+  for (const user of data.users.filter(user => user.active && user.role !== 'Site Personnel')) {
+    await run(`localStorage.setItem(${JSON.stringify(SESSION_STORAGE_KEY)},${JSON.stringify(JSON.stringify(identity(user)))});return true;`);
+    await navigate('/reports?source=access-check');
+    await wait("return document.querySelector('h1')?.textContent==='Operations report'&&!!document.querySelector('[aria-label=\"Report project\"]');");
+    await call('Page.reload');
+    await wait("return document.querySelector('h1')?.textContent==='Operations report'&&!!document.querySelector('.report-site-stock');");
+    assert.equal(await run("return !!document.querySelector('.side-nav a[href=\"/admin\"]');"),user.role==='Administrator',`${user.role}: Administration permissions stay separate`);
+    const summary = await run("return {metrics:document.querySelector('.metric-strip').innerText,budget:document.querySelector('.report-summary-grid').innerText,stock:document.querySelector('.report-site-stock').innerText};");
+    if (!reportBaseline) reportBaseline=summary;
+    assert.deepEqual(summary,reportBaseline,`${user.role}: full report matches other departments`);
+    assert.equal(await run("return !!document.querySelector('.payment-coordination-form');"),false,'Reports never exposes the Finance editing form');
+    for (const [width,height] of [[1440,650],[375,1000]]) {
+      await call('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:1,mobile:width<700});
+      await navigate('/dashboard');await wait("return !!document.querySelector('#role-tasks');");
+      if(width<700)await run("document.querySelector('.mobile-menu').click();return true;");
+      await run("const link=document.querySelector('.side-nav a[href=\"/reports\"]');if(!link)throw new Error('Reports navigation missing');if(!link.getClientRects().length)document.querySelector('.nav-more-trigger').click();return true;");
+      await wait("const link=document.querySelector('.side-nav a[href=\"/reports\"]');return !!link?.getClientRects().length;");
+      await run("document.querySelector('.side-nav a[href=\"/reports\"]').click();return true;");
+      await wait("return location.pathname==='/reports'&&document.querySelector('h1')?.textContent==='Operations report';");
+    }
+    await fill('[aria-label="Report project"]',project);
+    const budgetBefore = await run("return document.querySelector('.report-summary-grid > section:first-child').innerText;");
+    await fill('[aria-label="Report from date"]','2099-01-01');await fill('[aria-label="Report to date"]','2099-01-31');
+    assert.equal(await run("return document.querySelector('.metric-strip strong').textContent;"),'0',`${user.role}: dates filter record counts`);
+    assert.equal(await run("return document.querySelector('.report-summary-grid > section:first-child').innerText;"),budgetBefore,'Date filtering preserves current budget position');
+    await fill('[aria-label="Report from date"]','');await fill('[aria-label="Report to date"]','');
+    await wait("return !!document.querySelector('.report-site-stock tbody a');");
+    const inventoryHref=await run("return document.querySelector('.report-site-stock tbody a').getAttribute('href');");
+    await navigate(inventoryHref);
+    assert.notEqual(await run("return document.querySelector('h1')?.textContent;"),'Access unavailable',`${user.role}: supporting inventory record opens`);
+    console.log(`Reports access verified: ${user.role}, full data, filters, reload, desktop/mobile navigation and linked inventory`);
+  }
+  const recordsAfterReports=await snapshot();delete recordsAfterReports.role;
+  assert.deepEqual(recordsAfterReports,reportRecords,'Viewing reports and filters never changes transaction records');
+  await navigate('/reports');await wait("return document.querySelector('h1')?.textContent==='Operations report';");
+  await run("document.querySelector('.masthead-account').click();return true;");
+  await wait("return document.querySelector('.account-modal')?.open;");
+  await run(`const button=[...document.querySelectorAll('.role-options button')].find(button=>button.querySelector('small')?.textContent===${JSON.stringify(author.name)});if(!button)throw new Error('Site account missing');button.click();return true;`);
+  await wait("return document.querySelector('h1')?.textContent==='Access unavailable';");
+  assert.equal(await run("return !!document.querySelector('.side-nav a[href=\"/reports\"]');"),false,'Site Personnel loses Reports navigation immediately after switching');
+  await navigate('/reports?source=direct');await wait("return document.querySelector('h1')?.textContent==='Access unavailable';");
+  await call('Page.reload');await wait("return document.querySelector('h1')?.textContent==='Access unavailable';");
+  await run("document.querySelector('.masthead-account').click();return true;");await wait("return document.querySelector('.account-modal')?.open;");
+  await run("[...document.querySelectorAll('.account-modal-actions button')].find(button=>button.textContent==='Sign out').click();return true;");
+  await wait("return location.pathname==='/sign-in';");
+  await call('Page.navigate',{url:base+'/reports?source=signed-out'});await wait("return location.pathname==='/sign-in';");
   await run(`localStorage.setItem(${JSON.stringify(SESSION_STORAGE_KEY)},${JSON.stringify(JSON.stringify(identity(accounting)))});return true;`);
   await navigate(`/inventory/${project}/${cement}`);await wait("return !!document.querySelector('form select');");
   assert.equal(await run("return document.querySelector('form select').value;"),'adjustment');
@@ -114,5 +160,5 @@ try {
   assert.equal(await run("return localStorage.getItem('constructsync-usage-draft-v1/setup-check');"),'retain');
   const backup=await run(`return (async()=>{const marker=JSON.parse(localStorage.getItem('hml-constructsync-showcase-installed-v1'));const db=await new Promise((resolve,reject)=>{const r=indexedDB.open('hml-constructsync-showcase-backups',1);r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);});const result=await new Promise((resolve,reject)=>{const r=db.transaction('backups').objectStore('backups').get(marker.backupId);r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);});db.close();return result.records.find(([key])=>key==='hml-constructsync-demo-v12')[1];})()`);
   assert.equal(backup,savedBeforeSetup,'Successful retry retains the original records in the installation backup');
-  console.log(`Next iteration browser smoke passed: consumption, CSV, dates, modal keyboard behavior, immutable ledger, role handoffs, route titles, mobile task order, navigation and Accounting defaults. Screenshots: ${profile}`);
+  console.log(`Next iteration browser smoke passed: consumption, CSV, dates, modal keyboard behavior, immutable ledger, all six Reports roles, filters, desktop/mobile navigation, signed-out and Site Personnel denial, role handoffs and Accounting defaults. Screenshots: ${profile}`);
 } finally { ws?.close(); browser.kill(); }
