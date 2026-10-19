@@ -1,6 +1,8 @@
 <!-- Hallmark · pre-emit critique: P5 H4 E4 S5 R5 V4 -->
 # ConstructSync full application audit
 
+Implementation follow-up: the next iteration addresses AUD-01–05 and AUD-07–14. AUD-06 (archive identification) remains deferred. This document preserves the original findings and baseline; see [iteration verification](ITERATION_2_VERIFICATION.md) for the implemented behavior and current checks.
+
 Audit date: 16 October 2026. Target: local working tree, including existing uncommitted work. Starting HEAD: `c62142118b243fab1abbc42984d81117cb20edef`.
 
 ## Assessment

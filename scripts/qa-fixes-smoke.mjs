@@ -1,3 +1,5 @@
+import { openQuotationReview } from "./helpers/workspace-fixture.mjs";
+import { prepareFixtureBrowser } from "./helpers/workspace-fixture.mjs";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { mkdtemp, writeFile } from "node:fs/promises";
@@ -11,13 +13,13 @@ import { seedDemo } from "../src/mock/fixtures/seed.ts";
 const base = (process.argv[2] || "http://localhost:3100").replace(/\/$/, "");
 const profile = await mkdtemp(path.join(os.tmpdir(), "constructsync-qa-"));
 const port = 15000 + Math.floor(Math.random() * 1000);
-const browser = spawn("C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe", ["--headless=new", "--disable-gpu", "--no-first-run", `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`, base], { windowsHide: true, stdio: "ignore" });
+const browser = spawn("C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe", ["--headless=new", "--disable-gpu", "--no-first-run", `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`, "about:blank"], { windowsHide: true, stdio: "ignore" });
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 let ws;
 try {
   let target;
   for (let i = 0; i < 80 && !target; i++) {
-    try { target = (await fetch(`http://127.0.0.1:${port}/json`).then(r => r.json())).find(p => p.type === "page" && p.url.startsWith(base)); } catch {}
+    try { target = (await fetch(`http://127.0.0.1:${port}/json`).then(r => r.json())).find(p => p.type === "page" && (p.url.startsWith(base)||p.url==='about:blank')); } catch {}
     if (!target) await sleep(250);
   }
   assert.ok(target, "Test browser starts");
@@ -38,11 +40,11 @@ try {
     if (result.exceptionDetails) throw new Error(result.exceptionDetails.exception?.description || result.exceptionDetails.text);
     return result.result.value;
   };
-  const wait = async code => { for (let i = 0; i < 100; i++) { if (await run(code)) return; await sleep(100); } throw new Error(`Timed out: ${code}`); };
+  const wait = async code => { for (let i = 0; i < 300; i++) { if (await run(code)) return; await sleep(100); } throw new Error(`Timed out: ${code}; ${await run("return JSON.stringify({page:location.pathname,errors:[...document.querySelectorAll(\'.inline-error,.field-error\')].map(e=>e.textContent),quotes:JSON.parse(localStorage.getItem(\'hml-constructsync-demo-v12\')).quotes.filter(q=>q.mrfId===\'m1\').map(q=>({id:q.id,name:q.supplierDetails?.name,ref:q.ref}))});")}`); };
   const navigate = async route => { await call("Page.navigate", { url: base + route }); await wait(`return location.pathname===${JSON.stringify(route.split("?")[0])}&&!!document.querySelector('h1');`); await sleep(180); };
   const fill = async (selector, value) => run(`const el=document.querySelector(${JSON.stringify(selector)});const proto=el.tagName==='SELECT'?HTMLSelectElement.prototype:HTMLInputElement.prototype;Object.getOwnPropertyDescriptor(proto,'value').set.call(el,${JSON.stringify(String(value))});el.dispatchEvent(new Event(el.tagName==='SELECT'?'change':'input',{bubbles:true}));return true;`);
   const click = async selector => { await run(`const el=document.querySelector(${JSON.stringify(selector)});el.focus();el.click();return true;`); await sleep(100); };
-  await call("Runtime.enable"); await call("Page.enable");
+  await call("Runtime.enable"); await prepareFixtureBrowser(call, base); await call("Page.enable");
   const press = async (label, scope = 'document') => {
     await run(`const b=[...${scope}.querySelectorAll('button')].find(b=>b.checkVisibility()&&!b.matches(':disabled')&&(b.textContent.trim()===${JSON.stringify(label)}||b.closest('.procurement-steps')&&b.textContent.includes(${JSON.stringify(label)})));if(!b)throw Error('Missing action '+${JSON.stringify(label)});b.click();return true;`);await sleep(120);
   };
@@ -111,7 +113,7 @@ try {
   const template=quotations.quotes.find(q=>q.mrfId==='m1');
   const draft=(id,supplier,invalid=false)=>({...structuredClone(template),id,mrfId:'m1',supplierId:'',ref:id,reviewStatus:'draft',archive:undefined,supplierDetails:{name:supplier,address:'',tin:'',contactName:'',email:'',phone:''},documents:[{name:'QA quotation.pdf',type:'application/pdf',fileId:'qa-source'}],currency:'PHP',financial:{vatStatus:'NON-VAT',priceBasis:'inclusive',vatRate:12,reviewed:true},adjustments:[],lines:req.items.map(item=>({id:id+'-'+item.id,description:item.name,quantity:20,unit:item.unit,unitPrice:invalid?0:100,requestItemId:item.id,conversionFactor:1,varianceReason:'',brand:'',specification:'',matchConfirmed:true,discountType:'none',discountValue:0,taxRate:0,printedTotal:null}))});
   quotations.quotes=quotations.quotes.filter(q=>q.mrfId!=='m1');quotations.quotes.push(draft('qa-ready-a','QA Supplier A'),draft('qa-ready-b','QA Supplier B'),draft('qa-invalid','QA Supplier C',true));
-  await load(quotations,'/requests/m1/quotes');await wait("return !!document.querySelector('.qa-bulk-toolbar');");
+  await load(quotations,'/requests/m1/quotes');await run(openQuotationReview);await sleep(160);await wait("return !!document.querySelector('.qa-bulk-toolbar');");
   const pdf=await PDFDocument.create();pdf.addPage();const bytes=Array.from(await pdf.save());
   const stored=await call('Runtime.evaluate',{expression:`(async()=>{const db=await new Promise((resolve,reject)=>{const r=indexedDB.open('hml-quotation-files',1);r.onupgradeneeded=()=>r.result.createObjectStore('files');r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);});await new Promise((resolve,reject)=>{const tx=db.transaction('files','readwrite');tx.objectStore('files').put(new Blob([new Uint8Array(${JSON.stringify(bytes)})],{type:'application/pdf'}),'qa-source');tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);});db.close();return true;})()`,awaitPromise:true,returnByValue:true});assert.ok(!stored.exceptionDetails);
   await run("window.__failQaArchive='qa-ready-b';return true;");
@@ -133,10 +135,10 @@ try {
   assert.deepEqual((await run(`return ${saved}.pendingAwards.map(a=>a.quantity);`)).sort(),[2,3]);
   // Prominent progress remains visible while ready groups across the queue are read.
   await press('Upload & review');await press('+ Supplier quotation group');
-  await run("const dt=new DataTransfer();dt.items.add(new File(['%PDF-1.4 QA'], 'QA extraction.pdf',{type:'application/pdf'}));const el=document.querySelector('.quote-group-drop input');el.files=dt.files;el.dispatchEvent(new Event('change',{bubbles:true}));return true;");
-  await press('Extract all ready groups (1)');await confirm();await wait("return !!document.querySelector('.qa-extraction-progress');");
+  await run(`const dt=new DataTransfer();dt.items.add(new File([new Uint8Array(${JSON.stringify(bytes)})], 'QA extraction.pdf',{type:'application/pdf'}));const el=document.querySelector('.quote-group-drop input');el.files=dt.files;el.dispatchEvent(new Event('change',{bubbles:true}));return true;`);
+  await press('Extract all ready groups (1)');await confirm();await wait("return !!document.querySelector('dialog[open] .qa-extraction-progress');");
   assert.match(await run("return document.querySelector('.qa-extraction-progress').textContent;"),/1 of 1/);
-  await wait("return !document.querySelector('.qa-extraction-progress')&&document.body.textContent.includes('AI supplier');");
+  await wait(`return !document.querySelector('dialog[open] .qa-extraction-progress')&&${saved}.quotes.some(q=>q.mrfId==='m1'&&q.ref==='AI-QA'&&q.supplierDetails.name.startsWith('AI supplier'))&&[...document.querySelectorAll('.quote-review h2')].some(el=>el.textContent.startsWith('AI supplier'));`);
   // Settled Finance records are discoverable and their history describes settlement.
   const finance=seedDemo();finance.role='Finance';finance.siteFilter='all';const settled=finance.pos.find(p=>p.id==='po1');settled.workflow='pm-external-v1';settled.status='released';settled.paymentMode='upfront';settled.issuance={at:'2026-10-10T00:00:00Z',by:admin};
   settled.externalPayment={amount:poTotal(finance,settled),method:'Bank',reference:'QA paid',date:'2026-10-10',proofs:[],verifiedAt:'2026-10-10T00:00:00Z',verifiedBy:admin};settled.coordinationHistory=[{revision:1,status:'Pending',priority:'High',plannedDate:'',note:'',at:'2026-10-10T00:00:00Z',by:admin,reason:'Full payment verified',outcome:'Settled'}];

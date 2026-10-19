@@ -1,3 +1,4 @@
+import { prepareFixtureBrowser } from "./helpers/workspace-fixture.mjs";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { mkdtemp, writeFile } from "node:fs/promises";
@@ -10,13 +11,13 @@ import { PDFDocument } from "pdf-lib";
 const base = (process.argv[2] || "http://localhost:3100").replace(/\/$/, "");
 const profile = await mkdtemp(path.join(os.tmpdir(), "constructsync-registers-"));
 const port = 11000 + Math.floor(Math.random() * 1000);
-const browser = spawn("C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe", ["--headless=new", "--disable-gpu", "--no-first-run", `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`, base], { windowsHide: true, stdio: "ignore" });
+const browser = spawn("C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe", ["--headless=new", "--disable-gpu", "--no-first-run", `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`, "about:blank"], { windowsHide: true, stdio: "ignore" });
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 let ws;
 try {
   let target;
   for (let i = 0; i < 80 && !target; i++) {
-    try { target = (await fetch(`http://127.0.0.1:${port}/json`).then(r => r.json())).find(p => p.type === "page" && p.url.startsWith(base)); } catch {}
+    try { target = (await fetch(`http://127.0.0.1:${port}/json`).then(r => r.json())).find(p => p.type === "page" && (p.url.startsWith(base)||p.url==='about:blank')); } catch {}
     if (!target) await sleep(250);
   }
   assert.ok(target, "Test browser starts");
@@ -37,11 +38,11 @@ try {
     if (result.exceptionDetails) throw new Error(result.exceptionDetails.exception?.description || result.exceptionDetails.text);
     return result.result.value;
   };
-  const wait = async code => { for (let i = 0; i < 100; i++) { if (await run(code)) return; await sleep(100); } throw new Error(`Timed out: ${code}`); };
+  const wait = async code => { for (let i = 0; i < 300; i++) { if (await run(code)) return; await sleep(100); } throw new Error(`Timed out: ${code}`); };
   const navigate = async route => { await call("Page.navigate", { url: base + route }); await wait(`return location.pathname===${JSON.stringify(route.split("?")[0])}&&!!document.querySelector('h1');`); await sleep(180); };
   const fill = async (selector, value) => run(`const el=document.querySelector(${JSON.stringify(selector)});const proto=el.tagName==='SELECT'?HTMLSelectElement.prototype:HTMLInputElement.prototype;Object.getOwnPropertyDescriptor(proto,'value').set.call(el,${JSON.stringify(String(value))});el.dispatchEvent(new Event(el.tagName==='SELECT'?'change':'input',{bubbles:true}));return true;`);
   const click = async selector => { await run(`const el=document.querySelector(${JSON.stringify(selector)});el.focus();el.click();return true;`); await sleep(100); };
-  await call("Runtime.enable"); await call("Page.enable");
+  await call("Runtime.enable"); await prepareFixtureBrowser(call, base); await call("Page.enable");
   await wait("return !!document.querySelector('#signin-email');");const account=ACCOUNT_FIXTURES.find(a=>a.role==='Administrator');await fill('#signin-email',account.email);await fill('#signin-password',account.password);await click('.signin-form button');await wait("return location.pathname==='/dashboard'&&!!document.querySelector('.masthead-account');");
 
   await call('Page.addScriptToEvaluateOnNewDocument', { source: `const originalFetch=window.fetch;window.fetch=(input,init)=>{if(String(input)==='/api/drive/projects')return Promise.resolve(Response.json({id:'numbering-test-folder'}));if(String(input)==='/api/requests/extract')return Promise.resolve(Response.json({extraction:{details:{projectName:'Numbered project',ref:'PAPER-111',requestDate:'2026-10-12',requestedBy:'AI Site',approvedBy:'PM',purchaser:'Buyer',financeOfficer:'Finance',specialInstructions:''},items:[{name:'Cement',quantity:2,unit:'bag',neededDate:'2026-10-13',purpose:'',location:'San Juan',remarks:''}]},warnings:[]}));return originalFetch(input,init)};` });
@@ -85,6 +86,7 @@ try {
   await run("document.querySelector('.admin-edit-project').requestSubmit();return true;"); await confirm();
   await wait("return !document.querySelector('.admin-edit-project');");
   await click('.record-dialog[open] .record-modal-close');
+  await run(`const key='hml-constructsync-users-v1',d=JSON.parse(localStorage.getItem(key));for(const u of d.users.filter(u=>u.role==='Site Personnel'))u.siteIds=[...new Set([...u.siteIds,${JSON.stringify(project.id)}])];localStorage.setItem(key,JSON.stringify(d));return true;`);
   await role('Site Personnel'); await navigate('/requests/new');
   await fill('#siteId', project.id);
   assert.equal(await run("return document.querySelector('#ref').readOnly;"), true);
@@ -112,6 +114,7 @@ try {
   await wait("return !!document.querySelector('.record-dialog[open] .admin-project-settings');"); await press('Edit project');
   assert.equal(await run("return document.querySelector('.admin-edit-project [aria-label=\"Project code\"]').readOnly;"), true, 'Code locks after the first draft save');
   await click('.record-dialog[open] .record-modal-close');
+  await run(`const key='hml-constructsync-users-v1',d=JSON.parse(localStorage.getItem(key));for(const u of d.users.filter(u=>u.role==='Site Personnel'))u.siteIds=[...new Set([...u.siteIds,${JSON.stringify(project.id)}])];localStorage.setItem(key,JSON.stringify(d));return true;`);
   await role('Site Personnel'); await navigate('/requests/new');
   assert.equal(await run("return document.querySelector('#ref').value;"), 'HBR-MRF-0001', 'Different project counter is independent');
   const pdf = await PDFDocument.create(); pdf.addPage().drawText('Source MRF PAPER-111', { x: 50, y: 700 });

@@ -1,4 +1,5 @@
 "use client";
+import { businessRangeError, inBusinessRange } from "@/src/domain/business-dates";
 import { CoordinationQueue } from "@/src/features/finance/PaymentCoordination";
 import { coordinationEligible } from "@/src/domain/payment-coordination";
 import { creditBalance, creditOverdue } from "@/src/domain/credit-terms";
@@ -15,18 +16,18 @@ import { budgetFor, deliveryStatus, inventoryFor, paidTotal, paymentStatus, poTo
 import { warehouseHeldFor } from "@/src/domain/delivery-flow";
 
 export function Reports() {
-  const { snapshot: state } = useDemo();
+  const { snapshot: state, access } = useDemo();
   const [siteId, setSiteId] = useState("all");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [documentSearch, setDocumentSearch] = useState("");
   const [stockSearch, setStockSearch] = useState("");
   if (!state) return null;
-  if (!["Project Manager", "Administrator"].includes(state.role)) return <PageHeader eyebrow="REPORTS" title="Access unavailable" description="Project Managers and Administrators can view operations reports." />;
+  if (!access.canOpen("/reports")) return <PageHeader eyebrow="REPORTS" title="Access unavailable" description="Operations reports are available to signed-in users in roles other than Site Personnel." />;
 
   const selectedSite = state.siteFilter !== "all" ? state.siteFilter : siteId;
   const included = (id: string, date: string) =>
-    (selectedSite === "all" || id === selectedSite) && (!from || date.slice(0, 10) >= from) && (!to || date.slice(0, 10) <= to);
+    (selectedSite === "all" || id === selectedSite) && inBusinessRange(date, from, to);
   const requests = state.requests.filter(request => included(request.siteId, request.createdAt));
   const pos = state.pos.filter(po => {
     const request = requestForPO(state, po);
@@ -47,7 +48,7 @@ export function Reports() {
   const filteredGaps = documentGaps.filter(po => `${po.ref} ${siteName(state, requestForPO(state, po)?.siteId || "")}`.toLowerCase().includes(documentSearch.trim().toLowerCase()));
   const filteredStock = stockRows.filter(row => `${row.name} ${row.unit} ${siteName(state, row.siteId)}`.toLowerCase().includes(stockSearch.trim().toLowerCase()));
   const hasActivity = requests.length > 0 || pos.length > 0 || batches.length > 0 || stockRows.length > 0;
-  const hasDateError = Boolean(from && to && from > to);
+  const hasDateError = Boolean(businessRangeError(from, to));
 
   return <>
     <PageHeader eyebrow="PROJECT OVERVIEW" title="Operations report" description="Project commitments, workflow volume, and exceptions." />

@@ -1,3 +1,5 @@
+import { prepareFixtureBrowser } from "./helpers/workspace-fixture.mjs";
+import { openQuotationReview } from "./helpers/workspace-fixture.mjs";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { mkdtemp, writeFile } from "node:fs/promises";
@@ -9,13 +11,13 @@ import { seedDemo } from "../src/mock/fixtures/seed.ts";
 const base = (process.argv[2] || "http://localhost:3100").replace(/\/$/, "");
 const profile = await mkdtemp(path.join(os.tmpdir(), "constructsync-registers-"));
 const port = 11000 + Math.floor(Math.random() * 1000);
-const browser = spawn("C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe", ["--headless=new", "--disable-gpu", "--no-first-run", `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`, base], { windowsHide: true, stdio: "ignore" });
+const browser = spawn("C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe", ["--headless=new", "--disable-gpu", "--no-first-run", `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`, "about:blank"], { windowsHide: true, stdio: "ignore" });
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 let ws;
 try {
   let target;
   for (let i = 0; i < 80 && !target; i++) {
-    try { target = (await fetch(`http://127.0.0.1:${port}/json`).then(r => r.json())).find(p => p.type === "page" && p.url.startsWith(base)); } catch {}
+    try { target = (await fetch(`http://127.0.0.1:${port}/json`).then(r => r.json())).find(p => p.type === "page" && (p.url.startsWith(base)||p.url==='about:blank')); } catch {}
     if (!target) await sleep(250);
   }
   assert.ok(target, "Test browser starts");
@@ -36,11 +38,11 @@ try {
     if (result.exceptionDetails) throw new Error(result.exceptionDetails.exception?.description || result.exceptionDetails.text);
     return result.result.value;
   };
-  const wait = async code => { for (let i = 0; i < 100; i++) { if (await run(code)) return; await sleep(100); } throw new Error(`Timed out: ${code}`); };
+  const wait = async code => { for (let i = 0; i < 300; i++) { if (await run(code)) return; await sleep(100); } throw new Error(`Timed out: ${code}`); };
   const navigate = async route => { await call("Page.navigate", { url: base + route }); await wait(`return location.pathname===${JSON.stringify(route)}&&!!document.querySelector('h1');`); await sleep(180); };
   const fill = async (selector, value) => run(`const el=document.querySelector(${JSON.stringify(selector)});const proto=el.tagName==='SELECT'?HTMLSelectElement.prototype:HTMLInputElement.prototype;Object.getOwnPropertyDescriptor(proto,'value').set.call(el,${JSON.stringify(String(value))});el.dispatchEvent(new Event(el.tagName==='SELECT'?'change':'input',{bubbles:true}));return true;`);
   const click = async selector => { await run(`const el=document.querySelector(${JSON.stringify(selector)});el.focus();el.click();return true;`); await sleep(100); };
-  await call("Runtime.enable"); await call("Page.enable");
+  await call("Runtime.enable"); await prepareFixtureBrowser(call, base); await call("Page.enable");
   const queued=path.join(profile,'Queued supplier.pdf');await writeFile(queued,'%PDF-1.4\nConfirmation smoke file');
   await wait("return !!document.querySelector('#signin-email');");
   const account=ACCOUNT_FIXTURES.find(a=>a.role==='Procurement');
@@ -57,7 +59,7 @@ try {
   quote.financial={vatStatus:'VAT',priceBasis:'inclusive',vatRate:12,reviewed:true};
   const draft={...structuredClone(quote),id:'confirm-draft',ref:'CONFIRM-DRAFT',reviewStatus:'draft',archive:undefined,reviewedAt:undefined,lines:[{...offer,id:'draft-offer'},{...offer,id:'draft-extra',description:'Extra offered material'}],adjustments:[{id:'draft-adjustment',label:'Freight',kind:'shipping',calculation:'fixed',value:100}]};
   fixture.quotes=fixture.quotes.filter(q=>q.mrfId!==request.id);fixture.quotes.push(quote,draft);
-  const load=async()=>{await run(`localStorage.setItem('hml-constructsync-demo-v12',${JSON.stringify(JSON.stringify(fixture))});return true;`);await navigate('/requests/m1/quotes');await wait("return document.querySelector('.quote-review')?.dataset.quotationId==='confirm-draft'&&!!document.querySelector('.supplier-upload-workbench');");};
+  const load=async()=>{await run(`localStorage.setItem('hml-constructsync-demo-v12',${JSON.stringify(JSON.stringify(fixture))});return true;`);await navigate('/requests/m1/quotes');await run(openQuotationReview);await sleep(160);await wait("return document.querySelector('.quote-review')?.dataset.quotationId==='confirm-draft'&&!!document.querySelector('.supplier-upload-workbench');");};
   await load();
   await call('Emulation.setDeviceMetricsOverride',{width:1440,height:900,deviceScaleFactor:1,mobile:false});
   assert.equal(await run("return !document.querySelector('.quotation-summary-table')&&document.querySelector('.quote-review').dataset.quotationId==='confirm-draft';"),true,'Supplier tabs replace the review queue and focus the current draft');
@@ -99,7 +101,7 @@ try {
   await prompt(buttonCode('Delete draft',draftRow),{danger:true});
 
   draft.archive={status:'pending',files:[],error:'Retry needed'};
-  await load();await wait("return [...document.querySelector('.quote-editor-header').querySelectorAll('button')].some(b=>b.textContent==='Retry Drive archive');");
+  await load();await wait("return [...document.querySelector('.quote-editor-header').querySelectorAll('button')].some(b=>b.textContent==='Retry archive');");
   assert.equal(await run("return !document.querySelector('.quote-editor-header [popoverTarget]');"),true,'A sole archive retry is directly visible');
   draft.archive=structuredClone(quote.archive);
   await load();await wait("return !!document.querySelector('.quote-editor-header a[href*=confirm-drive]');");
@@ -109,8 +111,10 @@ try {
   draft.archive=undefined;await load();
 
   await prompt(buttonCode('Delete',"document.querySelector('.quote-review')"),{danger:true});
-  await prompt("document.querySelector('.quote-adjustment-row button').click();return true;",{danger:true});
-  await prompt("document.querySelector('.quote-document-attachment button').click();return true;",{danger:true});
+  await prompt("document.querySelector('.quote-adjustment-card button[aria-label^=\"Remove adjustment\"]').click();return true;",{danger:true});
+  await run(buttonCode('View documents',"document.querySelector('.quote-review')"));await wait("return !!document.querySelector('.quote-documents-dialog[open]');");
+  await prompt(buttonCode('Remove selected attachment',"document.querySelector('.quote-documents-dialog')"),{danger:true});
+  await click('.quote-documents-dialog [aria-label="Close document preview"]');
   await prompt(buttonCode('Finalize quotation',"document.querySelector('.quote-review')"));
   for(const width of [1440,900,414,375,320]){
     await call('Emulation.setDeviceMetricsOverride',{width,height:900,deviceScaleFactor:1,mobile:width<801});
@@ -146,9 +150,10 @@ try {
   await load();await press('Compare & award');await run("[...document.querySelectorAll('details')].find(d=>d.querySelector('summary strong')?.textContent==='Comparison reports').open=true;return true;");await prompt(buttonCode('Generate bid comparison'));
   quote.archive={status:'pending',files:[],error:'Archive needs retry'};await load();
   await click('[data-quote-id="q1"]');
-  await prompt(buttonCode('Retry Drive archive',finalRow));
+  await prompt(buttonCode('Retry archive',finalRow));
   quote.archive={status:'complete',files:[]};await load();
-  await run("const b=document.querySelector('.quote-document-attachment button');b.focus();b.click();return true;");await wait("return !!document.querySelector('.confirm-dialog[open]');");await click('.confirm-dialog[open] .confirm-actions button:last-child');
+  await run(buttonCode('View documents',"document.querySelector('.quote-review')"));await wait("return !!document.querySelector('.quote-documents-dialog[open]');");
+  await run(buttonCode('Remove selected attachment',"document.querySelector('.quote-documents-dialog')"));await wait("return !!document.querySelector('.confirm-dialog[open]');");await click('.confirm-dialog[open] .confirm-actions button:last-child');
   await wait("return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).quotes.find(q=>q.id==='confirm-draft').documents.length===0;");
   const shared=await call('Runtime.evaluate',{expression:"(async()=>{const db=await new Promise(resolve=>{const r=indexedDB.open('hml-quotation-files',1);r.onsuccess=()=>resolve(r.result)});const file=await new Promise(resolve=>{const r=db.transaction('files','readonly').objectStore('files').get('confirm-shared-file');r.onsuccess=()=>resolve(r.result)});db.close();return !!file;})()",awaitPromise:true,returnByValue:true});assert.equal(shared.result.value,true,'Removing an attachment retains a file still shared by a finalized quote');
   console.log(`Quotation confirmation smoke passed. Screenshots: ${profile}`);

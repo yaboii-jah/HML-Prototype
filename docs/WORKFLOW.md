@@ -89,3 +89,13 @@ Older credit payment requests can cover a partial amount or the full outstanding
 ## Document references
 
 Projects use separate continuous numbers such as HML-MRF-0001, HML-PO-0001, HML-TRF-0001 and HML-DEL-0001. There is no yearly reset. A saved numbered MRF cannot change projects. Delivery receipts share the delivery number with a version suffix; bid comparison files inherit the MRF number. New archive copies carry the project prefix while original upload names, supplier references and bank references are retained. Existing saved references, report versions and completed archives are unchanged.
+
+## Outstanding department actions
+
+The MRF lifecycle checklist counts current actions and its details group them by department and source record. The full MRF lifecycle shows the same guidance. Blockers explain the requirement for a particular action; they do not impose one sequential owner across split POs or independent credit payment and delivery work. Open action is offered to the responsible role with the necessary assignment; other permitted viewers can open the record read-only. Dashboard and notifications use this shared projection. On phones the working queue precedes secondary metrics.
+
+## Consumption reconciliation
+
+In Site inventory, open **Consumption**. Choose an inclusive Philippine From/To period (initially the current month through today), then filter by project, material or unit. Each project/material/unit row has Opening, Stock added, Used, Transferred out, signed Adjustments and Closing. Stock added includes opening entries within the period, posted receipts and transfers in; row details show that breakdown and period movements. Legacy and grouped usage both count once. Reservations, drafts and unposted receipts do not change physical balances, and scope attribution is not inferred.
+
+CSV includes all filtered rows across pages. It uses the same balances as the screen and remains limited to readable projects. Undated movements are retained; affected opening/closing balances are marked incomplete rather than assigned an invented date. No mixed-unit grand total is shown.

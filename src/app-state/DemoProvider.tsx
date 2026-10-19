@@ -27,6 +27,7 @@ type DemoContextValue = RepositoryView & {
   switchRole: (role: Role) => { ok: boolean; message: string };
   signOut: () => void;
   reset: () => Promise<void>;
+  retrySetup: () => Promise<RepositoryView>;
 };
 const DemoContext = createContext<DemoContextValue | null>(null);
 const subscribe = (listener: () => void) => demoRepository.subscribe(listener);
@@ -96,7 +97,7 @@ function DemoSessionProvider({ children }: { children: ReactNode }) {
     return userDirectory.change(actor, change);
   };
   const reset = async () => { if (demoSession.read().role !== "Administrator") throw new Error("Workspace reset requires an Administrator."); const result = await demoRepository.reset(); notify(result.status === "ready" ? { tone: "success", title: "Workspace cleared. Start by adding a project." } : { tone: "warning", title: "Saved records could not be cleared. Existing files have been preserved." }); };
-  return <ArchiveProvider key={snapshot?.showcase?.installationId || "workspace"}><DemoContext.Provider value={{ ...view, snapshot, access, run, beginOperation: gateway.beginOperation, session, signedOut, directory, siteIds, manageUser, signIn, switchRole, switchAccount, signOut, reset }}>{children}</DemoContext.Provider></ArchiveProvider>;
+  return <ArchiveProvider key={snapshot?.showcase?.installationId || "workspace"}><DemoContext.Provider value={{ ...view, snapshot, access, run, beginOperation: gateway.beginOperation, session, signedOut, directory, siteIds, manageUser, signIn, switchRole, switchAccount, signOut, reset, retrySetup: () => demoRepository.retrySetup() }}>{children}</DemoContext.Provider></ArchiveProvider>;
 }
 
 export function DemoProvider({ children }: { children: ReactNode }) {

@@ -1,25 +1,24 @@
-export function sameOriginError(request: Request): Response | null {
-  const url = new URL(request.url);
-  const local = !process.env.VERCEL_ENV && ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname);
-  const origin = request.headers.get("origin");
-  const deny = () => Response.json({ error: "A same-origin request is required." }, { status: 403 });
-  if (!local && !origin) return deny();
+/** Validates the actual browser origin; forwarded headers never establish trust. */
+export function validatedRequestOrigin(request: Request): string | null {
   try {
-    let expectedOrigin = url.origin;
-    const browserHost = request.headers.get("host");
-    if (local && browserHost !== null) {
-      // Next may reconstruct request.url with its listening hostname rather than the browser's.
-      // Only correct the loopback hostname; protocol and port must still match the server URL.
-      if (!/^(localhost|127\.0\.0\.1|\[::1\])(?::\d{1,5})?$/i.test(browserHost)) return deny();
-      const browserUrl = new URL(`${url.protocol}//${browserHost}`);
-      if (browserUrl.port !== url.port) return deny();
-      expectedOrigin = browserUrl.origin;
+    const url = new URL(request.url);
+    const local = !process.env.VERCEL_ENV && ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname);
+    const origin = request.headers.get("origin");
+    if (!local && !origin) return null;
+    let expected = url.origin;
+    const host = request.headers.get("host");
+    if (local && host !== null) {
+      if (!/^(localhost|127\.0\.0\.1|\[::1\])(?::\d{1,5})?$/i.test(host)) return null;
+      const browser = new URL(`${url.protocol}//${host}`);
+      if (browser.port !== url.port) return null;
+      expected = browser.origin;
     }
-    if (origin && new URL(origin).origin !== expectedOrigin) return deny();
-  } catch {
-    return deny();
-  }
-  return null;
+    if (origin && new URL(origin).origin !== expected) return null;
+    return expected;
+  } catch { return null; }
+}
+export function sameOriginError(request: Request): Response | null {
+  return validatedRequestOrigin(request) ? null : Response.json({ error: "A same-origin request is required." }, { status: 403 });
 }
 
 export function driveAccessError(request: Request, write = false): Response | null {

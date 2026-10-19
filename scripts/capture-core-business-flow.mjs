@@ -9,12 +9,14 @@ import { ACCOUNT_FIXTURES } from '../src/app-state/account-fixtures.ts';
 import { coreFlowScenarios } from './core-flow-scenarios.mjs';
 
 const base = (process.env.CORE_FLOW_APP_URL || 'http://127.0.0.1:3000').replace(/\/$/, '');
-const detailed = process.argv.includes('--mrf372');
-const output = path.resolve('artifacts/core-business-flow', detailed ? 'detailed-screenshots' : '.');
+const capstone = process.argv.includes('--capstone');
+const detailed = process.argv.includes('--mrf372') || capstone;
+const output = capstone ? path.resolve('artifacts/capstone-key-modules') : path.resolve('artifacts/core-business-flow', detailed ? 'detailed-screenshots' : '.');
+const viewport = capstone ? { width: 1600, height: 1000, deviceScaleFactor: 2 } : { width: 1440, height: 900, deviceScaleFactor: 1 };
 const from = Number(process.argv.find(a => a.startsWith('--from='))?.split('=')[1] || 1);
 const to = Number(process.argv.find(a => a.startsWith('--to='))?.split('=')[1] || (detailed ? Infinity : 36));
 const only = process.argv.find(a => a.startsWith('--only='))?.split('=')[1].split(',').map(Number);
-const scenario = detailed ? await (await import('./mrf372-flow-scenarios.mjs')).mrf372FlowScenarios() : coreFlowScenarios();
+const scenario = capstone ? await (await import('./capstone-module-scenarios.mjs')).capstoneModuleScenarios() : detailed ? await (await import('./mrf372-flow-scenarios.mjs')).mrf372FlowScenarios() : coreFlowScenarios();
 const profile = await mkdtemp(path.join(os.tmpdir(), 'constructsync-core-paper-'));
 const port = 14000 + Math.floor(Math.random() * 1000);
 const slug = value => value.toLowerCase().replaceAll(/[^a-z0-9]+/g, '-').replaceAll(/^-|-$/g, '');
@@ -28,7 +30,7 @@ if (detailed) entries = entries.flatMap(entry => {
 });
 const browser = spawn('C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe', ['--headless=new', '--disable-gpu', '--disable-background-timer-throttling', '--no-first-run', `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`, base], { windowsHide: true, stdio: 'ignore' });
 let ws, current, active;
-const exceptions = [], driveCalls = [];
+const exceptions = [], driveCalls = [], capturedThisRun = [];
 try {
   let target;
   for (let attempt = 0; attempt < 120 && !target; attempt++) {
@@ -86,6 +88,8 @@ try {
   const capture = async checkpoint => {
     await run("document.activeElement?.blur();for(const b of document.querySelectorAll('.toast:not(.toast-progress) .toast-close'))b.click();");
     await call('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 220, y: 65 });
+    await wait("return !document.querySelector('.toast-progress,.archive-job[aria-busy=\"true\"]');");
+    await run('await document.fonts.ready;await Promise.all([...document.images].filter(i=>i.checkVisibility()).map(i=>i.decode().catch(()=>{})));');
     await sleep(350);
     const file = `screenshots/${checkpoint.group ? checkpoint.group + '/' : ''}${String(checkpoint.number).padStart(2, '0')}-${slug(checkpoint.title)}.png`;
     await mkdir(path.dirname(path.join(output, file)), { recursive: true });
@@ -95,11 +99,15 @@ try {
     entry.file = file; entry.role = checkpoint.role === 'Accounting / Auditing' ? 'Accounting' : checkpoint.role;
     entry.caption = `Figure ${checkpoint.number}. ${checkpoint.title}`;
     entry.visibleText = await run("return document.body.innerText;");
+    for (const text of checkpoint.expectedText || []) assert.ok(entry.visibleText.includes(text), `${checkpoint.title}: expected ${text}`);
+    for (const check of checkpoint.uiChecks || []) assert.ok(await run(check.expression), check.message);
+    if (capstone) assert.equal(await run('return document.documentElement.scrollWidth>innerWidth+1;'), false, 'No page-level horizontal overflow');
     entries = entries.filter(e => e.number !== entry.number).concat(entry).sort((a, b) => a.number - b.number);
     await writeFile(path.join(output, 'manifest.json'), JSON.stringify(entries, null, 2));
+    capturedThisRun.push(checkpoint.number);
   };
   await call('Page.enable'); await call('Runtime.enable'); await call('Network.enable');
-  await call('Emulation.setDeviceMetricsOverride', { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false });
+  await call('Emulation.setDeviceMetricsOverride', { ...viewport, mobile: false });
   await wait("return !!document.querySelector('#signin-email');");
   await run("localStorage.setItem('constructsync-theme','light');document.documentElement.dataset.theme='light';await document.fonts.ready;");
   const blankLogin = scenario.checkpoints.find(c => c.loginStage === 'blank');
@@ -152,6 +160,7 @@ try {
   for (const checkpoint of scenario.checkpoints.filter(c => !c.loginStage && selected(c))) {
     active = checkpoint;
     console.log(`${String(checkpoint.number).padStart(2, '0')} ${checkpoint.title}`);
+    if (capstone) await call('Emulation.setDeviceMetricsOverride', { ...(checkpoint.viewport || viewport), mobile: false });
     await switchRole(checkpoint.role);
     patchMetadata(checkpoint.snapshot);
     checkpoint.snapshot.role = checkpoint.role;
@@ -179,7 +188,7 @@ try {
   }
   assert.deepEqual(exceptions, [], 'No uncaught browser exceptions');
   assert.deepEqual(driveCalls, [], 'No external Drive writes');
-  await writeFile(path.join(output, 'VALIDATION.json'), JSON.stringify({ captured: entries.length, expected: scenario.checkpoints.length, viewport: { width: 1440, height: 900 }, commandCount: scenario.commands.length, scenarios: scenario.verified, sampleImportTests: scenario.sampleTest ? { passed: scenario.sampleTest.passed, files: [scenario.sampleTest.mrf, ...scenario.sampleTest.quotations].map(f => ({ file: f.file, sha256: f.sha256, verifiedGross: f.verifiedGross })) } : undefined, browserExceptions: exceptions, externalDriveRequests: driveCalls, source: 'Connected demonstration snapshots advanced through application domain commands; native UI controls, no altered page layout.', capturedAt: new Date().toISOString() }, null, 2));
+  await writeFile(path.join(output, 'VALIDATION.json'), JSON.stringify({ captured: entries.length, capturedThisRun, expected: scenario.checkpoints.length, viewport, commandCount: scenario.commands.length, scenarios: scenario.verified, sampleImportTests: scenario.sampleTest ? { passed: scenario.sampleTest.passed, method: scenario.sampleTest.method || 'live-extraction', files: [scenario.sampleTest.mrf, ...scenario.sampleTest.quotations].map(f => ({ file: f.file, sha256: f.sha256, verifiedGross: f.verifiedGross })) } : undefined, browserExceptions: exceptions, externalDriveRequests: driveCalls, source: 'Connected demonstration snapshots advanced through application domain commands; native UI controls, no altered page layout.', capturedAt: new Date().toISOString() }, null, 2));
   console.log(`Captured ${entries.length}/${scenario.checkpoints.length} figures in ${output}`);
 } catch (error) {
   if (ws?.readyState === 1) {

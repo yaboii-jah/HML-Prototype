@@ -15,9 +15,10 @@ import { validDocumentNumberingState } from "../domain/document-numbering.ts";
 
 const CURRENT_KEY = "hml-constructsync-demo-v12";
 const PREVIOUS_KEYS = ["hml-constructsync-demo-v11", "hml-constructsync-demo-v10", "hml-constructsync-demo-v9", "hml-constructsync-demo-v8", "hml-constructsync-demo-v7", "hml-constructsync-demo-v6", "hml-constructsync-demo-v5", "hml-constructsync-demo-v4", "hml-constructsync-demo-v3", "hml-constructsync-demo-v2", "hml-buildsync-demo-v2", "hml-buildsync-demo-v1"] as const;
-export type RepositoryView = { snapshot: DemoSnapshot | null; status: "loading" | "ready" | "volatile" | "recovery"; message?: string };
+export type RepositoryView = { snapshot: DemoSnapshot | null; status: "loading" | "ready" | "volatile" | "recovery" | "setup-error"; message?: string };
 export interface DemoRepository {
   load(): Promise<RepositoryView>;
+  retrySetup(): Promise<RepositoryView>;
   getSnapshot(): RepositoryView;
   subscribe(listener: () => void): () => void;
   execute(command: Command, actor?: AuditIdentity, siteIds?: readonly string[]): Promise<CommandResult>;
@@ -99,9 +100,11 @@ export class LocalDemoRepository implements DemoRepository {
   private initialized = false;
   private bootstrap: Promise<RepositoryView> | undefined;
   private bootstrapFailed = false;
+  private setup: () => Promise<void>;
   private listeners = new Set<() => void>();
 
-  constructor() {
+  constructor(setup?: () => Promise<void>) {
+    this.setup = setup || (async () => { const { installShowcase } = await import("./showcase-install.ts"); await installShowcase(parseCurrent); });
     if (typeof window !== "undefined") window.addEventListener("storage", event => {
       if (event.key !== CURRENT_KEY && !PREVIOUS_KEYS.some(key => key === event.key)) return;
       this.initialized = false;
@@ -160,19 +163,29 @@ export class LocalDemoRepository implements DemoRepository {
     if (this.bootstrap) return this.bootstrap;
     this.bootstrap = (async () => {
       try {
-        const { installShowcase } = await import("./showcase-install.ts");
-        await installShowcase(parseCurrent);
+        await this.setup();
         this.initialized = false;
         const result = this.read(); this.notify(); return result;
       } catch (cause) {
         this.bootstrapFailed = true; this.initialized = true;
-        this.view = { snapshot: null, status: "recovery", message: cause instanceof Error ? cause.message : "Workspace installation failed. Existing records were preserved." };
+        this.view = { snapshot: null, status: "setup-error", message: cause instanceof Error ? cause.message : "Workspace setup could not finish." };
         this.notify(); return this.view;
       }
     })();
     return this.bootstrap;
   }
   getSnapshot() { return this.read(); }
+  async retrySetup(): Promise<RepositoryView> {
+    if (this.view.status !== "setup-error") return this.bootstrap || this.view;
+    this.bootstrap = undefined;
+    this.bootstrapFailed = false;
+    this.initialized = false;
+    this.view = { snapshot: null, status: "loading" };
+    // Establish the in-flight promise before notifying subscribers.
+    const retry = this.load();
+    this.notify();
+    return retry;
+  }
   subscribe(listener: () => void) { this.listeners.add(listener); return () => this.listeners.delete(listener); }
   async execute(command: Command, actor?: AuditIdentity, siteIds?: readonly string[]): Promise<CommandResult> {
     const current = this.read().snapshot;

@@ -60,13 +60,15 @@ export function createReadAccess(state: DemoSnapshot | null | undefined, role: R
   };
   const canOpen = (href: string) => {
     if (!role) return false;
-    if (!sitePersonnel) return true;
     let url: URL;
     try { url = new URL(href, "http://constructsync.local"); } catch { return false; }
     if (url.origin !== "http://constructsync.local") return false;
     let parts: string[];
     try { parts = url.pathname.split("/").filter(Boolean).map(decodeURIComponent); } catch { return false; }
     const [section, id, subpage] = parts;
+    if (section === "admin" && role !== "Administrator") return false;
+    if (section === "reports" && sitePersonnel) return false;
+    if (!sitePersonnel) return true;
     if (section === "demo-files" && parts.length === 2 && state) { const file = localArchiveFiles(state).find(file => file.id === id); return !!file && !file.purchasingOnly && canReadRecord(file.ownerId); }
     if (parts.length === 1) return ["dashboard", "projects", "requests", "deliveries", "inventory"].includes(section);
     if (section === "projects" && parts.length === 2) return canReadProject(id);

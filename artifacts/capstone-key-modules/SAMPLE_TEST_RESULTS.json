@@ -1,0 +1,37 @@
+{
+  "passed": true,
+  "method": "Manual inputs verified against the original PDF text; no live AI extraction",
+  "files": [
+    {
+      "file": "sample-data/MRF 372 - Material Request and Key Plan.pdf",
+      "sha256": "a2e2e2884f4f79114746976b500702828b2a4992ad98e61226d89b2fe0135900"
+    },
+    {
+      "file": "sample-data/372 Q01 Meridian Doors and Fittings.pdf",
+      "sha256": "865a01b3811a23eb87bcc8e658474eec990711952252cc25e252883d6de5fe5d",
+      "verifiedGross": 438680
+    },
+    {
+      "file": "sample-data/372 Q02 Apex Architectural Hardware Corp.pdf",
+      "sha256": "41d541b47889908878f5da28804721b000774c0529cb305b73766c35d92d77fd",
+      "verifiedGross": 451548
+    },
+    {
+      "file": "sample-data/372 Q03 Summit Building Supply Trading.pdf",
+      "sha256": "16a58ab74ab00c6428146e429aa35c8bc60647de431ba18a490ecb6c93e24878",
+      "verifiedGross": 425900
+    },
+    {
+      "file": "sample-data/372 Q04 Kestrel Glass Systems Co.pdf",
+      "sha256": "33ad8a6b7b58eb3989bff5242c3d8c3d413b352bd7f189b4191475ec03861c96",
+      "verifiedGross": 414242
+    }
+  ],
+  "checks": [
+    "Eight MRF materials and matching supplier lines",
+    "Descriptions, quantities and units",
+    "Unit prices and printed line amounts",
+    "VAT-inclusive treatment and four gross totals",
+    "Original source bytes and SHA-256 hashes"
+  ]
+}

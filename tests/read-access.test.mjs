@@ -5,6 +5,7 @@ import { createReadAccess } from '../src/domain/read-access.ts';
 import { dashboardMetrics } from '../src/domain/queues.ts';
 import { applyCommand } from '../src/domain/commands.ts';
 import { budgetFor } from '../src/domain/selectors.ts';
+import { ROLES } from '../src/domain/types.ts';
 
 function fixture() {
   const state = seedDemo();
@@ -14,6 +15,20 @@ function fixture() {
   state.stockSuitabilityReviews = [{ id: 'suitability', requestId: 'm1', sourceSiteId: 'site-b', destinationSiteId: 'site-a' }];
   return state;
 }
+
+test('operations reports allow every signed-in department except Site Personnel', () => {
+  const state = fixture(), before = structuredClone(state);
+  for (const role of [...ROLES, null, undefined]) {
+    for (const assignments of [[], ['site-a'], ['site-a', 'site-b']]) {
+      const access = createReadAccess(state, role, assignments);
+      for (const route of ['/reports', '/reports/', '/reports?project=site-a&from=2026-10-01', '/reports#exceptions']) {
+        assert.equal(access.canOpen(route), !!role && role !== 'Site Personnel', `${role}: ${route}`);
+      }
+      assert.equal(access.canOpen('/admin'), role === 'Administrator');
+    }
+  }
+  assert.deepEqual(state, before, 'Checking report access does not change project records');
+});
 
 test('Site Personnel access follows assignments and parent ownership rather than the selected project', () => {
   const state = fixture();

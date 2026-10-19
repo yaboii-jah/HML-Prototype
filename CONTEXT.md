@@ -94,6 +94,12 @@ _Avoid_: Serve PO
 
 **Inventory movement:** A project stock receipt, usage or adjustment. The inventory balance is the accumulated effect of these movements.
 
+**Outstanding action:** Work a department still needs to perform for a material request or one of its related records. Several departments may have outstanding actions at the same time.
+
+**Workflow blocker:** An unmet requirement that prevents a particular action from proceeding. A blocker applies to that action rather than automatically stopping the entire request.
+
+**Consumption period:** An inclusive range of Philippine calendar dates used to reconcile a project's material movements from opening to closing stock.
+
 **Usage entry:** One confirmed record of materials consumed at one project, grouping the material usage movements with their explanations, person and time. Confirming an entry consumes available project stock together.
 
 **Usage draft:** Unsubmitted material quantities and explanations for one project. A draft consumes and reserves no stock.

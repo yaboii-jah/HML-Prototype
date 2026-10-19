@@ -281,7 +281,7 @@ Any incompatible snapshot change requires a schema-version decision and a migrat
 | `/deliveries/[id]` | Receiving confirmation and stock-posting flow. |
 | `/inventory`, `/inventory/[siteId]/[materialId]` | Site inventory and material movement history. |
 | `/accounting`, `/accounting/[poId]` | All POs grouped by MRF; PO/budget review, payment preparation, Logistics release and supporting documents. |
-| `/reports` | Project Manager and Administrator cross-project reporting. |
+| `/reports` | Full cross-project reporting for every signed-in role except Site Personnel; existing transaction-editing permissions still apply. |
 | `/sign-in` | Email/password department access with no predefined account hints. |
 | `/admin` | Project creation, Drive folder mapping and activity; no workspace reset control. |
 | `/admin/maintenance` | Temporarily retired; redirects to `/admin`. Normal workspace clearing is hidden. |
@@ -346,7 +346,7 @@ The domain test suite currently protects these high-value behaviors:
 - Formal purchase closure is not modeled.
 - Process bypassing is deferred at the user's request. Current approval, archive, payment and quantity controls remain mandatory. Project monitoring derives the confirmed Served/Delivered definitions from current records and does not depend on a bypass feature. A single overall MRF closure rule remains outside the checklist.
 - Formal tax/VAT/EWT accounting, accruals, bank balances, detailed ledgers, real notifications, shared record storage, email, and Drive quotation import are out of scope.
-- The year embedded in generated PO references is currently fixed to `2026`.
+- New document references use each project code and a continuous per-document-series sequence; historical references remain unchanged.
 - The repository is deliberately local-first and single-browser; concurrent multi-user behavior is not modeled.
 
 ## Maintenance contract
@@ -430,7 +430,7 @@ Administrator manages browser-local users in Administration > Users, with search
 
 The seven initial accounts bootstrap once into `hml-constructsync-users-v1`; this directory and its separate user-management history survive workspace reset. The session tracks stable user ID and revision. Role, email, password and status changes invalidate existing sessions and captured business commands, including changes from another tab. Name-only changes preserve historical actor snapshots and apply to subsequent actions. Corrupt directories require recovery without silently overwriting saved accounts.
 
-Management is retired from sign-in, navigation and active commands. Existing Management audit identities remain readable; an existing workspace selected as Management loads without losing records and selects Project Manager until sign-in reconciles its role. Presenter switching lists active named users and remains password-free. Project Manager can add/edit projects, budgets, scopes and Drive setup through Projects; PM and Administrator receive reports and exception visibility. User management remains Administrator-only; the normal maintenance reset is temporarily hidden and its route redirects to Administration. These controls simulate access within a local prototype and do not provide backend authentication.
+Management is retired from sign-in, navigation and active commands. Existing Management audit identities remain readable; an existing workspace selected as Management loads without losing records and selects Project Manager until sign-in reconciles its role. Presenter switching lists active named users and remains password-free. Project Manager can add/edit projects, budgets, scopes and Drive setup through Projects. Project Manager, Procurement, Finance, Logistics, Accounting / Auditing, and Administrator can view the same complete Operations report, including budgets, payments, stock, and exceptions; Site Personnel cannot open Reports. Report access does not grant additional transaction-editing permissions. User management remains Administrator-only; the normal maintenance reset is temporarily hidden and its route redirects to Administration. These controls simulate access within a local prototype and do not provide backend authentication.
 
 
 ### External credit/terms payments (2026-10-09)
@@ -471,3 +471,13 @@ The stock sourcing component retains the eight-column materials table with sourc
 Optional version-12 `stockSuitabilityReviews` records preserve requested/source material snapshots, explanations and named reviewer decisions. Pending/approved records reduce `requestSourcing.purchase` and `unassigned`, but never inventory availability or Served/Delivered calculations. Commands enforce current destination assignments, partial approval, explicit cancellation and one-time conversion to source-release reservations. Corrected specifications invalidate active reviews. Queues link destination reviewers and Procurement to the existing MRF detail view. New report snapshots retain a separate optional suitability quantity; omitted historical values remain zero.
 
 Transfer receipts and evidence now participate in the shared `ArchiveProvider` activity strip using stable per-document job IDs. `archiveTransferReceipt` and `archiveTransferEvidence` accept optional progress listeners; receipt generation reports indeterminate activity, evidence forwards confirmed chunk bytes through `uploadDocument`, and completion follows the archive acknowledgement command. Automatic receiving/posting archives and manual retries preserve their captured operation authority. Evidence uploads retain the shared chooser/drop-area limits and attach metadata before archival; failures leave saved attachments available for individual retry. Viewing uses separate temporary activity and creates no archive job. Stock-sourcing submission uses the existing bottom-right toast lifecycle. The QA refinements and their ten-item trace are recorded in [stock-sourcing-design.md](stock-sourcing-design.md).
+
+## Iteration 2: handoffs and consumption
+
+- Business-date defaults and report filters share `business-dates.ts` and the Philippine calendar; historical timestamps and entered dates remain unchanged.
+- `workflowActions` derives department work, action-level blockers, endpoint ownership and links from the existing records. Monitoring, lifecycle, role queues and notifications share it. Credit payments, deliveries and split PO branches remain independent. No new persisted workflow status was added.
+- Site inventory's Consumption view uses `consumptionRows` to reconcile period opening/additions/usage/transfers/adjustments/closing. Grouping remains project/material/unit-specific. A shared CSV projection exports all filtered readable rows, with incomplete balances for undated movements. Default range is month-to-date in Manila.
+- Temporary installation failure is `setup-error`, with repository/provider `retrySetup()` and a Retry setup screen at sign-in and in the workspace. Concurrent retries share one operation. Corrupt saved snapshots remain separate recovery; no automatic clearing occurs.
+- Quotation extraction checks the existing origin policy, file signatures and controlled multipart errors before provider work. Downloaded comparison links use the same validated browser origin; generated PDFs allow local loopback HTTP annotations alongside HTTPS.
+- Reports remains limited to Project Manager/Administrator, and Administration to Administrator; navigation and direct-route visibility agree. Route titles identify the section and loaded record. Accounting stock actions begin with adjustment. Snapshot version 12 and seeded records remain compatible.
+- `npm run test:browser -- <base-url> [suite ...]` runs the audited browser suite set plus usage/iteration checks and fails on any selected failure. Fixture suites initialize account revisions and assignments explicitly; showcase installation has a dedicated suite.

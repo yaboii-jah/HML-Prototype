@@ -13,7 +13,7 @@ The operations below describe conceptual domain responsibilities. The current ap
 | Supplier | The supplier whose contact details are used for offers and orders. | id: UUID; name: String; contact: String; phone: String; address: String | getContactDetails() |
 | MRF | A project material request submitted by Site Personnel for Project Manager review. | id: UUID; reference: String; requestDate: Date; status: String; instructions: String | submit(); review(decision); revise() |
 | MRFItem | One requested material within an MRF. | id: UUID; materialName: String; quantity: Decimal; unit: String; neededDate: Date | updateQuantity() |
-| Quotation | A supplier offer for an MRF, reviewed before use in purchasing. | id: UUID; reference: String; quoteDate: Date; currency: String; reviewStatus: String | finalize(); calculateTotal() |
+| Quotation | A supplier offer for an MRF, reviewed before use in purchasing. | id: UUID; reference: String; quoteDate: Date; reviewStatus: String | finalize(); calculateTotal() |
 | PurchaseOrder | A supplier order with Accounting-reviewed costing and payment terms. | id: UUID; reference: String; status: String; paymentMode: String; netPayable: Decimal | review(decision); issue(); clearDelivery() |
 | VerifiedPayment | Accounting's retained verification of an external supplier payment and its proof. | id: UUID; amount: Decimal; paymentDate: Date; verifiedAt: DateTime; proofReference: String | verify(); void(reason) |
 | Delivery | One scheduled supplier, warehouse-forwarding, or site-transfer trip. | id: UUID; reference: String; leg: String; scheduledDate: Date; status: String | schedule(); dispatch(); confirmReceipt() |
@@ -23,6 +23,7 @@ The operations below describe conceptual domain responsibilities. The current ap
 ### Attribute conventions
 
 - UUID, String, Decimal, Boolean, Date, and DateTime are conceptual attribute types; they do not select an implementation language or database engine.
+- All monetary amounts in this model are expressed in Philippine pesos (PHP); currency is assumed rather than shown as a separate Quotation attribute.
 - Each `id` corresponds to that entity's identifier in the [core schema](../erd/DATABASE_SCHEMA.md). `reference` corresponds to its document reference. Camel-case names express the ERD's attributes in class notation, such as `netPayable` for `net_payable`.
 - Related objects appear through associations instead of repeating all foreign-key attributes in the class boxes.
 - `Role` has seven values: Administrator, Project Manager, Site Personnel, Procurement, Logistics, Accounting / Auditing, and Finance. Use one User class with a role attribute; department roles do not form User subclasses.

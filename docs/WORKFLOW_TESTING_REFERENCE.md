@@ -132,3 +132,12 @@ Finance coordination regression: `npm test` covers Finance-only updates, require
 - [ ] Check keyboard navigation, modal focus/Escape, both themes and 320/375/414/768/1440 widths. Existing individual usage, adjustments, transfer reservations and old snapshots continue working.
 
 Automated coverage: `tests/usage-entries.test.mjs` and `scripts/usage-entries-smoke.mjs`.
+
+## Iteration 2 acceptance
+
+- [ ] From MRF details/checklist, verify simultaneous outstanding Finance, Accounting and Logistics work for split/credit POs. Compare labels and links with dashboard/notifications. Wrong roles and wrong transfer endpoints get no action control; completed/rejected work disappears.
+- [ ] Compare Consumption rows with movement history for a Philippine date range, including the midnight boundaries, fractional use, adjustments and inter-project transfers. Opening plus additions minus usage/transfers out plus adjustments equals Closing. Verify legacy/grouped usage count once and reservations/drafts do not affect balances.
+- [ ] Export after filtering and paging: CSV includes every matching readable row with the same values. Invalid ranges disable export. Undated rows show incomplete balances. Test another account's assignments and mixed material units/projects.
+- [ ] Verify Accounting starts with adjustment; restricted navigation matches direct-route guards; record titles update after navigation; mobile task queue precedes metrics.
+- [ ] Fail initial setup once, verify Retry setup and preserved data, then recover without clearing. Corrupt snapshots still require the explicit Administrator recovery path.
+- [ ] Run `npm test`, lint, TypeScript, build and `npm run test:browser -- http://127.0.0.1:3100`. Inspect `artifacts/iteration-2/verification.json`; every selected failure must produce a nonzero exit status. No live AI or Drive calls are required.

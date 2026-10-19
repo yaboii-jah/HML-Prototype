@@ -1,6 +1,6 @@
 # ConstructSync core UML class diagram
 
-This thesis domain diagram contains **11 classes, 53 essential attributes, 24 conceptual operations, and 17 associations**. It follows the approved [class specification](CLASS_MODEL.md) and the [core ERD](../erd/README.md).
+This thesis domain diagram contains **11 classes, 52 essential attributes, 24 conceptual operations, and 17 associations**. It follows the approved [class specification](CLASS_MODEL.md) and the [core ERD](../erd/README.md). All monetary amounts are assumed to be Philippine pesos (PHP), so Quotation does not display a separate currency attribute.
 
 [Academic description for the paper](PAPER_DESCRIPTION.md) explains the classes and their relationships in two paragraphs.
 

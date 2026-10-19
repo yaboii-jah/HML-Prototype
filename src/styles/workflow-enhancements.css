@@ -257,3 +257,11 @@ details[data-sticky-pinned="true"]>summary{border-radius:var(--radius) var(--rad
 
 .payment-coordination-summary p,.payment-coordination-summary .data-rows>div>*{min-width:0;overflow-wrap:anywhere}.payment-coordination-summary .data-rows small{display:block}.payment-coordination-summary>.panel-heading{flex-wrap:wrap}
 @media(max-width:600px){.payment-coordination-summary .data-rows>div{flex-wrap:wrap}.payment-coordination-summary .data-rows strong{text-align:left}}
+
+/* On phones the working queue precedes secondary summaries. */
+@media(max-width:800px){.workspace-content:has(.dashboard-main){display:flex;flex-direction:column}.workspace-content:has(.dashboard-main)>.page-header{order:0}.workspace-content:has(.dashboard-main)>.dashboard-main{order:1}.workspace-content:has(.dashboard-main)>.dashboard-metrics{order:2;grid-template-columns:repeat(2,minmax(0,1fr))}.workspace-content:has(.dashboard-main)>.request-monitoring{order:3}.dashboard-metrics>div{min-width:0}.dashboard-metrics strong{overflow-wrap:anywhere;font-size:19px}}
+
+.consumption-dates{display:grid;grid-template-columns:repeat(2,minmax(0,240px));gap:16px}.consumption-intro .panel-heading{gap:16px;flex-wrap:wrap}.consumption-report{min-width:0}.consumption-report .register-scroll table{min-width:1000px}@media(max-width:500px){.consumption-dates{grid-template-columns:minmax(0,1fr)}.consumption-intro .panel-heading .button{width:100%}}
+
+.outstanding-actions{min-width:0;margin-block:18px}.action-department{border:1px solid var(--line);border-radius:8px;margin-top:12px;padding:12px}.action-department h4{margin:0 0 10px}.action-department ul{list-style:none;padding:0;margin:0;display:grid;gap:12px}.action-department li{display:flex;justify-content:space-between;align-items:start;gap:14px;min-width:0}.action-department li>div{min-width:0;overflow-wrap:anywhere}.action-department small{display:block;color:var(--muted);margin-top:4px}.action-blocker{margin:6px 0 0;color:var(--bad)}@media(max-width:600px){.action-department li{flex-direction:column}.action-department .button{min-height:44px}.outstanding-actions h3{overflow-wrap:anywhere}}
+.consumption-report td:first-child .text-link{white-space:normal;text-align:left;overflow-wrap:anywhere;max-width:100%}
