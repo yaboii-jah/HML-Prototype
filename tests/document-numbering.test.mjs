@@ -1,3 +1,4 @@
+import { initializedWorkspaceStorage } from './helpers/initialized-storage.mjs';
 import test from "node:test";
 import assert from "node:assert/strict";
 import { seedDemo } from "../src/mock/fixtures/seed.ts";
@@ -154,7 +155,7 @@ test("Numbering survives schema-12 reload; uncoded legacy projects remain loadab
   const oldWindow = globalThis.window;
   const oldStorage = globalThis.localStorage;
   globalThis.window = { localStorage: { getItem: key => stored.get(key) || null, setItem: (key, value) => stored.set(key, value), removeItem: key => stored.delete(key) }, addEventListener() {} };
-  globalThis.localStorage = globalThis.window.localStorage;
+  globalThis.localStorage = initializedWorkspaceStorage(globalThis.window.localStorage);
   try {
     const loaded = await new LocalDemoRepository().load();
     assert.equal(loaded.status, "ready");

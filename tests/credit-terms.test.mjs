@@ -1,3 +1,4 @@
+import { initializedWorkspaceStorage } from './helpers/initialized-storage.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { blankWorkspace } from '../src/mock/fixtures/blank.ts';
@@ -142,7 +143,7 @@ test('overdue uses Philippine calendar boundaries, persists payments and never m
   assert.equal(creditOverdue(state,po,new Date('2026-10-09T16:00:00Z')),true);
   let paid=proof(state);paid=run(paid,record(paid));
   const originalWindow=globalThis.window, originalStorage=globalThis.localStorage, saved=new Map([['hml-constructsync-demo-v12',JSON.stringify(paid)]]);
-  globalThis.window={addEventListener(){}};globalThis.localStorage={getItem:key=>saved.get(key)||null,setItem:(key,value)=>saved.set(key,value),removeItem:key=>saved.delete(key)};
+  globalThis.window={addEventListener(){}};globalThis.localStorage=initializedWorkspaceStorage({getItem:key=>saved.get(key)||null,setItem:(key,value)=>saved.set(key,value),removeItem:key=>saved.delete(key)});
   try {
     const loaded=await new LocalDemoRepository().load();assert.equal(loaded.status,'ready');assert.deepEqual(loaded.snapshot,JSON.parse(JSON.stringify(paid)));
     const legacy=structuredClone(paid);delete legacy.pos[0].externalCredit;delete legacy.pos[0].creditPayments;delete legacy.pos[0].paymentDueDate;legacy.pos[0].issuance=undefined;

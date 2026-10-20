@@ -1,3 +1,4 @@
+import { initializedWorkspaceStorage } from './helpers/initialized-storage.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { seedDemo } from '../src/mock/fixtures/seed.ts';
@@ -160,7 +161,7 @@ test('draft storage failures are reported and malformed data is preserved until 
 test('repository reports durable versus volatile saves and a retry never deducts stock twice', async () => {
   const f = setup(), storage = storageFixture(), priorStorage = globalThis.localStorage, priorWindow = globalThis.window;
   storage.setItem('hml-constructsync-demo-v12', JSON.stringify(f.state));
-  globalThis.window = { addEventListener() {} }; globalThis.localStorage = storage;
+  globalThis.window = { addEventListener() {} }; globalThis.localStorage = initializedWorkspaceStorage(storage);
   try {
     const repo = new LocalDemoRepository(); repo.getSnapshot();
     const setItem = storage.setItem; storage.setItem = () => { throw new Error('quota'); };

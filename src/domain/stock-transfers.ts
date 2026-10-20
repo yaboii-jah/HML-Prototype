@@ -5,8 +5,10 @@ import { normalizedQuantity, orderedQuantity } from "./delivery-flow.ts";
 import { procurementReady } from "./request-archive.ts";
 import { projectCodeRequired, issueDocumentReference } from "./document-numbering.ts";
 import { copyIdentity } from "./audit.ts";
+import { COMPANY_WAREHOUSE } from "./company.ts";
+import { canManageTransferDocuments, canReceiveTransfer, isTransferSiteDelivery, isTransferSourceDelivery, transferLegFor, transferWarehouseAvailableFor } from "./transfer-delivery-flow.ts";
 import type { CommandContext, CommandResult } from "./commands.ts";
-import type { DemoSnapshot, Item, MRF, StockTransfer, TransferDelivery, TransferEvidence, TransferReceiptData, TransferReceiptVersion } from "./types.ts";
+import type { DemoSnapshot, Item, MRF, StockTransfer, TransferDelivery, TransferDeliveryLeg, TransferEvidence, TransferReceiptData, TransferReceiptVersion } from "./types.ts";
 
 const q = normalizedQuantity;
 const positive = (value: number) => Number.isFinite(value) && value > 0;
@@ -23,14 +25,14 @@ export function sourceStockOnHand(state: DemoSnapshot, siteId: string, name: str
 export function transferUnscheduled(state: DemoSnapshot, transfer: StockTransfer, lineId: string) {
   const line = transfer.lines.find(value => value.id === lineId);
   if (!line || transfer.status !== "approved") return 0;
-  const scheduled = deliveriesForTransfer(state, transfer.id).filter(value => value.status !== "cancelled").flatMap(value => value.lines).filter(value => value.transferLineId === lineId).reduce((sum, value) => sum + value.expected, 0);
+  const scheduled = deliveriesForTransfer(state, transfer.id).filter(value => isTransferSourceDelivery(value) && value.status !== "cancelled").flatMap(value => value.lines).filter(value => value.transferLineId === lineId).reduce((sum, value) => q(sum + value.expected), 0);
   return Math.max(0, q(line.approved - line.cancelled - scheduled));
 }
 export function transferReservedFor(state: DemoSnapshot, siteId: string, stockId: string) {
   return q((state.stockTransfers || []).filter(value => value.sourceSiteId === siteId).reduce((sum, transfer) => sum + transfer.lines.filter(line => line.sourceMaterialId === stockId).reduce((amount, line) => {
     if (transfer.status === "pending") return amount + line.proposed;
     if (transfer.status !== "approved") return amount;
-    const dispatched = deliveriesForTransfer(state, transfer.id).filter(value => value.status !== "expected" && value.status !== "cancelled").flatMap(value => value.lines).filter(value => value.transferLineId === line.id).reduce((total, value) => total + value.expected, 0);
+    const dispatched = deliveriesForTransfer(state, transfer.id).filter(value => isTransferSourceDelivery(value) && value.status !== "expected" && value.status !== "cancelled").flatMap(value => value.lines).filter(value => value.transferLineId === line.id).reduce((total, value) => q(total + value.expected), 0);
     return amount + Math.max(0, q(line.approved - line.cancelled - dispatched));
   }, 0), 0));
 }
@@ -41,7 +43,7 @@ export function transferQuantityFor(state: DemoSnapshot, requestId: string, item
   return q(transfersForRequest(state, requestId).reduce((sum, transfer) => {
     if (stage === "committed" && transfer.status === "pending") return sum + transfer.lines.filter(line => line.itemId === itemId).reduce((n, line) => n + line.proposed, 0);
     if (transfer.status !== "approved") return sum;
-    if (stage === "accepted" || stage === "posted") return sum + deliveriesForTransfer(state, transfer.id).filter(delivery => stage === "posted" ? delivery.status === "posted" : transferReceived(delivery)).flatMap(delivery => delivery.lines).filter(line => line.itemId === itemId).reduce((n, line) => n + line.accepted, 0);
+    if (stage === "accepted" || stage === "posted") return sum + deliveriesForTransfer(state, transfer.id).filter(delivery => isTransferSiteDelivery(delivery) && (stage === "posted" ? delivery.status === "posted" : transferReceived(delivery))).flatMap(delivery => delivery.lines).filter(line => line.itemId === itemId).reduce((n, line) => n + line.accepted, 0);
     const shortages = deliveriesForTransfer(state, transfer.id).filter(transferReceived).flatMap(delivery => delivery.lines).filter(line => line.itemId === itemId).reduce((n, line) => n + line.expected - line.accepted, 0);
     return sum + transfer.lines.filter(line => line.itemId === itemId).reduce((n, line) => n + line.approved - line.cancelled, 0) - shortages;
   }, 0));
@@ -57,7 +59,7 @@ export type TransferCommand =
   | { type: "proposeStockTransfer"; requestId: string; sourceSiteId: string; note: string; lines: { itemId: string; sourceName: string; unit: string; quantity: number; suitabilityConfirmed: boolean; suitabilityReviewId?: string }[] }
   | { type: "reviewStockTransfer"; id: string; decision: "approve" | "reject"; quantities: Record<string, number>; reason: string }
   | { type: "cancelStockTransfer"; id: string; reason: string }
-  | { type: "scheduleTransferDelivery"; transferId: string; scheduledDate: string; evidence: string; quantities: Record<string, number> }
+  | { type: "scheduleTransferDelivery"; transferId: string; leg?: TransferDeliveryLeg; parentDeliveryId?: string; scheduledDate: string; evidence: string; quantities: Record<string, number> }
   | { type: "cancelTransferDelivery" | "dispatchTransferDelivery"; id: string; reason?: string }
   | { type: "receiveTransferDelivery"; id: string; lines: Record<string, { accepted: number; issue: string }> }
   | { type: "postTransferDelivery"; id: string; quantities: Record<string, number>; reason: string }
@@ -68,11 +70,15 @@ export type TransferCommand =
   | { type: "failTransferEvidenceArchive"; transferId: string; documentId: string; error: string }
   | { type: "reviewTransferDocuments"; id: string; status: "Under Review" | "Complete" | "Discrepancy"; note: string };
 export const isTransferCommand = (command: { type: string }): command is TransferCommand => ["proposeStockTransfer", "reviewStockTransfer", "cancelStockTransfer", "scheduleTransferDelivery", "cancelTransferDelivery", "dispatchTransferDelivery", "receiveTransferDelivery", "postTransferDelivery", "completeTransferReceiptArchive", "failTransferReceiptArchive", "attachTransferEvidence", "completeTransferEvidenceArchive", "failTransferEvidenceArchive", "reviewTransferDocuments"].includes(command.type);
+function receiptDelivery(delivery: TransferDelivery) {
+  const { receiptVersions, ...record } = delivery; void receiptVersions;
+  return record;
+}
 export function transferReceiptData(state: DemoSnapshot, delivery: TransferDelivery): TransferReceiptData {
   const transfer = state.stockTransfers!.find(value => value.id === delivery.transferId)!;
-  const { receiptVersions: _versions, ...batch } = delivery; void _versions;
+  const parent = state.transferDeliveries?.find(value => value.id === delivery.parentDeliveryId);
   const { documents: _documents, documentReview: _review, documentReviewHistory: _history, ...record } = transfer; void _documents; void _review; void _history;
-  return structuredClone({ kind: "transfer", receiptVersion: delivery.receiptVersions?.at(-1)?.version || 0, delivery: batch, transfer: record, request: state.requests.find(value => value.id === transfer.requestId)!, sourceProject: state.sites.find(value => value.id === transfer.sourceSiteId)!, project: state.sites.find(value => value.id === transfer.destinationSiteId)! });
+  return structuredClone({ kind: "transfer", receiptVersion: delivery.receiptVersions?.at(-1)?.version || 0, delivery: receiptDelivery(delivery), ...(parent ? { parentDelivery: receiptDelivery(parent) } : {}), transfer: record, request: state.requests.find(value => value.id === transfer.requestId)!, sourceProject: state.sites.find(value => value.id === transfer.sourceSiteId)!, project: state.sites.find(value => value.id === transfer.destinationSiteId)! });
 }
 export function captureTransferReceipt(state: DemoSnapshot, delivery: TransferDelivery, id: string, at: string): TransferReceiptVersion {
   const version = (delivery.receiptVersions?.length || 0) + 1;
@@ -144,7 +150,7 @@ export function applyTransferCommand(state: DemoSnapshot, command: TransferComma
   }
   if (command.type === "cancelStockTransfer") {
     if (actor !== "Procurement" || !["pending", "approved"].includes(transfer.status) || !reasonOK(command.reason)) return fail("Procurement must explain cancellation of undispatched quantities.");
-    for (const batch of deliveriesForTransfer(state, transfer.id).filter(value => value.status === "expected")) { batch.status = "cancelled"; batch.reason = command.reason.trim(); batch.updatedAt = at; }
+    for (const batch of deliveriesForTransfer(state, transfer.id).filter(value => isTransferSourceDelivery(value) && value.status === "expected")) { batch.status = "cancelled"; batch.reason = command.reason.trim(); batch.updatedAt = at; }
     let changed = transfer.status === "pending";
     for (const line of transfer.lines) { const amount = transferUnscheduled(state, transfer, line.id); if (amount > 0) { line.cancelled = q(line.cancelled + amount); changed = true; } }
     if (!changed) return fail("No undispatched quantities remain to cancel.");
@@ -154,10 +160,15 @@ export function applyTransferCommand(state: DemoSnapshot, command: TransferComma
   }
   if (command.type === "scheduleTransferDelivery") {
     if (actor !== "Logistics" || transfer.status !== "approved") return fail("Logistics schedules source-approved transfers.");
+    const leg = command.leg ?? "site-site";
+    if (!["site-site", "site-warehouse", "warehouse-site"].includes(leg)) return fail("Choose a valid transfer delivery route.");
+    const parent = state.transferDeliveries.find(value => value.id === command.parentDeliveryId && value.transferId === transfer.id && transferLegFor(value) === "site-warehouse" && value.status === "confirmed");
+    if (leg === "warehouse-site" ? !parent : command.parentDeliveryId !== undefined) return fail("Forward deliveries must link to a confirmed warehouse receipt in this transfer.");
     if (!/^\d{4}-\d{2}-\d{2}$/.test(command.scheduledDate) || !Number.isFinite(Date.parse(command.scheduledDate)) || new Date(command.scheduledDate).toISOString().slice(0, 10) !== command.scheduledDate || !command.evidence.trim()) return fail("Enter a valid delivery date and evidence reference.");
-    const lines = transfer.lines.map(line => ({ transferLineId: line.id, itemId: line.itemId, expected: q(command.quantities[line.id] || 0), accepted: 0, issue: "" })).filter(line => line.expected !== 0);
-    if (!lines.length || lines.some(line => !positive(line.expected) || line.expected > transferUnscheduled(state, transfer, line.transferLineId))) return fail("Trip quantities exceed the remaining approved allocation.");
-    const batch: TransferDelivery = { id: ctx.id("transfer-delivery"), ...issueDocumentReference(state, transfer.destinationSiteId, "DEL", at), transferId: transfer.id, origin: structuredClone(transfer.origin), destination: structuredClone(transfer.destination), scheduledDate: command.scheduledDate, evidence: command.evidence.trim(), lines, status: "expected", createdAt: at, updatedAt: at, createdBy: identity };
+    if (Object.entries(command.quantities).some(([id, value]) => !transfer.lines.some(line => line.id === id) || !nonnegative(value))) return fail("Enter valid quantities for this transfer's materials.");
+    const lines = transfer.lines.map(line => ({ transferLineId: line.id, itemId: line.itemId, expected: q(command.quantities[line.id] ?? 0), accepted: 0, issue: "" })).filter(line => line.expected !== 0);
+    if (!lines.length || lines.some(line => !positive(line.expected) || line.expected > (parent ? transferWarehouseAvailableFor(state, parent.id, line.transferLineId) : transferUnscheduled(state, transfer, line.transferLineId)))) return fail(parent ? "Trip quantities exceed available warehouse stock." : "Trip quantities exceed the remaining approved allocation.");
+    const batch: TransferDelivery = { id: ctx.id("transfer-delivery"), ...issueDocumentReference(state, transfer.destinationSiteId, "DEL", at), transferId: transfer.id, leg, ...(parent ? { parentDeliveryId: parent.id } : {}), origin: structuredClone(parent ? parent.destination : transfer.origin), destination: structuredClone(leg === "site-warehouse" ? COMPANY_WAREHOUSE : transfer.destination), scheduledDate: command.scheduledDate, evidence: command.evidence.trim(), lines, status: "expected", createdAt: at, updatedAt: at, createdBy: identity };
     state.transferDeliveries.push(batch); reopen(transfer);
     return done("Transfer trip scheduled.", batch.id, transfer);
   }
@@ -166,6 +177,9 @@ export function applyTransferCommand(state: DemoSnapshot, command: TransferComma
     if (command.type === "cancelTransferDelivery") {
       if (!reasonOK(command.reason || "")) return fail("Explain cancellation of this trip.");
       delivery.status = "cancelled"; delivery.reason = command.reason!.trim();
+    } else if (!isTransferSourceDelivery(delivery)) {
+      if (delivery.lines.some(line => line.expected > transferWarehouseAvailableFor(state, delivery.parentDeliveryId || "", line.transferLineId, delivery.id))) return fail("Warehouse stock is no longer available for this trip.");
+      delivery.status = "dispatched"; delivery.dispatchedAt = at; delivery.dispatchedBy = identity;
     } else {
       const totals = new Map<string, number>();
       for (const line of delivery.lines) {
@@ -175,15 +189,15 @@ export function applyTransferCommand(state: DemoSnapshot, command: TransferComma
       }
       for (const line of delivery.lines) {
         const source = transfer.lines.find(value => value.id === line.transferLineId)!;
-        state.movements.push({ id: ctx.id("movement"), siteId: transfer.sourceSiteId, itemName: source.sourceName, unit: source.unit, quantity: -line.expected, kind: "transfer-out", reason: "Dispatched " + delivery.ref + " to " + transfer.destination.name, transferId: transfer.id, transferDeliveryId: delivery.id, requestItemId: line.itemId, actor, actorIdentity: identity, at });
+        state.movements.push({ id: ctx.id("movement"), siteId: transfer.sourceSiteId, itemName: source.sourceName, unit: source.unit, quantity: -line.expected, kind: "transfer-out", reason: "Dispatched " + delivery.ref + " to " + delivery.destination.name, transferId: transfer.id, transferDeliveryId: delivery.id, requestItemId: line.itemId, actor, actorIdentity: identity, at });
       }
       delivery.status = "dispatched"; delivery.dispatchedAt = at; delivery.dispatchedBy = identity;
     }
     delivery.updatedAt = at;
-    return done(command.type === "dispatchTransferDelivery" ? "Transfer dispatched; source stock deducted." : "Trip cancelled; approved stock remains reserved for rescheduling.", delivery.id, transfer);
+    return done(command.type === "dispatchTransferDelivery" ? isTransferSourceDelivery(delivery) ? "Transfer dispatched; source stock deducted." : "Forward delivery dispatched from warehouse." : "Trip cancelled; approved stock remains reserved for rescheduling.", delivery.id, transfer);
   }
   if (command.type === "receiveTransferDelivery" || command.type === "postTransferDelivery") {
-    if (!delivery || !sitePermit(transfer.destinationSiteId) || delivery.status !== (command.type === "receiveTransferDelivery" ? "dispatched" : "confirmed")) return fail("Only destination-assigned Site Personnel can receive and post this trip once.");
+    if (!delivery || !canReceiveTransfer(actor, ctx.siteIds || [], transfer, delivery) || command.type === "postTransferDelivery" && !isTransferSiteDelivery(delivery) || delivery.status !== (command.type === "receiveTransferDelivery" ? "dispatched" : "confirmed")) return fail("Procurement receives warehouse trips; destination-assigned Site Personnel receive and post site trips once.");
     const request = state.requests.find(value => value.id === transfer.requestId)!;
     const changed = command.type === "postTransferDelivery" && delivery.lines.some(line => command.quantities[line.transferLineId] !== line.accepted);
     if (changed && !reasonOK(command.reason)) return fail("Explain corrections before stock posting.");
@@ -202,17 +216,17 @@ export function applyTransferCommand(state: DemoSnapshot, command: TransferComma
       delivery.status = "posted"; delivery.postedAt = at; delivery.postedBy = identity;
       for (const line of delivery.lines.filter(value => value.accepted > 0)) {
         const item = request.items.find(value => value.id === line.itemId)!;
-        state.movements.push({ id: ctx.id("movement"), siteId: transfer.destinationSiteId, itemName: item.name, unit: item.unit, quantity: line.accepted, kind: "transfer-in", reason: "Posted " + delivery.ref + " from " + transfer.origin.name, transferId: transfer.id, transferDeliveryId: delivery.id, requestItemId: item.id, actor, actorIdentity: identity, at });
+        state.movements.push({ id: ctx.id("movement"), siteId: transfer.destinationSiteId, itemName: item.name, unit: item.unit, quantity: line.accepted, kind: "transfer-in", reason: "Posted " + delivery.ref + " from " + delivery.origin.name, transferId: transfer.id, transferDeliveryId: delivery.id, requestItemId: item.id, actor, actorIdentity: identity, at });
       }
     }
     delivery.updatedAt = at; delivery.reason = command.type === "postTransferDelivery" ? command.reason.trim() : undefined;
     if (command.type === "receiveTransferDelivery" || changed) { (delivery.receiptVersions ||= []).push(captureTransferReceipt(state, delivery, ctx.id("transfer-receipt"), at)); reopen(transfer); }
-    return done(command.type === "receiveTransferDelivery" ? "Transfer received; shortages returned to sourcing." : "Accepted transfer stock posted.", delivery.id, transfer);
+    return done(command.type === "receiveTransferDelivery" ? isTransferSiteDelivery(delivery) ? "Transfer received; shortages returned to sourcing." : "Warehouse receipt confirmed; Logistics can forward accepted stock." : "Accepted transfer stock posted.", delivery.id, transfer);
   }
-  const canArchive = actor === "Accounting / Auditing" || actor === "Administrator" || sitePermit(transfer.destinationSiteId);
+  const canArchive = (batch: TransferDelivery | undefined) => !!batch && canManageTransferDocuments(actor, ctx.siteIds || [], transfer, batch);
   if (command.type === "completeTransferReceiptArchive" || command.type === "failTransferReceiptArchive") {
     const receipt = delivery?.receiptVersions?.find(value => value.id === command.receiptId);
-    if (!canArchive || !receipt) return fail("This transfer receipt cannot be archived by this account.");
+    if (!canArchive(delivery) || !receipt) return fail("This transfer receipt cannot be archived by this account.");
     if (receipt.archive.status === "complete") return { ok: true, snapshot: state, message: "Receipt already archived." };
     if (command.type === "completeTransferReceiptArchive") {
       if (!validArchiveFileLink(state, command.url, command.fileId)) return fail("Invalid receipt archive link.");
@@ -221,11 +235,12 @@ export function applyTransferCommand(state: DemoSnapshot, command: TransferComma
     return done(command.type === "completeTransferReceiptArchive" ? "Transfer receipt archived." : "Transfer receipt archive needs retry.", delivery!.id, transfer);
   }
   if (command.type === "attachTransferEvidence") {
-    if (!(actor === "Accounting / Auditing" || sitePermit(transfer.destinationSiteId)) || !command.documents.length) return fail("Upload transfer evidence as destination Site Personnel or Accounting.");
+    if (actor === "Administrator" || !command.documents.length) return fail("Upload transfer evidence as the receiving department or Accounting.");
     const existing = transfer.documents || [], all = [...existing, ...command.documents];
     if (new Set(all.map(doc => doc.id)).size !== all.length) return fail("Duplicate evidence record.");
     for (const doc of command.documents) {
       const batch = state.transferDeliveries.find(value => value.id === doc.deliveryId && value.transferId === transfer.id && transferReceived(value));
+      if (!canArchive(batch)) return fail("Upload transfer evidence as the receiving department or Accounting.");
       if (!batch || !["Signed delivery receipt", "Other"].includes(doc.kind) || !["application/pdf", "image/jpeg", "image/png", "image/webp"].includes(doc.mime) || !positive(doc.size) || doc.size > 20 * 1024 * 1024 || !/^[a-f0-9]{64}$/.test(doc.sha256) || !doc.localFileId || !doc.name.trim() || doc.archive.status !== "pending" || doc.kind === "Signed delivery receipt" && doc.receiptVersion !== batch.receiptVersions?.at(-1)?.version) return fail("Invalid evidence or receipt version.");
       const group = all.filter(value => value.deliveryId === doc.deliveryId);
       if (group.length > 12 || group.reduce((sum, value) => sum + value.size, 0) > 45 * 1024 * 1024) return fail("Each trip allows 12 evidence files, 20 MB each and 45 MB total.");
@@ -235,7 +250,7 @@ export function applyTransferCommand(state: DemoSnapshot, command: TransferComma
   }
   if (command.type === "completeTransferEvidenceArchive" || command.type === "failTransferEvidenceArchive") {
     const doc = transfer.documents?.find(value => value.id === command.documentId);
-    if (!canArchive || !doc) return fail("Evidence archive not available to this account.");
+    if (!doc || !canArchive(state.transferDeliveries.find(value => value.id === doc.deliveryId && value.transferId === transfer.id))) return fail("Evidence archive not available to this account.");
     if (doc.archive.status === "complete") return { ok: true, snapshot: state, message: "Evidence already archived." };
     if (command.type === "completeTransferEvidenceArchive") {
       if (!validArchiveFileLink(state, command.url, command.fileId)) return fail("Invalid evidence archive link.");

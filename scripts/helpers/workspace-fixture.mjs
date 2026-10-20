@@ -2,7 +2,7 @@ import { LocalUserDirectory, USER_STORAGE_KEY } from '../../src/app-state/user-d
 import { seedDemo } from '../../src/mock/fixtures/seed.ts';
 import { blankWorkspace } from '../../src/mock/fixtures/blank.ts';
 
-/** Legacy workflow suites use an explicit fixture; showcase-smoke owns fresh installation coverage. */
+/** Legacy workflow suites use an explicit fixture; showcase-smoke owns empty-workspace initialization coverage. */
 export async function prepareFixtureBrowser(call, base, options = {}) {
   const values = new Map();
   const storage = { getItem: key => values.get(key) ?? null, setItem: (key, value) => values.set(key, value) };
@@ -14,7 +14,7 @@ export async function prepareFixtureBrowser(call, base, options = {}) {
     for (const user of directory.users.filter(u => u.role === 'Site Personnel')) user.siteIds = fixture.sites.map(s => s.id);
     directoryScript = `localStorage.setItem(${JSON.stringify(USER_STORAGE_KEY)},${JSON.stringify(JSON.stringify(directory))});`;
   }
-  const source = `if(location.origin===${JSON.stringify(new URL(base).origin)}&&!sessionStorage.getItem('workflow-fixture-ready')){localStorage.setItem('hml-constructsync-showcase-installed-v1','{"revision":1,"cleared":true}');localStorage.setItem('hml-constructsync-demo-v12',${JSON.stringify(JSON.stringify(fixture))});${directoryScript}sessionStorage.setItem('workflow-fixture-ready','true');}`;
+  const source = `if(location.origin===${JSON.stringify(new URL(base).origin)}&&!sessionStorage.getItem('workflow-fixture-ready')){localStorage.setItem('hml-constructsync-empty-workspace-v1','1');localStorage.setItem('hml-constructsync-demo-v12',${JSON.stringify(JSON.stringify(fixture))});${directoryScript}sessionStorage.setItem('workflow-fixture-ready','true');}`;
   await call('Page.enable');
   await call('Emulation.setFocusEmulationEnabled', {enabled:true});
   const initializer = await call('Page.addScriptToEvaluateOnNewDocument', {source});

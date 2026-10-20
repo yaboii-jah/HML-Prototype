@@ -1160,7 +1160,7 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       const codeError = projectCodeValidation(state, documentCode);
       if (codeError) return fail(codeError, "documentCode");
       const siteId = id("site");
-      state.sites.push({ id: siteId, documentCode, name, location: command.location.trim(), budget: command.budget, personnel: "", ...(state.showcase ? { localArchiveId: state.showcase.installationId } : {}), driveFolderSetup: { status: "pending" } });
+      state.sites.push({ id: siteId, documentCode, name, location: command.location.trim(), budget: command.budget, personnel: "", driveFolderSetup: { status: "pending" } });
       log(siteId, "Project added");
       return done("Project added. Site Personnel can now create an MRF.", siteId);
     }

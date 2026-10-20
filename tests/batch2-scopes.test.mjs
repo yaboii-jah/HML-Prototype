@@ -1,3 +1,4 @@
+import { initializedWorkspaceStorage } from './helpers/initialized-storage.mjs';
 import test from "node:test";
 import assert from "node:assert/strict";
 import { applyCommand } from "../src/domain/commands.ts";
@@ -122,7 +123,7 @@ test("classification describes goods and services without changing tax, deductio
 test("unscoped v12 data loads without writes or guessed assignments and still supports approved release", async () => {
   const saved = seedDemo(); delete saved.scopes; for (const request of saved.requests) delete request.scopeId;
   const raw = JSON.stringify(saved), previousWindow = globalThis.window, previousStorage = globalThis.localStorage;
-  let writes = 0; globalThis.window = { addEventListener() {} }; globalThis.localStorage = { getItem: key => key === "hml-constructsync-demo-v12" ? raw : null, setItem() { writes++; } };
+  let writes = 0; globalThis.window = { addEventListener() {} }; globalThis.localStorage = initializedWorkspaceStorage({ getItem: key => key === "hml-constructsync-demo-v12" ? raw : null, setItem() { writes++; } });
   try {
     const loaded = await new LocalDemoRepository().load(); assert.equal(loaded.status, "ready"); assert.equal(writes, 0); assert.deepEqual(loaded.snapshot.scopes, []);
     assert.deepEqual(loaded.snapshot.requests, saved.requests); assert.deepEqual(loaded.snapshot.activity, saved.activity);
@@ -136,7 +137,7 @@ test("unscoped v12 data loads without writes or guessed assignments and still su
 test("scope allocations and their named audit survive repository reload", async () => {
   const initial = workspace(), saved = run(initial, requestCommand(initial), actors.site);
   const raw = JSON.stringify(saved), previousWindow = globalThis.window, previousStorage = globalThis.localStorage;
-  let writes = 0; globalThis.window = { addEventListener() {} }; globalThis.localStorage = { getItem: key => key === "hml-constructsync-demo-v12" ? raw : null, setItem() { writes++; } };
+  let writes = 0; globalThis.window = { addEventListener() {} }; globalThis.localStorage = initializedWorkspaceStorage({ getItem: key => key === "hml-constructsync-demo-v12" ? raw : null, setItem() { writes++; } });
   try {
     const loaded = await new LocalDemoRepository().load();
     assert.equal(loaded.status, "ready"); assert.equal(writes, 0);

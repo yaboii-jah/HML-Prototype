@@ -74,7 +74,7 @@ test('source and destination transfer actions retain endpoint permissions and ca
   f.state.stockTransfers=[{id:'transfer',ref:'TRF',requestId:f.request.id,sourceSiteId:source,destinationSiteId:f.request.siteId,status:'pending',origin:{name:'Source'},destination:{name:'Destination'},lines:[],updatedAt:f.request.updatedAt}];
   let action=workflowActions(f.state,f.request.id).find(a=>a.id==='release-stock/transfer');
   assert.equal(canActOnWorkflowAction(action,'Site Personnel',[f.request.siteId]),false);assert.equal(canActOnWorkflowAction(action,'Site Personnel',[source]),true);
-  f.state.stockTransfers[0].status='approved';f.state.transferDeliveries=[{id:'trip',ref:'TRIP',transferId:'transfer',status:'dispatched',lines:[],updatedAt:f.request.updatedAt}];
+  f.state.stockTransfers[0].status='approved';f.state.transferDeliveries=[{id:'trip',ref:'TRIP',transferId:'transfer',status:'dispatched',origin:f.state.stockTransfers[0].origin,destination:f.state.stockTransfers[0].destination,lines:[],updatedAt:f.request.updatedAt}];
   action=workflowActions(f.state,f.request.id).find(a=>a.id==='receive-transfer/trip');assert.equal(canActOnWorkflowAction(action,'Site Personnel',[source]),false);assert.equal(canActOnWorkflowAction(action,'Site Personnel',[f.request.siteId]),true);
   f.state.transferDeliveries[0].status='cancelled';assert.equal(workflowActions(f.state,f.request.id).some(a=>a.recordId==='trip'),false);
 });

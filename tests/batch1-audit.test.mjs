@@ -1,3 +1,4 @@
+import { initializedWorkspaceStorage } from './helpers/initialized-storage.mjs';
 import test from "node:test";
 import assert from "node:assert/strict";
 import { applyCommand } from "../src/domain/commands.ts";
@@ -129,7 +130,7 @@ test("evidence preparation retains its initiating uploader and permits only its 
 test("named v12 audit records survive repository reload without session data or historical rewrites", async () => {
   const state = execute(seedDemo(), { type: "reviewRequest", id: "m6", decision: "return", reason: "Correct quantity" }, andrea);
   const raw = JSON.stringify(state), previousWindow = globalThis.window, previousStorage = globalThis.localStorage;
-  let writes = 0; globalThis.window = { addEventListener() {} }; globalThis.localStorage = { getItem: key => key === "hml-constructsync-demo-v12" ? raw : null, setItem() { writes++; } };
+  let writes = 0; globalThis.window = { addEventListener() {} }; globalThis.localStorage = initializedWorkspaceStorage({ getItem: key => key === "hml-constructsync-demo-v12" ? raw : null, setItem() { writes++; } });
   try {
     const loaded = await new LocalDemoRepository().load(); assert.equal(loaded.status, "ready"); assert.equal(writes, 0);
     assert.deepEqual(loaded.snapshot.activity, JSON.parse(raw).activity); assert.equal(loaded.snapshot.version, 12);

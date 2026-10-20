@@ -17,7 +17,7 @@ import { setupProjectFolder } from "./project-folder";
 import type { Site } from "@/src/domain/types";
 
 export function ProjectCreation({ confirm, onCreated, onCancel }: { confirm: ConfirmAction; onCreated: (id: string) => void; onCancel: () => void }) {
-  const { run, beginOperation, snapshot } = useDemo();
+  const { run, beginOperation } = useDemo();
   const { notify, update, dismiss } = useActionFeedback();
   const [error, setError] = useState(""), [busy, setBusy] = useState(false), [creatingFolder, setCreatingFolder] = useState(false);
   const [documentCode, setDocumentCode] = useState("");
@@ -28,17 +28,17 @@ export function ProjectCreation({ confirm, onCreated, onCancel }: { confirm: Con
     pending.current = true; setBusy(true); setError("");
     const toast = notify({ tone: "progress", title: "Adding project…", detail: `${name} · ${location}` });
     try {
-      if (!await confirm("Add project?", `${name} (${documentCode}) · ${location} · ${money(budget)} allocated budget. ${snapshot?.showcase ? "Documents will be archived locally in this browser." : "A project folder will be created automatically in the company Google Drive folder."}`, "Add project")) { dismiss(toast); return; }
+      if (!await confirm("Add project?", `${name} (${documentCode}) · ${location} · ${money(budget)} allocated budget. A project folder will be created automatically in the company Google Drive folder.`, "Add project")) { dismiss(toast); return; }
       const result = await run({ type: "addSite", documentCode, name, location, budget });
       if (!result.ok) { setError(result.message); update(toast, { tone: "error", title: result.message }); }
       else if (result.recordId) {
-        update(toast, { title: snapshot?.showcase ? "Project saved. Preparing local documents…" : "Project saved. Creating the Google Drive project folder…", detail: name });
+        update(toast, { title: "Project saved. Creating the Google Drive project folder…", detail: name });
         setCreatingFolder(true);
         const site = result.snapshot.sites.find(value => value.id === result.recordId)!;
         let ready = false;
         try { ready = await setupProjectFolder(site, beginOperation); } catch { /* The saved project remains pending and can be retried. */ }
         update(toast, ready
-          ? { tone: "success", title: snapshot?.showcase ? "Project added. Local archive ready." : "Project added. Google Drive folder ready.", detail: `${name} · ${location}` }
+          ? { tone: "success", title: "Project added. Google Drive folder ready.", detail: `${name} · ${location}` }
           : { tone: "warning", title: "Project added. Folder setup is pending.", detail: "Retry or link an existing folder in Project settings." });
         onCreated(result.recordId);
       } else update(toast, { tone: "error", title: result.message });

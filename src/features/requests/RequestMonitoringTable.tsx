@@ -9,6 +9,7 @@ import { RecordModal } from "@/src/components/ui/RecordModal";
 import { Badge } from "@/src/components/ui/Primitives";
 import { actorText, auditTime } from "@/src/domain/audit";
 import { batchStage, deliveryLocations, deliveryPayment, legLabel } from "@/src/domain/delivery-flow";
+import { transferDeliveryStage } from "@/src/domain/transfer-delivery-flow";
 import { dateText, money } from "@/src/domain/format";
 import { monitoringRequests, type MonitoringMilestone, type RequestMonitoring } from "@/src/domain/request-monitoring";
 import { accountingNextAction, poStatusLabel } from "@/src/domain/workflow";
@@ -21,6 +22,8 @@ function ProgressCell({ value }: { value: MonitoringMilestone }) {
 }
 
 function RelatedRecords({ row, state }: { row: RequestMonitoring; state: DemoSnapshot }) {
+  const transfers = (state.stockTransfers || []).filter(transfer => transfer.requestId === row.request.id);
+  const trips = (state.transferDeliveries || []).filter(trip => transfers.some(transfer => transfer.id === trip.transferId));
   return <div className="monitoring-related"><div className="panel-heading"><div><small>Latest activity: {auditTime(row.latestActivity?.at)} / {row.latestActivity ? actorText(row.latestActivity.actor,row.latestActivity.actorIdentity) : "User not recorded"}</small></div><Link className="text-link" href={`/requests/${row.request.id}#lifecycle`}>Open full lifecycle</Link></div>
     <OutstandingActions state={state} requestId={row.request.id} actions={row.actions}/>
     <h4>Purchase orders</h4>
@@ -33,7 +36,12 @@ function RelatedRecords({ row, state }: { row: RequestMonitoring; state: DemoSna
       const po = row.pos.find(value => value.id === batch.poId)!;
       const parent = row.batches.find(value => value.id === batch.parentBatchId), location = deliveryLocations(state, po, batch).destination;
       return <tr key={batch.id}><td><Link href={`/deliveries/${batch.id}`}>{batch.ref}</Link>{parent && <small>From <Link href={`/deliveries/${parent.id}`}>{parent.ref}</Link></small>}</td><td><Link href={`/purchase-orders/${po.id}`}>{po.ref}</Link></td><td>{legLabel(batch)}</td><td>{location.name}<small>{location.address}</small></td><td>{dateText(batch.scheduledDate)}</td><td><Badge value={batch.status}>{batchStage(batch)}</Badge></td><td>{batch.lines.map(line => line.issue).filter(Boolean).join(" · ") || "—"}</td></tr>;
-    }}/> : <p className="muted">No delivery legs yet.</p>}
+    }}/> : !trips.length && <p className="muted">No delivery legs yet.</p>}
+    {trips.length > 0 && <Register embedded rows={trips} headers={<><th>Transfer trip / parent</th><th>Transfer</th><th>Route</th><th>Scheduled</th><th>Stage</th><th>Issue</th></>} renderRow={trip => {
+      const transfer = transfers.find(value => value.id === trip.transferId)!;
+      const parent = trips.find(value => value.id === trip.parentDeliveryId), href = `/stock-transfers/${transfer.id}`;
+      return <tr key={trip.id}><td><Link href={`${href}#trip-${trip.id}`}>{trip.ref}</Link>{parent && <small>From <Link href={`${href}#trip-${parent.id}`}>{parent.ref}</Link></small>}</td><td><Link href={href}>{transfer.ref}</Link></td><td>{trip.origin.name} → {trip.destination.name}</td><td>{dateText(trip.scheduledDate)}</td><td><Badge>{transferDeliveryStage(trip)}</Badge></td><td>{trip.lines.map(line => line.issue).filter(Boolean).join(" · ") || "—"}</td></tr>;
+    }}/>}
     <h4>Requested material coverage</h4>
     <Register embedded rows={row.coverage} headers={<><th>Material</th><th>Unit</th><th className="numeric">Requested</th><th className="numeric">Released</th><th className="numeric">Accepted at site</th><th className="numeric">Posted</th></>} renderRow={value => <tr key={value.item.id}><th scope="row">{value.item.name || "Unnamed material"}</th><td>{value.item.unit}</td><td className="numeric">{value.item.quantity}</td><td className="numeric">{value.released}</td><td className="numeric">{value.accepted}</td><td className="numeric">{value.posted}</td></tr>}/>
     {row.paymentRequests.length > 0 && <p className="helper-note">Payment requests: {row.paymentRequests.map((payment, index) => <Fragment key={payment.id}>{index > 0 && " · "}<Link href={`/finance/${payment.poId}`}>{payment.ref}</Link> ({payment.status})</Fragment>)}</p>}

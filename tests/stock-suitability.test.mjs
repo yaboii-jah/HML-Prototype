@@ -1,3 +1,4 @@
+import { initializedWorkspaceStorage } from './helpers/initialized-storage.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { seedDemo } from '../src/mock/fixtures/seed.ts';
@@ -137,7 +138,7 @@ test('old v12 workspaces and active/used reviews reload; malformed provenance is
   const previousWindow = globalThis.window, previousStorage = globalThis.localStorage;
   try {
     const f = setup(); f.send(); const storage = new Map([['hml-constructsync-demo-v12',JSON.stringify(f.state)]]);
-    globalThis.localStorage = { getItem:key => storage.get(key) || null,setItem:(key,value) => storage.set(key,value),removeItem:key => storage.delete(key) }; globalThis.window = { addEventListener(){} };
+    globalThis.localStorage = initializedWorkspaceStorage({ getItem:key => storage.get(key) || null,setItem:(key,value) => storage.set(key,value),removeItem:key => storage.delete(key) }); globalThis.window = { addEventListener(){} };
     const repository = new LocalDemoRepository(); repository.getSnapshot(); assert.equal(repository.getSnapshot().status,'ready'); assert.equal(repository.getSnapshot().snapshot.stockSuitabilityReviews.length,1);
     const bad = structuredClone(f.state); bad.stockSuitabilityReviews[0].proposed = 100; assert.equal(validStockReviews(bad),false);
     const old = structuredClone(f.state); old.stockSuitabilityReviews = undefined; assert.equal(validStockReviews(old),true); assert.equal(validTransferState(old),true);

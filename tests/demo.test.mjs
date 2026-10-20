@@ -1,3 +1,4 @@
+import { initializedWorkspaceStorage } from './helpers/initialized-storage.mjs';
 import test from "node:test";
 import assert from "node:assert/strict";
 import { seedDemo } from "../src/mock/fixtures/seed.ts";
@@ -168,7 +169,7 @@ test("v1 migration preserves edited records and rejects malformed saved data", (
   const saved = new Map([["hml-constructsync-demo-v11", "not-json"]]);
   const previous = globalThis.localStorage;
   const previousWindow = globalThis.window;
-  globalThis.localStorage = { getItem: key => saved.get(key) ?? null, setItem: (key, value) => saved.set(key, value) };
+  globalThis.localStorage = initializedWorkspaceStorage({ getItem: key => saved.get(key) ?? null, setItem: (key, value) => saved.set(key, value) });
   globalThis.window = { addEventListener() {} };
   try {
     const repo = new LocalDemoRepository();
@@ -266,7 +267,7 @@ test("previous BuildSync records require an explicit reset and preserve user edi
   old.suppliers[1].contact = "Custom purchasing contact";
   old.activity[0].action = "PO served (Demo)";
   const saved = new Map([["hml-buildsync-demo-v2", JSON.stringify(old)]]);
-  globalThis.localStorage = { getItem: key => saved.get(key) ?? null, setItem: (key, value) => saved.set(key, value) };
+  globalThis.localStorage = initializedWorkspaceStorage({ getItem: key => saved.get(key) ?? null, setItem: (key, value) => saved.set(key, value) });
   globalThis.window = { addEventListener() {} };
   try {
     const view = new LocalDemoRepository().getSnapshot();
@@ -282,7 +283,7 @@ test("old ConstructSync material details remain untouched while reset is pending
   old.requests[0].purpose = "Edited purpose";
   const saved = new Map([["hml-constructsync-demo-v2", JSON.stringify(old)]]);
   const priorStorage = globalThis.localStorage, priorWindow = globalThis.window;
-  globalThis.localStorage = { getItem: key => saved.get(key) ?? null, setItem: (key, value) => saved.set(key, value), removeItem: key => saved.delete(key) };
+  globalThis.localStorage = initializedWorkspaceStorage({ getItem: key => saved.get(key) ?? null, setItem: (key, value) => saved.set(key, value), removeItem: key => saved.delete(key) });
   globalThis.window = { addEventListener() {} };
   try {
     const view = new LocalDemoRepository().getSnapshot();
@@ -350,7 +351,7 @@ test("v3 browser records cannot silently enter the new workflow", () => {
   const previousStorage = globalThis.localStorage, previousWindow = globalThis.window;
   const old = { ...seedDemo(), version: 3 };
   const saved = new Map([["hml-constructsync-demo-v3", JSON.stringify(old)]]);
-  globalThis.localStorage = { getItem: key => saved.get(key) ?? null, setItem: (key, value) => saved.set(key, value), removeItem: key => saved.delete(key) };
+  globalThis.localStorage = initializedWorkspaceStorage({ getItem: key => saved.get(key) ?? null, setItem: (key, value) => saved.set(key, value), removeItem: key => saved.delete(key) });
   globalThis.window = { addEventListener() {} };
   try {
     const view = new LocalDemoRepository().getSnapshot();

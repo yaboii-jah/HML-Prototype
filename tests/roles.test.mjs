@@ -1,3 +1,4 @@
+import { initializedWorkspaceStorage } from './helpers/initialized-storage.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { ROLES } from '../src/domain/types.ts';
@@ -16,7 +17,7 @@ async function withStorage(entries, check) {
   const previousWindow = globalThis.window, previousStorage = globalThis.localStorage;
   const saved = new Map(entries);
   globalThis.window = { addEventListener() {} };
-  globalThis.localStorage = { getItem: key => saved.get(key) ?? null, setItem: (key, value) => saved.set(key, value), removeItem: key => saved.delete(key) };
+  globalThis.localStorage = initializedWorkspaceStorage({ getItem: key => saved.get(key) ?? null, setItem: (key, value) => saved.set(key, value), removeItem: key => saved.delete(key) });
   try { testDirectory = new LocalUserDirectory(); await testDirectory.load(); await check(saved); }
   finally { globalThis.window = previousWindow; globalThis.localStorage = previousStorage; }
 }

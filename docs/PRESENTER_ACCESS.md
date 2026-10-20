@@ -2,6 +2,8 @@
 
 Use the same browser profile for the complete department walkthrough. The deployed app remains behind Vercel deployment protection. These bootstrap credentials initialize the browser-local user directory once and simulate department access; they do not protect server APIs or correspond to owned Gmail inboxes, and the app sends no email.
 
+The workspace starts empty. Sign in as Administrator or Project Manager to create projects and set up their Google Drive folders. The one-time removal of old operational data preserves these accounts, their current passwords and any manually added accounts; project assignments must be set again for new projects.
+
 | Name | Department | Email | Password |
 | --- | --- | --- | --- |
 | Miguel Santos | Site Personnel | hml.constructsync.site@gmail.com | HML!SITE2026 |

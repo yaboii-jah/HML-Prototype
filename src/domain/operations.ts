@@ -1,5 +1,6 @@
 import { canAttachDelivery, canArchiveAccounting, receivedDelivery } from "./delivery-archive.ts";
 import { isSiteBatch } from "./delivery-flow.ts";
+import { transferReceivingRole } from "./transfer-delivery-flow.ts";
 import { canAttachPaymentProof, proofAssigned, requiresPMReview } from "./full-disbursement.ts";
 import type { Command } from "./commands.ts";
 import type { DemoSnapshot, OperationTarget, Role } from "./types.ts";
@@ -35,9 +36,13 @@ function recordFingerprint(state: DemoSnapshot, target: OperationTarget): string
 export function operationError(state: DemoSnapshot, target: OperationTarget, role: Role): string {
   const permitted = (...roles: Role[]) => roles.includes(role);
   switch (target.kind) {
-    case "transfer-receipt": return permitted("Site Personnel", "Accounting / Auditing", "Administrator") && state.transferDeliveries?.some(delivery => delivery.id === target.deliveryId && delivery.receiptVersions?.some(receipt => receipt.id === target.receiptId && receipt.archive.status === "pending")) ? "" : "This transfer receipt has no pending archive.";
-    case "transfer-evidence": return permitted("Site Personnel", "Accounting / Auditing", "Administrator") && state.stockTransfers?.some(transfer => transfer.id === target.transferId && transfer.documents?.some(doc => doc.id === target.documentId && doc.archive.status === "pending")) ? "" : "This transfer evidence has no pending archive.";
-    case "transfer-attachment": return permitted("Site Personnel", "Accounting / Auditing") && state.transferDeliveries?.some(delivery => delivery.id === target.deliveryId && delivery.transferId === target.transferId && ["confirmed", "posted"].includes(delivery.status)) ? "" : "Receive this transfer before attaching evidence.";
+    case "transfer-receipt": return state.transferDeliveries?.some(delivery => delivery.id === target.deliveryId && permitted(transferReceivingRole(delivery), "Accounting / Auditing", "Administrator") && delivery.receiptVersions?.some(receipt => receipt.id === target.receiptId && receipt.archive.status === "pending")) ? "" : "This transfer receipt has no pending archive.";
+    case "transfer-evidence": {
+      const transfer = state.stockTransfers?.find(value => value.id === target.transferId), doc = transfer?.documents?.find(value => value.id === target.documentId);
+      const delivery = state.transferDeliveries?.find(value => value.id === doc?.deliveryId && value.transferId === transfer?.id);
+      return delivery && permitted(transferReceivingRole(delivery), "Accounting / Auditing", "Administrator") && doc?.archive.status === "pending" ? "" : "This transfer evidence has no pending archive.";
+    }
+    case "transfer-attachment": return state.transferDeliveries?.some(delivery => delivery.id === target.deliveryId && delivery.transferId === target.transferId && permitted(transferReceivingRole(delivery), "Accounting / Auditing") && ["confirmed", "posted"].includes(delivery.status)) ? "" : "Receive this transfer before attaching evidence.";
 
     case "payment-proof": { const po = state.pos.find(value => value.id === target.poId); return permitted("Accounting / Auditing", "Administrator") && po && canAttachPaymentProof(po) && !proofAssigned(po,target.documentId) && po.paymentProofs?.some(value => value.id === target.documentId && value.archive.status === "pending") ? "" : "This proof has no pending archive."; }
     case "project": return permitted("Administrator", "Project Manager") && state.sites.some(site => site.id === target.id && !site.driveFolderId) ? "" : "This project already has a folder or cannot be configured.";

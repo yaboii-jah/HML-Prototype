@@ -44,7 +44,7 @@ try {
   const button = async text => { await run(`const el=[...document.querySelectorAll('button')].find(b=>b.textContent.trim()===${JSON.stringify(text)});if(!el)throw new Error('Missing button '+${JSON.stringify(text)});el.focus();el.click();return true;`); await sleep(100); };
   const snapshot = () => run("return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12'));");
   await call('Page.enable'); await call('Runtime.enable');
-  const initializer = await call('Page.addScriptToEvaluateOnNewDocument', { source: `if(location.origin===${JSON.stringify(new URL(base).origin)}&&!sessionStorage.getItem('usage-smoke-initialized')){localStorage.setItem('hml-constructsync-showcase-installed-v1','{"revision":1,"cleared":true}');localStorage.setItem('hml-constructsync-demo-v12',${JSON.stringify(JSON.stringify(fixture))});localStorage.setItem(${JSON.stringify(USER_STORAGE_KEY)},${JSON.stringify(JSON.stringify(data))});localStorage.setItem(${JSON.stringify(SESSION_STORAGE_KEY)},${JSON.stringify(JSON.stringify(identity(author)))});sessionStorage.setItem('usage-smoke-initialized','true');}` });
+  const initializer = await call('Page.addScriptToEvaluateOnNewDocument', { source: `if(location.origin===${JSON.stringify(new URL(base).origin)}&&!sessionStorage.getItem('usage-smoke-initialized')){localStorage.setItem('hml-constructsync-empty-workspace-v1','1');localStorage.setItem('hml-constructsync-demo-v12',${JSON.stringify(JSON.stringify(fixture))});localStorage.setItem(${JSON.stringify(USER_STORAGE_KEY)},${JSON.stringify(JSON.stringify(data))});localStorage.setItem(${JSON.stringify(SESSION_STORAGE_KEY)},${JSON.stringify(JSON.stringify(identity(author)))});sessionStorage.setItem('usage-smoke-initialized','true');}` });
   await navigate('/inventory?view=consumption');
   await wait("return !!document.querySelector('[aria-label=\"Consumption from date\"]');");
   await call('Page.removeScriptToEvaluateOnNewDocument', {identifier:initializer.identifier});
@@ -146,19 +146,6 @@ try {
   await fill('[aria-label="Consumption from date"]','2026-10-01');await fill('[aria-label="Consumption to date"]','2026-10-31');
   assert.equal(await run("return document.querySelectorAll('.consumption-report tbody tr').length;"),1,'Assigned projects restrict reporting rows');
   assert.equal(errors.length,0,'No browser runtime exceptions');
-  // Exercise setup failure at sign-in, not only the repository's injected unit-test seam.
-  await run(`localStorage.setItem(${JSON.stringify(SESSION_STORAGE_KEY)},${JSON.stringify(JSON.stringify(identity(admin)))});return true;`);
-  await navigate('/dashboard');await wait("return !!document.querySelector('#role-tasks');");
-  const savedBeforeSetup=await run("return localStorage.getItem('hml-constructsync-demo-v12');");
-  await run("localStorage.setItem('constructsync-usage-draft-v1/setup-check','retain');localStorage.removeItem('hml-constructsync-showcase-installed-v1');return true;");
-  await call('Page.addScriptToEvaluateOnNewDocument',{source:`const realFetch=window.fetch.bind(window);window.fetch=(input,init)=>{const url=String(input);if(url.startsWith('/api/bid-comparisons')&&!sessionStorage.getItem('setup-failed-once')){sessionStorage.setItem('setup-failed-once','true');return Promise.resolve(Response.json({error:'Temporary comparison failure'},{status:503}));}return realFetch(input,init);};`});
-  await call('Page.navigate',{url:base+'/sign-in'});await wait("return document.querySelector('h1')?.textContent==='Setup could not finish';");
-  assert.equal(await run("return localStorage.getItem('hml-constructsync-demo-v12');"),savedBeforeSetup,'Failed setup preserves the snapshot');
-  assert.equal(await run("return [...document.querySelectorAll('button')].some(b=>/Clear workspace|Restore workspace/.test(b.textContent));"),false,'Temporary failure exposes retry without clearing');
-  await run("const b=[...document.querySelectorAll('button')].find(b=>b.textContent==='Retry setup');b.click();b.click();return true;");
-  await wait("return location.pathname==='/dashboard'&&!!document.querySelector('#role-tasks');");
-  assert.equal(await run("return localStorage.getItem('constructsync-usage-draft-v1/setup-check');"),'retain');
-  const backup=await run(`return (async()=>{const marker=JSON.parse(localStorage.getItem('hml-constructsync-showcase-installed-v1'));const db=await new Promise((resolve,reject)=>{const r=indexedDB.open('hml-constructsync-showcase-backups',1);r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);});const result=await new Promise((resolve,reject)=>{const r=db.transaction('backups').objectStore('backups').get(marker.backupId);r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);});db.close();return result.records.find(([key])=>key==='hml-constructsync-demo-v12')[1];})()`);
-  assert.equal(backup,savedBeforeSetup,'Successful retry retains the original records in the installation backup');
+  // Empty-startup cleanup and retry coverage lives in showcase-smoke.mjs.
   console.log(`Next iteration browser smoke passed: consumption, CSV, dates, modal keyboard behavior, immutable ledger, all six Reports roles, filters, desktop/mobile navigation, signed-out and Site Personnel denial, role handoffs and Accounting defaults. Screenshots: ${profile}`);
 } finally { ws?.close(); browser.kill(); }

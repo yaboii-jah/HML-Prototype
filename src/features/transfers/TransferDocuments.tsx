@@ -9,6 +9,7 @@ import { PdfDocumentViewer } from "@/src/components/PdfDocumentViewer";
 import { Badge, Field, InlineError } from "@/src/components/ui/Primitives";
 import type { DemoSnapshot, StockTransfer, TransferDelivery, TransferEvidence } from "@/src/domain/types";
 import { archiveTransferEvidence, archiveTransferReceipt, attachTransferFiles, readTransferEvidence } from "./transfer-files";
+import { canManageTransferDocuments } from "@/src/domain/transfer-delivery-flow";
 
 export function TransferDocuments({ state, transfer, delivery }: { state: DemoSnapshot; transfer: StockTransfer; delivery: TransferDelivery }) {
   const { beginOperation, siteIds } = useDemo();
@@ -18,7 +19,7 @@ export function TransferDocuments({ state, transfer, delivery }: { state: DemoSn
   const [kind,setKind] = useState<TransferEvidence["kind"]>("Signed delivery receipt");
   const [preview,setPreview] = useState<{ document:TransferEvidence;blob:Blob;url:string } | null>(null);
   useEffect(() => () => { if (preview) URL.revokeObjectURL(preview.url); },[preview]);
-  const eligible = ["Accounting / Auditing","Administrator"].includes(state.role) || state.role === "Site Personnel" && siteIds.includes(transfer.destinationSiteId);
+  const eligible = canManageTransferDocuments(state.role, siteIds, transfer, delivery);
   const canUpload = eligible && state.role !== "Administrator";
   const documents = transfer.documents?.filter(doc => doc.deliveryId === delivery.id) || [];
   const activeJob = (id:string) => jobs.find(job => job.id === id && job.phase !== "complete" && !job.error);

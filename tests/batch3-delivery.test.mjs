@@ -1,3 +1,4 @@
+import { initializedWorkspaceStorage } from './helpers/initialized-storage.mjs';
 import test from "node:test";
 import assert from "node:assert/strict";
 import { registerHooks } from "node:module";
@@ -188,7 +189,7 @@ test("fractional quantities remain schedulable and reach a zero balance without 
 
 test("legacy direct receiving and new routing metadata survive v12 reload without invented dispatch records", async () => {
   const legacy = seedDemo(), raw = JSON.stringify(legacy), previousWindow = globalThis.window, previousStorage = globalThis.localStorage;
-  let writes = 0; globalThis.window = { addEventListener() {} }; globalThis.localStorage = { getItem: key => key === "hml-constructsync-demo-v12" ? raw : null, setItem() { writes++; } };
+  let writes = 0; globalThis.window = { addEventListener() {} }; globalThis.localStorage = initializedWorkspaceStorage({ getItem: key => key === "hml-constructsync-demo-v12" ? raw : null, setItem() { writes++; } });
   try {
     const loaded = await new LocalDemoRepository().load(); assert.equal(loaded.status, "ready"); assert.equal(writes, 0); assert.deepEqual(loaded.snapshot.batches, legacy.batches);
     const received = run(loaded.snapshot, receive("b2", 40), "Site Personnel"); assert.equal(received.batches.find(batch => batch.id === "b2").dispatchedAt, undefined);

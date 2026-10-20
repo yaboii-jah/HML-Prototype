@@ -97,6 +97,7 @@ export async function clearQuoteFiles() {
       transaction.objectStore(STORE).clear();
       transaction.oncomplete = () => resolve();
       transaction.onerror = () => reject(transaction.error);
+      transaction.onabort = () => reject(transaction.error || new Error("Browser documents could not be cleared."));
     });
   } finally { database.close(); }
 }

@@ -1,3 +1,4 @@
+import { initializedWorkspaceStorage } from './helpers/initialized-storage.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { blankWorkspace } from '../src/mock/fixtures/blank.ts';
@@ -106,7 +107,7 @@ test('Accounting requires archived proof and complete details, verifies computed
   state = run(as(state, 'Logistics'), { type: 'createBatch', poId, scheduledDate: '2026-10-06', evidence: 'Delivery', delayReason: '', expected: { cement: 10 } });
   assert.equal(state.batches.length, 1);
   const stored = JSON.stringify(state), oldStorage=globalThis.localStorage, oldWindow=globalThis.window;
-  globalThis.window={addEventListener(){}}; globalThis.localStorage={getItem:key=>key==='hml-constructsync-demo-v12'?stored:null,setItem(){}};
+  globalThis.window={addEventListener(){}}; globalThis.localStorage=initializedWorkspaceStorage({getItem:key=>key==='hml-constructsync-demo-v12'?stored:null,setItem(){}});
   try { assert.deepEqual(new LocalDemoRepository().getSnapshot().snapshot, JSON.parse(stored)); } finally { globalThis.localStorage=oldStorage; globalThis.window=oldWindow; }
 });
 
