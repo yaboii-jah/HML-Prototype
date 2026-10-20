@@ -1,3 +1,4 @@
+import { initializedWorkspaceStorage } from './helpers/initialized-storage.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { blankWorkspace } from '../src/mock/fixtures/blank.ts';
@@ -197,7 +198,7 @@ test('role queues distinguish Accounting release from Finance review and disburs
 test('v11 is preserved until explicit reset; current payment and release history survives reload', async () => {
   const previousWindow = globalThis.window, previousStorage = globalThis.localStorage;
   const old = JSON.stringify({ ...submittedPO(), version: 11 }); const saved = new Map([['hml-constructsync-demo-v11', old]]);
-  globalThis.window = { addEventListener() {} }; globalThis.localStorage = { getItem: key => saved.get(key) ?? null, setItem: (key, value) => saved.set(key, value), removeItem: key => saved.delete(key) };
+  globalThis.window = { addEventListener() {} }; globalThis.localStorage = initializedWorkspaceStorage({ getItem: key => saved.get(key) ?? null, setItem: (key, value) => saved.set(key, value), removeItem: key => saved.delete(key) });
   try {
     const repo = new LocalDemoRepository(); assert.equal((await repo.load()).status, 'recovery'); assert.equal(saved.get('hml-constructsync-demo-v11'), old);
     assert.equal(saved.has('hml-constructsync-demo-v12'), false); await repo.reset(); assert.equal(saved.has('hml-constructsync-demo-v11'), false);

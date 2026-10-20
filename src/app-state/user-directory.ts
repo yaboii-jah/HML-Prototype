@@ -30,13 +30,14 @@ function parse(raw: string): Data {
   return data;
 }
 
-export function showcaseAssignments(raw: string, siteIds: string[], at: string): string {
+/** Retain credentials and account history while dropping access to removed projects. */
+export function clearProjectAssignments(raw: string): string {
   const data = parse(raw);
-  for (const user of data.users.filter(user => user.active && user.role === "Site Personnel")) {
-    user.siteIds = [...siteIds]; user.revision++; user.updatedAt = at;
-    data.activity.unshift({ id: crypto.randomUUID(), entity: user.id, entityType: "user", entityRef: user.name, eventType: "user.changed", action: "Demonstration project assignments installed", changedFields: ["Assigned projects"], actor: "Administrator", at });
+  let changed = false;
+  for (const user of data.users) if (user.siteIds?.length) {
+    user.siteIds = []; user.revision++; user.updatedAt = new Date().toISOString(); changed = true;
   }
-  return JSON.stringify(data);
+  return changed ? JSON.stringify(data) : raw;
 }
 
 export class LocalUserDirectory {

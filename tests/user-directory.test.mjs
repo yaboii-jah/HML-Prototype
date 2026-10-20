@@ -1,3 +1,4 @@
+import { initializedWorkspaceStorage } from './helpers/initialized-storage.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { LocalUserDirectory, USER_STORAGE_KEY } from '../src/app-state/user-directory.ts';
@@ -68,7 +69,7 @@ test('last Administrator, self-deactivation and stale account edits are blocked 
 test('directory changes invalidate sessions and captured commands; presenter switching uses specific active accounts', async () => {
   const { directory, admin, actor, storage, current } = await setup();
   const previousWindow = globalThis.window, previousStorage = globalThis.localStorage;
-  globalThis.window = { addEventListener() {} }; globalThis.localStorage = storage;
+  globalThis.window = { addEventListener() {} }; globalThis.localStorage = initializedWorkspaceStorage(storage);
   try {
     const user = directory.getSnapshot().users.find(user => user.role === 'Project Manager');
     const session = new LocalDemoSession(directory); session.select({ email: user.email, role: user.role, userId: user.id, revision: user.revision });
@@ -89,7 +90,7 @@ test('directory changes invalidate sessions and captured commands; presenter swi
 
 test('workspace reset preserves users and retired Management history without reactivating its session', async () => {
   const { directory, saved, storage } = await setup(), priorWindow = globalThis.window, priorStorage = globalThis.localStorage;
-  globalThis.window = { addEventListener() {} }; globalThis.localStorage = storage;
+  globalThis.window = { addEventListener() {} }; globalThis.localStorage = initializedWorkspaceStorage(storage);
   try {
     const state = seedDemo(); state.role = 'Management';
     state.activity.push({ id: 'retired', entity: state.sites[0].id, actor: 'Management', actorIdentity: { name: 'Historical manager', email: 'old@example.com', role: 'Management' }, action: 'Historical oversight', at: '2026-09-01T00:00:00Z' });

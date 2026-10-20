@@ -7,6 +7,7 @@ import { procurementReady } from "./request-archive.ts";
 import { paidTotal, poItems, poTotal, schedulableFor } from "./selectors.ts";
 import { reviewIsCurrent } from "./stock-suitability.ts";
 import { requestSourcing, transferDocumentGaps, transferUnscheduled } from "./stock-transfers.ts";
+import { isTransferSiteDelivery, transferReceivingRole, transferWarehouseAvailableFor } from "./transfer-delivery-flow.ts";
 import { openPaymentRequest, releaseBlocker } from "./workflow.ts";
 import type { DemoSnapshot, Role } from "./types.ts";
 
@@ -71,9 +72,12 @@ export function workflowActions(state: DemoSnapshot, requestId?: string): Workfl
       if (transfer.status === "approved" && transfer.lines.some(l => transferUnscheduled(state, transfer, l.id) > 0)) add("schedule-transfer", "Logistics", transfer, "Schedule transfer", href, `${transfer.origin.name} → ${transfer.destination.name}`, requestBlocker);
       const gaps = transferDocumentGaps(state, transfer);
       for (const trip of trips) {
-        if (trip.status === "expected") add("dispatch-transfer", "Logistics", trip, "Dispatch", href, "Dispatch this stock transfer trip", requestBlocker);
-        if (["dispatched", "confirmed"].includes(trip.status)) add(trip.status === "confirmed" ? "post-transfer" : "receive-transfer", "Site Personnel", trip, trip.status === "confirmed" ? "Post transferred stock" : "Receive transferred stock", href, `From ${transfer.origin.name}`, "", transfer.destinationSiteId);
-        if (["confirmed", "posted"].includes(trip.status) && gaps.some(g => g.startsWith(trip.ref))) add("transfer-evidence", "Site Personnel", trip, "Complete transfer receipts", href, gaps.filter(g => g.startsWith(trip.ref)).join(" "), "", transfer.destinationSiteId);
+        const tripHref = `${href}#trip-${trip.id}`, site = isTransferSiteDelivery(trip);
+        if (trip.status === "expected") add("dispatch-transfer", "Logistics", trip, "Dispatch", tripHref, `${trip.origin.name} → ${trip.destination.name}`, requestBlocker);
+        if (trip.status === "dispatched") add("receive-transfer", transferReceivingRole(trip), trip, site ? "Receive transferred stock" : "Receive transfer at warehouse", tripHref, `From ${trip.origin.name}`, "", transfer.destinationSiteId);
+        if (site && trip.status === "confirmed") add("post-transfer", "Site Personnel", trip, "Post transferred stock", tripHref, `From ${trip.origin.name}`, "", transfer.destinationSiteId);
+        if (!site && trip.lines.some(line => transferWarehouseAvailableFor(state, trip.id, line.transferLineId) > 0)) add("forward-transfer", "Logistics", trip, "Forward delivery", tripHref, `Warehouse → ${transfer.destination.name}`, requestBlocker);
+        if (["confirmed", "posted"].includes(trip.status) && gaps.some(g => g.startsWith(trip.ref))) add("transfer-evidence", transferReceivingRole(trip), trip, "Complete transfer receipts", tripHref, gaps.filter(g => g.startsWith(trip.ref)).join(" "), "", transfer.destinationSiteId);
       }
       if (trips.some(d => ["confirmed", "posted"].includes(d.status)) && transfer.documentReview?.status !== "Complete") add("review-transfer", "Accounting / Auditing", transfer, "Review transfer documents", href, "Complete the transfer document review", gaps.join(" "));
     }

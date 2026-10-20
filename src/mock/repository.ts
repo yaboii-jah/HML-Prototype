@@ -12,6 +12,7 @@ import { clearQuoteFiles } from "../features/requests/quote-files.ts";
 import { validBidReport } from "../domain/bid-reports.ts";
 import { validDeliveryReceipt } from "../domain/delivery-document.ts";
 import { validDocumentNumberingState } from "../domain/document-numbering.ts";
+import { EMPTY_WORKSPACE_MARKER, initializeEmptyWorkspace } from "./workspace-initialization.ts";
 
 const CURRENT_KEY = "hml-constructsync-demo-v12";
 const PREVIOUS_KEYS = ["hml-constructsync-demo-v11", "hml-constructsync-demo-v10", "hml-constructsync-demo-v9", "hml-constructsync-demo-v8", "hml-constructsync-demo-v7", "hml-constructsync-demo-v6", "hml-constructsync-demo-v5", "hml-constructsync-demo-v4", "hml-constructsync-demo-v3", "hml-constructsync-demo-v2", "hml-buildsync-demo-v2", "hml-buildsync-demo-v1"] as const;
@@ -100,11 +101,12 @@ export class LocalDemoRepository implements DemoRepository {
   private initialized = false;
   private bootstrap: Promise<RepositoryView> | undefined;
   private bootstrapFailed = false;
+  private setupComplete = false;
   private setup: () => Promise<void>;
   private listeners = new Set<() => void>();
 
   constructor(setup?: () => Promise<void>) {
-    this.setup = setup || (async () => { const { installShowcase } = await import("./showcase-install.ts"); await installShowcase(parseCurrent); });
+    this.setup = setup || initializeEmptyWorkspace;
     if (typeof window !== "undefined") window.addEventListener("storage", event => {
       if (event.key !== CURRENT_KEY && !PREVIOUS_KEYS.some(key => key === event.key)) return;
       this.initialized = false;
@@ -124,8 +126,9 @@ export class LocalDemoRepository implements DemoRepository {
   }
   private read(): RepositoryView {
     if (this.initialized) return this.view;
-    if (typeof window !== "undefined" && typeof indexedDB !== "undefined" && !this.bootstrapFailed) {
-      try { if (!localStorage.getItem("hml-constructsync-showcase-installed-v1")) { if (!this.bootstrap) queueMicrotask(() => { void this.load(); }); return this.view; } } catch {}
+    if (typeof window !== "undefined" && !this.setupComplete && !this.bootstrapFailed) {
+      try { this.setupComplete = localStorage.getItem(EMPTY_WORKSPACE_MARKER) === "1"; } catch {}
+      if (!this.setupComplete) { if (!this.bootstrap) queueMicrotask(() => { void this.load(); }); return this.view; }
     }
     this.initialized = true;
     if (typeof window === "undefined") return this.view;
@@ -159,11 +162,12 @@ export class LocalDemoRepository implements DemoRepository {
     }
   }
   async load(): Promise<RepositoryView> {
-    if (typeof window === "undefined" || typeof indexedDB === "undefined") return this.read();
+    if (typeof window === "undefined") return this.read();
     if (this.bootstrap) return this.bootstrap;
     this.bootstrap = (async () => {
       try {
         await this.setup();
+        this.setupComplete = true;
         this.initialized = false;
         const result = this.read(); this.notify(); return result;
       } catch (cause) {
@@ -195,16 +199,13 @@ export class LocalDemoRepository implements DemoRepository {
     return result;
   }
   async reset() {
-    if (typeof window !== "undefined" && typeof indexedDB !== "undefined") {
-      let prior: Record<string, unknown> = {};
-      try { const value = JSON.parse(localStorage.getItem("hml-constructsync-showcase-installed-v1") || "{}"); if (value && typeof value === "object" && !Array.isArray(value)) prior = value; } catch {}
-      localStorage.setItem("hml-constructsync-showcase-installed-v1", JSON.stringify({ ...prior, revision: 1, cleared: true }));
-    }
+    this.setupComplete = true;
     this.initialized = true;
     this.view = this.write(blankWorkspace());
     if (this.view.status === "ready") try { clearUsageDrafts(localStorage); } catch {}
     if (this.view.status === "ready") try { await clearQuoteFiles(); } catch {}
     if (this.view.status === "ready") try { PREVIOUS_KEYS.forEach(key => localStorage.removeItem(key)); } catch {}
+    if (this.view.status === "ready") try { localStorage.setItem(EMPTY_WORKSPACE_MARKER, "1"); } catch {}
     this.notify();
     return this.view;
   }

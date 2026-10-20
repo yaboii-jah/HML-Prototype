@@ -1,3 +1,4 @@
+import { initializedWorkspaceStorage } from './helpers/initialized-storage.mjs';
 import test from "node:test";
 import assert from "node:assert/strict";
 import ExcelJS from "exceljs";
@@ -123,7 +124,7 @@ test("current report history survives reload while old workflow records require 
   const previousWindow = globalThis.window, previousStorage = globalThis.localStorage;
   const saved = new Map([["hml-constructsync-demo-v9", JSON.stringify(old)]]);
   globalThis.window = { addEventListener() {} };
-  globalThis.localStorage = { getItem: key => saved.get(key) || null, setItem: (key, value) => saved.set(key, value), removeItem: key => saved.delete(key) };
+  globalThis.localStorage = initializedWorkspaceStorage({ getItem: key => saved.get(key) || null, setItem: (key, value) => saved.set(key, value), removeItem: key => saved.delete(key) });
   try {
     const blocked = new LocalDemoRepository(); assert.equal((await blocked.load()).status, "recovery");
     assert.equal(saved.has("hml-constructsync-demo-v9"), true);

@@ -41,7 +41,7 @@ export function AssignmentNotice() {
 
 export function SetupFailure() {
   const { message, retrySetup } = useDemo();
-  return <div className="state-screen"><div className="state-card"><span className="eyebrow">WORKSPACE SETUP</span><h1>Setup could not finish</h1><p>{message}</p><p>Existing records and files have been preserved. Retry setup to continue.</p><button className="button primary" onClick={() => void retrySetup()}>Retry setup</button></div></div>;
+  return <div className="state-screen"><div className="state-card"><span className="eyebrow">WORKSPACE SETUP</span><h1>Setup could not finish</h1><p>{message}</p><p>Retry setup to finish preparing the workspace before using it.</p><button className="button primary" onClick={() => void retrySetup()}>Retry setup</button></div></div>;
 }
 
 export function MissingRecord({ name, listHref }: { name: string; listHref: string }) {

@@ -1,3 +1,4 @@
+import { initializedWorkspaceStorage } from './helpers/initialized-storage.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { applyCommand } from '../src/domain/commands.ts';
@@ -96,7 +97,7 @@ test('project filtering resolves explicit legacy links and preserves removed-rec
 test('new admin audit metadata survives schema-12 reload without rewriting stored history', async () => {
   const state=execute(seedDemo(),{type:'updateSite',siteId:'site-a',name:'Updated project',location:'Pasig',budget:800000});
   const raw=JSON.stringify(state), priorWindow=globalThis.window, priorStorage=globalThis.localStorage;
-  let writes=0; globalThis.window={addEventListener(){}}; globalThis.localStorage={getItem:key=>key==='hml-constructsync-demo-v12'?raw:null,setItem(){writes++;}};
+  let writes=0; globalThis.window={addEventListener(){}}; globalThis.localStorage=initializedWorkspaceStorage({getItem:key=>key==='hml-constructsync-demo-v12'?raw:null,setItem(){writes++;}});
   try { const view=await new LocalDemoRepository().load(); assert.equal(view.status,'ready'); assert.equal(writes,0); assert.deepEqual(view.snapshot.activity,JSON.parse(raw).activity); }
   finally {globalThis.window=priorWindow;globalThis.localStorage=priorStorage;}
 });

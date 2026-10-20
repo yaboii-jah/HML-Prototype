@@ -1,3 +1,4 @@
+import { initializedWorkspaceStorage } from './helpers/initialized-storage.mjs';
 import test from "node:test";
 import assert from "node:assert/strict";
 import { seedDemo } from "../src/mock/fixtures/seed.ts";
@@ -155,6 +156,6 @@ test("PO PDF and reload retain effective supplier and automatic financial settin
   assert.match(texts, /Accounting supplier change/); assert.match(texts, /10,858\.90/); assert.match(texts, /357\.14/); assert.match(texts, /1,224,980\.34/);
   const originalStorage = globalThis.localStorage, originalWindow = globalThis.window, saved = new Map([["hml-constructsync-demo-v12", JSON.stringify(state)]]);
   globalThis.window = { addEventListener() {} };
-  globalThis.localStorage = { getItem: key => saved.get(key) ?? null, setItem: (key, value) => saved.set(key, value), removeItem: key => saved.delete(key) };
+  globalThis.localStorage = initializedWorkspaceStorage({ getItem: key => saved.get(key) ?? null, setItem: (key, value) => saved.set(key, value), removeItem: key => saved.delete(key) });
   try { const repository = new LocalDemoRepository(); await repository.load(); assert.equal(poTotal(repository.getSnapshot().snapshot, repository.getSnapshot().snapshot.pos[0]), 1224980.34); } finally { globalThis.localStorage = originalStorage; globalThis.window = originalWindow; }
 });

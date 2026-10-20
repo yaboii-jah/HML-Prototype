@@ -5,6 +5,7 @@ import { coordinatedPOs } from "./payment-coordination.ts";
 import { isExternalPayment } from "./full-disbursement.ts";
 import { accountingNextAction } from "./workflow.ts";
 import { transferUnscheduled } from "./stock-transfers.ts";
+import { transferWarehouseHeldFor } from "./transfer-delivery-flow.ts";
 import type { DemoSnapshot } from "./types.ts";
 
 export type Task = { title: string; detail: string; href: string; siteId?: string; waiting: number };
@@ -35,7 +36,7 @@ export function dashboardMetrics(state: DemoSnapshot, canReadProject: (id?: stri
     accountingReviews: pos.filter(p => ["submitted", "hold"].includes(p.status)).length,
     financeCoordination: coordinatedPOs(state).filter(po => pos.some(value => value.id === po.id)).length,
     financeReviews: state.paymentRequests.filter(p => !isExternalPayment(state.pos.find(po => po.id === p.poId)) && ["submitted", "hold", "approved"].includes(p.status) && pos.some(po => po.id === p.poId)).length,
-    openDeliveryLines: (state.stockTransfers || []).filter(transfer => matches(transfer.destinationSiteId) && transfer.status === "approved").reduce((total, transfer) => total + transfer.lines.filter(line => transferUnscheduled(state, transfer, line.id) > 0 || (state.transferDeliveries || []).some(delivery => delivery.transferId === transfer.id && ["expected", "dispatched"].includes(delivery.status) && delivery.lines.some(value => value.transferLineId === line.id))).length, 0) + pos.filter(p => p.status === "released").reduce((sum,p) => sum + (requestForPO(state,p)?.items.filter(item => outstandingFor(state,p,item.id) > 0).length || 0), 0),
+    openDeliveryLines: (state.stockTransfers || []).filter(transfer => matches(transfer.destinationSiteId) && transfer.status === "approved").reduce((total, transfer) => total + transfer.lines.filter(line => transferUnscheduled(state, transfer, line.id) > 0 || (state.transferDeliveries || []).some(delivery => delivery.transferId === transfer.id && (["expected", "dispatched"].includes(delivery.status) && delivery.lines.some(value => value.transferLineId === line.id) || transferWarehouseHeldFor(state, delivery.id, line.id) > 0))).length, 0) + pos.filter(p => p.status === "released").reduce((sum,p) => sum + (requestForPO(state,p)?.items.filter(item => outstandingFor(state,p,item.id) > 0).length || 0), 0),
     commitment: state.sites.filter(s=>matches(s.id)).reduce((sum,s)=>sum+budgetFor(state,s.id).committed,0),
   };
 }

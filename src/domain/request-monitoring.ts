@@ -1,5 +1,6 @@
 import { workflowActions, type WorkflowAction } from "./workflow-actions.ts";
 import { transferQuantityFor, transfersForRequest, deliveriesForTransfer, transferUnscheduled } from "./stock-transfers.ts";
+import { isTransferSiteDelivery, transferWarehouseAvailableFor, transferWarehouseHeldFor } from "./transfer-delivery-flow.ts";
 import { creditOverdue } from "./credit-terms.ts";
 import { servedPO, requiresPMReview, isExternalPayment } from "./full-disbursement.ts";
 import { auditRecords, type AuditRecord } from "./audit.ts";
@@ -53,10 +54,10 @@ export function requestMonitoring(state: DemoSnapshot, requestId: string, record
   const forFinance = openPayments.filter(payment => ["submitted", "hold", "approved"].includes(payment.status)).length;
   const toDisburse = openPayments.filter(payment => payment.status === "approved").length;
   const expected = activeBatches.filter(batch => batch.status === "expected").length, transit = activeBatches.filter(batch => batch.status === "dispatched").length;
-  const heldAtWarehouse = activeBatches.filter(batch => batch.lines.some(line => warehouseHeldFor(state, batch.id, line.itemId) > 0)).length;
-  const forwardable = activeBatches.filter(batch => batch.lines.some(line => warehouseAvailableFor(state, batch.id, line.itemId) > 0)).length;
+  const heldAtWarehouse = activeBatches.filter(batch => batch.lines.some(line => warehouseHeldFor(state, batch.id, line.itemId) > 0)).length + transferTrips.filter(trip => trip.lines.some(line => transferWarehouseHeldFor(state, trip.id, line.transferLineId) > 0)).length;
+  const forwardable = activeBatches.filter(batch => batch.lines.some(line => warehouseAvailableFor(state, batch.id, line.itemId) > 0)).length + transferTrips.filter(trip => trip.lines.some(line => transferWarehouseAvailableFor(state, trip.id, line.transferLineId) > 0)).length;
   const supplierCapacity = released.some(po => poItems(state, po).some(item => schedulableFor(state, po, item.id) > 0));
-  const awaitingPosting = activeBatches.filter(batch => isSiteBatch(batch) && batch.status === "confirmed").length + transferTrips.filter(value => value.status === "confirmed").length;
+  const awaitingPosting = activeBatches.filter(batch => isSiteBatch(batch) && batch.status === "confirmed").length + transferTrips.filter(value => isTransferSiteDelivery(value) && value.status === "confirmed").length;
   const receiptIssues = [...activeBatches, ...transferTrips.filter(value => ["confirmed", "posted"].includes(value.status))].filter(batch => batch.lines.some(line => line.accepted < line.expected && line.issue.trim())).length;
   const archivePending = request.archive?.status === "pending" || active.some(po => po.archive?.status === "pending");
   const hasBlocker = request.status === "returned" || !!request.correction || poHeld > 0 || poReturned > 0 || paymentHeld > 0 || paymentReturned > 0 || archivePending || receiptIssues > 0 && !fullCoverage(coverage, "accepted");
