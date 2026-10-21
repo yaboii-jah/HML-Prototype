@@ -38,7 +38,7 @@ export function PoContentsFields({ state, po, onChange, editSupplier = true }: {
       </MaterialDetailsRow>)}
       {!lines.length && <tr><td colSpan={6}>No materials. Add an MRF material to this PO.</td></tr>}
     </tbody></table></div>
-    <button type="button" className="button secondary" onClick={() => { const item = request.items.find(value => available(value.id) > 0); if (item) onChange({ ...po, lines: [...lines, { itemId: item.id, quoteLineId: newId("po-line"), quantity: Math.min(1, available(item.id)), unitPrice: 0, discountType: "none", discountValue: 0, fixedDiscountConfirmed: true }] }); }}>Add MRF material</button>
+    <button type="button" className="button secondary po-add-action" onClick={() => { const item = request.items.find(value => available(value.id) > 0); if (item) onChange({ ...po, lines: [...lines, { itemId: item.id, quoteLineId: newId("po-line"), quantity: Math.min(1, available(item.id)), unitPrice: 0, discountType: "none", discountValue: 0, fixedDiscountConfirmed: true }] }); }}>Add MRF material</button>
     <Field label="PO notes"><textarea name="notes" value={po.notes} onChange={event => onChange({ ...po, notes: event.target.value })}/></Field>
     <h3 className="subheading">PO charges and deductions</h3>
     {(po.adjustments || []).map(value => <div className="po-adjustment-row" key={value.id}>
@@ -51,7 +51,7 @@ export function PoContentsFields({ state, po, onChange, editSupplier = true }: {
       <label className="quote-check"><input type="checkbox" checked={value.confirmed} onChange={event => editCharge(value.id, { confirmed: event.target.checked })}/> Confirm</label>
       <button type="button" className="text-link" onClick={async () => { if (await confirm("Remove this charge?", `${value.label || "Unnamed charge"} will be removed from the current PO edit.`, "Remove charge", true)) onChange({ ...po, adjustments: po.adjustments?.filter(charge => charge.id !== value.id) }); }}>Remove charge</button>
     </div>)}
-    <button type="button" className="button secondary" onClick={() => onChange({ ...po, adjustments: [...(po.adjustments || []), { id: newId("adjustment"), label: "", kind: "other", calculation: "fixed", value: 0, included: true, taxable: true, confirmed: false }] })}>Add charge or deduction</button>
+    <button type="button" className="button secondary po-add-action" onClick={() => onChange({ ...po, adjustments: [...(po.adjustments || []), { id: newId("adjustment"), label: "", kind: "other", calculation: "fixed", value: 0, included: true, taxable: true, confirmed: false }] })}>Add charge or deduction</button>
     <MaterialDetailsModal item={selectedItem} onClose={() => setSelectedLineId("")}>{selectedLine && <div className="data-rows"><div><span>PO quantity</span><strong>{selectedLine.quantity} {selectedItem?.unit}</strong></div><div><span>Unit price</span><strong>{money(selectedLine.unitPrice)}</strong></div><div><span>Discount</span><strong>{selectedLine.discountValue || 0} ({selectedLine.discountType || "none"})</strong></div><div><span>Calculated line total</span><strong>{money(poLineTotal(selectedLine))}</strong></div></div>}</MaterialDetailsModal>
     {confirmation}
   </>;

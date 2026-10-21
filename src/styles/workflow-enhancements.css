@@ -53,6 +53,7 @@ details[data-sticky-pinned="true"]>summary{border-radius:var(--radius) var(--rad
 .has-error>.archive-state-icon{color:var(--bad)}
 @keyframes archive-spin{to{transform:rotate(360deg)}}
 .po-edit-form{padding-bottom:var(--space-lg);max-width:1100px}
+.po-add-action{display:flex;width:fit-content;margin-block:var(--space-md)}
 .po-edit-actions{position:sticky;bottom:var(--space-md);z-index:20;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);padding:var(--space-md);box-shadow:var(--shadow)}
 .po-edit-actions .po-action-total{margin-right:auto;color:var(--ink)}
 .po-edit-actions .po-action-total small{display:block;color:var(--muted)}
