@@ -2,7 +2,7 @@
 
 > **Living document:** This is the canonical, implementation-aligned context for the application. Update this file in the same change whenever a major implementation changes the product scope, business workflow, domain model, permissions, routes, persistence, seeded walkthrough, architecture, or verification strategy. Do not record small visual polish, copy edits, or isolated bug fixes unless they change one of those areas.
 
-**Last verified:** 2026-10-15
+**Last verified:** 2026-10-21
 **Application version:** Prototype (`package.json` 0.1.0)
 **State schema:** `DemoSnapshot` version 12
 
@@ -62,7 +62,7 @@ See [DEMO_WORKSPACE.md](DEMO_WORKSPACE.md) for data counts, department walkthrou
 | Finance | Process revised upfront and external-credit payments outside the app. For existing Finance-managed POs, prioritize and approve/hold/return/reject payment requests; separately record actual disbursements for approved requests. Returns go to Accounting. |
 | Logistics | Schedule and dispatch source-approved site transfers without a PO/payment gate. Schedule and dispatch supplier/site or supplier/warehouse batches; forward confirmed warehouse quantities in multiple batches to their original PO/site. |
 | Accounting | Review PO finances and payment arrangement, approve within budget or return to Procurement, archive approved POs, attach/archive PO-level payment proof and verify full external payment for revised upfront POs; verify partial/full external-credit payments with proof and a due date; prepare payment requests for existing Finance-managed POs and release eligible POs to Logistics. Review delivery evidence separately; make justified stock adjustments. |
-| Administrator | Manage named users, Site Personnel project assignments, access status and password resets; view Reports and exceptions; add/edit projects, maintain scope allocations and remove unused scopes, confirm and save validated Drive mappings, inspect filtered activity, retry archives, with normal workspace clearing temporarily disabled. |
+| Administrator | Manage named users, Site Personnel project assignments, access status and password resets; view Reports and exceptions; add/edit projects, maintain scope allocations and remove unused scopes, confirm and save validated Drive mappings, inspect filtered activity, retry archives, and clear the browser workspace after explicit confirmation, preserving accounts and Google Drive archives. |
 
 The domain command layer in `src/domain/commands.ts` is the authority for permissions and transition validation. Hiding an action in the UI is not sufficient authorization.
 
@@ -258,7 +258,7 @@ Keep business rules out of page components where practical. New state transition
 - Scope budgets add a `scopes` collection and optional MRF `scopeId` within schema 12. Saved v12 records without scopes load with an empty collection without storage writes, guessed assignments or historical changes. Unassigned records display explicitly; new submissions and PO approvals require a valid scope. Existing approved/released workflows remain operational. The presenter will manually clear the prior walkthrough before fresh scope setup.
 - Optional batch routing, parent links, location snapshots and immutable scheduling/dispatch/receiving/posting identity metadata extend schema 12. Missing legacy routing means the existing direct-site flow; missing operation timestamps/names remain explicitly unrecorded. New routing metadata is validated on reload. Receipt archive versions, optional PO-level document association, signed-receipt version bindings and review history extend schema 12 without resetting existing records. Historical receipts are captured only through an explicit archive action; preview remains readonly.
 - If storage is unavailable, the app continues with volatile in-tab state and displays a warning.
-- Clear workspace restores the empty baseline, removes recognized legacy keys, and clears browser-local MRF and quotation files. Existing saved work remains until explicitly cleared.
+- Clear workspace restores the empty baseline, removes projects, suppliers, transactions, inventory, usage/stock drafts, recognized legacy keys, browser-local documents/generated caches and old demonstration backups. Accounts, credentials, account-management history, interface preferences and Google Drive files are preserved; project assignments are removed. The Administrator stays signed in and the empty workspace persists after refresh. Active archive jobs and duplicate submissions block clearing. Cleanup errors are reported without success and permit retry; a partial failure may already have removed some data. The provider reset action returns a success boolean.
 - Old query-string links using `?view=&kind=&id=` redirect to current routes through `src/domain/legacy-links.ts`.
 
 Any incompatible snapshot change requires a schema-version decision and a migration or an explicitly documented reset strategy.
@@ -283,8 +283,8 @@ Any incompatible snapshot change requires a schema-version decision and a migrat
 | `/accounting`, `/accounting/[poId]` | All POs grouped by MRF; PO/budget review, payment preparation, Logistics release and supporting documents. |
 | `/reports` | Full cross-project reporting for every signed-in role except Site Personnel; existing transaction-editing permissions still apply. |
 | `/sign-in` | Email/password department access with no predefined account hints. |
-| `/admin` | Project creation, Drive folder mapping and activity; no workspace reset control. |
-| `/admin/maintenance` | Temporarily retired; redirects to `/admin`. Normal workspace clearing is hidden. |
+| `/admin` | Project creation, Drive folder mapping, users, activity and Administrator-only confirmed workspace clearing. |
+| `/admin/maintenance` | Redirects to `/admin`, where Administrator can clear the workspace. |
 | `/api/drive/validate`, `/api/drive/archive`, `/api/drive/archive/chunk`, `/api/drive/files` | Protected project folder validation, resumable PDF archive, and project folder browsing/search. |
 | `/api/documents/preview` | Generates the same MRF/PO PDFs used for archival for browser preview, download and printing. |
 | `/api/bid-comparisons`, `/api/drive/bid-comparisons`, `/api/drive/bid-comparisons/chunk` | Server XLSX/PDF generation, protected report archival/download, and dedicated resumable uploads bound to artifact type. |
@@ -372,6 +372,7 @@ When updating it:
 
 | Date | Context change |
 | --- | --- |
+| 2026-10-21 | Enabled confirmed Administrator workspace clearing, preserving accounts and Drive archives while clearing all local operational data, documents, drafts, backups and project assignments; added active-job blocking and cleanup failure/retry checks. |
 | 2026-10-15 | Added automatic one-time populated workspaces, 5 projects/30 MRFs/45 POs/37 supplier batches/60 stock balances, editable current workflows, real local documents and archive adapters, preserved account assignments/credentials, original-data backups and interrupted-install recovery. |
 | 2026-10-14 | Fixed scroll-dependent register height growth, moved Accounting MRF navigation into its summary to remove PO spacing, and shortened visible Accounting labels while preserving stored role identifiers and permissions. |
 | 2026-10-14 | Increased the minimum height of shared main tables, including Delivery batches, to 480px on desktop and 420px on mobile while preserving compact embedded tables. |
@@ -430,7 +431,7 @@ Administrator manages browser-local users in Administration > Users, with search
 
 The seven initial accounts bootstrap once into `hml-constructsync-users-v1`; this directory and its separate user-management history survive workspace reset. The session tracks stable user ID and revision. Role, email, password and status changes invalidate existing sessions and captured business commands, including changes from another tab. Name-only changes preserve historical actor snapshots and apply to subsequent actions. Corrupt directories require recovery without silently overwriting saved accounts.
 
-Management is retired from sign-in, navigation and active commands. Existing Management audit identities remain readable; an existing workspace selected as Management loads without losing records and selects Project Manager until sign-in reconciles its role. Presenter switching lists active named users and remains password-free. Project Manager can add/edit projects, budgets, scopes and Drive setup through Projects. Project Manager, Procurement, Finance, Logistics, Accounting / Auditing, and Administrator can view the same complete Operations report, including budgets, payments, stock, and exceptions; Site Personnel cannot open Reports. Report access does not grant additional transaction-editing permissions. User management remains Administrator-only; the normal maintenance reset is temporarily hidden and its route redirects to Administration. These controls simulate access within a local prototype and do not provide backend authentication.
+Management is retired from sign-in, navigation and active commands. Existing Management audit identities remain readable; an existing workspace selected as Management loads without losing records and selects Project Manager until sign-in reconciles its role. Presenter switching lists active named users and remains password-free. Project Manager can add/edit projects, budgets, scopes and Drive setup through Projects. Project Manager, Procurement, Finance, Logistics, Accounting / Auditing, and Administrator can view the same complete Operations report, including budgets, payments, stock, and exceptions; Site Personnel cannot open Reports. Report access does not grant additional transaction-editing permissions. User management and confirmed workspace clearing remain Administrator-only; the maintenance route redirects to Administration. These controls simulate access within a local prototype and do not provide backend authentication.
 
 
 ### External credit/terms payments (2026-10-09)

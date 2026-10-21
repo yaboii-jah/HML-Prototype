@@ -4,11 +4,12 @@ import type { ArchiveProgress, ArchiveProgressListener } from "@/src/domain/arch
 import type { OperationTarget } from "@/src/domain/types";
 
 type Job = ArchiveProgress & { id: string; label: string; target?: OperationTarget; error?: string };
-type ArchiveContext = { jobs: Job[]; perform: <T>(id: string, label: string, task: (progress: ArchiveProgressListener) => Promise<T>, target?: OperationTarget) => Promise<T>; dismiss: (id: string) => void };
+type ArchiveContext = { jobs: Job[]; isRunning: () => boolean; perform: <T>(id: string, label: string, task: (progress: ArchiveProgressListener) => Promise<T>, target?: OperationTarget) => Promise<T>; dismiss: (id: string) => void };
 const Context = createContext<ArchiveContext | null>(null);
 export function ArchiveProvider({ children }: { children: ReactNode }) {
   const [jobs, setJobs] = useState<Job[]>([]);
   const active = useRef(new Map<string, Promise<unknown>>());
+  const isRunning = useCallback(() => active.current.size > 0, []);
   const perform = useCallback(<T,>(id: string, label: string, task: (progress: ArchiveProgressListener) => Promise<T>, target?: OperationTarget): Promise<T> => {
     const running = active.current.get(id);
     if (running) return running as Promise<T>;
@@ -30,7 +31,7 @@ export function ArchiveProvider({ children }: { children: ReactNode }) {
     return promise;
   }, []);
   const dismiss = (id: string) => setJobs(current => current.filter(job => job.id !== id || active.current.has(id)));
-  return <Context.Provider value={{ jobs, perform, dismiss }}>{children}</Context.Provider>;
+  return <Context.Provider value={{ jobs, isRunning, perform, dismiss }}>{children}</Context.Provider>;
 }
 export function useArchive() {
   const value = useContext(Context);
