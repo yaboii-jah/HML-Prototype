@@ -165,6 +165,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             setAccountOpen(false);
             setNotificationsOpen(false);
             setMenuOpen(false);
+            router.replace("/dashboard");
             requestAnimationFrame(() => document.querySelector<HTMLButtonElement>(".masthead-account")?.focus({ preventScroll: true }));
           }}><span aria-hidden="true">{account.name.split(" ").map(part => part[0]).slice(0, 2).join("")}</span><div><strong>{roleLabel(account.role)}</strong><small>{account.name}</small></div></button>)}</div>
         </section>

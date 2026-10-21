@@ -528,14 +528,15 @@ try {
   await wait("return !document.querySelector('.account-modal[open]');");
   assert.equal(await run("return document.activeElement === document.querySelector('.masthead-account');"), true, "Closing the account dialog restores focus");
   const beforeSwitching = await state();
-  const switchLocation = await run("return location.pathname+location.search+location.hash;");
   for (const account of [...ACCOUNT_FIXTURES.slice(1), ACCOUNT_FIXTURES[0]]) {
+    await navigate(account.role === 'Site Personnel' ? '/admin' : '/projects');
+    await run("history.replaceState(history.state,'','?switch-check=1#switch-check');return true;");
     await run("document.querySelector('.masthead-account').click();return true;");
     await wait("return !!document.querySelector('.account-modal[open]');");
     await click(account.name, '.role-options button');
-    await wait(`return !document.querySelector('.account-modal[open]')&&JSON.parse(localStorage.getItem(${JSON.stringify(SESSION_STORAGE_KEY)})).role===${JSON.stringify(account.role)}&&document.querySelector('.account-label strong')?.textContent===${JSON.stringify(account.name)};`);
+    await wait(`return location.pathname==='/dashboard'&&!document.querySelector('.account-modal[open]')&&JSON.parse(localStorage.getItem(${JSON.stringify(SESSION_STORAGE_KEY)})).role===${JSON.stringify(account.role)}&&document.querySelector('.account-label strong')?.textContent===${JSON.stringify(account.name)};`);
     assert.deepEqual(await run(`return JSON.parse(localStorage.getItem(${JSON.stringify(SESSION_STORAGE_KEY)}));`), { email: account.email, role: account.role, userId: 'bootstrap-' + account.role.toLowerCase().replace(/[^a-z]+/g, '-'), revision: await run(`return JSON.parse(localStorage.getItem('hml-constructsync-users-v1')).users.find(u=>u.email===${JSON.stringify(account.email)}).revision;`) });
-    assert.equal(await run("return location.pathname+location.search+location.hash;"), switchLocation, 'Switching keeps the current workspace page');
+    assert.equal(await run("return location.pathname+location.search+location.hash;"), '/dashboard', 'Switching opens the dashboard without the previous query or fragment');
     assert.deepEqual(await state(), { ...beforeSwitching, role: account.role }, 'Switching preserves all records, history and project context');
     await wait("return document.activeElement === document.querySelector('.masthead-account');");
   }
