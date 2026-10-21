@@ -14,7 +14,7 @@ The workspace starts empty. Sign in as Administrator or Project Manager to creat
 | Isabel Cruz | Accounting / Auditing | hml.constructsync.accounting@gmail.com | HML!ACCT2026 |
 | Daniel Garcia | Administrator | hml.constructsync.admin@gmail.com | HML!ADMIN2026 |
 
-After signing in, open **Account → Switch department** on any workspace page to change departments without entering another password. The selected user's name, email, permissions and audit identity change together; the current page, project filter, saved records and files remain available. Auth pages have no switcher. You can still sign out and sign in with the next department's credentials. Sessions survive refresh and browser restart until sign-out; prior role-only sessions require one new sign-in without clearing workspace data.
+After signing in, open **Account → Switch department** on any workspace page to change departments without entering another password. The selected user's name, email, permissions and audit identity change together; the dashboard opens for the selected account, while the project filter, saved records and files remain available. Auth pages have no switcher. You can still sign out and sign in with the next department's credentials. Sessions survive refresh and browser restart until sign-out; prior role-only sessions require one new sign-in without clearing workspace data.
 
 Workspace clearing is intentionally absent from routine Administration. `/admin/maintenance` redirects to Administration. Temporary setup failures offer **Retry setup**; only genuine unreadable-data recovery exposes a confirmed Administrator restore/clear action. Keep the same origin and browser profile throughout the demonstration.
 

@@ -70,7 +70,7 @@ try {
   await call('Emulation.setDeviceMetricsOverride',{width:1440,height:900,deviceScaleFactor:1,mobile:false});
   await click('.masthead-account');await wait("return !!document.querySelector('.role-options');");
   assert.equal(await run("return document.querySelector('.role-options').textContent.includes('Management');"),false);
-  await run("[...document.querySelectorAll('.role-options button')].find(b=>b.textContent.includes('Browser manager')).click();return true;");await wait("return JSON.parse(localStorage.getItem('hml-constructsync-session-v2')).email==='browser.manager@example.com';");
+  await run("[...document.querySelectorAll('.role-options button')].find(b=>b.textContent.includes('Browser manager')).click();return true;");await wait("return location.pathname==='/dashboard'&&JSON.parse(localStorage.getItem('hml-constructsync-session-v2')).email==='browser.manager@example.com'&&document.querySelector('.account-label strong')?.textContent==='Browser manager'&&!document.querySelector('.account-modal[open]');");
   await navigate('/projects');await add('PM-created project');
   assert.equal(await run("return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).sites[0].driveFolderId;"),'automatic-project-folder');
   await press('Project');await press('Edit project');await fill('.record-dialog[open] .admin-edit-project .field:last-child input','125000.50');await press('Save project');await accept();await wait("return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).sites[0].budget===125000.5;");
