@@ -100,6 +100,71 @@ try {
   assert.equal((await state()).showcase.installationId, 'old-browser-install');
   await press('Retry setup'); await wait("return !!document.querySelector('#signin-email');");
   empty(await state()); assert.equal((await directory()).users.length, previousDirectory.users.length);
-  await signIn(); empty(await state()); assert.deepEqual(exceptions, []);
+  await signIn(); empty(await state());
+  // Explicit Administrator clearing uses the same empty baseline after initialization.
+  const manual = { ...old, role: 'Administrator' };
+  const manualDirectory = await directory();
+  manualDirectory.users.find(user => user.role === 'Site Personnel').siteIds = manual.sites.map(site => site.id);
+  await run(`localStorage.setItem('hml-constructsync-demo-v12',${JSON.stringify(JSON.stringify(manual))});localStorage.setItem('hml-constructsync-users-v1',${JSON.stringify(JSON.stringify(manualDirectory))});localStorage.setItem('constructsync-usage-draft-v1/manual','draft');localStorage.setItem('constructsync-stock-draft-v1/manual','draft');`);
+  await navigate('/admin'); await wait("return !!document.querySelector('.admin-projects');");
+  const snapshotBeforeCancel = await state();
+  await run("const b=[...document.querySelectorAll('.page-header button')].find(b=>b.textContent==='Clear workspace');b.click();b.click();");
+  await wait("return !!document.querySelector('.confirm-dialog[open]');");
+  assert.equal(await run("return document.querySelectorAll('.confirm-dialog[open]').length;"), 1);
+  await press('Cancel', '.confirm-dialog[open]');
+  assert.deepEqual(await state(), snapshotBeforeCancel, 'Cancel preserves all operational records');
+  assert.deepEqual(await directory(), manualDirectory, 'Cancel preserves accounts and assignments');
+  await press('Clear workspace', '.page-header'); await wait("return !!document.querySelector('.confirm-dialog[open]');");
+  await run("const user=JSON.parse(localStorage.getItem('hml-constructsync-users-v1')).users.find(u=>u.role==='Finance');const key='hml-constructsync-session-v2';localStorage.setItem(key,JSON.stringify({email:user.email,role:user.role,userId:user.id,revision:user.revision}));window.dispatchEvent(new StorageEvent('storage',{key}));");
+  await wait("return !document.querySelector('.confirm-dialog[open]')&&document.querySelector('h1')?.textContent==='Access unavailable';");
+  assert.deepEqual((await state()).sites, snapshotBeforeCancel.sites, 'Changing accounts cancels the pending clear');
+  assert.equal(await run("return [...document.querySelectorAll('button')].some(b=>b.textContent==='Clear workspace');"), false, 'Other departments cannot clear');
+  await run("document.querySelector('.masthead-account').click();"); await wait("return !!document.querySelector('.account-modal[open]');");
+  await run(`document.querySelectorAll('.role-options button').forEach(b=>{if(b.querySelector('small')?.textContent===${JSON.stringify(administrator.name)})b.click();});`);
+  await wait("return location.pathname==='/dashboard';"); await navigate('/admin');
+  // Hold an actual folder archive while checking that the clear control is disabled.
+  await run("const fetchOriginal=window.fetch;window.__holdFolder=true;window.fetch=(input,init)=>input==='/api/drive/projects'&&window.__holdFolder?new Promise(resolve=>{window.__finishFolder=()=>resolve(Response.json({id:'held-folder'}));}):fetchOriginal(input,init);");
+  const addProject = async name => {
+    await press('Add project', '.page-header');
+    for (const [key, value] of Object.entries({ name, documentCode: name.toUpperCase().replaceAll(' ', '-'), location: 'Manila', budget: '10000' })) await fill(`.admin-add-project [name="${key}"]`, value);
+    await press('Add project', '.admin-add-project'); await wait("return !!document.querySelector('.confirm-dialog[open]');"); await press('Add project', '.confirm-dialog[open]');
+  };
+  await addProject('Archive check');
+  await wait("return !!window.__finishFolder;");
+  assert.equal(await run("return [...document.querySelectorAll('.page-header button')].find(b=>b.textContent==='Clear workspace').disabled;"), true, 'Active archive blocks clearing');
+  await run("window.__holdFolder=false;window.__finishFolder();");
+  await wait("return [...document.querySelectorAll('.page-header button')].some(b=>b.textContent==='Clear workspace'&&!b.disabled);");
+  await navigate('/admin');
+  await run("for(const [name,store,keyPath] of [['hml-quotation-files','files',undefined],['hml-constructsync-showcase-backups','backups','id']]){const db=await new Promise((resolve,reject)=>{const r=indexedDB.open(name,1);r.onupgradeneeded=()=>r.result.createObjectStore(store,keyPath?{keyPath}:undefined);r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);});await new Promise((resolve,reject)=>{const tx=db.transaction(store,'readwrite');if(keyPath)tx.objectStore(store).put({id:'manual-backup',files:[new Blob(['bytes'])]});else tx.objectStore(store).put(new Blob(['bytes']),'manual-file');tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);});db.close();}");
+  const clearAndConfirm = async () => { await press('Clear workspace', '.page-header'); await wait("return !!document.querySelector('.confirm-dialog[open]');"); await press('Clear workspace', '.confirm-dialog[open]'); };
+  await run("const originalClear=IDBObjectStore.prototype.clear;window.__failClear=true;IDBObjectStore.prototype.clear=function(){if(this.name==='files'&&window.__failClear){window.__failClear=false;throw new Error('Simulated document cleanup failure');}return originalClear.call(this);};");
+  const beforeFailure = await state(), usersBeforeClear = await directory();
+  await clearAndConfirm(); await wait("return document.querySelector('.toast-error')?.textContent.includes('Workspace clearing did not finish');");
+  assert.deepEqual(await state(), beforeFailure, 'File failure does not claim or publish a successful reset');
+  assert.equal(await fileCount(), 1);
+  const sessionBeforeClear = await run("return localStorage.getItem('hml-constructsync-session-v2');");
+  await clearAndConfirm(); await wait("return document.querySelector('.toast-success')?.textContent.includes('Workspace cleared');");
+  empty(await state()); assert.equal((await state()).role, 'Administrator');
+  assert.equal(await run("return localStorage.getItem('hml-constructsync-session-v2');"), sessionBeforeClear);
+  assert.equal(await fileCount(), 0);
+  assert.equal(await run("return (await indexedDB.databases()).some(db=>db.name==='hml-constructsync-showcase-backups');"), false);
+  for (const key of ['constructsync-usage-draft-v1/manual', 'constructsync-stock-draft-v1/manual']) assert.equal(await run(`return localStorage.getItem(${JSON.stringify(key)});`), null);
+  const usersAfterClear = await directory();
+  assert.equal(usersAfterClear.users.length, usersBeforeClear.users.length);
+  assert.deepEqual(usersAfterClear.activity, usersBeforeClear.activity);
+  assert.deepEqual(usersAfterClear.users.map(user=>user.credential), usersBeforeClear.users.map(user=>user.credential));
+  assert.ok(usersAfterClear.users.every(user=>!user.siteIds?.length));
+  await navigate('/admin'); empty(await state());
+  for (const width of [375, 1440]) {
+    await call('Emulation.setDeviceMetricsOverride', { width, height: 900, deviceScaleFactor: 1, mobile: width < 700 });
+    await sleep(250);
+    assert.equal(await run('return document.documentElement.scrollWidth<=innerWidth+2;'), true);
+    await writeFile(path.join(profile, `admin-clear-${width}.png`), Buffer.from((await call('Page.captureScreenshot', { format: 'png' })).data, 'base64'));
+  }
+  await addProject('After clearing'); await wait("return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).sites[0]?.driveFolderId==='verified-drive-folder';");
+  await navigate('/admin'); await clearAndConfirm(); await wait("return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).sites.length===0;");
+  empty(await state());
+  assert.deepEqual(exceptions, []);
+  console.log('Administrator clearing passed: cancel, stale account, active archive, failure/retry, records/files/backups/drafts, preserved accounts/session, repeat clear and responsive controls.');
   console.log('Empty-workspace smoke passed: startup, cleanup, accounts, concurrent tabs, failure/retry, Google Drive routing, and mobile/desktop layouts. Drive responses simulated. Screenshots:', profile);
 } finally { ws?.close(); browser.kill(); }

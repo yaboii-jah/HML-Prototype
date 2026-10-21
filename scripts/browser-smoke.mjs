@@ -1209,7 +1209,7 @@ try {
     await writeFile(path.join(profile, `admin-projects-${width}.png`), Buffer.from((await call("Page.captureScreenshot", { format: "png" })).data, "base64"));
   }
   await call("Emulation.clearDeviceMetricsOverride");
-  assert.equal(await run("return [...document.querySelectorAll('button')].some(button => /Reset workspace|Clear all workspace/.test(button.textContent));"), false);
+  assert.equal(await run("return [...document.querySelectorAll('.page-header button')].some(button => button.textContent.trim()==='Clear workspace');"), true);
   assert.equal(await run("return !!document.querySelector('a[href=\"/admin/maintenance\"]');"), false);
   await call('Page.navigate',{url:baseUrl+'/admin/maintenance'});await wait("return location.pathname==='/admin'&&document.querySelector('h1')?.textContent==='Administration';");
   assert.equal(await run("return document.querySelector('h1').textContent;"),'Administration');

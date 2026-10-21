@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useDemo } from "@/src/app-state/DemoProvider";
 import { PageHeader } from "@/src/components/ui/Primitives";
 import { useConfirmation } from "@/src/components/ui/ConfirmDialog";
@@ -12,16 +12,33 @@ import { Register, ViewTabs } from "@/src/components/ui/Register";
 import { RecordModal } from "@/src/components/ui/RecordModal";
 import { projectScopes } from "@/src/domain/scope-budgets";
 import { money } from "@/src/domain/format";
+import { useArchive } from "@/src/app-state/ArchiveProvider";
+import { useToasts } from "@/src/app-state/ToastProvider";
 
 export function Admin() {
-  const {snapshot:state,directory}=useDemo();const id=useId(),lastProject=useRef<string|null>(null);
+  const {snapshot:state,directory,reset}=useDemo();const id=useId(),lastProject=useRef<string|null>(null);
+  const {jobs,isRunning,dismiss}=useArchive();
+  const {notify,toasts}=useToasts();
+  const working=toasts.some(toast=>toast.tone==="progress"),pendingWork=useRef(false);
+  useEffect(()=>{pendingWork.current=working;},[working]);
+  const [clearing,setClearing]=useState(false),clearPending=useRef(false);
   const [creating,setCreating]=useState(false),[selected,setSelected]=useState<string|null>(null),[search,setSearch]=useState(""),[view,setView]=useState(0),[tabs,setTabs]=useState<Record<string,number>>({});
   const {confirm,confirmation}=useConfirmation();if(!state)return null;
   if(state.role!=="Administrator")return <><PageHeader title="Access unavailable" description="User administration requires an Administrator account."/><Link href="/projects" className="button secondary">Open projects</Link></>;
   const rows=state.sites.filter(site=>`${site.name} ${site.location}`.toLowerCase().includes(search.trim().toLowerCase()));
   const project=state.sites.find(site=>site.id===selected),tab=selected?tabs[selected]||0:0;
   const select=(key:string)=>{lastProject.current=key;setSelected(key);};
-  return <><PageHeader title="Administration" description="Projects, user access and recorded workspace changes." actions={state.role==="Administrator"&&<><button className="button primary" type="button" disabled={creating} onClick={()=>{setView(0);setCreating(true);}}>Add project</button></>}/>
+  const clearWorkspace=async()=>{
+    if(clearPending.current||isRunning()||pendingWork.current)return;
+    clearPending.current=true;setClearing(true);
+    try{
+      if(!await confirm("Clear all workspace data?","This permanently removes all projects, suppliers, transactions, inventory, drafts, browser documents and old workspace backups from this browser. User accounts, passwords and account-management history are kept. Project assignments are removed. Files already archived in Google Drive are not deleted. This cannot be undone.","Clear workspace",true))return;
+      if(isRunning()||pendingWork.current){notify({tone:"warning",title:"Wait for running operations to finish before clearing the workspace."});return;}
+      if(await reset()){setCreating(false);setSelected(null);setSearch("");setView(0);setTabs({});lastProject.current=null;jobs.forEach(job=>dismiss(job.id));}
+    }finally{clearPending.current=false;setClearing(false);}
+  };
+  const archiving=jobs.some(job=>!job.error&&job.phase!=="complete"),blocked=archiving||working;
+  return <><PageHeader title="Administration" description="Projects, user access and recorded workspace changes." actions={<><button className="button danger-outline" type="button" disabled={clearing||blocked} title={blocked?"Wait for running operations to finish":undefined} onClick={()=>void clearWorkspace()}>{clearing?"Clearing workspace…":"Clear workspace"}</button><button className="button primary" type="button" disabled={creating||clearing} onClick={()=>{setView(0);setCreating(true);}}>Add project</button></>}/>
     <ViewTabs id={id} labels={["Projects","Activity","Users"]} active={view} onChange={setView}/>
     <div role="tabpanel" id={`${id}-panel-0`} aria-labelledby={`${id}-tab-0`} hidden={view!==0}>
       {creating&&<ProjectCreation confirm={confirm} onCancel={()=>setCreating(false)} onCreated={key=>{setCreating(false);setSearch("");setTabs(current=>({...current,[key]:1}));select(key);}}/>}

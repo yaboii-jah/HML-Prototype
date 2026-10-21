@@ -111,3 +111,62 @@ test('unreadable account storage blocks cleanup without replacing accounts or to
   assert.equal(cleared, false); assert.equal(storage.getItem(USER_STORAGE_KEY), '{broken');
   assert.equal(storage.getItem(currentKey), 'old records'); assert.equal(storage.getItem(EMPTY_WORKSPACE_MARKER), null);
 });
+
+test('manual clearing repeats after initialization while retaining the Administrator session, credentials and account history', async () => {
+  const directory = JSON.parse(accounts);
+  directory.users.find(user => user.role === 'Site Personnel').siteIds = ['site-a'];
+  directory.activity.push({ id: 'kept-history', action: 'User added' });
+  const session = JSON.stringify({ email: directory.users.find(user => user.role === 'Administrator').email, role: 'Administrator' });
+  const storage = memoryStorage([[EMPTY_WORKSPACE_MARKER, '1'], [USER_STORAGE_KEY, JSON.stringify(directory)], [SESSION_STORAGE_KEY, session], ['constructsync-theme', 'dark']]);
+  let files = ['document'], backups = ['backup'];
+  const options = { storage, force: true, preserveSession: true, role: 'Administrator', clearFiles: async () => { files = []; }, clearBackups: async () => { backups = []; } };
+  for (let attempt = 0; attempt < 2; attempt++) {
+    storage.setItem(currentKey, JSON.stringify(seedDemo()));
+    storage.setItem('constructsync-stock-draft-v1/user/request', 'draft');
+    storage.setItem('constructsync-usage-draft-v1/user/site', 'draft');
+    await clearOperationalStorage(options);
+    assert.deepEqual(JSON.parse(storage.getItem(currentKey)), { ...blankWorkspace(), role: 'Administrator' });
+    assert.equal(storage.getItem(SESSION_STORAGE_KEY), session);
+    assert.equal(storage.getItem('constructsync-theme'), 'dark');
+    assert.equal(storage.getItem('constructsync-stock-draft-v1/user/request'), null);
+    assert.equal(storage.getItem('constructsync-usage-draft-v1/user/site'), null);
+    const saved = JSON.parse(storage.getItem(USER_STORAGE_KEY));
+    assert.deepEqual(saved.activity, directory.activity);
+    assert.deepEqual(saved.users.map(user => user.credential), directory.users.map(user => user.credential));
+    assert.ok(saved.users.every(user => !user.siteIds?.length));
+    assert.deepEqual(files, []); assert.deepEqual(backups, []);
+  }
+});
+
+test('repository rejects overlapping writes and reports file-cleanup failure, then supports retry', async t => {
+  const previous = { window: globalThis.window, localStorage: globalThis.localStorage, indexedDB: globalThis.indexedDB };
+  t.after(() => { Object.assign(globalThis, previous); });
+  const initial = { ...seedDemo(), role: 'Administrator' };
+  const storage = memoryStorage([[EMPTY_WORKSPACE_MARKER, '1'], [USER_STORAGE_KEY, accounts], [currentKey, JSON.stringify(initial)]]);
+  globalThis.window = { addEventListener() {} }; globalThis.localStorage = storage;
+  let failOpen;
+  globalThis.indexedDB = { open() { const request = {}; failOpen = () => { request.error = new Error('Document storage unavailable'); request.onerror(); }; return request; } };
+  const repository = new LocalDemoRepository(); await repository.load();
+  const pending = repository.reset();
+  assert.equal(repository.reset(), pending);
+  assert.equal((await repository.execute({ type: 'setRole', role: 'Finance' })).ok, false);
+  failOpen(); await assert.rejects(pending, /Document storage unavailable/);
+  assert.deepEqual(repository.getSnapshot().snapshot, JSON.parse(JSON.stringify(initial)));
+  assert.equal(storage.getItem(USER_STORAGE_KEY), accounts);
+  globalThis.indexedDB = undefined;
+  assert.equal((await repository.reset()).status, 'ready');
+  assert.deepEqual(repository.getSnapshot().snapshot, { ...blankWorkspace(), role: 'Administrator' });
+  assert.equal(storage.getItem(USER_STORAGE_KEY), accounts);
+});
+
+test('manual cleanup exposes storage-write failures and can be retried without losing accounts', async () => {
+  const storage = memoryStorage([[EMPTY_WORKSPACE_MARKER, '1'], [USER_STORAGE_KEY, accounts], [currentKey, JSON.stringify(seedDemo())]]);
+  const write = storage.setItem;
+  storage.setItem = (key, value) => { if (key === currentKey) throw new Error('Workspace storage unavailable'); write(key, value); };
+  const options = { storage, force: true, preserveSession: true, role: 'Administrator', clearFiles: async () => {}, clearBackups: async () => {} };
+  await assert.rejects(clearOperationalStorage(options), /Workspace storage unavailable/);
+  assert.equal(storage.getItem(USER_STORAGE_KEY), accounts);
+  storage.setItem = write;
+  await clearOperationalStorage(options);
+  assert.deepEqual(JSON.parse(storage.getItem(currentKey)), { ...blankWorkspace(), role: 'Administrator' });
+});

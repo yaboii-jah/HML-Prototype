@@ -26,7 +26,7 @@ type DemoContextValue = RepositoryView & {
   switchAccount: (id: string) => { ok: boolean; message: string };
   switchRole: (role: Role) => { ok: boolean; message: string };
   signOut: () => void;
-  reset: () => Promise<void>;
+  reset: () => Promise<boolean>;
   retrySetup: () => Promise<RepositoryView>;
 };
 const DemoContext = createContext<DemoContextValue | null>(null);
@@ -96,7 +96,26 @@ function DemoSessionProvider({ children }: { children: ReactNode }) {
     if ((change.type === "add" || change.type === "edit") && change.siteIds?.some(id => !view.snapshot?.sites.some(site => site.id === id))) return { ok: false, message: "Choose projects from the current workspace." };
     return userDirectory.change(actor, change);
   };
-  const reset = async () => { if (demoSession.read().role !== "Administrator") throw new Error("Workspace reset requires an Administrator."); const result = await demoRepository.reset(); notify(result.status === "ready" ? { tone: "success", title: "Workspace cleared. Start by adding a project." } : { tone: "warning", title: "Saved records could not be cleared. Existing files have been preserved." }); };
+  const reset = async () => {
+    userDirectory.refresh();
+    const actor = identityFor(demoSession.read());
+    if (!actor || actor.role !== "Administrator" || actor.userId !== session.userId || actor.sessionRevision !== session.revision) {
+      notify({ id: "workspace-reset", tone: "error", title: "Sign in as the current Administrator before clearing the workspace." });
+      return false;
+    }
+    notify({ id: "workspace-reset", tone: "progress", title: "Clearing workspace…" });
+    try {
+      const result = await demoRepository.reset();
+      if (result.status !== "ready") throw new Error(result.message || "Browser storage is unavailable.");
+      userDirectory.refresh();
+      notify({ id: "workspace-reset", tone: "success", title: "Workspace cleared. Start by adding a project." });
+      return true;
+    } catch {
+      userDirectory.refresh();
+      notify({ id: "workspace-reset", tone: "error", title: "Workspace clearing did not finish.", detail: "Some data may already have been removed. Retry Clear workspace when browser storage is available." });
+      return false;
+    }
+  };
   return <ArchiveProvider key={snapshot?.showcase?.installationId || "workspace"}><DemoContext.Provider value={{ ...view, snapshot, access, run, beginOperation: gateway.beginOperation, session, signedOut, directory, siteIds, manageUser, signIn, switchRole, switchAccount, signOut, reset, retrySetup: () => demoRepository.retrySetup() }}>{children}</DemoContext.Provider></ArchiveProvider>;
 }
 

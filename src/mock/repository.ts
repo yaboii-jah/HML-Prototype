@@ -1,5 +1,4 @@
 import { validUsageEntries } from "../domain/usage-entries.ts";
-import { clearUsageDrafts } from "../features/inventory/usage-draft.ts";
 import { applyCommand, type Command, type CommandResult } from "../domain/commands.ts";
 import { validStockReviews } from "../domain/stock-suitability.ts";
 import { validTransferState } from "../domain/transfer-document.ts";
@@ -12,7 +11,7 @@ import { clearQuoteFiles } from "../features/requests/quote-files.ts";
 import { validBidReport } from "../domain/bid-reports.ts";
 import { validDeliveryReceipt } from "../domain/delivery-document.ts";
 import { validDocumentNumberingState } from "../domain/document-numbering.ts";
-import { EMPTY_WORKSPACE_MARKER, initializeEmptyWorkspace } from "./workspace-initialization.ts";
+import { clearOperationalStorage, clearShowcaseBackups, EMPTY_WORKSPACE_MARKER, initializeEmptyWorkspace } from "./workspace-initialization.ts";
 
 const CURRENT_KEY = "hml-constructsync-demo-v12";
 const PREVIOUS_KEYS = ["hml-constructsync-demo-v11", "hml-constructsync-demo-v10", "hml-constructsync-demo-v9", "hml-constructsync-demo-v8", "hml-constructsync-demo-v7", "hml-constructsync-demo-v6", "hml-constructsync-demo-v5", "hml-constructsync-demo-v4", "hml-constructsync-demo-v3", "hml-constructsync-demo-v2", "hml-buildsync-demo-v2", "hml-buildsync-demo-v1"] as const;
@@ -100,6 +99,7 @@ export class LocalDemoRepository implements DemoRepository {
   private view: RepositoryView = { snapshot: null, status: "loading" };
   private initialized = false;
   private bootstrap: Promise<RepositoryView> | undefined;
+  private clearing: Promise<RepositoryView> | undefined;
   private bootstrapFailed = false;
   private setupComplete = false;
   private setup: () => Promise<void>;
@@ -192,22 +192,35 @@ export class LocalDemoRepository implements DemoRepository {
   }
   subscribe(listener: () => void) { this.listeners.add(listener); return () => this.listeners.delete(listener); }
   async execute(command: Command, actor?: AuditIdentity, siteIds?: readonly string[]): Promise<CommandResult> {
+    if (this.clearing) return { ok: false, message: "Wait for workspace clearing to finish before making changes." };
     const current = this.read().snapshot;
     if (!current) return { ok: false, message: "Restore the workspace before making changes." };
     const result = applyCommand(current, command, actor ? { actor, siteIds, now: () => new Date().toISOString(), id: newId } : undefined);
     if (result.ok) { this.view = this.write(result.snapshot); this.notify(); return { ...result, persisted: this.view.status === "ready" }; }
     return result;
   }
-  async reset() {
-    this.setupComplete = true;
-    this.initialized = true;
-    this.view = this.write(blankWorkspace());
-    if (this.view.status === "ready") try { clearUsageDrafts(localStorage); } catch {}
-    if (this.view.status === "ready") try { await clearQuoteFiles(); } catch {}
-    if (this.view.status === "ready") try { PREVIOUS_KEYS.forEach(key => localStorage.removeItem(key)); } catch {}
-    if (this.view.status === "ready") try { localStorage.setItem(EMPTY_WORKSPACE_MARKER, "1"); } catch {}
-    this.notify();
-    return this.view;
+  reset(): Promise<RepositoryView> {
+    if (this.clearing) return this.clearing;
+    const role = this.read().snapshot?.role;
+    this.clearing = (async () => {
+      try {
+        await clearOperationalStorage({ storage: localStorage, force: true, preserveSession: true, role,
+          clearFiles: async () => { if (typeof indexedDB !== "undefined") await clearQuoteFiles(); },
+          clearBackups: async () => { if (typeof indexedDB !== "undefined") await clearShowcaseBackups(); },
+        });
+        // Also supports storage adapters without key enumeration.
+        PREVIOUS_KEYS.forEach(key => localStorage.removeItem(key));
+        this.setupComplete = true;
+        this.initialized = false;
+        return this.read();
+      } finally {
+        this.clearing = undefined;
+        this.initialized = false;
+        this.read();
+        this.notify();
+      }
+    })();
+    return this.clearing;
   }
 }
 
