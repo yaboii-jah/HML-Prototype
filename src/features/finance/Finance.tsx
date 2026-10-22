@@ -2,7 +2,6 @@
 
 import { isExternalPayment } from "@/src/domain/full-disbursement";
 import { CoordinationQueue, CoordinationReview } from "./PaymentCoordination";
-import { Register, ViewTabs } from "@/src/components/ui/Register";
 
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
@@ -10,32 +9,15 @@ import { useDemo } from "@/src/app-state/DemoProvider";
 import { Badge, Empty, Field, InlineError, PageHeader, RecordHeader, Timeline } from "@/src/components/ui/Primitives";
 import { useConfirmation } from "@/src/components/ui/ConfirmDialog";
 import { MissingRecord } from "@/src/components/ui/States";
-import { dateText, daysWaiting, money, today } from "@/src/domain/format";
+import { dateText, money, today } from "@/src/domain/format";
 import { paidTotal, poTotal, requestForPO, siteName, supplierName } from "@/src/domain/selectors";
 import { poStatusLabel } from "@/src/domain/workflow";
 import type { Payment, PaymentRequest, Priority } from "@/src/domain/types";
 
 export function FinanceQueue() {
   const { snapshot: state } = useDemo();
-  const [active, setActive] = useState(0);
   if (!state) return null;
-  return <><PageHeader eyebrow="FINANCE" title="Finance queue" description="Prioritize and coordinate external payments. Accounting verifies payment proof; delivery follows the agreed payment arrangement."/><ViewTabs labels={["Payment coordination", "Legacy payment requests"]} active={active} onChange={setActive} id="finance"/><div role="tabpanel" id={`finance-panel-${active}`} aria-labelledby={`finance-tab-${active}`}>{active === 0 ? <CoordinationQueue state={state}/> : <LegacyFinanceQueue/>}</div></>;
-}
-
-function LegacyFinanceQueue() {
-  const { snapshot: state } = useDemo();
-  const [search, setSearch] = useState("");
-  const [view, setView] = useState(0);
-  const [priority, setPriority] = useState("all"), [min, setMin] = useState(""), [sort, setSort] = useState("priority");
-  if (!state) return null;
-  const rank = { Urgent: 0, High: 1, Normal: 2 };
-  const rows = state.paymentRequests.filter(value => {
-    const po = state.pos.find(po => po.id === value.poId);
-    return po && !isExternalPayment(po) && `${value.ref} ${po.ref} ${supplierName(state,po)}`.toLowerCase().includes(search.toLowerCase()) && (view === 1 ? value.status === "disbursed" : ["submitted", "hold", "approved"].includes(value.status)) && (state.siteFilter === "all" || requestForPO(state, po)?.siteId === state.siteFilter) && (priority === "all" || value.priority === priority) && (!min || value.amount >= Number(min));
-  }).sort((a, b) => sort === "amount" ? b.amount - a.amount : sort === "waiting" ? a.updatedAt.localeCompare(b.updatedAt) : rank[a.priority] - rank[b.priority] || a.updatedAt.localeCompare(b.updatedAt));
-  const relevant = state.paymentRequests.filter(value => { const po = state.pos.find(po => po.id === value.poId); return po && !isExternalPayment(po) && (state.siteFilter === "all" || requestForPO(state, po)?.siteId === state.siteFilter); });
-  return <><div className="panel-heading"><div><h2>Legacy payment requests</h2><p className="helper-note">Review and disburse existing Finance-managed payment requests.</p></div></div><ViewTabs id="legacy-payment-history" labels={[`Active (${relevant.filter(value => ["submitted", "hold", "approved"].includes(value.status)).length})`, `Settled (${relevant.filter(value => value.status === "disbursed").length})`]} active={view} onChange={setView}/><div role="tabpanel" id={`legacy-payment-history-panel-${view}`} aria-labelledby={`legacy-payment-history-tab-${view}`}>
-    <Register rows={rows} resetKey={priority+min+sort+search+view+state.siteFilter} filters={<><input type="search" aria-label="Search Finance" placeholder="Search payment, PO or supplier" value={search} onChange={event=>setSearch(event.target.value)}/><select aria-label="Priority" value={priority} onChange={event => setPriority(event.target.value)}><option value="all">All priorities</option><option>Normal</option><option>High</option><option>Urgent</option></select><input aria-label="Minimum payment amount" type="number" min="0" placeholder="Minimum amount ₱" value={min} onChange={event => setMin(event.target.value)}/><select aria-label="Sort Finance queue" value={sort} onChange={event => setSort(event.target.value)}><option value="priority">Priority, then oldest</option><option value="waiting">Longest waiting</option><option value="amount">Highest amount</option></select></>} headers={<><th>Payment request / PO</th><th>Project</th><th>Priority</th><th className="numeric">Amount</th><th>Waiting</th><th>Status</th><th>Next action</th></>} empty={view === 1 ? "No settled legacy payments match these filters." : "No payment requests currently need Finance action."} renderRow={value => { const po = state.pos.find(po => po.id === value.poId)!; return <tr key={value.id}><td><Link className="table-primary" href={`/finance/${po.id}`}>{value.ref}</Link><small>{po.ref} · {supplierName(state, po)}</small></td><td>{siteName(state, requestForPO(state, po)?.siteId || "")}</td><td><Badge value={value.priority}/></td><td className="numeric">{money(value.amount)}</td><td>{daysWaiting(value.updatedAt)} days</td><td><Badge value={value.status}/></td><td>{value.status === "disbursed" ? "View payment history" : value.status === "approved" ? "Record disbursement" : "Review payment"}</td></tr>; }}/></div></>;
+  return <><PageHeader eyebrow="FINANCE" title="Finance queue" description="Prioritize and coordinate external payments. Accounting verifies payment proof; delivery follows the agreed payment arrangement."/><CoordinationQueue state={state}/></>;
 }
 
 export function FinanceReview({ id }: { id: string }) {
