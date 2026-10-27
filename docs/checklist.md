@@ -10,7 +10,7 @@ Use this companion to track the steps toward production. See the [progress track
 
 - [ ] **2. Prepare Node, npm and CI for deployment.**
   Done when Node 26 development and Node 24 deployment use the declared npm version, deployment runtime checks pass, and local verification plus all four Linux/Windows CI combinations pass.
-  Local fixes passed 2026-10-27 with 365 tests and 28 browser suites. Initial hosted CI passed both Linux jobs; the corrected four-job run is pending.
+  Local fixes passed 2026-10-27 with 365 tests and 28 browser suites. The first corrected CI run passed three jobs; two Windows Node 24 navigation timeouts are being fixed.
 
 - [ ] **3. Add secure accounts, permissions and shared data.**
   Done when authorized users can share permitted records and unauthorized or revoked access is rejected.

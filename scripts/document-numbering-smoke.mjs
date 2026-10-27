@@ -1,4 +1,5 @@
 import { prepareFixtureBrowser } from "./helpers/workspace-fixture.mjs";
+import { navigateDocument } from "./helpers/browser-environment.mjs";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { mkdtemp, writeFile } from "node:fs/promises";
@@ -29,7 +30,7 @@ try {
     if (request) { pending.delete(message.id); if (message.error) request.reject(new Error(JSON.stringify(message.error))); else request.resolve(message.result); }
   };
   const call = (method, params = {}) => new Promise((resolve, reject) => {
-    const id = ++nextId, timer = setTimeout(() => { pending.delete(id); reject(new Error(`Timeout: ${method}`)); }, 15000);
+    const id = ++nextId, timer = setTimeout(() => { pending.delete(id); reject(new Error(`Timeout: ${method}`)); }, method === "Page.navigate" ? 60000 : 15000);
     pending.set(id, { resolve: value => { clearTimeout(timer); resolve(value); }, reject: error => { clearTimeout(timer); reject(error); } });
     ws.send(JSON.stringify({ id, method, params }));
   });
@@ -39,7 +40,7 @@ try {
     return result.result.value;
   };
   const wait = async code => { for (let i = 0; i < 300; i++) { if (await run(code)) return; await sleep(100); } throw new Error(`Timed out: ${code}`); };
-  const navigate = async route => { await call("Page.navigate", { url: base + route }); await wait(`return location.pathname===${JSON.stringify(route.split("?")[0])}&&!!document.querySelector('h1');`); await sleep(180); };
+  const navigate = async route => { await navigateDocument(call, base + route); await wait(`return location.pathname===${JSON.stringify(route.split("?")[0])}&&!!document.querySelector('h1');`); await sleep(180); };
   const fill = async (selector, value) => run(`const el=document.querySelector(${JSON.stringify(selector)});const proto=el.tagName==='SELECT'?HTMLSelectElement.prototype:HTMLInputElement.prototype;Object.getOwnPropertyDescriptor(proto,'value').set.call(el,${JSON.stringify(String(value))});el.dispatchEvent(new Event(el.tagName==='SELECT'?'change':'input',{bubbles:true}));return true;`);
   const click = async selector => { await run(`const el=document.querySelector(${JSON.stringify(selector)});el.focus();el.click();return true;`); await sleep(100); };
   await call("Runtime.enable"); await prepareFixtureBrowser(call, base); await call("Page.enable");
