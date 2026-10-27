@@ -1,3 +1,4 @@
+import { browserCallTimeout } from "./helpers/browser-environment.mjs";
 import { prepareFixtureBrowser } from "./helpers/workspace-fixture.mjs";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -30,7 +31,7 @@ try {
     if (request) { pending.delete(message.id); if (message.error) request.reject(new Error(JSON.stringify(message.error))); else request.resolve(message.result); }
   };
   const call = (method, params = {}) => new Promise((resolve, reject) => {
-    const id = ++sequence, timer = setTimeout(() => { pending.delete(id); reject(new Error(`Timeout: ${method}`)); }, 20000);
+    const id = ++sequence, timer = setTimeout(() => { pending.delete(id); reject(new Error(`Timeout: ${method}`)); }, browserCallTimeout(method, 20000));
     pending.set(id, { resolve: value => { clearTimeout(timer); resolve(value); }, reject: error => { clearTimeout(timer); reject(error); } });
     ws.send(JSON.stringify({ id, method, params }));
   });
@@ -68,7 +69,7 @@ try {
   await call("Page.navigate", { url: base + "/sign-in" });
   await wait("return !!document.querySelector('.skeleton-signin')&&window.__loadingChecks.accounts.length===7;");
   assert.equal(await run("return document.querySelector('.skeleton-signin').getAttribute('aria-busy');"), "true");
-  await sleep(200);
+  await wait("const visual=document.querySelector('.skeleton-signin .loading-visual');return visual&&getComputedStyle(visual).visibility==='visible';");
   assert.equal(await run("return getComputedStyle(document.querySelector('.skeleton-signin .loading-visual')).visibility;"), "visible", "Grace period reveals startup skeleton");
   await run("window.__releaseAccounts();return true;");
   await wait("return !!document.querySelector('#signin-email');");
@@ -104,7 +105,7 @@ try {
   }
   await call("Emulation.setEmulatedMedia", { features: [{ name: "prefers-reduced-motion", value: "reduce" }] });
   assert.equal(await run("return getComputedStyle(document.querySelector('.drive-project-files .skeleton'),'::after').animationName;"), "none", "Reduced motion disables shimmer");
-  await call("Emulation.setEmulatedMedia", { features: [] });
+  await call("Emulation.setEmulatedMedia", { features: [{ name: "prefers-reduced-motion", value: "no-preference" }] });
   await call("Emulation.setDeviceMetricsOverride", { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false });
   await run("document.querySelector('.drive-project-files').scrollIntoView({block:'center'});return true;");
   await writeFile(path.join(profile, "drive-skeleton.png"), Buffer.from((await call("Page.captureScreenshot", { format: "png" })).data, "base64"));

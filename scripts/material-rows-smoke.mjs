@@ -1,4 +1,5 @@
 import { prepareFixtureBrowser } from "./helpers/workspace-fixture.mjs";
+import { browserCallTimeout, navigateDocument } from "./helpers/browser-environment.mjs";
 import { workspaceFixtureScript, openQuotationReview } from "./helpers/workspace-fixture.mjs";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -29,7 +30,7 @@ try {
     if (request) { pending.delete(message.id); if (message.error) request.reject(new Error(JSON.stringify(message.error))); else request.resolve(message.result); }
   };
   const call = (method, params = {}) => new Promise((resolve, reject) => {
-    const id = ++nextId, timer = setTimeout(() => { pending.delete(id); reject(new Error(`Timeout: ${method}`)); }, 15000);
+    const id = ++nextId, timer = setTimeout(() => { pending.delete(id); reject(new Error(`Timeout: ${method}`)); }, browserCallTimeout(method, 15000));
     pending.set(id, { resolve: value => { clearTimeout(timer); resolve(value); }, reject: error => { clearTimeout(timer); reject(error); } });
     ws.send(JSON.stringify({ id, method, params }));
   });
@@ -58,7 +59,7 @@ try {
   fixture.pendingAwards = [{id:'row-award',requestId:'m1',itemId:request.items[0].id,quoteId:quote.id,quoteLineId:quote.lines[0].id,supplierId:quote.supplierId,quantity:5}];
   const load = async (route, role='Procurement', data=fixture) => {
     await run(workspaceFixtureScript(data, role));
-    await call('Page.navigate',{url:base+route});
+    await navigateDocument(call,base+route);
     await wait(`return location.pathname+location.search===${JSON.stringify(route)}&&!!document.querySelector('h1');`);
     await sleep(250);
     if(route.endsWith("/quotes")){await run(openQuotationReview);await sleep(160);}

@@ -10,7 +10,7 @@ Today the app is a browser-local prototype: accounts, sessions and business reco
 | --- | --- | --- |
 | Application | Next.js App Router and TypeScript | Pages, route handlers, server-side application logic and typed domain rules. React is the UI library used by Next.js, not a separate application framework. |
 | UI | Tailwind CSS v4 | Target styling system for the existing screens and responsive layouts. Tailwind is installed today, but the current interface uses custom CSS; conversion is separate work. |
-| Runtime and hosting | Node.js 24.x on Vercel | Run the deployed application and server integrations. The repository currently pins Node 26.12.1; update and verify the runtime and tooling for the target before deployment. See [Vercel's supported Node.js versions](https://vercel.com/docs/functions/runtimes/node-js/node-js-versions). |
+| Runtime and hosting | Node.js 24.x on Vercel; Node.js 26 locally | Keep local development on Node 26.12.1 and npm 11.20.0. The production baseline is Node 24.22.1 with the same npm version; CI is configured to verify both runtimes on Linux and Windows. Node type definitions follow the production major. Vercel installation and build checks require Node 24 rather than silently selecting another accepted development runtime. See [Vercel's supported Node.js versions](https://vercel.com/docs/functions/runtimes/node-js/node-js-versions). |
 | Authentication | Supabase Auth | Individual, invitation-only email/password accounts, sessions, password recovery and revocation. |
 | Business data | Supabase Postgres | Shared authoritative records, access grants, audit history, document metadata and job state. |
 | Document files | Google Drive | Permanent originals, generated documents and related evidence, organized in company-controlled project folders. |
@@ -20,6 +20,8 @@ Today the app is a browser-local prototype: accounts, sessions and business reco
 | Document generation | Existing PDF and Excel libraries | Generate and render the application's PDFs and spreadsheets. |
 
 Hosted testing may use a Vercel Hobby project only when its use meets Vercel's eligibility terms. Company operations require an appropriate commercial Vercel plan. The intended business deployment remains on Vercel behind an HML-owned custom domain; a domain is an address, not a separate hosting platform.
+
+Development and production builds explicitly use Next.js's supported Webpack option. Windows Application Control blocked the updated native SWC compiler during local verification; Next.js's WebAssembly fallback supports Webpack but cannot run Turbopack. Keep the local, CI and deployment build commands consistent without changing the operating-system policy. This bundler choice does not change the application framework or data boundaries.
 
 ## System Boundaries
 

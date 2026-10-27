@@ -44,7 +44,13 @@ export class LocalDemoSession {
       let account: AccountIdentity | null = null;
       if (saved) { try { account = this.storedIdentity(JSON.parse(normalizeStoredRoles(saved))); } catch {} }
       if (saved && !account) localStorage.removeItem(SESSION_STORAGE_KEY);
-      if (account) localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(account));
+      if (account) {
+        const canonical = JSON.stringify(account);
+        // Ordinary reads must not restore a session cleared or replaced by another tab.
+        if (saved !== canonical && localStorage.getItem(SESSION_STORAGE_KEY) === saved) {
+          localStorage.setItem(SESSION_STORAGE_KEY, canonical);
+        }
+      }
       this.view = account ? { ...account, status: "ready" } : { email: null, role: null, status: "ready" };
     } catch { this.view = { email: null, role: null, status: "volatile" }; }
     return this.view;
