@@ -5,7 +5,7 @@ import { mkdtemp, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { ACCOUNT_FIXTURES } from "../src/app-state/demo-session.ts";
-import { seedDemo } from "../src/mock/fixtures/seed.ts";
+import { seedDemo } from "../tests/fixtures/workspace.ts";
 import { captureBidReport } from "../src/domain/bid-reports.ts";
 import { PDFDocument } from "pdf-lib";
 import { createHash } from "node:crypto";

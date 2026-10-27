@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { seedDemo } from "../src/mock/fixtures/seed.ts";
+import { seedDemo } from "./fixtures/workspace.ts";
 import { applyCommand } from "../src/domain/commands.ts";
 
 let sequence = 0;

@@ -1,7 +1,7 @@
 import { initializedWorkspaceStorage } from './helpers/initialized-storage.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { seedDemo } from '../src/mock/fixtures/seed.ts';
+import { seedDemo } from './fixtures/workspace.ts';
 import { applyCommand } from '../src/domain/commands.ts';
 import { exactStockMatch, validStockReviews } from '../src/domain/stock-suitability.ts';
 import { requestSourcing, sourceStockAvailable, transferQuantityFor } from '../src/domain/stock-transfers.ts';
@@ -73,7 +73,7 @@ test('shared stock and aggregate request demand cannot be overallocated within a
 });
 test('destination approval can reduce quantity; release rechecks availability and consumes the hold once', () => {
   const f = setup(); f.send(); let review = f.state.stockSuitabilityReviews[0];
-  const input = { type:'reviewStockSuitability',id:review.id,decision:'approve',quantity:6,reason:'Only six can be cut safely' };
+  const input = { type:'reviewStockSuitability',specificationsConfirmed:true,id:review.id,decision:'approve',quantity:6,reason:'Only six can be cut safely' };
   assert.equal(f.command('Site Personnel',input,[f.source.id]).ok,false);
   assert.equal(f.command('Procurement',input,[f.request.siteId]).ok,false);
   assert.equal(f.command('Site Personnel',input,[f.request.siteId]).ok,true);
@@ -92,7 +92,7 @@ test('destination approval can reduce quantity; release rechecks availability an
 test('rejection and explicit cancellation return demand without touching source stock', () => {
   for (const reject of [true,false]) {
     const f = setup(); f.send(); const review = f.state.stockSuitabilityReviews[0];
-    const result = reject ? f.command('Site Personnel',{ type:'reviewStockSuitability',id:review.id,decision:'reject',quantity:0,reason:'Cannot meet required dimensions' },[f.request.siteId]) : f.command('Procurement',{ type:'cancelStockSuitability',id:review.id,reason:'Purchase instead due to urgency' });
+    const result = reject ? f.command('Site Personnel',{ type:'reviewStockSuitability',specificationsConfirmed:true,id:review.id,decision:'reject',quantity:0,reason:'Cannot meet required dimensions' },[f.request.siteId]) : f.command('Procurement',{ type:'cancelStockSuitability',id:review.id,reason:'Purchase instead due to urgency' });
     assert.equal(result.ok,true); assert.equal(requestSourcing(f.state,f.request,f.request.items[0]).purchase,12);
     assert.equal(sourceStockAvailable(f.state,f.source.id,review.sourceName,review.unit),8); assert.equal(validStockReviews(f.state),true);
   }
@@ -131,7 +131,7 @@ test('corrected specifications invalidate active approvals and release their dem
   f.state.quotes = []; const request = f.state.requests.find(r => r.id === f.request.id); request.correction = { status:'requested',scope:'full',reason:'Correct panel width' };
   const result = f.command('Site Personnel',{ type:'saveRequest',id:request.id,intent:'draft',siteId:request.siteId,scopeId:request.scopeId,ref:request.ref,requestDate:request.requestDate,requestedBy:request.requestedBy,approvedBy:request.approvedBy,purchaser:request.purchaser,financeOfficer:request.financeOfficer,items:[{ ...request.items[0],name:'Glass 750 x 2100' }],documents:request.documents },[request.siteId]);
   assert.equal(result.ok,true,result.message); assert.equal(f.state.stockSuitabilityReviews[0].status,'stale'); assert.equal(requestSourcing(f.state,f.state.requests[0],f.state.requests[0].items[0]).suitability,0);
-  assert.equal(f.command('Site Personnel',{ type:'reviewStockSuitability',id:review.id,decision:'approve',quantity:8,reason:'' },[request.siteId]).ok,false);
+  assert.equal(f.command('Site Personnel',{ type:'reviewStockSuitability',specificationsConfirmed:true,id:review.id,decision:'approve',quantity:8,reason:'' },[request.siteId]).ok,false);
   assert.equal(validStockReviews(f.state),true);
 });
 test('old v12 workspaces and active/used reviews reload; malformed provenance is rejected', async () => {

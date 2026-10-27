@@ -1,7 +1,7 @@
 import { initializedWorkspaceStorage } from './helpers/initialized-storage.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { seedDemo } from '../src/mock/fixtures/seed.ts';
+import { seedDemo } from './fixtures/workspace.ts';
 import { applyCommand } from '../src/domain/commands.ts';
 import { requestSourcing, sourceStockAvailable, sourceStockOnHand, transferQuantityFor, transferReceiptData, transferReservedFor, transferUnscheduled } from '../src/domain/stock-transfers.ts';
 import { validTransferReceipt, validTransferState } from '../src/domain/transfer-document.ts';
@@ -11,8 +11,21 @@ import { workflowActions } from '../src/domain/workflow-actions.ts';
 import { dashboardMetrics } from '../src/domain/queues.ts';
 import { materialId } from '../src/domain/ids.ts';
 import { materialAwardStatus } from '../src/domain/comparative-awards.ts';
-import { budgetFor } from '../src/domain/selectors.ts';
+import { inventoryFor, budgetFor } from '../src/domain/selectors.ts';
 import { LocalDemoRepository } from '../src/mock/repository.ts';
+import { parseCurrent } from '../src/mock/repository.ts';
+import { receivedMaterialScopes } from '../src/domain/inventory-scopes.ts';
+
+function destinationsFor(state, deliveryId) {
+  const delivery = state.transferDeliveries.find(value => value.id === deliveryId);
+  const transfer = state.stockTransfers.find(value => value.id === delivery.transferId);
+  const request = state.requests.find(value => value.id === transfer.requestId);
+  return Object.fromEntries(delivery.lines.map(line => {
+    const item = request.items.find(value => value.id === line.itemId);
+    const target = inventoryFor(state,request.siteId).find(value => value.id === materialId(item.name,item.unit));
+    return [line.transferLineId,target ? { mode:'existing',materialId:target.id,specificationsConfirmed:true } : { mode:'new',reason:'' }];
+  }));
+}
 
 let nextId = 0;
 function setup() {
@@ -67,8 +80,8 @@ test('partial source approval, multiple trips and shortages preserve stock conse
   assert.equal(f.command('Site Personnel', { type: 'receiveTransferDelivery', id: delivery.id, lines: { [lineId]: { accepted: 18, issue: 'Two bags damaged' } } }, [f.request.siteId]).ok, true);
   assert.equal(requestSourcing(f.state, f.request, f.request.items[0]).purchase, 77);
   assert.equal(sourceStockOnHand(f.state, f.request.siteId, 'Cement stock', 'bag'), 0);
-  assert.equal(f.command('Site Personnel', { type: 'postTransferDelivery', id: delivery.id, quantities: { [lineId]: 18 }, reason: '' }, [f.request.siteId]).ok, true);
-  assert.equal(f.command('Site Personnel', { type: 'postTransferDelivery', id: delivery.id, quantities: { [lineId]: 18 }, reason: '' }, [f.request.siteId]).ok, false);
+  assert.equal(f.command('Site Personnel', { type: 'postTransferDelivery', id: delivery.id, destinations: destinationsFor(f.state,delivery.id), quantities: { [lineId]: 18 }, reason: '' }, [f.request.siteId]).ok, true);
+  assert.equal(f.command('Site Personnel', { type: 'postTransferDelivery', id: delivery.id, destinations: destinationsFor(f.state,delivery.id), quantities: { [lineId]: 18 }, reason: '' }, [f.request.siteId]).ok, false);
   assert.equal(sourceStockOnHand(f.state, f.request.siteId, 'Cement stock', 'bag'), 18);
   assert.equal(transferUnscheduled(f.state, f.state.stockTransfers[0], lineId), 5);
   assert.equal(validTransferState(f.state), true);
@@ -121,6 +134,114 @@ function receiveTrip(f, amount = 40, accepted = amount) {
   return { transfer, delivery, line };
 }
 
+function destinationOpening(f, name = 'Stock cement', unit = 'bags', quantity = 12) {
+  f.state.movements.push({ ...f.state.movements[0],id:'destination-'+f.state.movements.length,siteId:f.request.siteId,itemName:name,unit,quantity });
+  return materialId(name,unit);
+}
+
+test('explicit destination matching credits existing stock with an alias unit and preserves receipt and scope history on reload', () => {
+  const f = setup();
+  const targetId = destinationOpening(f);
+  destinationOpening(f,'Stock cement','bag',7);
+  const {delivery,line} = receiveTrip(f);
+  const receipts = structuredClone(f.state.transferDeliveries[0].receiptVersions);
+  const input = {type:'postTransferDelivery',id:delivery.id,quantities:{[line]:40},reason:'',destinations:{[line]:{mode:'existing',materialId:targetId,specificationsConfirmed:true}}};
+  for (const role of ['Procurement','Logistics','Accounting / Auditing']) assert.equal(f.command(role,input,[f.request.siteId]).ok,false);
+  assert.equal(f.command('Site Personnel',input,[f.source.id]).ok,false);
+  assert.equal(f.command('Site Personnel',input,[f.request.siteId]).ok,true);
+  assert.equal(sourceStockOnHand(f.state,f.request.siteId,'Stock cement','bags'),52);
+  assert.equal(sourceStockOnHand(f.state,f.request.siteId,'Stock cement','bag'),7,'Historical alias-labelled balances remain separate');
+  assert.equal(sourceStockOnHand(f.state,f.source.id,'CEMENT STOCK','BAG'),40);
+  assert.equal(inventoryFor(f.state,f.request.siteId).some(value => value.name==='Cement stock'),false);
+  assert.deepEqual(f.state.transferDeliveries[0].receiptVersions,receipts,'A mapping alone does not replace the signed-receipt version');
+  const posting = f.state.transferDeliveries[0].lines[0].stockPosting;
+  assert.equal(posting.materialId,targetId);
+  assert.equal(posting.specificationsConfirmed,true);
+  assert.match(f.state.movements.find(value => value.kind==='transfer-in').reason,/Same specifications confirmed/);
+  assert.equal(f.state.transferDeliveries[0].postedBy.role,'Site Personnel');
+  assert.equal(receivedMaterialScopes(f.state).get(f.request.siteId+'/'+targetId).has(f.request.scopeId),true);
+  assert.equal(validTransferState(f.state),true);
+  assert.ok(parseCurrent(JSON.stringify(f.state)));
+  assert.equal(f.command('Site Personnel',input,[f.request.siteId]).ok,false);
+  for (const corrupt of [
+    state => {state.transferDeliveries[0].lines[0].stockPosting.materialId='invented';},
+    state => {state.transferDeliveries[0].lines[0].stockPosting.specificationsConfirmed=false;},
+    state => {delete state.transferDeliveries[0].lines[0].stockPosting;},
+    state => {state.movements=state.movements.filter(value => !(value.kind==='opening' && value.siteId===f.request.siteId && value.unit==='bags'));},
+  ]) { const state = structuredClone(f.state); corrupt(state); assert.equal(validTransferState(state),false); }
+});
+
+test('destination choices reject missing confirmation, foreign stock, incompatible units and unexplained duplicates atomically', () => {
+  const f = setup(), targetId = destinationOpening(f), wrongUnit = destinationOpening(f,'Cement stock','box');
+  const {delivery,line} = receiveTrip(f);
+  const input = {type:'postTransferDelivery',id:delivery.id,quantities:{[line]:40},reason:''};
+  const before = structuredClone(f.state);
+  for (const selection of [undefined,{mode:'existing',materialId:targetId,specificationsConfirmed:false},{mode:'existing',materialId:wrongUnit,specificationsConfirmed:true},{mode:'existing',materialId:materialId('CEMENT STOCK','BAG'),specificationsConfirmed:true},{mode:'new',reason:''}]) {
+    const result = f.command('Site Personnel',{...input,destinations:selection ? {[line]:selection} : {}},[f.request.siteId]);
+    assert.equal(result.ok,false,result.message);
+    assert.deepEqual(f.state,before);
+  }
+  assert.equal(f.command('Site Personnel',{...input,destinations:{[line]:{mode:'new',reason:'Different grade checked at site'}}},[f.request.siteId]).ok,true);
+  assert.equal(sourceStockOnHand(f.state,f.request.siteId,'Cement stock','bag'),40);
+  assert.equal(sourceStockOnHand(f.state,f.request.siteId,'Stock cement','bags'),12);
+  assert.equal(f.state.transferDeliveries[0].lines[0].stockPosting.reasonRequired,true);
+  assert.ok(parseCurrent(JSON.stringify(f.state)));
+});
+
+test('zero-balance inventory is reusable, exact identities cannot be recreated and zero receipts need no selection', () => {
+  const f = setup(), targetId = destinationOpening(f,'Cement stock','bag',0), {delivery,line} = receiveTrip(f);
+  const post = {type:'postTransferDelivery',id:delivery.id,quantities:{[line]:40},reason:''};
+  assert.equal(f.command('Site Personnel',{...post,destinations:{[line]:{mode:'new',reason:'Trying to duplicate the exact identity'}}},[f.request.siteId]).ok,false);
+  assert.equal(f.command('Site Personnel',{...post,destinations:{[line]:{mode:'existing',materialId:targetId,specificationsConfirmed:true}}},[f.request.siteId]).ok,true);
+  assert.equal(inventoryFor(f.state,f.request.siteId).length,1);
+  assert.equal(validTransferState(f.state),true);
+  const zero = setup(), trip = receiveTrip(zero,20,0);
+  assert.equal(zero.command('Site Personnel',{type:'postTransferDelivery',id:trip.delivery.id,quantities:{[trip.line]:0},reason:'',destinations:{}},[zero.request.siteId]).ok,true);
+  assert.equal(zero.state.movements.some(value => value.kind==='transfer-in'),false);
+  assert.equal(validTransferState(zero.state),true);
+});
+
+test('old posted version-12 records without destination mappings remain readable', () => {
+  const f = setup(), {delivery,line} = receiveTrip(f);
+  assert.equal(f.command('Site Personnel',{type:'postTransferDelivery',id:delivery.id,quantities:{[line]:40},reason:'',destinations:{[line]:{mode:'new',reason:''}}},[f.request.siteId]).ok,true);
+  delete f.state.transferDeliveries[0].lines[0].stockPosting;
+  assert.ok(parseCurrent(JSON.stringify(f.state)));
+});
+
+test('existing-stock provenance remains reloadable despite historical timezone or device-clock differences', () => {
+  const f = setup(), targetId = destinationOpening(f);
+  f.state.movements.at(-1).at='2026-10-14T00:00:00+08:00';
+  const {delivery,line} = receiveTrip(f);
+  assert.equal(f.command('Site Personnel',{type:'postTransferDelivery',id:delivery.id,quantities:{[line]:40},reason:'',destinations:{[line]:{mode:'existing',materialId:targetId,specificationsConfirmed:true}}},[f.request.siteId]).ok,true);
+  assert.ok(parseCurrent(JSON.stringify(f.state)),'The target existed when the command ran, regardless of its recorded timestamp');
+});
+
+test('differently named source stock requires requesting-site specification confirmation before release', () => {
+  const f = setup(); f.state.movements[0].itemName='Stock cement'; f.state.movements[0].unit='bags';
+  const selection = {itemId:'cement',sourceSiteId:f.source.id,sourceName:'Stock cement',unit:'bags',quantity:20,matchConfirmed:false,needsReview:true,explanation:'Word order differs; same grade and bag size'};
+  assert.equal(f.command('Procurement',{type:'proposeStockTransfer',requestId:f.request.id,sourceSiteId:f.source.id,note:'',lines:[{...selection,suitabilityConfirmed:true}]}).ok,false);
+  assert.equal(f.command('Procurement',{type:'submitStockSourcingPlan',requestId:f.request.id,note:'',selections:[selection]}).ok,true);
+  const review = f.state.stockSuitabilityReviews[0];
+  assert.equal(sourceStockAvailable(f.state,f.source.id,'Stock cement','bags'),80,'Review holds demand, not source stock');
+  const approval = {type:'reviewStockSuitability',id:review.id,decision:'approve',quantity:20,reason:''};
+  assert.equal(f.command('Site Personnel',{...approval,specificationsConfirmed:true},[f.source.id]).ok,false);
+  assert.equal(f.command('Site Personnel',approval,[f.request.siteId]).ok,false);
+  assert.equal(f.command('Site Personnel',{...approval,specificationsConfirmed:true},[f.request.siteId]).ok,true);
+  assert.equal(f.command('Procurement',{type:'requestApprovedStockRelease',id:review.id,quantity:20}).ok,true);
+  const transfer = f.state.stockTransfers[0];
+  assert.equal(f.approve(transfer,20).ok,true);
+  assert.equal(f.schedule(f.state.stockTransfers[0],20).ok,true);
+  const delivery = f.state.transferDeliveries[0], line = transfer.lines[0].id;
+  assert.equal(f.command('Logistics',{type:'dispatchTransferDelivery',id:delivery.id}).ok,true);
+  assert.equal(f.command('Site Personnel',{type:'receiveTransferDelivery',id:delivery.id,lines:{[line]:{accepted:20,issue:''}}},[f.request.siteId]).ok,true);
+  assert.equal(f.command('Site Personnel',{type:'postTransferDelivery',id:delivery.id,quantities:{[line]:20},reason:'',destinations:{[line]:{mode:'new',reason:''}}},[f.request.siteId]).ok,true);
+  assert.equal(sourceStockOnHand(f.state,f.source.id,'Stock cement','bags'),60);
+  assert.equal(sourceStockOnHand(f.state,f.source.id,'Stock cement','bag'),0);
+  assert.equal(sourceStockOnHand(f.state,f.request.siteId,'Cement stock','bag'),20);
+  assert.equal(validTransferState(f.state),true);
+  assert.ok(parseCurrent(JSON.stringify(f.state)));
+});
+
 test('PO edits count saved awards while conversion consumes only the awards being converted', () => {
   const f = setup(), quote = stockQuote(f), other = stockQuote(f, 1); f.propose(40);
   const line = { itemId: 'cement', quoteLineId: quote.lines[0].id, quantity: 40, unitPrice: 100 };
@@ -154,7 +275,7 @@ test('reload rejects missing or foreign stock debits and credits', () => {
   const f = setup(), { delivery, line } = receiveTrip(f);
   assert.equal(validTransferState(f.state), true);
   const noDebit = structuredClone(f.state); noDebit.movements = noDebit.movements.filter(value => value.kind !== 'transfer-out'); assert.equal(validTransferState(noDebit), false);
-  f.command('Site Personnel', { type: 'postTransferDelivery', id: delivery.id, quantities: { [line]: 40 }, reason: '' }, [f.request.siteId]);
+  f.command('Site Personnel', { type: 'postTransferDelivery', id: delivery.id, destinations: destinationsFor(f.state,delivery.id), quantities: { [line]: 40 }, reason: '' }, [f.request.siteId]);
   const noCredit = structuredClone(f.state); noCredit.movements = noCredit.movements.filter(value => value.kind !== 'transfer-in'); assert.equal(validTransferState(noCredit), false);
   const foreign = structuredClone(f.state); foreign.movements.find(value => value.kind === 'transfer-in').siteId = f.source.id; assert.equal(validTransferState(foreign), false);
 });
@@ -188,7 +309,7 @@ test('monitoring and lifecycle include transfer-only transit, receipt, posting a
   f.command('Logistics', { type: 'dispatchTransferDelivery', id: delivery.id });
   assert.match(requestMonitoring(f.state, f.request.id).logistics.detail, /1 legs/); assert.equal(requestMonitoring(f.state, f.request.id).finance.label, 'Not applicable');
   f.command('Site Personnel', { type: 'receiveTransferDelivery', id: delivery.id, lines: { [line]: { accepted: 100, issue: '' } } }, [f.request.siteId]);
-  f.command('Site Personnel', { type: 'postTransferDelivery', id: delivery.id, quantities: { [line]: 100 }, reason: '' }, [f.request.siteId]);
+  f.command('Site Personnel', { type: 'postTransferDelivery', id: delivery.id, destinations: destinationsFor(f.state,delivery.id), quantities: { [line]: 100 }, reason: '' }, [f.request.siteId]);
   assert.equal(requestMonitoring(f.state, f.request.id).delivered.label, 'Delivered'); assert.equal(requestMonitoring(f.state, f.request.id).stock.label, 'Stock posted');
   assert.match(requestLifecycle(f.state, f.request.id).stages.find(stage => stage.name === 'Delivery').progress, /1 posted/);
 });
@@ -200,7 +321,7 @@ test('Accounting completion needs archived current receipt evidence; corrected s
   assert.equal(f.command('Site Personnel', { type: 'attachTransferEvidence', transferId: transfer.id, documents: [evidence] }, [f.request.siteId]).ok, true);
   for (const command of [{ type: 'completeTransferReceiptArchive', deliveryId: delivery.id, receiptId: receipt.id }, { type: 'completeTransferEvidenceArchive', transferId: transfer.id, documentId: evidence.id }]) assert.equal(f.command('Accounting / Auditing', { ...command, fileId: 'receipt-file', url: 'https://drive.google.com/file/d/receipt-file/view' }).ok, true);
   assert.equal(f.command('Accounting / Auditing', { type: 'reviewTransferDocuments', id: transfer.id, status: 'Complete', note: '' }).ok, true);
-  assert.equal(f.command('Site Personnel', { type: 'postTransferDelivery', id: delivery.id, quantities: { [line]: 17 }, reason: 'One additional bag unusable' }, [f.request.siteId]).ok, true);
+  assert.equal(f.command('Site Personnel', { type: 'postTransferDelivery', id: delivery.id, destinations: destinationsFor(f.state,delivery.id), quantities: { [line]: 17 }, reason: 'One additional bag unusable' }, [f.request.siteId]).ok, true);
   assert.deepEqual(f.state.transferDeliveries[0].receiptVersions[0].data, frozen); assert.equal(f.state.transferDeliveries[0].receiptVersions.length, 2);
   assert.equal(f.command('Accounting / Auditing', { type: 'reviewTransferDocuments', id: transfer.id, status: 'Complete', note: '' }).ok, false);
   const pdf = await PDFDocument.load(await generateTransferReceiptPdf(f.state.transferDeliveries[0].receiptVersions[1].data));
@@ -248,8 +369,8 @@ test('warehouse forwarding supports split trips without double deductions or pre
     assert.equal(f.command('Logistics', { type: 'dispatchTransferDelivery', id: delivery.id }).ok, true);
     assert.equal(f.command('Logistics', { type: 'dispatchTransferDelivery', id: delivery.id }).ok, false);
     assert.equal(f.command('Site Personnel', { type: 'receiveTransferDelivery', id: delivery.id, lines: { [line]: { accepted, issue: accepted < delivery.lines[0].expected ? 'One bag damaged' : '' } } }, [f.request.siteId]).ok, true);
-    assert.equal(f.command('Site Personnel', { type: 'postTransferDelivery', id: delivery.id, quantities: { [line]: accepted }, reason: '' }, [f.request.siteId]).ok, true);
-    assert.equal(f.command('Site Personnel', { type: 'postTransferDelivery', id: delivery.id, quantities: { [line]: accepted }, reason: '' }, [f.request.siteId]).ok, false);
+    assert.equal(f.command('Site Personnel', { type: 'postTransferDelivery', id: delivery.id, destinations: destinationsFor(f.state,delivery.id), quantities: { [line]: accepted }, reason: '' }, [f.request.siteId]).ok, true);
+    assert.equal(f.command('Site Personnel', { type: 'postTransferDelivery', id: delivery.id, destinations: destinationsFor(f.state,delivery.id), quantities: { [line]: accepted }, reason: '' }, [f.request.siteId]).ok, false);
     assert.equal(validTransferState(f.state), true);
   }
   assert.equal(sourceStockOnHand(f.state, f.source.id, 'CEMENT STOCK', 'BAG'), 40);
@@ -290,7 +411,7 @@ test('warehouse receipts and onward receiving enforce their own roles and parent
   const receive = { type: 'receiveTransferDelivery', id: parent.id, lines: { [line]: { accepted: 20, issue: '' } } };
   for (const role of ['Logistics', 'Site Personnel', 'Accounting / Auditing']) assert.equal(f.command(role, receive, [f.request.siteId, f.source.id]).ok, false);
   assert.equal(f.command('Procurement', receive).ok, true); assert.equal(f.command('Procurement', receive).ok, false);
-  for (const role of ['Procurement', 'Site Personnel']) assert.equal(f.command(role, { type: 'postTransferDelivery', id: parent.id, quantities: { [line]: 20 }, reason: '' }, [f.request.siteId]).ok, false);
+  for (const role of ['Procurement', 'Site Personnel']) assert.equal(f.command(role, { type: 'postTransferDelivery', id: parent.id, destinations: destinationsFor(f.state,parent.id), quantities: { [line]: 20 }, reason: '' }, [f.request.siteId]).ok, false);
   assert.equal(f.schedule(transfer, 10, { leg: 'warehouse-site', parentDeliveryId: parent.id }).ok, true);
   const child = f.state.transferDeliveries.at(-1);
   assert.equal(f.command('Logistics', { type: 'dispatchTransferDelivery', id: child.id }).ok, true);
@@ -326,7 +447,7 @@ test('forwarded stock corrections retain warehouse consumption and immutable rec
   f.command('Logistics', { type: 'dispatchTransferDelivery', id: child.id });
   f.command('Site Personnel', { type: 'receiveTransferDelivery', id: child.id, lines: { [line]: { accepted: 18, issue: 'Two damaged bags' } } }, [f.request.siteId]);
   const frozen = structuredClone(f.state.transferDeliveries.at(-1).receiptVersions[0].data);
-  assert.equal(f.command('Site Personnel', { type: 'postTransferDelivery', id: child.id, quantities: { [line]: 19 }, reason: 'One bag recovered at site' }, [f.request.siteId]).ok, true);
+  assert.equal(f.command('Site Personnel', { type: 'postTransferDelivery', id: child.id, destinations: destinationsFor(f.state,child.id), quantities: { [line]: 19 }, reason: 'One bag recovered at site' }, [f.request.siteId]).ok, true);
   assert.equal(transferQuantityFor(f.state, f.request.id, 'cement'), 37);
   assert.equal(transferWarehouseHeldFor(f.state, parent.id, line), 18);
   assert.equal(f.state.transferDeliveries.at(-1).receiptVersions.length, 2);

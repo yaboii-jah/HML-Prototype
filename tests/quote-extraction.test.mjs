@@ -16,6 +16,31 @@ const quotationRequest = () => {
   return new Request("http://localhost/api/quotes/extract", { method: "POST", body: form });
 };
 
+test("quotation transport ignores thought parts, joins text parts and propagates cancellation", async t => {
+  const previousFetch = globalThis.fetch, previousKey = process.env.GEMINI_API_KEY;
+  t.after(() => { globalThis.fetch = previousFetch; if (previousKey === undefined) delete process.env.GEMINI_API_KEY; else process.env.GEMINI_API_KEY = previousKey; });
+  process.env.GEMINI_API_KEY = 'test-key';
+  const controller = new AbortController();
+  const request = new Request(quotationRequest(), { signal: controller.signal });
+  globalThis.fetch = async (_url, options) => {
+    assert.equal(options.signal.aborted, false);
+    controller.abort();
+    assert.equal(options.signal.aborted, true);
+    return Response.json({ candidates: [{ finishReason: 'STOP', content: { parts: [{ thought: true, text: 'private reasoning' }, { text: '{"lines":' }, { text: '[{"description":"Cement","quantity":10,"unitPrice":250}]}' }] } }] });
+  };
+  const response = await POST(request);
+  assert.equal(response.status, 200);
+  assert.equal((await response.json()).extraction.lines[0].description, 'Cement');
+});
+
+test("quotation extraction rejects a truncated result even when its partial JSON parses", async t => {
+  const previousFetch = globalThis.fetch, previousKey = process.env.GEMINI_API_KEY;
+  t.after(() => { globalThis.fetch = previousFetch; if (previousKey === undefined) delete process.env.GEMINI_API_KEY; else process.env.GEMINI_API_KEY = previousKey; });
+  process.env.GEMINI_API_KEY = 'test-key';
+  globalThis.fetch = async () => Response.json({ candidates: [{ finishReason: 'MAX_TOKENS', content: { parts: [{ text: '{"lines":[]}' }] } }] });
+  assert.equal((await POST(quotationRequest())).status, 502);
+});
+
 test("quotation extraction sends Gemini's JSON format and returns reviewed lines", async t => {
   const previousFetch = globalThis.fetch;
   const previousKey = process.env.GEMINI_API_KEY;

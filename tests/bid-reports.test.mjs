@@ -3,7 +3,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import ExcelJS from "exceljs";
 import { randomBytes } from "node:crypto";
-import { seedDemo } from "../src/mock/fixtures/seed.ts";
+import { seedDemo } from "./fixtures/workspace.ts";
 import { migrateV9, LocalDemoRepository } from "../src/mock/repository.ts";
 import { applyCommand } from "../src/domain/commands.ts";
 import { bidReportReadiness, captureBidReport, validBidReport } from "../src/domain/bid-reports.ts";
@@ -11,7 +11,7 @@ import { quoteTotal, poTotal } from "../src/domain/selectors.ts";
 import { quoteLineTotal } from "../src/domain/pricing.ts";
 import { buildBidWorkbook, generateBidWorkbook } from "../src/server/bid-workbook.ts";
 import { openBidUploadTicket, sealBidUploadTicket, validBidChunk } from "../src/server/bid-upload-ticket.ts";
-import { uploadDocument } from "../src/features/requests/archive-purchasing.ts";
+import { uploadDocument } from "../src/documents/resumable-upload.ts";
 
 let sequence = 0;
 const context = { now: () => "2026-09-30T08:00:00.000Z", id: prefix => `${prefix}-report-${++sequence}` };

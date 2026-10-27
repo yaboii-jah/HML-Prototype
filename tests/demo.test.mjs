@@ -1,8 +1,8 @@
 import { initializedWorkspaceStorage } from './helpers/initialized-storage.mjs';
 import test from "node:test";
 import assert from "node:assert/strict";
-import { seedDemo } from "../src/mock/fixtures/seed.ts";
-import { blankWorkspace } from "../src/mock/fixtures/blank.ts";
+import { seedDemo } from "./fixtures/workspace.ts";
+import { blankWorkspace } from "../src/mock/blank-workspace.ts";
 import { applyCommand } from "../src/domain/commands.ts";
 import { migrateLegacy, migrateV5, migrateV6, migrateV7, migrateV8, LocalDemoRepository } from "../src/mock/repository.ts";
 import { legacyDestination } from "../src/domain/legacy-links.ts";

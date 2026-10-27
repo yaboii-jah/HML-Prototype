@@ -1,6 +1,6 @@
-# Optional Google Drive configuration
+# Google Drive configuration
 
-The populated demonstration workspace stores its archive copies locally and does not require Drive credentials. Use the same browser origin/profile to open those files. This configuration applies when exercising the prototype's live Drive path with a separate test workspace.
+New project archives use Google Drive. New browser profiles start empty; automated workflow tests use synthetic fixtures and controlled responses. Configure the following only on the application server, using a root folder where the configured account can create and read files.
 
 Copy `.env.example` to `.env.local` and configure the variables read by `src/server/drive.ts`:
 
@@ -11,4 +11,8 @@ Copy `.env.example` to `.env.local` and configure the variables read by `src/ser
 
 Restart the local server after changing environment values. Project settings validates mapped folders and reports pending/failed archive work with retry controls. Use test documents and a test Drive location when exercising live integration. Do not commit credentials, tokens or `.env.local`.
 
-The prototype's browser accounts do not provide server-side authorization. Live Drive permission and credential-expiry behavior require a separate integration verification before company use; the automated workflow suites use controlled responses rather than accessing a real account.
+The prototype's browser accounts do not provide server-side authorization. Keep live-enabled instances protected while production authentication and permissions are pending.
+
+After `npm run verify` has produced a build, run `npm run test:live` for isolated integration verification. This uses the actual application credentials, creates a uniquely tagged test child under the configured root, starts a separate application process restricted to that child, and exercises AI extraction and Drive upload/download integrity with generated synthetic documents. The runner verifies ownership before trashing its own test folder and verifies the trashed state afterward. Existing company files and sharing permissions are preserved. Only test tooling can perform this cleanup; no deletion endpoint is added to the application.
+
+The ignored `.verification/live.json` contains the outcome. A failed cleanup returns a failing exit status and identifies the run-owned folder for follow-up. A successful run verifies current credentials and permissions; future credential expiry, production authorization, provider outages and recovery still need operational controls.

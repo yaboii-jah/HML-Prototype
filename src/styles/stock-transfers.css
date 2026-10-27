@@ -18,6 +18,13 @@
 .stock-transfer-detail .transfer-form-actions:empty{display:none}
 .stock-transfer-detail .transfer-preview{margin-bottom:16px}
 .transfer-trip{scroll-margin-top:96px}
+.transfer-stock-posting,.transfer-stock-posted{margin-top:20px;padding-top:20px;border-top:1px solid var(--line);min-width:0}
+.transfer-stock-posting h3,.transfer-stock-posted h3{font-size:15px;margin:0 0 12px}
+.transfer-stock-choice{padding:16px;margin:12px 0;border:1px solid var(--line);border-radius:var(--radius-md);min-width:0}
+.transfer-stock-choice .field{margin:12px 0;min-width:0}
+.transfer-stock-choice input:not([type=checkbox]),.transfer-stock-choice select,.transfer-stock-choice textarea{width:100%;min-width:0;box-sizing:border-box}
+.transfer-stock-choice .stock-specs{margin-top:8px}
+.transfer-stock-balance,.transfer-stock-posted p{overflow-wrap:anywhere;line-height:1.6;font-size:13px}
 .transfer-warehouse{margin-top:20px;padding-top:20px;border-top:1px solid var(--line);min-width:0}
 .transfer-warehouse h3{font-size:15px;margin:0 0 8px}
 .transfer-warehouse .qa-bounded-table table{min-width:600px}

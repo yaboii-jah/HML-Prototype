@@ -8,7 +8,7 @@ import { groupAuditEvents } from "@/src/domain/request-lifecycle";
 import { activityFor } from "@/src/domain/selectors";
 import { statusLabel } from "@/src/domain/format";
 import type { DemoSnapshot, DocumentRef } from "@/src/domain/types";
-import { openQuoteFile } from "@/src/features/requests/quote-files";
+import { openQuoteFile } from "@/src/documents/files";
 import { useState } from "react";
 import type { ReactNode } from "react";
 

@@ -1,0 +1,32 @@
+name: Verify
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    env:
+      GOOGLE_DRIVE_ENABLED: 'false'
+      GEMINI_API_KEY: ''
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm install --global npm@11.20.0
+      - run: npm ci
+      - run: npm audit --audit-level=high
+      - run: npm run verify
+      - run: npm run verify:browser
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: verification
+          path: .verification/
+          include-hidden-files: true
+          retention-days: 7

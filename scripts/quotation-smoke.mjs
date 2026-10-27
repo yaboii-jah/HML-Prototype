@@ -7,7 +7,7 @@ import assert from "node:assert/strict";
 import ExcelJS from "exceljs";
 import { PDFDocument } from "pdf-lib";
 import { ACCOUNT_FIXTURES } from "../src/app-state/demo-session.ts";
-import { seedDemo } from "../src/mock/fixtures/seed.ts";
+import { seedDemo } from "../tests/fixtures/workspace.ts";
 import { poFinancialBreakdown } from "../src/domain/pricing.ts";
 
 const edge = "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe";

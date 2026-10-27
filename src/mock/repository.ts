@@ -3,11 +3,11 @@ import { applyCommand, type Command, type CommandResult } from "../domain/comman
 import { validStockReviews } from "../domain/stock-suitability.ts";
 import { validTransferState } from "../domain/transfer-document.ts";
 import { newId } from "../domain/ids.ts";
-import { blankWorkspace } from "./fixtures/blank.ts";
+import { blankWorkspace } from "./blank-workspace.ts";
 import { normalizeKnownPlaceholders } from "./normalize.ts";
 import { upgradeLegacyQuotes } from "../domain/procurement.ts";
 import { ROLES, type AuditIdentity, type DemoSnapshot, type LegacySnapshot } from "../domain/types.ts";
-import { clearQuoteFiles } from "../features/requests/quote-files.ts";
+import { clearQuoteFiles } from "../documents/files.ts";
 import { validBidReport } from "../domain/bid-reports.ts";
 import { validDeliveryReceipt } from "../domain/delivery-document.ts";
 import { validDocumentNumberingState } from "../domain/document-numbering.ts";

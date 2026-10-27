@@ -1,3 +1,5 @@
+import { equivalentStockUnit } from "./stock-matching.ts";
+import { validTransferStockPosting } from "./transfer-stock-posting.ts";
 import { materialId } from "./ids.ts";
 import { requestSourcing, sourceStockOnHand, transferReservedFor } from "./stock-transfers.ts";
 import { COMPANY_WAREHOUSE } from "./company.ts";
@@ -26,7 +28,8 @@ export function validTransferReceipt(value: unknown): value is TransferReceiptDa
     if (delivery.status === "posted" && (!isTransferSiteDelivery(delivery) || !time(delivery.postedAt) || delivery.postedBy?.role !== "Site Personnel")) return false;
     return delivery.lines.every(line => {
       const source = transfer.lines.find(value => value.id === line.transferLineId), item = request.items.find(value => value.id === line.itemId);
-      return !!source && !!item && source.itemId === item.id && text(item.name) && text(source.sourceName) && source.sourceMaterialId === materialId(source.sourceName, source.unit) && source.unit.trim().toLowerCase() === item.unit.trim().toLowerCase() && amount(line.expected) && line.expected > 0 && line.expected <= source.approved && (!parent || line.expected <= (parent.lines.find(value => value.transferLineId === line.transferLineId && value.itemId === line.itemId)?.accepted || 0)) && amount(line.accepted) && line.accepted <= line.expected && typeof line.issue === "string" && (!["confirmed", "posted"].includes(delivery.status) || line.accepted === line.expected || line.issue.trim().length >= 5);
+      if (line.stockPosting !== undefined && (!item || delivery.status !== "posted" || line.accepted <= 0 || !validTransferStockPosting(line.stockPosting, item))) return false;
+      return !!source && !!item && source.itemId === item.id && text(item.name) && text(source.sourceName) && source.sourceMaterialId === materialId(source.sourceName, source.unit) && equivalentStockUnit(source.unit, item.unit) && amount(line.expected) && line.expected > 0 && line.expected <= source.approved && (!parent || line.expected <= (parent.lines.find(value => value.transferLineId === line.transferLineId && value.itemId === line.itemId)?.accepted || 0)) && amount(line.accepted) && line.accepted <= line.expected && typeof line.issue === "string" && (!["confirmed", "posted"].includes(delivery.status) || line.accepted === line.expected || line.issue.trim().length >= 5);
     });
   } catch { return false; }
 }
@@ -38,7 +41,7 @@ export function validTransferState(state: DemoSnapshot) {
     for (const transfer of transfers) {
       const request = state.requests.find(value => value.id === transfer.requestId);
       if (!request || request.siteId !== transfer.destinationSiteId || transfer.sourceSiteId === transfer.destinationSiteId || !state.sites.some(value => value.id === transfer.sourceSiteId) || !["pending", "approved", "rejected", "cancelled"].includes(transfer.status) || !text(transfer.ref) || !time(transfer.createdAt) || !Array.isArray(transfer.lines) || !transfer.lines.length || new Set(transfer.lines.map(value => value.id)).size !== transfer.lines.length) return false;
-      if (transfer.lines.some(line => !text(line.id) || !text(line.sourceName) || !text(line.unit) || line.sourceMaterialId !== materialId(line.sourceName, line.unit) || line.suitabilityConfirmed !== true || !request.items.some(item => item.id === line.itemId && item.unit.trim().toLowerCase() === line.unit.trim().toLowerCase()) || !amount(line.proposed) || line.proposed <= 0 || !amount(line.approved) || line.approved > line.proposed || !amount(line.cancelled) || line.cancelled > line.approved)) return false;
+      if (transfer.lines.some(line => !text(line.id) || !text(line.sourceName) || !text(line.unit) || line.sourceMaterialId !== materialId(line.sourceName, line.unit) || line.suitabilityConfirmed !== true || !request.items.some(item => item.id === line.itemId && equivalentStockUnit(item.unit, line.unit)) || !amount(line.proposed) || line.proposed <= 0 || !amount(line.approved) || line.approved > line.proposed || !amount(line.cancelled) || line.cancelled > line.approved)) return false;
       if (transfer.lines.some(line => line.suitabilityReviewId && !state.stockSuitabilityReviews?.some(review => review.id === line.suitabilityReviewId && review.status === "used" && review.transferId === transfer.id && review.requestId === transfer.requestId && review.itemId === line.itemId && review.sourceSiteId === transfer.sourceSiteId && review.sourceMaterialId === line.sourceMaterialId && review.released === line.proposed))) return false;
       if (transfer.status === "approved" && (!time(transfer.reviewedAt) || transfer.reviewedBy?.role !== "Site Personnel" || !transfer.lines.some(line => line.approved > 0))) return false;
       if (request.items.some(item => { const row = requestSourcing(state, request, item); return row.ordered + row.transfers + row.staged + row.suitability > row.requested + .000001; })) return false;
@@ -75,7 +78,9 @@ export function validTransferState(state: DemoSnapshot) {
           expected.set(id, (expected.get(id) || 0) - line.expected);
         }
         if (delivery.status === "posted" && line.accepted > 0) {
-          const id = key(transfer.destinationSiteId, item.id, item.name, item.unit, "transfer-in");
+          const posting = line.stockPosting;
+          if (posting?.mode === "existing" && !state.movements.some(movement => movement.siteId === transfer.destinationSiteId && movement.transferDeliveryId !== delivery.id && materialId(movement.itemName, movement.unit) === posting.materialId)) return false;
+          const id = key(transfer.destinationSiteId, item.id, posting?.name ?? item.name, posting?.unit ?? item.unit, "transfer-in");
           expected.set(id, (expected.get(id) || 0) + line.accepted);
         }
       }

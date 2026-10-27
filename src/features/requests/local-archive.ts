@@ -1,7 +1,7 @@
 import type { ArchiveProgressListener } from "../../domain/archive-progress.ts";
 import { localArchiveUrl } from "../../domain/archive-destination.ts";
 import type { Site } from "../../domain/types.ts";
-import { saveGeneratedFile } from "./quote-files.ts";
+import { saveGeneratedFile } from "../../documents/files.ts";
 
 export async function previewPdf(data: unknown): Promise<Blob> {
   const response = await fetch("/api/documents/preview", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });

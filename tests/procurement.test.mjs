@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { seedDemo } from "../src/mock/fixtures/seed.ts";
+import { seedDemo } from "./fixtures/workspace.ts";
 import { applyCommand } from "../src/domain/commands.ts";
 import { migrateV3OrV4 } from "../src/mock/repository.ts";
 import { poTotal } from "../src/domain/selectors.ts";

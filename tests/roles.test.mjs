@@ -4,8 +4,8 @@ import assert from 'node:assert/strict';
 import { ROLES } from '../src/domain/types.ts';
 import { ACCOUNT_FIXTURES, LocalDemoSession, SESSION_STORAGE_KEY } from '../src/app-state/demo-session.ts';
 import { applyCommand } from '../src/domain/commands.ts';
-import { blankWorkspace } from '../src/mock/fixtures/blank.ts';
-import { seedDemo } from '../src/mock/fixtures/seed.ts';
+import { blankWorkspace } from '../src/mock/blank-workspace.ts';
+import { seedDemo } from './fixtures/workspace.ts';
 import { LocalDemoRepository } from '../src/mock/repository.ts';
 import { bindAccountCommands } from '../src/app-state/command-gateway.ts';
 

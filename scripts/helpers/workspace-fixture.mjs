@@ -1,6 +1,6 @@
 import { LocalUserDirectory, USER_STORAGE_KEY } from '../../src/app-state/user-directory.ts';
-import { seedDemo } from '../../src/mock/fixtures/seed.ts';
-import { blankWorkspace } from '../../src/mock/fixtures/blank.ts';
+import { seedDemo } from '../../tests/fixtures/workspace.ts';
+import { blankWorkspace } from '../../src/mock/blank-workspace.ts';
 
 /** Legacy workflow suites use an explicit fixture; showcase-smoke owns empty-workspace initialization coverage. */
 export async function prepareFixtureBrowser(call, base, options = {}) {

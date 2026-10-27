@@ -1,14 +1,23 @@
 import { spawn } from 'node:child_process';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { browserSuites } from './browser-suites.mjs';
 
 const base = process.argv[2] || 'http://127.0.0.1:3000';
-const audit = JSON.parse(await readFile('artifacts/app-audit/verification-summary.json', 'utf8'));
-const original = Array.isArray(audit.originalSuites) ? audit.originalSuites : audit.originalSuites.results;
-const names = process.argv.length > 3 ? process.argv.slice(3) : [...new Set([...original.map(s => s.name), 'usage-entries', 'next-iteration'])];
-const output = path.resolve('artifacts/iteration-2'); await mkdir(output, {recursive:true});
+const names = process.argv.length > 3 ? process.argv.slice(3) : browserSuites;
+if (names.some(name => !browserSuites.includes(name))) throw new Error('Select a controlled suite from scripts/browser-suites.mjs. Use test:live for provider checks.');
+const output = path.resolve('.verification/browser'); await mkdir(output, {recursive:true});
 const results = [];
 const queue = [...names];
+const startedAt = new Date().toISOString();
+let summaryWrites = Promise.resolve();
+function writeSummary(complete = false) {
+  const summary = JSON.stringify({ base, startedAt, at: new Date().toISOString(), complete, selected: names, results: [...results] }, null, 2);
+  summaryWrites = summaryWrites.then(() => writeFile(path.join(output, 'verification.json'), summary));
+  return summaryWrites;
+}
+// Replace stale results immediately and preserve completed checks if a run is interrupted.
+await writeSummary();
 async function worker() {
   while (queue.length) {
     const name = queue.shift();
@@ -26,11 +35,12 @@ async function worker() {
     clearTimeout(timer); await writeFile(path.join(output, `${name}.log`), log);
     const result = {name,code,timedOut,durationMs:Date.now()-start,log:`${name}.log`,tail:log.trim().split('\n').slice(-12).join('\n')};
     results.push(result); console.log(`${code === 0 ? 'PASS' : 'FAIL'} ${name} (${Math.round(result.durationMs/1000)}s)`);
+    await writeSummary();
     if (code !== 0) console.log(result.tail);
   }
 }
 await Promise.all([worker(), worker()]);
-await writeFile(path.join(output,'verification.json'), JSON.stringify({base,at:new Date().toISOString(),results},null,2));
+await writeSummary(true);
 const failures = results.filter(r => r.code !== 0);
 console.log(`${results.length-failures.length}/${results.length} browser suites passed. Logs: ${output}`);
 if (failures.length) process.exitCode = 1;

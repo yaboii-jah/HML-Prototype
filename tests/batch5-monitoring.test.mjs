@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { requestMonitoring, monitoringRequests } from "../src/domain/request-monitoring.ts";
 import { requestLifecycle } from "../src/domain/request-lifecycle.ts";
-import { seedDemo } from "../src/mock/fixtures/seed.ts";
+import { seedDemo } from "./fixtures/workspace.ts";
 
 function base() {
   const state = seedDemo(), po = state.pos.find(value => value.id === "po1");

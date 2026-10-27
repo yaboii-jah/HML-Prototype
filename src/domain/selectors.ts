@@ -1,6 +1,6 @@
 import { isExternalCredit, isExternalPayment } from "./full-disbursement.ts";
 import { isSiteBatch, normalizedQuantity, orderedQuantity, siteAcceptedFor, supplierSchedulableFor } from "./delivery-flow.ts";
-import { materialId } from "./ids.ts";
+import { stockMaterialsAt } from "./stock-matching.ts";
 import { sourceStockOnHand } from "./stock-transfers.ts";
 import { poFinancialBreakdown, poLineTotal, quoteFinancialBreakdown, quoteLineTotal, totalWithAdjustments } from "./pricing.ts";
 import type { DemoSnapshot, MRF, PO, Quote } from "./types.ts";
@@ -37,9 +37,7 @@ export const outstandingFor = (state: DemoSnapshot, po: PO, itemId: string) => M
 export const schedulableFor = supplierSchedulableFor;
 export const stockFor = sourceStockOnHand;
 export const inventoryFor = (state: DemoSnapshot, siteId: string) => {
-  const entries = new Map<string, { id: string; name: string; unit: string }>();
-  state.movements.filter(m => m.siteId === siteId).forEach(m => entries.set(materialId(m.itemName, m.unit), { id: materialId(m.itemName, m.unit), name: m.itemName, unit: m.unit }));
-  return [...entries.values()].map(item => ({ ...item, onHand: stockFor(state, siteId, item.name, item.unit) }));
+  return stockMaterialsAt(state, siteId).map(item => ({ ...item, onHand: stockFor(state, siteId, item.name, item.unit) }));
 };
 export const materialFor = (state: DemoSnapshot, siteId: string, id: string) => inventoryFor(state, siteId).find(item => item.id === id);
 export const activityFor = (state: DemoSnapshot, ids: string[]) => state.activity.filter(a => ids.includes(a.entity) || !!a.requestId && ids.includes(a.requestId) || !!a.poId && ids.includes(a.poId)).sort((a,b) => b.at.localeCompare(a.at));

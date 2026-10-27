@@ -1,8 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { applyCommand } from "../src/domain/commands.ts";
-import { seedDemo } from "../src/mock/fixtures/seed.ts";
-import { blankWorkspace } from "../src/mock/fixtures/blank.ts";
+import { seedDemo } from "./fixtures/workspace.ts";
+import { blankWorkspace } from "../src/mock/blank-workspace.ts";
 import { projectRemovalReason } from "../src/domain/project-removal.ts";
 import { deliveryEvidenceStatus, deliveryDocumentIssues } from "../src/domain/delivery-archive.ts";
 import { tasksFor } from "../src/domain/queues.ts";

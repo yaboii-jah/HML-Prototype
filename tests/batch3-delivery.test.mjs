@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { registerHooks } from "node:module";
 import { PDFDocument, PDFName } from "pdf-lib";
 import { applyCommand } from "../src/domain/commands.ts";
-import { seedDemo } from "../src/mock/fixtures/seed.ts";
+import { seedDemo } from "./fixtures/workspace.ts";
 import { ACCOUNT_FIXTURES } from "../src/app-state/demo-session.ts";
 import { acceptedFor, budgetFor, outstandingFor, schedulableFor, stockFor } from "../src/domain/selectors.ts";
 import { batchStage, deliveryPayment, deliveryToday, warehouseAvailableFor, warehouseHeldFor } from "../src/domain/delivery-flow.ts";

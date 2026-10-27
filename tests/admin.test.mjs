@@ -5,7 +5,7 @@ import { applyCommand } from '../src/domain/commands.ts';
 import { adminActivityGroups, activityDateKey, activityRangeError, emptyActivityFilters } from '../src/domain/admin-activity.ts';
 import { auditProjectId, auditRecords } from '../src/domain/audit.ts';
 import { projectMinimumBudget, projectScopes } from '../src/domain/scope-budgets.ts';
-import { seedDemo } from '../src/mock/fixtures/seed.ts';
+import { seedDemo } from './fixtures/workspace.ts';
 import { LocalDemoRepository } from '../src/mock/repository.ts';
 
 const admin = { name: 'Daniel Garcia', email: 'admin@example.com', role: 'Administrator' };

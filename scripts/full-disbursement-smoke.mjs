@@ -5,7 +5,7 @@ import { mkdtemp } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { ACCOUNT_FIXTURES } from "../src/app-state/demo-session.ts";
-import { seedDemo } from "../src/mock/fixtures/seed.ts";
+import { seedDemo } from "../tests/fixtures/workspace.ts";
 import { initializePoDocument } from "../src/domain/po-document.ts";
 import { writeFile } from "node:fs/promises";
 import { PDFDocument } from "pdf-lib";

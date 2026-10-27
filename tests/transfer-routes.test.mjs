@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { registerHooks } from 'node:module';
-import { seedDemo } from '../src/mock/fixtures/seed.ts';
+import { seedDemo } from './fixtures/workspace.ts';
 import { applyCommand } from '../src/domain/commands.ts';
 import { openTransferUploadTicket, sealTransferUploadTicket } from '../src/server/transfer-upload-ticket.ts';
 import { openAccountingUploadTicket, sealAccountingUploadTicket } from '../src/server/accounting-upload-ticket.ts';

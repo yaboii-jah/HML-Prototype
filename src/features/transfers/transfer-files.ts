@@ -7,9 +7,9 @@ import { transferReceiptData } from "../../domain/stock-transfers.ts";
 import { accountingSignature, ACCOUNTING_MIMES, MAX_ACCOUNTING_FILE, MAX_ACCOUNTING_BATCH } from "../../domain/accounting-documents.ts";
 import { archiveFileName } from "../../domain/document-numbering.ts";
 import { newId } from "../../domain/ids.ts";
-import { saveGeneratedFile, readQuoteFile, deleteLocalFile } from "../requests/quote-files.ts";
-import { workbookDigest } from "../requests/bid-report-files.ts";
-import { uploadDocument } from "../requests/archive-purchasing.ts";
+import { saveGeneratedFile, readQuoteFile, deleteLocalFile } from "../../documents/files.ts";
+import { documentDigest as workbookDigest } from "../../documents/digest.ts";
+import { uploadDocument } from "../../documents/resumable-upload.ts";
 
 type Run = (command: Command) => Promise<CommandResult>;
 async function json(response: Response) {

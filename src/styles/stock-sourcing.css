@@ -30,6 +30,9 @@
 .stock-sourced-breakdown{display:grid;gap:6px;font-size:12px}
 .stock-source-control{display:grid;gap:8px;min-width:0}
 .stock-source-control select{width:100%;min-width:0;max-width:100%;margin:0}
+.stock-source-control>input,.stock-match-control textarea{width:100%;min-width:0;max-width:100%;box-sizing:border-box}
+.stock-match-control .field{min-width:0;margin:0;font-size:12px}
+.stock-match-control textarea{min-height:88px;resize:vertical}
 .stock-search-controls{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
 .stock-quantity-control{display:grid;justify-items:start;gap:8px;min-width:0}
 .stock-quantity-line{display:flex;align-items:center;gap:8px;width:100%;min-width:0}

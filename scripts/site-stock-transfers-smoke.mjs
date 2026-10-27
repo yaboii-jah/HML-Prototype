@@ -5,8 +5,8 @@ import { mkdtemp, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { ACCOUNT_FIXTURES } from "../src/app-state/demo-session.ts";
-import { seedDemo } from "../src/mock/fixtures/seed.ts";
-import { applyCommand } from "../src/domain/commands.ts";
+import { seedDemo } from "../tests/fixtures/workspace.ts";
+import { validTransferState } from "../src/domain/transfer-document.ts";
 
 const base = (process.argv[2] || "http://localhost:3100").replace(/\/$/, "");
 const profile = await mkdtemp(path.join(os.tmpdir(), "constructsync-registers-"));
@@ -38,7 +38,7 @@ try {
     if (result.exceptionDetails) throw new Error(result.exceptionDetails.exception?.description || result.exceptionDetails.text);
     return result.result.value;
   };
-  const wait = async code => { for (let i = 0; i < 300; i++) { if (await run(code)) return; await sleep(100); } throw new Error(`Timed out: ${code}`); };
+  const wait = async code => { for (let i = 0; i < 300; i++) { if (await run(code)) return; await sleep(100); } throw new Error(`Timed out: ${code}\n${await run("return document.body.innerText.slice(-3500);")}`); };
   const navigate = async route => { console.log("Checking " + route); await call("Page.navigate", { url: base + route }); await wait(`return location.pathname+location.search===${JSON.stringify(route)}&&!!document.querySelector('h1');`); await sleep(180); };
   const fill = async (selector, value) => run(`const el=document.querySelector(${JSON.stringify(selector)});const proto=el.tagName==='SELECT'?HTMLSelectElement.prototype:el.tagName==='TEXTAREA'?HTMLTextAreaElement.prototype:HTMLInputElement.prototype;Object.getOwnPropertyDescriptor(proto,'value').set.call(el,${JSON.stringify(String(value))});el.dispatchEvent(new Event(el.tagName==='SELECT'?'change':'input',{bubbles:true}));return true;`);
   const click = async selector => { await run(`const el=document.querySelector(${JSON.stringify(selector)});el.focus();el.click();return true;`); await sleep(100); };
@@ -52,7 +52,7 @@ try {
   fixture.role='Procurement';request.status='approved';delete request.archive;delete request.correction;
   request.items=[{...request.items[0],id:'cement',name:'Cement',unit:'bag',quantity:100}];
   fixture.movements=[{id:'opening',siteId:sourceSite.id,itemName:'Cement',unit:'bag',quantity:80,kind:'opening',reason:'Opening stock',actor:'Site Personnel',at:'2026-10-12T00:00:00Z'}];
-  fixture.movements.push({...fixture.movements[0],id:'alternative-opening',itemName:'Cement alternative grade',quantity:30});
+  fixture.movements.push({...fixture.movements[0],id:'alternative-opening',itemName:'Cemnt',unit:'bags',quantity:30});
   const glassName='TEMPERED GLASS PANEL 10MM CLEAR, 900 X 2100MM, POLISHED EDGES AND STAINLESS STEEL FITTINGS';
   request.items.push({...request.items[0],id:'glass',name:glassName,unit:'PCS',quantity:12});
   fixture.movements.push({...fixture.movements[0],id:'glass-opening',itemName:glassName,unit:'PCS',quantity:12});
@@ -62,10 +62,7 @@ try {
   fixture.sites.find(site=>site.id===request.siteId).driveFolderId='test-transfer-project-folder';
   const sourceQuote=fixture.quotes.find(quote=>quote.id==='q1');
   fixture.quotes=[{...sourceQuote,currency:'PHP',reviewStatus:'finalized',archive:{status:'complete',files:[]},financial:{vatStatus:'VAT',priceBasis:'exclusive',vatRate:12,reviewed:true},lines:[{id:'cement-offer',requestItemId:'cement',description:'Cement',quantity:100,unit:'bag',unitPrice:100,conversionFactor:1,matchConfirmed:true,brand:'',specification:'',varianceReason:'',discountType:'none',discountValue:0}]}];
-  // A previously submitted differing-description review must remain actionable.
-  const historicalReview=applyCommand(fixture,{type:'submitStockSourcingPlan',requestId:request.id,note:'Previously submitted alternative',selections:[{itemId:'cement',sourceSiteId:sourceSite.id,sourceName:'Cement alternative grade',unit:'bag',quantity:30,matchConfirmed:false,needsReview:true,explanation:'Confirm this grade can be used for the requested work'}]},{now:()=>new Date().toISOString(),id:prefix=>prefix+'-'+crypto.randomUUID(),actor:{name:account.name,email:account.email,role:'Procurement'}});
-  assert.equal(historicalReview.ok,true);
-  Object.assign(fixture,historicalReview.snapshot);
+  fixture.movements.push({...fixture.movements[0],id:'destination-opening',siteId:request.siteId,itemName:'Cemnt',unit:'bags',quantity:12});
   const state=()=>run("return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12'));");
   await run("localStorage.setItem('hml-constructsync-demo-v12',"+JSON.stringify(JSON.stringify(fixture))+");return true;");
   const button=async text=>{await run("const button=[...document.querySelectorAll('button')].find(b=>b.textContent.trim()==="+JSON.stringify(text)+");if(!button)throw new Error('Missing button '+ "+JSON.stringify(text)+");button.click();return true;");await sleep(150);};
@@ -86,10 +83,22 @@ try {
   await click('.user-edit-form input[name=siteIds][value='+request.siteId+']');await click('.user-edit-form .button.primary');await confirm();await wait("return !document.querySelector('.user-edit-form');");
   await switchAccount(account.name);await navigate('/requests/m1/quotes');await wait("return !!document.querySelector('.stock-sourcing-table');");
   await fill('select[aria-label="Source project"]',sourceSite.id);
-  assert.equal(await run("return [...document.querySelectorAll('button')].some(b=>b.textContent.trim()==='Find alternative stock');"),false,'Alternative browsing is removed');
-  assert.equal(await run("return [...document.querySelector('[data-stock-material=cement] select').options].some(o=>o.textContent==='Cement alternative grade');"),false,'New options contain matching descriptions only');
+  assert.equal(await run("return [...document.querySelector('[data-stock-material=cement] select').options].some(o=>o.textContent==='Cemnt (bags)');"),true,'Differently named stock with a unit alias is available');
+  const typoId=await run("return [...document.querySelector('[data-stock-material=cement] select').options].find(o=>o.textContent==='Cemnt (bags)').value;");
+  await fill('[data-stock-material="cement"] select',typoId);
+  await fill('[data-stock-material="cement"] input[type=number]',30);
+  await button('Review selections');
+  assert.match(await run("return document.querySelector('[data-stock-material=cement]').innerText;"),/Explain why/,'Differing names require an explanation');
+  await fill('textarea[aria-label="Match explanation for Cemnt"]','Spelling differs; same cement grade and bag size');
+  await button('Review selections');
+  await wait("return !!document.querySelector('.record-dialog[open]');");
+  assert.match(await run("return document.querySelector('.record-dialog[open]').innerText;"),/Requesting-site specification review/);
+  await click('.record-dialog[open] .stock-final-verification input');
+  await button('Send requests');
+  await wait("return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).stockSuitabilityReviews?.length===1;");
+  assert.equal((await state()).stockTransfers.length,0,'Differing name waits for the requesting site');
   const stockSelector='[data-stock-material="cement"] select';
-  const exactId=await run("return [...document.querySelector('[data-stock-material=cement] select').options].find(o=>o.textContent==='Cement').value;");
+  const exactId=await run("return [...document.querySelector('[data-stock-material=cement] select').options].find(o=>o.textContent==='Cement (bag)').value;");
   await run("document.querySelector('[data-stock-material=cement] select').focus();return true;");
   assert.equal(await run("return document.activeElement.tagName;"),'SELECT','Stock selector accepts keyboard focus');
   await fill(stockSelector,exactId);
@@ -99,7 +108,7 @@ try {
   const exactChoice='[data-stock-selection]';
   assert.equal(await run("return document.querySelector('[data-stock-selection] input[type=number]').value;"),'','Quantity is entered manually');
   await fill(exactChoice+' input[type=number]',40);
-  assert.match(await run("return document.querySelector('[data-stock-material=cement] .stock-match-control').innerText;"),/Matches request/);
+  assert.match(await run("return document.querySelector('[data-stock-material=cement] .stock-match-control').innerText;"),/Matches description/);
   assert.equal(await run("return document.querySelectorAll('.stock-match-control input[type=checkbox]').length;"),0,'Routine row checkboxes removed');
   assert.equal(await run("return [...document.querySelectorAll('button')].some(b=>['Ask site to review','Cancel site review'].includes(b.textContent.trim()));"),false,'Optional site-review actions removed');
   assert.equal(await run("return !!document.querySelector('.stock-source-control textarea');"),false,'Draft explanation field removed');
@@ -124,7 +133,7 @@ try {
   await click('[data-stock-material="glass"] .stock-match-control button');
   // Switching source projects preserves drafts and validation reveals hidden selections.
   await fill('select[aria-label="Source project"]',otherSource.id);
-  assert.match(await run("return document.querySelector('[data-stock-material=glass]').innerText;"),/No matching stock at this project.*Choose another source project/s,'Empty results explain the next step');
+  assert.match(await run("return document.querySelector('[data-stock-material=glass]').innerText;"),/No stock matches this search and unit/s,'Empty results explain the next step');
   const otherId=await run("return document.querySelector('[data-stock-material=cement] select').options[1].value;");
   await fill(stockSelector,otherId);
   await fill('select[aria-label="Source project"]',sourceSite.id);
@@ -150,12 +159,12 @@ try {
   // Older matching drafts marked for review now need fresh verification and source release.
   await run("const key=Object.keys(localStorage).find(k=>k.startsWith('constructsync-stock-draft-v1/')&&k.endsWith('/m1'));const draft=JSON.parse(localStorage.getItem(key));draft.choices[0].needsReview=true;draft.choices[0].matchConfirmed=true;draft.choices[0].explanation='';localStorage.setItem(key,JSON.stringify(draft));return true;");
   await navigate('/requests/m1/quotes');
-  assert.match(await run("return document.querySelector('[data-stock-material=cement] .stock-match-control').innerText;"),/Matches request/,'Recovered matching draft routes to source release');
-  // Older differing-description drafts stay visible for removal, but cannot be sent.
-  await run("const key=Object.keys(localStorage).find(k=>k.startsWith('constructsync-stock-draft-v1/')&&k.endsWith('/m1'));const draft=JSON.parse(localStorage.getItem(key));draft.choices.push({...draft.choices[0],id:'legacy-alternative-draft',sourceName:'Cement alternative grade',quantity:'30',needsReview:true,explanation:'Old draft alternative'});localStorage.setItem(key,JSON.stringify(draft));return true;");
+  assert.match(await run("return document.querySelector('[data-stock-material=cement] .stock-match-control').innerText;"),/Matches description/,'Recovered matching draft routes to source release');
+  // Older differing-description drafts require an explanation and requesting-site review.
+  await run("const key=Object.keys(localStorage).find(k=>k.startsWith('constructsync-stock-draft-v1/')&&k.endsWith('/m1'));const draft=JSON.parse(localStorage.getItem(key));draft.choices.push({...draft.choices[0],id:'legacy-alternative-draft',sourceName:'Cemnt',quantity:'30',needsReview:true,explanation:''});localStorage.setItem(key,JSON.stringify(draft));return true;");
   await navigate('/requests/m1/quotes');
   await button('Review selections');
-  assert.match(await run("return document.querySelector('[data-stock-selection=\"legacy-alternative-draft\"]').innerText;"),/Only matching stock can now be selected/);
+  assert.match(await run("return document.querySelector('[data-stock-selection=\"legacy-alternative-draft\"]').innerText;"),/Explain why/);
   assert.equal(await run("return !!document.querySelector('.record-dialog[open]');"),false,'Differing-description draft blocks submission');
   await click('[data-stock-selection="legacy-alternative-draft"] .stock-match-control button');
   await button('Review selections');
@@ -176,22 +185,24 @@ try {
   await click('.record-dialog[open] .stock-final-verification input');
   await button('Send requests');
   await wait("return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).stockTransfers.length===1;");
-  await wait("return [...document.querySelectorAll('.toast-success')].some(t=>t.textContent.includes('Stock release requests sent.'));");
+  await wait("return [...document.querySelectorAll('.toast-success')].some(t=>t.textContent.includes('Stock requests sent.'));");
   assert.equal(await run("return !!document.querySelector('.stock-success');"),false,'Submission uses one bottom-right success notification');
   assert.equal((await state()).stockSuitabilityReviews[0].proposed,30);
-  assert.equal((await state()).stockSuitabilityReviews.length,1,'New submissions leave the historical review unchanged');
+  assert.equal((await state()).stockSuitabilityReviews.length,1,'New submissions leave the existing review unchanged');
   assert.equal((await state()).stockTransfers[0].lines[0].proposed,40);
   // Destination suitability approval does not reserve source stock; Procurement explicitly converts it.
   const reviewId=(await state()).stockSuitabilityReviews[0].id;
   await switchAccount(sourceName);await navigate('/requests/m1');
-  assert.equal(await run("return [...document.querySelectorAll('button')].some(b=>b.textContent.trim()==='Approve alternative');"),false);
+  assert.equal(await run("return [...document.querySelectorAll('button')].some(b=>b.textContent.trim()==='Confirm same material');"),false);
   await switchAccount('Transfer destination receiver');await navigate('/dashboard');
   assert.match(await run("return document.body.innerText;"),/Review alternative stock/);
-  await navigate('/requests/m1');await button('Approve alternative');
+  await navigate('/requests/m1');
+  assert.equal(await run("return [...document.querySelectorAll('button')].find(b=>b.textContent==='Confirm same material').disabled;"),true,'Specification confirmation is required');
+  await click('input[aria-label="Confirm same specifications for Cemnt"]');await button('Confirm same material');
   await wait("return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).stockSuitabilityReviews[0].status==='approved';");
   assert.equal((await state()).stockTransfers.length,1);
   await switchAccount(account.name);await navigate('/requests/m1');
-  await fill('input[aria-label="Release quantity for Cement alternative grade"]',30);
+  await fill('input[aria-label="Release quantity for Cemnt"]',30);
   await button('Request stock release');
   await wait("return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).stockSuitabilityReviews[0].status==='used';");
   assert.equal((await state()).stockTransfers.length,2);
@@ -231,7 +242,33 @@ try {
   await releaseArchives();
   await wait("return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).transferDeliveries[0].receiptVersions[0].archive.error;");
   assert.equal((await state()).transferDeliveries[0].status,'confirmed','Archive failure does not undo receiving');
+  await button('Post accepted stock');await confirm();
+  await wait("return [...document.querySelectorAll('.inline-error')].some(e=>e.textContent.includes('Choose destination inventory'));");
+  assert.equal((await state()).transferDeliveries[0].status,'confirmed','Posting requires an explicit destination choice');
+  await fill('select[aria-label="Destination stock for Cement"]','new');
+  await button('Post accepted stock');await confirm();
+  await wait("return [...document.querySelectorAll('.inline-error')].some(e=>e.textContent.includes('Explain why a separate material'));");
+  const targetId=await run("return [...document.querySelector('select[aria-label=\"Destination stock for Cement\"]').options].find(option=>option.textContent.startsWith('Cemnt (bags)')).value;");
+  await fill('select[aria-label="Destination stock for Cement"]',targetId);
+  await button('Post accepted stock');await confirm();
+  await wait("return [...document.querySelectorAll('.inline-error')].some(e=>e.textContent.includes('Confirm the selected inventory'));");
+  await click('input[aria-label="Confirm destination specifications for Cement"]');
+  for (const width of [375,1440]) {
+    await call('Emulation.setDeviceMetricsOverride',{width,height:1000,deviceScaleFactor:1,mobile:width<700});
+    assert.equal(await run('return document.documentElement.scrollWidth<=innerWidth+2;'),true,'Destination picker fits '+width);
+    await run("document.activeElement.blur();document.querySelector('.mobile-close')?.click();document.querySelectorAll('.archive-job button').forEach(button=>button.click());return true;");
+    await sleep(180);
+    await run("document.querySelector('.transfer-stock-choice').scrollIntoView({block:'start'});window.scrollBy(0,-100);return true;");
+    assert.equal(await run("const select=document.querySelector('[aria-label=\"Destination stock for Cement\"]');const rect=select.getBoundingClientRect();return rect.left>=0&&rect.right<=innerWidth&&!document.querySelector('.mobile-scrim');"),true,'Destination selection remains visible '+width);
+    const shot=await call('Page.captureScreenshot',{format:'png',captureBeyondViewport:false});
+    await writeFile(path.join(profile,'stock-posting-'+width+'.png'),Buffer.from(shot.data,'base64'));
+  }
   await button('Post accepted stock');await confirm();await wait("return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).transferDeliveries[0].status==='posted';");
+  const mapped=await state();
+  assert.equal(mapped.transferDeliveries[0].lines[0].stockPosting.materialId,targetId);
+  assert.equal(mapped.movements.filter(value=>value.siteId===request.siteId&&value.itemName==='Cemnt'&&value.unit==='bags').reduce((sum,value)=>sum+value.quantity,0),30);
+  assert.equal(validTransferState(mapped),true);
+
   assert.equal((await state()).movements.filter(m=>m.kind==='transfer-in')[0].quantity,18);
   await wait("return [...document.querySelectorAll('button')].some(b=>b.textContent==='Retry receipt archive'&&!b.disabled);");
   failArchive=false;delayArchive=true;await button('Retry receipt archive');

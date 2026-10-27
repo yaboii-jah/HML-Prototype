@@ -1,11 +1,12 @@
+import { syntheticPdf } from "./helpers/synthetic-documents.mjs";
 import { prepareFixtureBrowser } from "./helpers/workspace-fixture.mjs";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { mkdtemp } from "node:fs/promises";
+import { mkdtemp, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { ACCOUNT_FIXTURES } from "../src/app-state/demo-session.ts";
-import { seedDemo } from "../src/mock/fixtures/seed.ts";
+import { seedDemo } from "../tests/fixtures/workspace.ts";
 
 const base = (process.argv[2] || "http://localhost:3100").replace(/\/$/, "");
 const profile = await mkdtemp(path.join(os.tmpdir(), "constructsync-registers-"));
@@ -48,7 +49,9 @@ try {
   const signin = async role => { const account=ACCOUNT_FIXTURES.find(a=>a.role===role); await fill('#signin-email',account.email);await fill('#signin-password',account.password);await click('.signin-form button');await wait("return location.pathname==='/dashboard'&&!!document.querySelector('.masthead-account');"); };
   const role = async name => { await click('.masthead-account');await wait("return !!document.querySelector('.account-modal[open]');");await press('Sign out',"document.querySelector('.account-modal')");await wait("return !!document.querySelector('#signin-email');");await signin(name); };
   const confirmed = async () => { await wait("return !!document.querySelector('.confirm-dialog[open]');");await click('.confirm-dialog[open] .confirm-actions button:last-child'); };
-  const upload = async () => { const {root}=await call('DOM.getDocument');const {nodeId}=await call('DOM.querySelector',{nodeId:root.nodeId,selector:'input[aria-label="Upload accounting documents"]'});assert.ok(nodeId);await call('DOM.setFileInputFiles',{nodeId,files:[path.resolve('sample-data/site-payment-receipts/01 Meridian - Site Delivery Payment Receipt.pdf')]}); };
+  const receiptPath = path.join(profile, "synthetic-receipt.pdf");
+  await writeFile(receiptPath, await syntheticPdf(["Synthetic test receipt", "Payment reference: TEST-001", "Amount: PHP 2500.00"]));
+  const upload = async () => { const {root}=await call('DOM.getDocument');const {nodeId}=await call('DOM.querySelector',{nodeId:root.nodeId,selector:'input[aria-label="Upload accounting documents"]'});assert.ok(nodeId);await call('DOM.setFileInputFiles',{nodeId,files:[receiptPath]}); };
   const saved = "JSON.parse(localStorage.getItem('hml-constructsync-demo-v12'))";
   await signin('Site Personnel');
   const fixture=seedDemo(),po=fixture.pos.find(p=>p.id==='po1'),request=fixture.requests.find(r=>r.id===po.mrfId);

@@ -23,7 +23,7 @@ import { earliestNeededDate, posForRequest, poTotal, siteName, stockFor, supplie
 import { projectScopes, scopeName, scopeValidationError } from "@/src/domain/scope-budgets";
 import type { DemoSnapshot, DocumentRef, Item } from "@/src/domain/types";
 import { DocumentPreview } from "@/src/components/DocumentPreview";
-import { deleteLocalFile, saveRequestFile } from "./quote-files";
+import { deleteLocalFile, saveRequestFile } from "../../documents/files.ts";
 import { procurementReady } from "@/src/domain/request-archive";
 import { StockSuitabilityList } from "./StockSuitabilityList";
 import { businessDate } from "@/src/domain/business-dates";
