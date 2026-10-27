@@ -68,7 +68,7 @@ try {
   await call("Page.navigate", { url: base + "/sign-in" });
   await wait("return !!document.querySelector('.skeleton-signin')&&window.__loadingChecks.accounts.length===7;");
   assert.equal(await run("return document.querySelector('.skeleton-signin').getAttribute('aria-busy');"), "true");
-  await sleep(200);
+  await wait("const visual=document.querySelector('.skeleton-signin .loading-visual');return visual&&getComputedStyle(visual).visibility==='visible';");
   assert.equal(await run("return getComputedStyle(document.querySelector('.skeleton-signin .loading-visual')).visibility;"), "visible", "Grace period reveals startup skeleton");
   await run("window.__releaseAccounts();return true;");
   await wait("return !!document.querySelector('#signin-email');");
