@@ -4,8 +4,9 @@ Use this companion to track the steps toward production. See the [progress track
 
 ## Steps
 
-- [ ] **1. Save the current work in Git.**
+- [x] **1. Save the current work in Git.**
   Done when the changes are reviewed and committed, with the commit reference recorded.
+  Completed 2026-10-27: reviewed and committed as `a26983a`.
 
 - [ ] **2. Prepare Node, npm and CI for deployment.**
   Done when the Node 24.x target, compatible npm, local tooling and CI agree and the required checks pass.

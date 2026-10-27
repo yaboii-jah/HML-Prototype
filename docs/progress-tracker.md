@@ -4,20 +4,21 @@ Update this file after every meaningful implementation or documentation change a
 
 ## Current Phase
 
-- Production preparation: five core context documents and a production checklist companion are complete locally. Production implementation has not started.
+- Production preparation: five core context documents and a production checklist companion are committed in `a26983a`. Production implementation has not started.
 - Local checks demonstrate the current prototype baseline; production authentication, shared persistence and operational readiness remain pending.
 
 ## Current Goal
 
-- Review and checkpoint the current work, then prepare runtime/toolchain compatibility followed by identity and shared-data foundations. Follow the [production checklist](checklist.md); implementation of each unit requires its own agreed scope.
+- Prepare runtime/toolchain compatibility, followed by identity and shared-data foundations. Follow the [production checklist](checklist.md); implementation of each unit requires its own agreed scope.
 
 ## Completed
 
 - **Committed baseline:** Cleanup and verification tooling in `104640a`, included in the current staging baseline. Historical artifact/sample collections were removed, reusable fixtures isolated under tests, document/upload/AI helpers shared, and CI plus repeatable verification introduced. This did not implement the production backend.
-- **Completed locally, uncommitted:** Accounting is the canonical role across the app, permissions, fixtures and tests. Compatibility handling preserves existing browser accounts, sessions, permanent IDs and records; tests cover identity checks and blocked storage writes.
-- **Completed locally, uncommitted:** Five-document context set, including this tracker, with README/agent pointers and active progress-maintenance rules. Actionable legacy requirements, integration setup, open decisions and dated evidence were consolidated; 15 superseded Markdown files and two empty subfolders were removed. The documents distinguish production targets from current implementation and establish proportionate verification.
-- **Completed locally, uncommitted:** Agent instructions require reading all five context documents before planning or changing the project, including when resuming without current context. Task completion includes an explicit documentation-impact review, updates to affected documents and a report of what changed or why no update was needed. `CLAUDE.md` inherits the requirement through `AGENTS.md`.
-- **Completed locally, uncommitted:** Simple production checklist companion with seven unfinished steps, completion conditions and update rules. The checklist owns ordered milestones and checked status; this tracker retains active work, blockers, open questions and detailed evidence. Agents read and update the companion during milestone work.
+- **Committed in `a26983a`:** Accounting is the canonical role across the app, permissions, fixtures and tests. Compatibility handling preserves existing browser accounts, sessions, permanent IDs and records; tests cover identity checks and blocked storage writes.
+- **Committed in `a26983a`:** Five-document context set, including this tracker, with README/agent pointers and active progress-maintenance rules. Actionable legacy requirements, integration setup, open decisions and dated evidence were consolidated; 15 superseded Markdown files and two empty subfolders were removed. The documents distinguish production targets from current implementation and establish proportionate verification.
+- **Committed in `a26983a`:** Agent instructions require reading all five context documents before planning or changing the project, including when resuming without current context. Task completion includes an explicit documentation-impact review, updates to affected documents and a report of what changed or why no update was needed. `CLAUDE.md` inherits the requirement through `AGENTS.md`.
+- **Committed in `a26983a`:** Simple production checklist companion with seven steps, completion conditions and update rules. The checklist owns ordered milestones and checked status; this tracker retains active work, blockers, open questions and detailed evidence. Agents read and update the companion during milestone work.
+- **Completed 2026-10-27:** Reviewed and committed the documentation and Accounting changes in checkpoint `a26983a`. The checklist records this checkpoint; consult Git for the current branch publication and merge status.
 - **Existing product baseline:** Material requests, quotations/awards, POs, external payment coordination/verification, delivery, stock transfers, usage, document archives and operational monitoring exist in the prototype. PHP-only quotation checks, themed scrollbars, clearer material labels, scope selection, inventory filters and comparison previews are implemented improvements rather than new backlog items. Their presence does not establish server authorization or shared storage.
 
 ## In Progress
@@ -28,7 +29,7 @@ Update this file after every meaningful implementation or documentation change a
 
 Use the [production checklist](checklist.md#steps) for the ordered milestones and their completion conditions.
 
-- Next action: review and checkpoint the current local changes, then scope runtime/toolchain alignment. The repository currently pins Node 26.12.1/npm 11.20.0; the deployment target is Node 24.x with compatible tooling.
+- Next action: scope runtime/toolchain alignment. The repository currently pins Node 26.12.1/npm 11.20.0; the deployment target is Node 24.x with compatible tooling.
 - Work foundations first: individual identity, shared records and server authorization before business-workflow migration. Tailwind remains a separate track.
 - Keep the active unit and blockers here rather than duplicating the checklist. Future milestones do not authorize starting unrelated work or publishing changes.
 
@@ -75,8 +76,8 @@ The [architecture document](architecture.md) is the detailed source of truth. Ke
 
 ## Session Notes
 
-- **Resume context:** Local branch `docs/restructure-project-documentation`, based on staging commit `aead301`. The Accounting rename and new documentation are pending local changes, not published or merged. Preserve them when resuming; this documentation unit includes no commit, push or deployment.
-- **Read before the next unit:** [Project overview](project-overview.md), [architecture](architecture.md), [AI workflow rules](ai-workflow-rules.md) and [code standards](code-standards.md), plus the companion [checklist](checklist.md) for milestone work. Begin with a reviewed Git checkpoint, then scope runtime/toolchain alignment; do not mark identity, storage, workflows or Tailwind complete because their target design is documented.
+- **Resume context:** Branch `docs/restructure-project-documentation` is based on staging commit `aead301`; the documentation and Accounting checkpoint is `a26983a`. Consult Git for the current publication and merge status. The checkpoint does not deploy the application.
+- **Read before the next unit:** [Project overview](project-overview.md), [architecture](architecture.md), [AI workflow rules](ai-workflow-rules.md) and [code standards](code-standards.md), plus the companion [checklist](checklist.md) for milestone work. Scope runtime/toolchain alignment next; do not mark identity, storage, workflows or Tailwind complete because their target design is documented.
 
 | Date | Verification scope | Recorded result and limit |
 | --- | --- | --- |
@@ -86,5 +87,6 @@ The [architecture document](architecture.md) is the detailed source of truth. Ke
 | 2026-10-27 | Five-document consolidation | Five-file inventory, template headings, 42 local links/anchors, retained requirements/open questions/evidence, whitespace and obsolete-reference checks passed. The managed Next.js block and all 57 pending application files were preserved. No application, browser or live checks were rerun for this documentation-only unit. |
 | 2026-10-27 | Required agent documentation reading and updates | Verified all five mandatory reading links, matching start/completion instructions, local links/anchors, whitespace and the unchanged managed Next.js block. Unrelated pending files were preserved. Documentation-only validation; no new application, browser or live checks are claimed. |
 | 2026-10-27 | Production checklist companion | Verified six document files, seven unchecked steps with completion conditions, the five-core reading list and conditional companion instruction, tracker/checklist ownership, local links/anchors and whitespace. The managed Next.js block and unrelated pending files were preserved. No migration, Git checkpoint or application verification was performed by this documentation task. |
+| 2026-10-27 | Git checkpoint `a26983a` | Reviewed the changes; staged whitespace and 50 documentation links/anchors passed. Scanned 65 added/modified files for common credential patterns and private environment files without finding matches. Application files matched the previously verified 360-test/four-browser-suite version; those tests were not rerun for this checkpoint. |
 
 Ignored `.verification/` logs and summaries are local evidence and may be absent in another checkout. Preserve dated, scoped outcomes here rather than linking to assumed permanent artifacts or copying provider responses. Hosted CI/deployment outcomes were not verified in this documentation task. Remaining load, multi-user, provider-expiry, restore and department-acceptance checks belong to the production milestones above.
