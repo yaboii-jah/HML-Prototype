@@ -9,10 +9,11 @@ if (names.some(name => !browserSuites.includes(name))) throw new Error('Select a
 const output = path.resolve('.verification/browser'); await mkdir(output, {recursive:true});
 const results = [];
 const queue = [...names];
+const workerCount = process.env.CI === 'true' ? 1 : 2;
 const startedAt = new Date().toISOString();
 let summaryWrites = Promise.resolve();
 function writeSummary(complete = false) {
-  const summary = JSON.stringify({ base, startedAt, at: new Date().toISOString(), complete, selected: names, results: [...results] }, null, 2);
+  const summary = JSON.stringify({ base, startedAt, at: new Date().toISOString(), complete, workerCount, selected: names, results: [...results] }, null, 2);
   summaryWrites = summaryWrites.then(() => writeFile(path.join(output, 'verification.json'), summary));
   return summaryWrites;
 }
@@ -39,7 +40,8 @@ async function worker() {
     if (code !== 0) console.log(result.tail);
   }
 }
-await Promise.all([worker(), worker()]);
+console.log(`Running browser checks with ${workerCount} worker${workerCount === 1 ? '' : 's'}.`);
+await Promise.all(Array.from({ length: workerCount }, () => worker()));
 await writeSummary(true);
 const failures = results.filter(r => r.code !== 0);
 console.log(`${results.length-failures.length}/${results.length} browser suites passed. Logs: ${output}`);
