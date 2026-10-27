@@ -8,9 +8,9 @@ Use this companion to track the steps toward production. See the [progress track
   Done when the changes are reviewed and committed, with the commit reference recorded.
   Completed 2026-10-27: reviewed and committed as `a26983a`.
 
-- [ ] **2. Prepare Node, npm and CI for deployment.**
+- [x] **2. Prepare Node, npm and CI for deployment.**
   Done when Node 26 development and Node 24 deployment use the declared npm version, deployment runtime checks pass, and local verification plus all four Linux/Windows CI combinations pass.
-  Reopened 2026-10-27 after intermittent browser failures. The shared navigation policy passed local standard checks and all 28 browser suites on 2026-10-28; the final hosted matrix is pending. Hosted deployment remains part of step 7.
+  Completed 2026-10-28: local verification and [all four CI jobs](https://github.com/yaboii-jah/HML-Prototype/actions/runs/40544882334) passed at `cc87c65`, with 365 tests per job and all 28 browser suites on both Windows runtimes. Hosted deployment remains part of step 7.
 
 - [ ] **3. Add secure accounts, permissions and shared data.**
   Done when authorized users can share permitted records and unauthorized or revoked access is rejected.
