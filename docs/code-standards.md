@@ -15,6 +15,7 @@ These standards apply to new or substantially changed code. Improve the affected
 ## TypeScript
 
 - Keep strict mode enabled. Use TypeScript for application modules and TSX for modules containing JSX; retain the appropriate JavaScript module format for existing Node scripts and tests.
+- Keep server code and verification tooling compatible with the Node 24 production baseline even when developing on Node 26. Node type definitions follow version 24; verify both supported runtimes in CI before relying on a newer API.
 - Prefer precise types, discriminated unions and explicit optional fields. Use `unknown` for untrusted data and narrow it before use rather than introducing `any`.
 - Validate external inputs at system boundaries, including requests, provider responses and persisted browser data. A cast after `JSON.parse` or `response.json()` does not validate the value.
 - Use runtime checks or existing validators to establish the required shape and business constraints before treating input as a domain value. Reuse validation where contracts match; do not add a new schema library solely to satisfy this document.

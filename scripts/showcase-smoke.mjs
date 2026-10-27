@@ -50,7 +50,11 @@ try {
   assert.equal(await fileCount(), 0); assert.deepEqual(startupDocumentRequests, []);
   assert.equal(await run(`return localStorage.getItem(${JSON.stringify(EMPTY_WORKSPACE_MARKER)});`), '1');
   assert.equal(await run("return localStorage.getItem('hml-constructsync-showcase-installed-v1');"), null);
-  await signIn(); await navigate('/admin'); await press('Add project');
+  await signIn();
+  await navigate('/admin');
+  // The shell heading can appear before the Administration content is ready.
+  await wait("return !!document.querySelector('.admin-projects');");
+  await press('Add project');
   await fill('.admin-add-project [name="name"]', 'Actual project');
   await fill('.admin-add-project [name="documentCode"]', 'ACTUAL');
   await fill('.admin-add-project [name="location"]', 'Manila');

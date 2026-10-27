@@ -4,11 +4,12 @@ import { verificationEnvironment } from './helpers/verification-environment.mjs'
 
 await mkdir('.verification', { recursive: true });
 const checks = [
+  ['toolchain', ['scripts/check-toolchain.mjs']],
   ['lint', ['node_modules/eslint/bin/eslint.js', '.']],
   ['typegen', ['node_modules/next/dist/bin/next', 'typegen']],
   ['typecheck', ['node_modules/typescript/bin/tsc', '--noEmit', '--incremental', 'false']],
   ['unit', ['--experimental-strip-types', '--test', ...(await readdir('tests')).filter(name => name.endsWith('.test.mjs')).map(name => 'tests/' + name)]],
-  ['build', ['node_modules/next/dist/bin/next', 'build']],
+  ['build', ['node_modules/next/dist/bin/next', 'build', '--webpack']],
 ];
 const results = [];
 for (const [name, args] of checks) {

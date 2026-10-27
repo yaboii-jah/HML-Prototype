@@ -9,7 +9,8 @@ Use this companion to track the steps toward production. See the [progress track
   Completed 2026-10-27: reviewed and committed as `a26983a`.
 
 - [ ] **2. Prepare Node, npm and CI for deployment.**
-  Done when the Node 24.x target, compatible npm, local tooling and CI agree and the required checks pass.
+  Done when Node 26 development and Node 24 deployment use the declared npm version, deployment runtime checks pass, and local verification plus all four Linux/Windows CI combinations pass.
+  Local checks passed 2026-10-27; all four hosted CI results are still pending.
 
 - [ ] **3. Add secure accounts, permissions and shared data.**
   Done when authorized users can share permitted records and unauthorized or revoked access is rejected.

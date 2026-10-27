@@ -14,6 +14,8 @@ Use the companion [production checklist](docs/checklist.md) to follow foundation
 
 ## Run locally
 
+Use Node 26.12.1 (the local `.nvmrc` pin) and npm 11.20.0. The deployment baseline is Node 24.22.1; both supported majors accept later stable patch/minor releases within the declared package engine ranges. Installation rejects an unsupported Node or npm version.
+
 ```bash
 npm ci
 npm run dev
@@ -37,14 +39,20 @@ New projects use Google Drive document archives. Copy `.env.example` to `.env.lo
 
 ## Verification
 
-Use Node 26.12.1 and npm 11.20.0, matching `.nvmrc` and the package metadata. Install the locked dependencies with `npm ci`.
+Keep Node 26 locally and use the npm version declared in `packageManager`. Install the locked dependencies with `npm ci`; `npm run check:toolchain` checks the active versions without installing dependencies. Node type definitions follow version 24 so application type checking reflects the production runtime.
 
 ```bash
 npm run verify
 npm run verify:browser
 ```
 
-The first command runs lint, route type generation, TypeScript, unit/API tests and a production build. The browser command starts its own production server with real integrations disabled and runs all maintained suites using isolated headless Edge profiles. Windows with Microsoft Edge is required for browser verification. Select individual suites with `npm run verify:browser -- next-iteration usage-entries`. `npm run test:browser` is an alias. Logs and machine-readable results are written under ignored `.verification/`; screenshots stay in temporary browser profiles. Pull-request CI runs the same commands without live credentials.
+The first command checks the toolchain, then runs lint, route type generation, TypeScript, unit/API tests and a production build. The browser command starts its own production server with real integrations disabled and runs all maintained suites using isolated headless Edge profiles. Windows with Microsoft Edge is required for browser verification. Select individual suites with `npm run verify:browser -- next-iteration usage-entries`. `npm run test:browser` is an alias. Logs and machine-readable results are written under ignored `.verification/`; screenshots stay in temporary browser profiles.
+
+GitHub Actions is configured to run clean installation, the high-severity dependency audit and standard verification on Linux and Windows using Node 24.22.1 and 26.12.1. Both Windows jobs also run all 28 browser suites. The workflow runs for pull requests, pushes to `main`/`staging` and manual dispatch, with a separate artifact for each combination. Check hosted results before treating this configuration as verified.
+
+Vercel remains a Node 24 deployment target. The repository's `vercel.json` invokes an installation bootstrap that rejects other Node majors before installing the declared npm version and running `npm ci`. Its `build:deployment` command checks Node 24 and npm again before building; it intentionally fails on local Node 26. Select Node 24 in Vercel project settings and check the build logs during the later protected deployment rehearsal. Package engine ranges admit local Node 26, so a hosting default must not silently change the intended production runtime. This configuration does not deploy the app or establish production readiness.
+
+Development, verification and deployment builds use Next.js's `--webpack` option. It also supports Next.js's WebAssembly compiler fallback when Windows Application Control blocks the native compiler; Turbopack requires native bindings.
 
 ```bash
 npm run test:live
