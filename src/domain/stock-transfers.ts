@@ -270,7 +270,7 @@ export function applyTransferCommand(state: DemoSnapshot, command: TransferComma
     return done(command.type === "completeTransferEvidenceArchive" ? "Transfer evidence archived." : "Transfer evidence archive needs retry.", transfer.id, transfer);
   }
   if (command.type === "reviewTransferDocuments") {
-    if (actor !== "Accounting / Auditing" || !["Under Review", "Complete", "Discrepancy"].includes(command.status)) return fail("Accounting reviews transfer documents.");
+    if (actor !== "Accounting" || !["Under Review", "Complete", "Discrepancy"].includes(command.status)) return fail("Accounting reviews transfer documents.");
     if (command.status === "Complete" && (!deliveriesForTransfer(state, transfer.id).some(transferReceived) || transferDocumentGaps(state, transfer).length)) return fail("Archive current generated and signed receipts plus all supporting evidence first.");
     if (command.status === "Discrepancy" && !reasonOK(command.note)) return fail("Explain the document discrepancy.");
     if (transfer.documentReview) (transfer.documentReviewHistory ||= []).push(transfer.documentReview);

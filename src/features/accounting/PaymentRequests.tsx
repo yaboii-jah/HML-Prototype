@@ -20,7 +20,7 @@ export function PaymentRequests({ po }: { po: PO }) {
   return <section className="panel"><div className="panel-heading"><h2>Payment requests</h2><Link className="text-link" href={`/finance/${po.id}`}>Finance payment review →</Link></div><p className="helper-note">Accounting prepares a request. Finance approves it and records the actual disbursement. Invoice and receipt review stays separate.</p>
     {requests.map(value => { const payment = state.payments.find(payment => payment.paymentRequestId === value.id); return <div className="data-link" key={value.id}><div><strong>{value.ref} · {money(value.amount)}</strong><small>{value.note || "Supplier payment"}{value.reason && ` · ${value.reason}`}</small>{payment && <small>{payment.method} · {payment.reference} · {dateText(payment.date)}</small>}</div><Badge value={value.status}/></div>; })}
     {!requests.length && <Empty detail={eligible ? "No payment request prepared yet." : "Approve the PO before preparing payment."}/>}
-    {eligible && balance > 0 && state.role === "Accounting / Auditing" && (!open || ["draft", "returned"].includes(open.status)) && <PaymentRequestForm key={`${open?.id || "new"}-${open?.updatedAt || balance}`} po={po} existing={open} balance={balance}/>}
+    {eligible && balance > 0 && state.role === "Accounting" && (!open || ["draft", "returned"].includes(open.status)) && <PaymentRequestForm key={`${open?.id || "new"}-${open?.updatedAt || balance}`} po={po} existing={open} balance={balance}/>}
   </section>;
 }
 

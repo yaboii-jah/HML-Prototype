@@ -40,7 +40,7 @@ function submittedPO() {
   state = run(state, { type: 'createAwardPO', requestId: request.id, quoteId: 'offer', lines: [{ itemId: 'cement', quoteLineId: 'offer-cement', quantity: 10, unitPrice: 100 }], tax: 0, freight: 0, discount: 0, reason: 'Confirmed supplier offer', notes: '' });
   state = run(state, { type: 'savePO', id: state.pos[0].id, quoteId: 'offer', notes: '', finalize: true });
   assert.equal(state.pos[0].status, 'submitted');
-  return as(state, 'Accounting / Auditing');
+  return as(state, 'Accounting');
 }
 function approve(state, mode = 'upfront') {
   const po = state.pos[0];
@@ -49,7 +49,7 @@ function approve(state, mode = 'upfront') {
 }
 const archive = state => run(state, { type: 'completePOArchive', id: state.pos[0].id, fileId: 'po-drive', url: 'https://drive.google.com/file/d/po-drive/view' });
 function requestPayment(state, amount = poTotal(state, state.pos[0]) - paidTotal(state, state.pos[0].id)) {
-  return run(as(state, 'Accounting / Auditing'), { type: 'savePaymentRequest', poId: state.pos[0].id, amount, note: 'Supplier payment', submit: true });
+  return run(as(state, 'Accounting'), { type: 'savePaymentRequest', poId: state.pos[0].id, amount, note: 'Supplier payment', submit: true });
 }
 function pay(state) {
   const id = state.paymentRequests.at(-1).id;
@@ -67,11 +67,11 @@ test('upfront flow waits for full actual disbursement, then delivers, posts and 
   const committed = budgetFor(state, siteId);
   state = run(as(state, 'Finance'), { type: 'reviewPaymentRequest', id: paymentRequestId, decision: 'approve' });
   assert.equal(paidTotal(state, id), 0); assert.deepEqual(budgetFor(state, siteId), committed);
-  fail(as(state, 'Accounting / Auditing'), { type: 'releasePO', id }, /Full Finance disbursement/);
+  fail(as(state, 'Accounting'), { type: 'releasePO', id }, /Full Finance disbursement/);
   state = run(state, { type: 'recordPayment', paymentRequestId, method: 'Bank', reference: 'BANK-1', date: '2026-10-05' });
   assert.equal(state.accounting.length, 0, 'Upfront disbursement does not require delivery receipts');
   assert.equal(budgetFor(state, siteId).available, committed.available); assert.equal(budgetFor(state, siteId).spent, 1000);
-  state = run(as(state, 'Accounting / Auditing'), { type: 'releasePO', id });
+  state = run(as(state, 'Accounting'), { type: 'releasePO', id });
   state = run(as(state, 'Logistics'), { type: 'createBatch', poId: id, scheduledDate: '2026-10-06', evidence: 'DR-1', delayReason: '', expected: { cement: 6 } });
   const batchId = state.batches[0].id;
   state = run(state, { type: 'dispatchBatch', id: batchId });
@@ -81,7 +81,7 @@ test('upfront flow waits for full actual disbursement, then delivers, posts and 
   fail(state, { type: 'postBatch', id: batchId, accepted: { cement: 5 }, reason: '' });
   state = run(state, { type: 'recordMovement', siteId, itemName: 'Cement', unit: 'bag', kind: 'usage', quantity: 2, reason: 'Site concrete work' });
   assert.equal(stockFor(state, siteId, 'Cement', 'bag'), 3);
-  assert.equal(state.pos[0].releasedBy, 'Accounting / Auditing'); assert.equal(state.payments[0].actor, 'Finance');
+  assert.equal(state.pos[0].releasedBy, 'Accounting'); assert.equal(state.payments[0].actor, 'Finance');
 });
 
 test('credit releases with no payment request and Finance can pay after delivery starts', () => {
@@ -111,10 +111,10 @@ test('credit accepts partial payment requests and preserves history when the rem
 test('partial payment requests retain history and upfront release waits for the balance', () => {
   let state = archive(approve(submittedPO())); const id = state.pos[0].id;
   state = pay(requestPayment(state, 400));
-  fail(as(state, 'Accounting / Auditing'), { type: 'releasePO', id }, /Full Finance disbursement/);
+  fail(as(state, 'Accounting'), { type: 'releasePO', id }, /Full Finance disbursement/);
   state = pay(requestPayment(state, 600));
   assert.equal(state.paymentRequests.length, 2); assert.ok(state.paymentRequests.every(value => value.status === 'disbursed'));
-  state = run(as(state, 'Accounting / Auditing'), { type: 'releasePO', id }); assert.equal(paidTotal(state, id), 1000);
+  state = run(as(state, 'Accounting'), { type: 'releasePO', id }); assert.equal(paidTotal(state, id), 1000);
 });
 
 test('payment hold, return, resubmission and rejection preserve the approved PO', () => {
@@ -122,7 +122,7 @@ test('payment hold, return, resubmission and rejection preserve the approved PO'
   fail(as(state, 'Finance'), { type: 'reviewPaymentRequest', id: request.id, decision: 'return', reason: 'No' });
   state = run(as(state, 'Finance'), { type: 'reviewPaymentRequest', id: request.id, decision: 'hold', reason: 'Confirm supplier details' });
   state = run(state, { type: 'reviewPaymentRequest', id: request.id, decision: 'return', reason: 'Correct payment note' });
-  state = run(as(state, 'Accounting / Auditing'), { type: 'savePaymentRequest', id: request.id, poId: po.id, amount: 500, note: 'Corrected note', submit: true });
+  state = run(as(state, 'Accounting'), { type: 'savePaymentRequest', id: request.id, poId: po.id, amount: 500, note: 'Corrected note', submit: true });
   assert.equal(state.paymentRequests[0].id, request.id); assert.equal(state.paymentRequests[0].reason, undefined);
   state = run(as(state, 'Finance'), { type: 'reviewPaymentRequest', id: request.id, decision: 'reject', reason: 'Supplier payment cancelled' });
   state = requestPayment(state); assert.equal(state.paymentRequests.length, 2); assert.equal(state.paymentRequests[0].status, 'rejected');
@@ -161,18 +161,18 @@ test('Accounting PO holds and returns reopen Procurement editing without committ
   state = run(state, { type: 'reviewPO', id, decision: 'return', reason: 'Revise supplier schedule' });
   state = run(as(state, 'Procurement'), { type: 'savePO', id, quoteId: 'offer', notes: 'Corrected schedule', finalize: true });
   assert.equal(state.pos[0].status, 'submitted'); assert.equal(state.pos[0].reviewReason, undefined);
-  state = run(as(state, 'Accounting / Auditing'), { type: 'reviewPO', id, decision: 'reject', reason: 'Order no longer required' });
+  state = run(as(state, 'Accounting'), { type: 'reviewPO', id, decision: 'reject', reason: 'Order no longer required' });
   assert.equal(budgetFor(state, state.sites[0].id).committed, 0);
 });
 
 test('department permissions reject crossed handoffs and Administrator has oversight only', () => {
   const submitted = submittedPO(), approved = archive(approve(submitted)), requested = requestPayment(approved), disbursable = run(as(requested, 'Finance'), { type: 'reviewPaymentRequest', id: requested.paymentRequests[0].id, decision: 'approve' });
   const checks = [
-    [submitted, { type: 'reviewPO', id: submitted.pos[0].id, decision: 'approve' }, 'Accounting / Auditing'],
-    [approved, { type: 'savePaymentRequest', poId: approved.pos[0].id, amount: 100, note: '', submit: true }, 'Accounting / Auditing'],
+    [submitted, { type: 'reviewPO', id: submitted.pos[0].id, decision: 'approve' }, 'Accounting'],
+    [approved, { type: 'savePaymentRequest', poId: approved.pos[0].id, amount: 100, note: '', submit: true }, 'Accounting'],
     [requested, { type: 'reviewPaymentRequest', id: requested.paymentRequests[0].id, decision: 'approve' }, 'Finance'],
     [disbursable, { type: 'recordPayment', paymentRequestId: requested.paymentRequests[0].id, method: 'Bank', reference: 'REF', date: '2026-10-05' }, 'Finance'],
-    [approved, { type: 'releasePO', id: approved.pos[0].id }, 'Accounting / Auditing'],
+    [approved, { type: 'releasePO', id: approved.pos[0].id }, 'Accounting'],
   ];
   for (const [state, command, owner] of checks) for (const role of ROLES) if (role !== owner) fail(as(state, role), command, /Sign in/);
   assert.deepEqual(tasksFor(as(submitted, 'Administrator')), []);
@@ -202,7 +202,7 @@ test('v11 is preserved until explicit reset; current payment and release history
   try {
     const repo = new LocalDemoRepository(); assert.equal((await repo.load()).status, 'recovery'); assert.equal(saved.get('hml-constructsync-demo-v11'), old);
     assert.equal(saved.has('hml-constructsync-demo-v12'), false); await repo.reset(); assert.equal(saved.has('hml-constructsync-demo-v11'), false);
-    let state = pay(requestPayment(archive(approve(submittedPO())))); state = run(as(state, 'Accounting / Auditing'), { type: 'releasePO', id: state.pos[0].id });
+    let state = pay(requestPayment(archive(approve(submittedPO())))); state = run(as(state, 'Accounting'), { type: 'releasePO', id: state.pos[0].id });
     saved.set('hml-constructsync-demo-v12', JSON.stringify(state)); assert.deepEqual((await new LocalDemoRepository().load()).snapshot, JSON.parse(JSON.stringify(state)));
     const malformed = structuredClone(state); malformed.pos[0].status = 'served'; saved.set('hml-constructsync-demo-v12', JSON.stringify(malformed)); assert.equal((await new LocalDemoRepository().load()).status, 'recovery');
   } finally { globalThis.window = previousWindow; globalThis.localStorage = previousStorage; }

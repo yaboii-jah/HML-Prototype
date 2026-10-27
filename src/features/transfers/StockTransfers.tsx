@@ -82,7 +82,7 @@ export function StockTransferDetail({ id }: { id: string }) {
     </section>
     {state.role === "Logistics" && transfer.lines.some(line => transferUnscheduled(state, transfer, line.id) > 0) && <TransferSchedule key={id} state={state} transfer={transfer} busy={busy} act={act}/>}
     {trips.map(delivery => <TransferTrip key={delivery.id} state={state} transfer={transfer} delivery={delivery} busy={busy} act={act}/>)}
-    {state.role === "Accounting / Auditing" && trips.some(delivery => ["confirmed", "posted"].includes(delivery.status)) && <TransferDocumentReview state={state} transfer={transfer} busy={busy} act={act}/>}
+    {state.role === "Accounting" && trips.some(delivery => ["confirmed", "posted"].includes(delivery.status)) && <TransferDocumentReview state={state} transfer={transfer} busy={busy} act={act}/>}
     <section className="panel"><h2>Transfer history</h2><Timeline state={state} ids={[id, ...trips.map(value => value.id)]}/></section>
     <MaterialDetailsModal item={request.items.find(item => item.id === selectedItem)} onClose={() => setSelectedItem("")}/>{confirmation}
   </div>;

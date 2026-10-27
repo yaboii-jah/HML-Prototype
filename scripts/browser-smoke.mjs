@@ -420,7 +420,7 @@ try {
   const auditRoutes = ["/dashboard", "/projects", "/projects/site-a", "/requests", "/requests/new", "/requests/m1", "/requests/m7/edit", "/requests/m1/quotes", "/suppliers", "/purchase-orders", "/purchase-orders/po1", "/purchase-orders/po2/edit", "/finance", "/finance/po3", "/deliveries", "/deliveries/new?poId=po1", "/deliveries/b1", "/inventory", `/inventory/site-a/${materialId("Portland cement", "bag")}`, "/accounting", "/accounting/po1", "/reports", "/admin"];
   for (const route of auditRoutes) {
     console.log("Checking layout",route);
-    const auditRole = route.startsWith('/finance') ? 'Finance' : route.startsWith('/accounting') ? 'Accounting / Auditing' : /^\/(admin|reports)/.test(route) ? 'Administrator' : route.startsWith('/suppliers') || /\/quotes|\/purchase-orders\/[^/]+\/edit/.test(route) || route === '/purchase-orders' ? 'Procurement' : route.startsWith('/deliveries/new') ? 'Logistics' : 'Site Personnel';
+    const auditRole = route.startsWith('/finance') ? 'Finance' : route.startsWith('/accounting') ? 'Accounting' : /^\/(admin|reports)/.test(route) ? 'Administrator' : route.startsWith('/suppliers') || /\/quotes|\/purchase-orders\/[^/]+\/edit/.test(route) || route === '/purchase-orders' ? 'Procurement' : route.startsWith('/deliveries/new') ? 'Logistics' : 'Site Personnel';
     if ((await state()).role !== auditRole) await role(auditRole);
     await navigate(route);
     await checkProductCopy();
@@ -614,7 +614,7 @@ try {
   await navigate(materialLink);
   assert.equal(await run("return document.activeElement.closest('[data-comparison-material]')?.dataset.comparisonMaterial===new URL(location.href).searchParams.get('materialId');"),true,'Material navigation focuses the relevant comparison row');
   const pageContrastFailures = new Map();
-  for (const [page, pageRole] of [["/projects","Project Manager"],["/projects/site-a","Administrator"],["/suppliers","Procurement"],["/requests/m1/quotes","Procurement"],["/purchase-orders/po2/edit","Procurement"],["/accounting/po3","Accounting / Auditing"],["/finance/po3","Finance"],["/deliveries","Logistics"],["/inventory","Site Personnel"],["/accounting/po1","Accounting / Auditing"],["/accounting","Accounting / Auditing"],["/reports","Project Manager"],["/admin","Administrator"]]) {
+  for (const [page, pageRole] of [["/projects","Project Manager"],["/projects/site-a","Administrator"],["/suppliers","Procurement"],["/requests/m1/quotes","Procurement"],["/purchase-orders/po2/edit","Procurement"],["/accounting/po3","Accounting"],["/finance/po3","Finance"],["/deliveries","Logistics"],["/inventory","Site Personnel"],["/accounting/po1","Accounting"],["/accounting","Accounting"],["/reports","Project Manager"],["/admin","Administrator"]]) {
     await role(pageRole);
     await navigate(page);
     for (const width of [1440,1024,768,414,375,320]) {
@@ -1070,7 +1070,7 @@ try {
   await submit('form.form-stack', 'button[value="finalize"]');
   await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).pos.find(x=>x.id===${JSON.stringify(po.id)}).status==='submitted';`);
   await wait(`return location.pathname===${JSON.stringify(`/purchase-orders/${po.id}`)} && !!document.querySelector('.record-header');`);
-  await role("Accounting / Auditing"); await navigate(`/accounting/${po.id}`);
+  await role("Accounting"); await navigate(`/accounting/${po.id}`);
   await click("Hold with reason"); await fill('textarea[name="reason"]', "Confirm revised delivery window"); await submit('form.decision-panel');
   await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).pos.find(x=>x.id===${JSON.stringify(po.id)}).status==='hold';`);
   await click("Return to Procurement"); await fill('textarea[name="reason"]', "Add confirmed supplier schedule"); await submit('form.decision-panel');
@@ -1078,7 +1078,7 @@ try {
   await role("Procurement"); await navigate(`/purchase-orders/${po.id}/edit`); await fill('textarea[name="notes"]', "Supplier confirmed Tuesday delivery"); await submit('form.form-stack', 'button[value="finalize"]');
   await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).pos.find(x=>x.id===${JSON.stringify(po.id)}).status==='submitted';`);
   await wait(`return location.pathname===${JSON.stringify(`/purchase-orders/${po.id}`)} && !!document.querySelector('.record-header');`);
-  await role("Accounting / Auditing"); await navigate(`/accounting/${po.id}`);
+  await role("Accounting"); await navigate(`/accounting/${po.id}`);
   await fill('select[name="paymentMode"]','upfront');
   await click('Add charge or deduction');
   await fill('.accounting-po-form .po-adjustment-row .field input','Handling fee');
@@ -1095,7 +1095,7 @@ try {
   await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).paymentRequests.some(value=>value.poId===${JSON.stringify(po.id)}&&value.status==='submitted');`);
   await role('Finance'); await navigate(`/finance/${po.id}`);
   await click('Return to Accounting'); await fill('textarea[name="reason"]','Clarify supplier payment note'); await submit('form.decision-panel');
-  await role('Accounting / Auditing'); await navigate(`/accounting/${po.id}`);
+  await role('Accounting'); await navigate(`/accounting/${po.id}`);
   await fill('.payment-request-form textarea[name="note"]','Confirmed full supplier payment'); await click('Submit payment request');
   await role('Finance'); await navigate(`/finance/${po.id}`); await click('Approve payment');
   await wait("return !!document.querySelector('.finance-disbursement-form');");
@@ -1104,7 +1104,7 @@ try {
   await fill('.finance-disbursement-form input[name="reference"]','BANK-SMOKE-01'); await click('Record disbursement');
   await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).paymentRequests.some(value=>value.poId===${JSON.stringify(po.id)}&&value.status==='disbursed');`);
   const disbursementsBeforeEvidence = (await state()).payments.filter(value=>value.poId===po.id);
-  await role('Accounting / Auditing'); await navigate(`/accounting/${po.id}`); await click('Release to Logistics');
+  await role('Accounting'); await navigate(`/accounting/${po.id}`); await click('Release to Logistics');
   await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).pos.find(x=>x.id===${JSON.stringify(po.id)}).status==='released';`);
   await role("Logistics"); await navigate(`/deliveries/new?poId=${po.id}`); await fill('input[name="evidence"]', "DR-SMOKE-01"); await fill('input[name^="expected-"]', 12); await submit('form.form-stack');
   console.log("Delivery scheduled");
@@ -1139,7 +1139,7 @@ try {
   await click("Open inventory record", ".record-dialog[open] a"); await wait("return location.pathname.startsWith('/inventory/site-a/');");
   await fill('input[name="quantity"]', 5); await fill('textarea[name="reason"]', "Ground floor slab pour"); await click("Record movement");
   snapshot = await state(); assert.equal(snapshot.movements.filter(m => m.itemName === "Portland cement smoke lot").reduce((n, m) => n + m.quantity, 0), 7);
-  await role("Accounting / Auditing"); await navigate("/accounting");
+  await role("Accounting"); await navigate("/accounting");
   await fill('input[aria-label="Search accounting"]',request.ref);
   assert.equal(await run(`return [...document.querySelectorAll('.accounting-groups a')].some(link=>link.textContent===${JSON.stringify(po.ref)});`),true,'Accounting must group the PO under its MRF');
   await navigate(`/accounting/${po.id}`);

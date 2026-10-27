@@ -18,7 +18,7 @@ const priced = (unitPrice, quantity = 1) => ({ itemId: "item", quoteLineId: "off
 const sample = () => ({ financial: { ...automatic }, lines: [185617.82, 319055.1, 231244.08, 96703.4, 245995.78, 99953.4, 37626.8].map((amount, i) => ({ ...priced(amount), quoteLineId: `offer-${i}` })), adjustments: [service(20000)] });
 const run = (state, command) => { const result = applyCommand(state, command); assert.equal(result.ok, true, result.message); return result.snapshot; };
 function fixture() {
-  const state = seedDemo(); state.role = "Accounting / Auditing";
+  const state = seedDemo(); state.role = "Accounting";
   const po = state.pos[0], request = state.requests.find(value => value.id === po.mrfId), quote = state.quotes.find(value => value.id === po.quoteId), site = state.sites.find(value => value.id === request.siteId);
   initializePoDocument(po, request, quote, site, "2026-10-08T00:00:00Z");
   po.document.vendorName = supplierName(state, po); po.financial = { ...automatic };

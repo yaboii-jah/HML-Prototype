@@ -75,7 +75,7 @@ try {
     if([375,1440].includes(width)){const shot=await call('Page.captureScreenshot',{format:'png',captureBeyondViewport:false});await writeFile(path.join(profile,`consumption-${width}-${theme}.png`),Buffer.from(shot.data,'base64'));}
   }
   assert.deepEqual((await snapshot()).movements,before,'Report browsing and export leave the ledger unchanged');
-  const admin=data.users.find(u=>u.role==='Administrator'),finance=data.users.find(u=>u.role==='Finance'),accounting=data.users.find(u=>u.role==='Accounting / Auditing');
+  const admin=data.users.find(u=>u.role==='Administrator'),finance=data.users.find(u=>u.role==='Finance'),accounting=data.users.find(u=>u.role==='Accounting');
   await run(`localStorage.setItem(${JSON.stringify(SESSION_STORAGE_KEY)},${JSON.stringify(JSON.stringify(identity(admin)))});return true;`);
   await navigate('/requests/m1');await wait("return !!document.querySelector('.request-lifecycle');");
   await run("document.querySelector('.request-lifecycle>details').open=true;return true;");

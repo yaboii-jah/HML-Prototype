@@ -107,7 +107,7 @@ test('supplier awards and all PO paths respect technical-review demand', () => {
   const po = f.state.pos.find(value => value.id === made.recordId);
   assert.equal(f.command('Procurement',{ type:'savePO',id:po.id,quoteId:quote.id,lines:[line],notes:'',finalize:false }).ok,false);
   assert.match(directPoError(f.state,po,[line],quote.supplierId),/exceed/);
-  po.status = 'submitted'; assert.equal(f.command('Accounting / Auditing',{ type:'saveAccountingPO',id:po.id,paymentMode:'upfront',financial:po.financial,lines:[line] }).ok,false);
+  po.status = 'submitted'; assert.equal(f.command('Accounting',{ type:'saveAccountingPO',id:po.id,paymentMode:'upfront',financial:po.financial,lines:[line] }).ok,false);
   const g = setup(), second = quoteFor(g); g.send([g.selection('Glass 900 x 2100',8,true)]);
   assert.equal(g.command('Procurement',{ type:'createPO',requestId:g.request.id,quoteId:second.id,reason:'Competitive quote',notes:'' }).ok,false);
 });

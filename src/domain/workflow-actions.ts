@@ -33,21 +33,21 @@ export function workflowActions(state: DemoSnapshot, requestId?: string): Workfl
     for (const po of state.pos.filter(p => p.mrfId === request.id && p.status !== "rejected")) {
       const poHref = `/purchase-orders/${po.id}`, accountingHref = `/accounting/${po.id}`;
       if (["draft", "returned"].includes(po.status)) { add("prepare-po", "Procurement", po, "Prepare PO", poHref, po.reviewReason || "Review and submit the purchase order", requestBlocker, request.siteId, po.status === "returned"); continue; }
-      if (["submitted", "hold"].includes(po.status)) { add("review-po", "Accounting / Auditing", po, "Review PO and budget", accountingHref, po.reviewReason || "Review supplier, materials and payment arrangement", requestBlocker, request.siteId, po.status === "hold"); continue; }
-      if (po.archive?.status === "pending") add("archive-po", "Accounting / Auditing", po, "Archive approved PO", accountingHref, po.archive.error || "Complete the approved purchase order archive", "", request.siteId, !!po.archive.error);
+      if (["submitted", "hold"].includes(po.status)) { add("review-po", "Accounting", po, "Review PO and budget", accountingHref, po.reviewReason || "Review supplier, materials and payment arrangement", requestBlocker, request.siteId, po.status === "hold"); continue; }
+      if (po.archive?.status === "pending") add("archive-po", "Accounting", po, "Archive approved PO", accountingHref, po.archive.error || "Complete the approved purchase order archive", "", request.siteId, !!po.archive.error);
       if (isExternalPayment(po)) {
         if (!po.issuance) add("issue-po", "Procurement", po, "Issue PO to supplier", poHref, "Confirm supplier issuance after the approved archive is ready", requestBlocker || (po.archive?.status !== "complete" ? "Archive the approved PO first." : ""));
         if (coordinationEligible(po) && coordinationBalance(state, po) > 0) {
           add("coordinate-payment", "Finance", po, "Coordinate payment", `/finance/${po.id}`, coordinationWarning(state, po) || po.paymentCoordination?.status || "Payment is processed outside the app", "", request.siteId, creditOverdue(state, po));
           const proofs = (po.paymentProofs || []).filter(p => archivedProof(p) && !proofAssigned(po, p.id));
-          add("verify-payment", "Accounting / Auditing", po, proofs.length ? "Verify external payment" : "Attach payment proof", accountingHref, proofs.length ? "Verify the actual supplier payment against archived evidence" : "Upload and archive proof before payment verification", "", request.siteId, creditOverdue(state, po));
+          add("verify-payment", "Accounting", po, proofs.length ? "Verify external payment" : "Attach payment proof", accountingHref, proofs.length ? "Verify the actual supplier payment against archived evidence" : "Upload and archive proof before payment verification", "", request.siteId, creditOverdue(state, po));
         }
       } else if (paidTotal(state, po.id) + .000001 < poTotal(state, po)) {
         const payment = openPaymentRequest(state, po.id);
-        if (!payment || ["draft", "returned"].includes(payment.status)) add("prepare-payment", "Accounting / Auditing", payment || po, "Prepare payment request", accountingHref, payment?.reason || "Prepare the remaining supplier payment", "", request.siteId, payment?.status === "returned");
+        if (!payment || ["draft", "returned"].includes(payment.status)) add("prepare-payment", "Accounting", payment || po, "Prepare payment request", accountingHref, payment?.reason || "Prepare the remaining supplier payment", "", request.siteId, payment?.status === "returned");
         else add(payment.status === "approved" ? "disburse-payment" : "review-payment", "Finance", payment, payment.status === "approved" ? "Disburse payment" : "Review payment request", `/finance/${po.id}`, payment.reason || "Review and process the supplier payment", "", request.siteId, payment.status === "hold");
       }
-      if (po.status === "approved") add("clear-delivery", "Accounting / Auditing", po, "Confirm delivery clearance", accountingHref, "Release this PO for Logistics", releaseBlocker(state, po));
+      if (po.status === "approved") add("clear-delivery", "Accounting", po, "Confirm delivery clearance", accountingHref, "Release this PO for Logistics", releaseBlocker(state, po));
       if (po.status === "released" && poItems(state, po).some(i => schedulableFor(state, po, i.id) > 0)) add("schedule-delivery", "Logistics", po, "Schedule delivery", `/deliveries/new?poId=${po.id}`, "Supplier quantities are available to schedule", requestBlocker);
       const batches = state.batches.filter(b => b.poId === po.id);
       for (const batch of batches) {
@@ -63,7 +63,7 @@ export function workflowActions(state: DemoSnapshot, requestId?: string): Workfl
       }
       if (state.accounting.find(r => r.poId === po.id)?.review !== "Complete" && (batches.some(receivedDelivery) || (state.accounting.find(r => r.poId === po.id)?.documents || []).length > 0)) {
         const gaps = deliveryDocumentIssues(state, po.id);
-        add("review-documents", "Accounting / Auditing", po, "Review supporting documents", accountingHref, "Complete the invoice and receipt review", gaps.join(" "));
+        add("review-documents", "Accounting", po, "Review supporting documents", accountingHref, "Complete the invoice and receipt review", gaps.join(" "));
       }
     }
     for (const transfer of (state.stockTransfers || []).filter(t => t.requestId === request.id)) {
@@ -79,7 +79,7 @@ export function workflowActions(state: DemoSnapshot, requestId?: string): Workfl
         if (!site && trip.lines.some(line => transferWarehouseAvailableFor(state, trip.id, line.transferLineId) > 0)) add("forward-transfer", "Logistics", trip, "Forward delivery", tripHref, `Warehouse → ${transfer.destination.name}`, requestBlocker);
         if (["confirmed", "posted"].includes(trip.status) && gaps.some(g => g.startsWith(trip.ref))) add("transfer-evidence", transferReceivingRole(trip), trip, "Complete transfer receipts", tripHref, gaps.filter(g => g.startsWith(trip.ref)).join(" "), "", transfer.destinationSiteId);
       }
-      if (trips.some(d => ["confirmed", "posted"].includes(d.status)) && transfer.documentReview?.status !== "Complete") add("review-transfer", "Accounting / Auditing", transfer, "Review transfer documents", href, "Complete the transfer document review", gaps.join(" "));
+      if (trips.some(d => ["confirmed", "posted"].includes(d.status)) && transfer.documentReview?.status !== "Complete") add("review-transfer", "Accounting", transfer, "Review transfer documents", href, "Complete the transfer document review", gaps.join(" "));
     }
     for (const review of (state.stockSuitabilityReviews || []).filter(r => r.requestId === request.id && reviewIsCurrent(state, r))) {
       if (review.status === "pending") add("review-stock", "Site Personnel", review, `Review alternative stock: ${review.requestedName}`, `${requestHref}#stock-suitability`, review.explanation, requestBlocker, review.destinationSiteId);

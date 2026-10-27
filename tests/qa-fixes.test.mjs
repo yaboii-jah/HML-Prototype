@@ -31,7 +31,7 @@ test("unused project deletion retains Drive references in audit, removes scopes 
 test("project deletion rejects linked records and unauthorized roles without losing history", () => {
   const state = seedDemo(), before = structuredClone(state);
   assert.match(execute(state, { type: "removeSite", siteId: state.sites[0].id }, "Administrator").message, /material requests/);
-  for (const role of ["Procurement", "Finance", "Site Personnel", "Logistics", "Accounting / Auditing"]) assert.equal(execute(state, { type: "removeSite", siteId: state.sites[0].id }, role).ok, false);
+  for (const role of ["Procurement", "Finance", "Site Personnel", "Logistics", "Accounting"]) assert.equal(execute(state, { type: "removeSite", siteId: state.sites[0].id }, role).ok, false);
   assert.deepEqual(state, before);
   const stock = structuredClone(state); stock.requests = [];
   stock.movements = [{ id: "stock", siteId: stock.sites[0].id }];

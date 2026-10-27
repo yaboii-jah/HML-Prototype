@@ -74,7 +74,7 @@ try {
   await upload();await wait(`return ${saved}.accounting[0]?.documents?.[0]?.archive.status==='complete';`);
   assert.equal(await run(`return ${saved}.accounting[0].documents[0].kind;`),'Signed delivery receipt');
   assert.equal(await run(`return ${saved}.accounting[0].documents[0].receiptVersion;`),2);
-  await role('Accounting / Auditing');await navigate('/accounting/po1');await wait("return !!document.querySelector('input[name=invoice]');");
+  await role('Accounting');await navigate('/accounting/po1');await wait("return !!document.querySelector('input[name=invoice]');");
   await fill('input[name="invoice"]','INV-SMOKE');await fill('input[name="receipt"]','SIGNED-DR-SMOKE');await fill('select[name="review"]','Complete');await press('Save document review');await confirmed();
   await wait(`return ${saved}.accounting[0].review==='Complete';`);
   // Accounting can supply a missing invoice without associating it with a delivery.

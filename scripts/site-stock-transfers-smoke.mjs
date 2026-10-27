@@ -312,7 +312,7 @@ try {
     if(width===1440||width===375){const shot=await call('Page.captureScreenshot',{format:'png',captureBeyondViewport:false});await writeFile(path.join(profile,'transfer-'+width+'-'+theme+'.png'),Buffer.from(shot.data,'base64'));}
   }
   await navigate('/deliveries');await wait("return document.body.innerText.includes('Site stock transfers');");
-  await switchAccount(ACCOUNT_FIXTURES.find(a=>a.role==='Accounting / Auditing').name);await navigate('/accounting');await wait("return document.body.innerText.includes('Stock transfer document review');");
+  await switchAccount(ACCOUNT_FIXTURES.find(a=>a.role==='Accounting').name);await navigate('/accounting');await wait("return document.body.innerText.includes('Stock transfer document review');");
   await navigate(route);await wait("return document.body.innerText.includes('Accounting document review');");
   await call('Emulation.setDeviceMetricsOverride',{width:1440,height:1000,deviceScaleFactor:1,mobile:false});
   assert.equal(await run("const section=document.querySelector('.transfer-accounting-review');const fields=[...section.querySelectorAll('.form-grid>.field')];return Math.abs(fields[0].getBoundingClientRect().top-fields[1].getBoundingClientRect().top)<=1;"),true,'Accounting fields align at the top');

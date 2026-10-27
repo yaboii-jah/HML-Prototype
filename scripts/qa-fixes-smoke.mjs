@@ -73,7 +73,7 @@ try {
   assert.equal(await run(`return ${saved}.activity[0].eventType;`),'project.removed');
   for(const width of [1920,2560]){await fit(width,'light');assert.equal(await run("const main=document.querySelector('.workspace-content');const r=main.getBoundingClientRect(),p=main.parentElement.getBoundingClientRect();return r.width<=1550&&Math.abs((r.left-p.left)-(p.right-r.right))<2;"),true,'Wide content is centered beside sidebar');}
   // Fifty-row Accounting editing stays mounted inside a bounded, horizontally scrollable table.
-  const many=seedDemo();many.role='Accounting / Auditing';many.siteFilter='all';const request=many.requests.find(r=>r.id==='m1'),po=many.pos.find(p=>p.id==='po1');
+  const many=seedDemo();many.role='Accounting';many.siteFilter='all';const request=many.requests.find(r=>r.id==='m1'),po=many.pos.find(p=>p.id==='po1');
   request.items=Array.from({length:50},(_,i)=>({...request.items[0],id:'qa-material-'+i,name:'QA material '+(i+1),quantity:20}));
   po.status='submitted';po.archive=undefined;po.lines=request.items.map(item=>({itemId:item.id,quoteLineId:'qa-line-'+item.id,quantity:2,unitPrice:100,discountType:'none',discountValue:0,fixedDiscountConfirmed:true}));
   await load(many,'/accounting/po1');await wait("return document.querySelectorAll('.qa-bounded-table tbody tr').length===50;");

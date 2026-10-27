@@ -23,7 +23,7 @@ async function withStorage(entries, check) {
 }
 
 test('seven active roles can sign in while removed assignment commands remain rejected', () => {
-  assert.deepEqual(ROLES, ['Site Personnel', 'Project Manager', 'Procurement', 'Finance', 'Logistics', 'Accounting / Auditing', 'Administrator']);
+  assert.deepEqual(ROLES, ['Site Personnel', 'Project Manager', 'Procurement', 'Finance', 'Logistics', 'Accounting', 'Administrator']);
   assert.deepEqual(ACCOUNT_FIXTURES.map(account => account.role), ROLES);
   const state = blankWorkspace(), original = structuredClone(state);
   const result = applyCommand(state, { type: 'setRole', role: 'Unknown role' });
@@ -130,10 +130,10 @@ test('v12 PM selection loads in memory and preserves transactions, old assignmen
     assert.equal(view.status, 'ready');
     assert.deepEqual(view.snapshot, JSON.parse(raw));
     assert.equal(saved.get(workspaceKey), raw, 'Loading must not rewrite stored records');
-    const result = await repository.execute({ type: 'setRole', role: 'Accounting / Auditing' });
+    const result = await repository.execute({ type: 'setRole', role: 'Accounting' });
     assert.equal(result.ok, true);
     const persisted = JSON.parse(saved.get(workspaceKey));
-    assert.deepEqual(persisted, { ...JSON.parse(raw), role: 'Accounting / Auditing' });
+    assert.deepEqual(persisted, { ...JSON.parse(raw), role: 'Accounting' });
     assert.equal((await new LocalDemoRepository().load()).status, 'ready');
     saved.set(workspaceKey, JSON.stringify({ ...state, role: 'Unknown role' }));
     assert.equal((await new LocalDemoRepository().load()).status, 'recovery');

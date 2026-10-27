@@ -29,7 +29,7 @@ test('received evidence belongs to its batch/PO and reopens a completed review w
 test('upload commands reject wrong roles, unreceived batches, cross-PO evidence and invalid file limits', () => {
   const { state, command } = fixture();
   for (const role of ['Procurement','Finance','Administrator']) assert.equal(applyCommand({ ...state, role }, command).ok, false);
-  assert.equal(applyCommand({ ...state, role: 'Accounting / Auditing' }, command).ok, true);
+  assert.equal(applyCommand({ ...state, role: 'Accounting' }, command).ok, true);
   const expected = structuredClone(state); expected.batches.find(value => value.id === command.batchId).status = 'expected';
   assert.equal(applyCommand(expected, command).ok, false);
   assert.equal(applyCommand(state, { ...command, poId: 'another-po' }).ok, false);
@@ -42,7 +42,7 @@ test('archive retries preserve evidence and an acknowledged archive cannot becom
   const attachment = result.snapshot.accounting.find(value => value.poId === command.poId).documents[0];
   result = applyCommand(result.snapshot, { type: 'failAccountingArchive', poId: command.poId, documentId: attachment.id, error: 'Offline' });
   assert.equal(result.snapshot.accounting.find(value => value.poId === command.poId).documents[0].localFileId, document.localFileId);
-  result = applyCommand({ ...result.snapshot, role: 'Accounting / Auditing' }, { type: 'completeAccountingArchive', poId: command.poId, documentId: attachment.id, fileId: 'drive-receipt', url: 'https://drive.google.com/file/d/drive-receipt/view' });
+  result = applyCommand({ ...result.snapshot, role: 'Accounting' }, { type: 'completeAccountingArchive', poId: command.poId, documentId: attachment.id, fileId: 'drive-receipt', url: 'https://drive.google.com/file/d/drive-receipt/view' });
   assert.equal(result.ok,true,result.message);
   result = applyCommand(result.snapshot, { type: 'failAccountingArchive', poId: command.poId, documentId: attachment.id, error: 'Late failure' });
   const archived = result.snapshot.accounting.find(value => value.poId === command.poId).documents[0];

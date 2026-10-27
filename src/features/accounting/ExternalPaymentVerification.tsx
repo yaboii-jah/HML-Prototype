@@ -22,7 +22,7 @@ export function ExternalPaymentVerification({ po }: { po: PO }) {
   const { notify, update } = useActionFeedback();
   const [busy, setBusy] = useState(false), [error, setError] = useState(""), [reopening, setReopening] = useState(false);
   if (!state) return null;
-  const accountant = state.role === "Accounting / Auditing";
+  const accountant = state.role === "Accounting";
   const editable = accountant && po.status === "approved" && !!po.issuance && !po.externalPayment;
   const proofs = po.paymentProofs || [], verified = po.externalPayment;
   const blocked = releaseBlocker(state, po);

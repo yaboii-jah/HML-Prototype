@@ -26,7 +26,7 @@ export function CreditPaymentVerification({ po }: { po: PO }) {
   const [busy, setBusy] = useState(false), [error, setError] = useState(""), [message, setMessage] = useState(""), [voiding, setVoiding] = useState<string | null>(null);
   const pending = useRef(false);
   if (!state) return null;
-  const accountant = state.role === "Accounting / Auditing", balance = creditBalance(state, po);
+  const accountant = state.role === "Accounting", balance = creditBalance(state, po);
   const eligible = !!po.issuance && ["approved", "released"].includes(po.status);
   const editable = accountant && eligible && balance > 0;
   const proofs = (po.paymentProofs || []).filter(proof => !proofAssigned(po, proof.id));

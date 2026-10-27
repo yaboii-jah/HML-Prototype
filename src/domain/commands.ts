@@ -713,7 +713,7 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       log(po.id, "PO draft updated"); return done("PO draft saved.");
     }
     case "saveAccountingPO": {
-      if (!permit("Accounting / Auditing")) return fail("Sign in as Accounting to review PO finances.");
+      if (!permit("Accounting")) return fail("Sign in as Accounting to review PO finances.");
       const po = state.pos.find(value => value.id === command.id);
       if (!po || !["submitted", "hold"].includes(po.status)) return fail("This PO is locked for financial review.");
       const request = requestForPO(state, po), quote = state.quotes.find(value => value.id === po.quoteId);
@@ -757,7 +757,7 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       payment.priority = command.priority; payment.updatedAt = at; return done("Payment priority updated.");
     }
     case "reviewPO": {
-      if (!permit("Accounting / Auditing")) return fail("Sign in as Accounting to review a PO.");
+      if (!permit("Accounting")) return fail("Sign in as Accounting to review a PO.");
       const po = state.pos.find(value => value.id === command.id);
       if (!po || !["submitted", "hold"].includes(po.status)) return fail("This PO is not awaiting Accounting review.");
       if (command.decision === "approve") {
@@ -810,7 +810,7 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       log(po.id, "PO reopened for Accounting recheck", command.reason); return done("Revise the PO and resubmit it to Accounting.");
     }
     case "attachPaymentProofs": {
-      if (!permit("Accounting / Auditing")) return fail("Sign in as Accounting to attach payment proof.");
+      if (!permit("Accounting")) return fail("Sign in as Accounting to attach payment proof.");
       const po = state.pos.find(value => value.id === command.poId);
       if (!po || !canAttachPaymentProof(po)) return fail("Attach proof after supplier issuance and before payment verification.");
       const documents = po.paymentProofs || [];
@@ -825,7 +825,7 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       log(po.id, "Payment proof attached"); return done("Proof attached. Archive it before verification.");
     }
     case "removePaymentProof": {
-      if (!permit("Accounting / Auditing")) return fail("Sign in as Accounting to remove proof.");
+      if (!permit("Accounting")) return fail("Sign in as Accounting to remove proof.");
       const po = state.pos.find(value => value.id === command.poId);
       if (!po || !canAttachPaymentProof(po) || proofAssigned(po, command.documentId) || !po.paymentProofs?.some(value => value.id === command.documentId)) return fail("Reopen verification before changing its proof; cleared payments are locked.");
       po.paymentProofs = po.paymentProofs.filter(value => value.id !== command.documentId);
@@ -833,7 +833,7 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
     }
     case "completePaymentProofArchive":
     case "failPaymentProofArchive": {
-      if (!permit("Accounting / Auditing", "Administrator")) return fail("Sign in as Accounting to archive proof.");
+      if (!permit("Accounting", "Administrator")) return fail("Sign in as Accounting to archive proof.");
       const po = state.pos.find(value => value.id === command.poId), proof = po?.paymentProofs?.find(value => value.id === command.documentId);
       if (command.type === "completePaymentProofArchive" && proof?.archive.status === "complete" && proof.archive.fileId === command.fileId && proof.archive.url === command.url) return done("Payment proof already archived.");
       if (!po || !isExternalPayment(po) || !proof || proof.archive.status !== "pending") return fail("This proof has no pending archive.");
@@ -845,7 +845,7 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       proof.archive.error = command.error.slice(0, 300); log(po.id, "Payment proof archive failed", command.error); return done("Proof archive needs retry.");
     }
     case "recordCreditPayment": {
-      if (!permit("Accounting / Auditing")) return fail("Sign in as Accounting to verify credit payments.");
+      if (!permit("Accounting")) return fail("Sign in as Accounting to verify credit payments.");
       const po = state.pos.find(value => value.id === command.poId);
       if (!po || !isExternalCredit(po) || !canAttachPaymentProof(po) || !identity) return fail("Supplier issuance is required before credit payment verification.");
       if (!procurementReady(requestForPO(state, po)) || po.archive?.status !== "complete") return fail("Complete current purchasing archives before verification.");
@@ -861,7 +861,7 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       return done("Payment verified. Delivery status is unchanged.", command.paymentId);
     }
     case "voidCreditPayment": {
-      if (!permit("Accounting / Auditing")) return fail("Sign in as Accounting to correct credit payments.");
+      if (!permit("Accounting")) return fail("Sign in as Accounting to correct credit payments.");
       const po = state.pos.find(value => value.id === command.poId), payment = po?.creditPayments?.find(value => value.id === command.paymentId);
       if (!po || !isExternalCredit(po) || !["approved", "released"].includes(po.status) || !payment || payment.voided || !identity || !reasonOK(command.reason)) return fail("Choose a recorded payment and enter a correction reason of at least five characters.");
       payment.voided = { at, by: identity, reason: command.reason.trim() }; po.updatedAt = at;
@@ -870,7 +870,7 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       return done("Payment voided; history retained and balance restored. Delivery status is unchanged.");
     }
     case "verifyExternalPayment": {
-      if (!permit("Accounting / Auditing")) return fail("Sign in as Accounting to verify full payment.");
+      if (!permit("Accounting")) return fail("Sign in as Accounting to verify full payment.");
       const po = state.pos.find(value => value.id === command.poId);
       if (!po || !isExternalPayment(po) || isExternalCredit(po) || po.status !== "approved" || !po.issuance || po.externalPayment || !identity) return fail("This PO is not awaiting external payment verification.");
       if (!procurementReady(requestForPO(state, po)) || po.archive?.status !== "complete") return fail("Complete current purchasing archives before verification.");
@@ -884,7 +884,7 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       log(po.id, "Full external payment verified by Accounting"); return done("Full payment verified. Confirm delivery clearance separately.");
     }
     case "reopenPaymentVerification": {
-      if (!permit("Accounting / Auditing")) return fail("Sign in as Accounting to reopen verification.");
+      if (!permit("Accounting")) return fail("Sign in as Accounting to reopen verification.");
       const po = state.pos.find(value => value.id === command.poId);
       if (!po || !isExternalPayment(po) || isExternalCredit(po) || po.status !== "approved" || !po.externalPayment || !identity || !reasonOK(command.reason)) return fail("Only verified payments before delivery clearance can reopen, with a reason.");
       po.verificationHistory = [...(po.verificationHistory || []), { ...structuredClone(po.externalPayment), reopenedAt: at, reopenedBy: identity, reason: command.reason.trim() }];
@@ -893,7 +893,7 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       log(po.id, "External payment verification reopened", command.reason); return done("Correct the proof or payment details, then verify full payment again.");
     }
     case "savePaymentRequest": {
-      if (!permit("Accounting / Auditing")) return fail("Sign in as Accounting to prepare a payment request.");
+      if (!permit("Accounting")) return fail("Sign in as Accounting to prepare a payment request.");
       const po = state.pos.find(value => value.id === command.poId && ["approved", "released"].includes(value.status));
       if (!po) return fail("Accounting must approve the PO before requesting payment.");
       if (isExternalPayment(po)) return fail("This PO uses external payment verification by Accounting.");
@@ -921,7 +921,7 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       log(payment.id, `Finance payment request ${payment.status}`, payment.reason); return done(`Payment request ${payment.status}.`);
     }
     case "completePOArchive": {
-      if (!permit("Accounting / Auditing", "Administrator")) return fail("Sign in as Accounting or Administrator to archive a PO.");
+      if (!permit("Accounting", "Administrator")) return fail("Sign in as Accounting or Administrator to archive a PO.");
       const po = state.pos.find(value => value.id === command.id);
       if (po?.archive?.status === "complete" && po.archive.fileId === command.fileId && po.archive.url === command.url) return done("PO already archived.");
       if (!po || po.status !== "approved" || po.archive?.status !== "pending" || !command.fileId || !command.url) return fail("This PO is not awaiting a Drive archive.");
@@ -930,7 +930,7 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       return done("Purchase order archived.");
     }
     case "failPOArchive": {
-      if (!permit("Accounting / Auditing", "Administrator")) return fail("Sign in as Accounting or Administrator to update a PO archive.");
+      if (!permit("Accounting", "Administrator")) return fail("Sign in as Accounting or Administrator to update a PO archive.");
       const po = state.pos.find(value => value.id === command.id);
       if (!po || po.archive?.status !== "pending") return fail("This PO is not awaiting a Drive archive.");
       po.archive.error = command.error.slice(0, 300);
@@ -938,7 +938,7 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       return done("PO archive pending. Retry the upload.");
     }
     case "releasePO": {
-      if (!permit("Accounting / Auditing")) return fail("Sign in as Accounting to release a PO.");
+      if (!permit("Accounting")) return fail("Sign in as Accounting to release a PO.");
       const po = state.pos.find(value => value.id === command.id);
       if (!po) return fail("Purchase order not found.");
       const error = releaseBlocker(state, po);
@@ -1021,7 +1021,7 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
     case "recordMovement": {
       if (!["usage", "adjustment"].includes(command.kind)) return fail("Use receiving or dispatch to record transfer movements.");
       if (command.kind === "usage" && !permit("Site Personnel")) return fail("Sign in as Site Personnel to record usage.");
-      if (command.kind === "adjustment" && !permit("Site Personnel", "Accounting / Auditing")) return fail("This role cannot correct stock.");
+      if (command.kind === "adjustment" && !permit("Site Personnel", "Accounting")) return fail("This role cannot correct stock.");
       if (!state.sites.some(s => s.id === command.siteId) || !inventoryFor(state, command.siteId).some(item => item.name.toLowerCase() === command.itemName.trim().toLowerCase() && item.unit.toLowerCase() === command.unit.trim().toLowerCase())) return fail("Choose an existing site material.");
       if (!reasonOK(command.reason)) return fail("Enter a reason of at least five characters.", "reason");
       if (!Number.isFinite(command.quantity) || command.quantity === 0 || (command.kind === "usage" && command.quantity < 0)) return fail("Enter a valid nonzero quantity.", "quantity");
@@ -1070,7 +1070,7 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
     }
     case "captureDeliveryReceipt": {
       const batch = state.batches.find(value => value.id === command.id);
-      if (!batch || !receivedDelivery(batch) || !permit("Accounting / Auditing", "Administrator", isSiteBatch(batch) ? "Site Personnel" : "Procurement")) return fail("This confirmed receipt cannot be archived by this department.");
+      if (!batch || !receivedDelivery(batch) || !permit("Accounting", "Administrator", isSiteBatch(batch) ? "Site Personnel" : "Procurement")) return fail("This confirmed receipt cannot be archived by this department.");
       if (!batch.receiptVersions?.length) { batch.receiptVersions = [deliveryReceiptVersion(state, batch, id("delivery-receipt"), at)]; reopenDocumentReview(batch.poId, "Historical delivery receipt captured"); log(batch.id, "Generated delivery receipt captured"); }
       return done("Generated delivery receipt ready for archive.");
     }
@@ -1078,7 +1078,7 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
     case "failDeliveryReceiptArchive": {
       const batch = state.batches.find(value => value.id === command.batchId);
       const receipt = batch?.receiptVersions?.find(value => value.id === command.receiptId);
-      if (!batch || !receipt || !permit("Accounting / Auditing", "Administrator", isSiteBatch(batch) ? "Site Personnel" : "Procurement")) return fail("This receipt archive is not available to this department.");
+      if (!batch || !receipt || !permit("Accounting", "Administrator", isSiteBatch(batch) ? "Site Personnel" : "Procurement")) return fail("This receipt archive is not available to this department.");
       if (receipt.archive.status === "complete") return done("Delivery receipt already archived.");
       if (command.type === "completeDeliveryReceiptArchive") {
         if (!validArchiveFileLink(state, command.url, command.fileId)) return fail("Invalid delivery receipt Drive link.");
@@ -1088,7 +1088,7 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       return done("Delivery receipt archive status saved.");
     }
     case "classifyAccountingDocument": {
-      if (!permit("Accounting / Auditing")) return fail("Only Accounting can classify existing evidence.");
+      if (!permit("Accounting")) return fail("Only Accounting can classify existing evidence.");
       const document = state.accounting.find(value => value.poId === command.poId)?.documents?.find(value => value.id === command.documentId);
       if (!document || command.batchId !== document.batchId || !validAccountingDocument({ ...document, kind: command.kind })) return fail("Choose a valid category without changing the document's delivery association.");
       const batch = state.batches.find(value => value.id === document.batchId);
@@ -1099,7 +1099,7 @@ export function applyCommand(previous: DemoSnapshot, command: Command, ctx: Comm
       return done("Document category updated.");
     }
     case "saveDocuments": {
-      if (!permit("Accounting / Auditing")) return fail("Sign in as Accounting to review documents.");
+      if (!permit("Accounting")) return fail("Sign in as Accounting to review documents.");
       if (!state.pos.some(p => p.id === command.poId && ["approved", "released"].includes(p.status))) return fail("This PO is not ready for accounting review.");
       if (command.review === "Complete" && (!command.invoiceRef.trim() || !command.receiptRef.trim())) return fail("Invoice and receipt references are required to complete review.");
       if (command.review === "Complete") { const issues = deliveryDocumentIssues(state, command.poId); if (issues.length) return fail(issues[0]); }

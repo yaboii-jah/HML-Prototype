@@ -61,7 +61,7 @@ test('reservations protect usage/adjustments and site assignments protect source
   const f = setup(); f.propose(40); const transfer = f.state.stockTransfers[0], before = structuredClone(f.state);
   assert.equal(f.command('Site Personnel', { type: 'reviewStockTransfer', id: transfer.id, decision: 'approve', quantities: { [transfer.lines[0].id]: 40 }, reason: '' }, [f.request.siteId]).ok, false);
   assert.equal(f.command('Site Personnel', { type: 'recordMovement', siteId: f.source.id, itemName: 'CEMENT STOCK', unit: 'BAG', kind: 'usage', quantity: 50, reason: 'Concrete work' }, [f.source.id]).ok, false);
-  assert.equal(f.command('Accounting / Auditing', { type: 'recordMovement', siteId: f.source.id, itemName: 'CEMENT STOCK', unit: 'BAG', kind: 'adjustment', quantity: -50, reason: 'Stock correction' }).ok, false);
+  assert.equal(f.command('Accounting', { type: 'recordMovement', siteId: f.source.id, itemName: 'CEMENT STOCK', unit: 'BAG', kind: 'adjustment', quantity: -50, reason: 'Stock correction' }).ok, false);
   assert.deepEqual(f.state, before);
   assert.equal(f.command('Site Personnel', { type: 'recordMovement', siteId: f.source.id, itemName: 'CEMENT STOCK', unit: 'BAG', kind: 'usage', quantity: 1, reason: 'Concrete work' }, []).ok, false);
 });
@@ -146,7 +146,7 @@ test('explicit destination matching credits existing stock with an alias unit an
   const {delivery,line} = receiveTrip(f);
   const receipts = structuredClone(f.state.transferDeliveries[0].receiptVersions);
   const input = {type:'postTransferDelivery',id:delivery.id,quantities:{[line]:40},reason:'',destinations:{[line]:{mode:'existing',materialId:targetId,specificationsConfirmed:true}}};
-  for (const role of ['Procurement','Logistics','Accounting / Auditing']) assert.equal(f.command(role,input,[f.request.siteId]).ok,false);
+  for (const role of ['Procurement','Logistics','Accounting']) assert.equal(f.command(role,input,[f.request.siteId]).ok,false);
   assert.equal(f.command('Site Personnel',input,[f.source.id]).ok,false);
   assert.equal(f.command('Site Personnel',input,[f.request.siteId]).ok,true);
   assert.equal(sourceStockOnHand(f.state,f.request.siteId,'Stock cement','bags'),52);
@@ -253,7 +253,7 @@ test('PO edits count saved awards while conversion consumes only the awards bein
   assert.deepEqual(f.state, before);
   f.state.pos.find(po => po.id === poId).status = 'submitted';
   const po = f.state.pos.find(po => po.id === poId);
-  assert.equal(f.command('Accounting / Auditing', { type: 'saveAccountingPO', id: poId, paymentMode: 'upfront', financial: po.financial, lines: [{ ...line, quantity: 60 }] }).ok, false);
+  assert.equal(f.command('Accounting', { type: 'saveAccountingPO', id: poId, paymentMode: 'upfront', financial: po.financial, lines: [{ ...line, quantity: 60 }] }).ok, false);
   const converted = f.command('Procurement', { type: 'generateAwardPOs', requestId: f.request.id, reasons: { [other.supplierId]: 'Available stock' } });
   assert.equal(converted.ok, true, converted.message); assert.equal(f.state.pendingAwards.length, 0); assert.equal(validTransferState(f.state), true);
 });
@@ -319,11 +319,11 @@ test('Accounting completion needs archived current receipt evidence; corrected s
   const receipt = f.state.transferDeliveries[0].receiptVersions[0], frozen = structuredClone(receipt.data);
   const evidence = { id: 'signed-v1', deliveryId: delivery.id, receiptVersion: 1, kind: 'Signed delivery receipt', name: 'Signed.pdf', mime: 'application/pdf', size: 1024, localFileId: 'signed-local', sha256: 'a'.repeat(64), uploadedAt: '', uploadedBy: 'Site Personnel', archive: { status: 'pending' } };
   assert.equal(f.command('Site Personnel', { type: 'attachTransferEvidence', transferId: transfer.id, documents: [evidence] }, [f.request.siteId]).ok, true);
-  for (const command of [{ type: 'completeTransferReceiptArchive', deliveryId: delivery.id, receiptId: receipt.id }, { type: 'completeTransferEvidenceArchive', transferId: transfer.id, documentId: evidence.id }]) assert.equal(f.command('Accounting / Auditing', { ...command, fileId: 'receipt-file', url: 'https://drive.google.com/file/d/receipt-file/view' }).ok, true);
-  assert.equal(f.command('Accounting / Auditing', { type: 'reviewTransferDocuments', id: transfer.id, status: 'Complete', note: '' }).ok, true);
+  for (const command of [{ type: 'completeTransferReceiptArchive', deliveryId: delivery.id, receiptId: receipt.id }, { type: 'completeTransferEvidenceArchive', transferId: transfer.id, documentId: evidence.id }]) assert.equal(f.command('Accounting', { ...command, fileId: 'receipt-file', url: 'https://drive.google.com/file/d/receipt-file/view' }).ok, true);
+  assert.equal(f.command('Accounting', { type: 'reviewTransferDocuments', id: transfer.id, status: 'Complete', note: '' }).ok, true);
   assert.equal(f.command('Site Personnel', { type: 'postTransferDelivery', id: delivery.id, destinations: destinationsFor(f.state,delivery.id), quantities: { [line]: 17 }, reason: 'One additional bag unusable' }, [f.request.siteId]).ok, true);
   assert.deepEqual(f.state.transferDeliveries[0].receiptVersions[0].data, frozen); assert.equal(f.state.transferDeliveries[0].receiptVersions.length, 2);
-  assert.equal(f.command('Accounting / Auditing', { type: 'reviewTransferDocuments', id: transfer.id, status: 'Complete', note: '' }).ok, false);
+  assert.equal(f.command('Accounting', { type: 'reviewTransferDocuments', id: transfer.id, status: 'Complete', note: '' }).ok, false);
   const pdf = await PDFDocument.load(await generateTransferReceiptPdf(f.state.transferDeliveries[0].receiptVersions[1].data));
   const text = pdf.getPages().flatMap(page => pageText(pdf, page)).map(value => value.text).join(' ');
   assert.match(text, /STOCK TRANSFER RECEIPT/); assert.match(text, /CEMENT STOCK/); assert.match(text, /Cement/); assert.equal(validTransferState(f.state), true);
@@ -409,7 +409,7 @@ test('warehouse receipts and onward receiving enforce their own roles and parent
   for (const options of [{ leg: 'warehouse-site' }, { leg: 'warehouse-site', parentDeliveryId: parent.id }, { leg: 'site-site', parentDeliveryId: parent.id }, { leg: 'site-warehouse', parentDeliveryId: parent.id }, { leg: 'unknown' }]) assert.equal(f.schedule(transfer, 1, options).ok, false);
   assert.equal(f.command('Logistics', { type: 'dispatchTransferDelivery', id: parent.id }).ok, true);
   const receive = { type: 'receiveTransferDelivery', id: parent.id, lines: { [line]: { accepted: 20, issue: '' } } };
-  for (const role of ['Logistics', 'Site Personnel', 'Accounting / Auditing']) assert.equal(f.command(role, receive, [f.request.siteId, f.source.id]).ok, false);
+  for (const role of ['Logistics', 'Site Personnel', 'Accounting']) assert.equal(f.command(role, receive, [f.request.siteId, f.source.id]).ok, false);
   assert.equal(f.command('Procurement', receive).ok, true); assert.equal(f.command('Procurement', receive).ok, false);
   for (const role of ['Procurement', 'Site Personnel']) assert.equal(f.command(role, { type: 'postTransferDelivery', id: parent.id, destinations: destinationsFor(f.state,parent.id), quantities: { [line]: 20 }, reason: '' }, [f.request.siteId]).ok, false);
   assert.equal(f.schedule(transfer, 10, { leg: 'warehouse-site', parentDeliveryId: parent.id }).ok, true);
@@ -489,7 +489,7 @@ test('warehouse and onward receipt PDFs and evidence operations follow the recei
     const started = f.command('Procurement', { type: 'startOperation', id: 'warehouse-op-' + nextId++, target }); assert.equal(started.ok, true, started.message);
   }
   for (const command of [{ type: 'completeTransferReceiptArchive', deliveryId: parent.id, receiptId: receipt.id }, { type: 'completeTransferEvidenceArchive', transferId: transfer.id, documentId: evidence.id }]) assert.equal(f.command('Procurement', { ...command, fileId: 'warehouse-file', url: 'https://drive.google.com/file/d/warehouse-file/view' }).ok, true);
-  assert.equal(f.command('Accounting / Auditing', { type: 'reviewTransferDocuments', id: transfer.id, status: 'Complete', note: '' }).ok, true);
+  assert.equal(f.command('Accounting', { type: 'reviewTransferDocuments', id: transfer.id, status: 'Complete', note: '' }).ok, true);
   f.schedule(transfer, 40, { leg: 'warehouse-site', parentDeliveryId: parent.id }); const child = f.state.transferDeliveries.at(-1);
   assert.equal(f.state.stockTransfers[0].documentReview.status, 'Under Review');
   assert.equal(validTransferReceipt(transferReceiptData(f.state, child)), true);

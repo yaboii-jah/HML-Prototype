@@ -1,5 +1,6 @@
 import { ACCOUNT_FIXTURES } from "./account-fixtures.ts";
 import { ROLES, type Role, type Activity, type AuditIdentity } from "../domain/types.ts";
+import { normalizeStoredRoles } from "./stored-roles.ts";
 
 export const USER_STORAGE_KEY = "hml-constructsync-users-v1";
 const ITERATIONS = 600_000;
@@ -24,7 +25,7 @@ async function credential(password: string): Promise<Credential> {
 const passwordError = (value: string) => value.length < 8 || value.length > 128 || !value.trim() ? "Use a password between 8 and 128 characters." : "";
 const profileError = (name: string, email: string, role: Role) => !name.trim() || name.trim().length > 100 ? "Enter a name of up to 100 characters." : !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254 ? "Enter a valid email address." : !ROLES.includes(role) ? "Choose an active department role." : "";
 function parse(raw: string): Data {
-  const data = JSON.parse(raw) as Data;
+  const data = JSON.parse(normalizeStoredRoles(raw)) as Data;
   if (data.users?.some(user => user.siteIds !== undefined && (!Array.isArray(user.siteIds) || user.siteIds.some(id => typeof id !== "string" || !id.trim()) || new Set(user.siteIds).size !== user.siteIds.length))) throw new Error("Saved project assignments could not be read.");
   if (data.version !== 1 || !Array.isArray(data.users) || !Array.isArray(data.activity) || data.users.some(user => !user || typeof user.id !== "string" || !user.id || typeof user.name !== "string" || typeof user.email !== "string" || profileError(user.name, user.email, user.role) || typeof user.active !== "boolean" || !Number.isInteger(user.revision) || user.revision < 1 || !/^[a-f0-9]{32}$/.test(user.credential?.salt) || !/^[a-f0-9]{64}$/.test(user.credential?.hash)) || new Set(data.users.map(user => user.id)).size !== data.users.length || new Set(data.users.map(user => user.email)).size !== data.users.length || !data.users.some(user => user.active && user.role === "Administrator")) throw new Error("Saved user accounts could not be read. The existing directory has been preserved.");
   return data;
@@ -69,7 +70,17 @@ export class LocalUserDirectory {
     this.loading = (async () => {
       try {
         const store = this.storage(), raw = store?.getItem(USER_STORAGE_KEY);
-        if (raw) { this.data = parse(raw); this.publish("ready"); return; }
+        if (raw) {
+          const normalized = normalizeStoredRoles(raw);
+          this.data = parse(normalized);
+          try {
+            if (normalized !== raw) store?.setItem(USER_STORAGE_KEY, normalized);
+            this.publish("ready");
+          } catch {
+            this.publish("volatile", "Accounts are available for this session, but browser storage could not save the department update.");
+          }
+          return;
+        }
         const at = new Date().toISOString();
         const users = await Promise.all(ACCOUNT_FIXTURES.map(async account => ({ id: `bootstrap-${account.role.toLowerCase().replace(/[^a-z]+/g, "-")}`, name: account.name, email: account.email, role: account.role, active: true, revision: 1, createdAt: at, updatedAt: at, credential: await credential(account.password) })));
         // Another tab may have initialized or edited the directory while hashing.

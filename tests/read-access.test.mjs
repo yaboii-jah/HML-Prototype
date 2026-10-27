@@ -98,7 +98,7 @@ test('empty assignments fail closed and other roles retain existing visibility',
   assert.equal(access.canOpen('/requests'), true);
   assert.equal(access.canOpen('/requests/m1'), false);
   assert.equal(access.canReadProject('site-a'), false);
-  for (const role of ['Administrator', 'Project Manager', 'Procurement', 'Finance', 'Logistics', 'Accounting / Auditing']) {
+  for (const role of ['Administrator', 'Project Manager', 'Procurement', 'Finance', 'Logistics', 'Accounting']) {
     const other = createReadAccess(state, role);
     assert.equal(other.showBudgets, true);
     assert.equal(other.canOpen('/accounting/po1'), true);

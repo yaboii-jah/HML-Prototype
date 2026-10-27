@@ -9,7 +9,7 @@ export function canReceiveTransfer(role: Role, siteIds: readonly string[], trans
   return isTransferSiteDelivery(delivery) ? role === "Site Personnel" && siteIds.includes(transfer.destinationSiteId) : role === "Procurement";
 }
 export function canManageTransferDocuments(role: Role, siteIds: readonly string[], transfer: StockTransfer, delivery: TransferDelivery) {
-  return role === "Accounting / Auditing" || role === "Administrator" || canReceiveTransfer(role, siteIds, transfer, delivery);
+  return role === "Accounting" || role === "Administrator" || canReceiveTransfer(role, siteIds, transfer, delivery);
 }
 export function transferDeliveryStage(delivery: TransferDelivery) {
   if (delivery.status === "expected") return "Scheduled";

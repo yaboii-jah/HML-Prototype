@@ -42,7 +42,7 @@ function submittedPO() {
   state = run(state, { type: 'createAwardPO', requestId: request.id, quoteId: 'offer', lines: [{ itemId: 'cement', quoteLineId: 'offer-cement', quantity: 10, unitPrice: 100 }], tax: 0, freight: 0, discount: 0, reason: 'Confirmed supplier offer', notes: '' });
   state = run(state, { type: 'savePO', id: state.pos[0].id, quoteId: 'offer', notes: '', finalize: true });
   assert.equal(state.pos[0].status, 'submitted');
-  return as(state, 'Accounting / Auditing');
+  return as(state, 'Accounting');
 }
 function approved() {
   let state=submittedPO(),po=state.pos[0];
@@ -50,7 +50,7 @@ function approved() {
   state=run(state,{type:'reviewPO',id:po.id,decision:'approve'});
   return run(state,{type:'completePOArchive',id:po.id,fileId:'po-credit-drive',url:'https://drive.google.com/file/d/po-credit-drive/view'});
 }
-function issued() {let state=approved();return as(run(as(state,'Procurement'),{type:'issuePO',id:state.pos[0].id}),'Accounting / Auditing');}
+function issued() {let state=approved();return as(run(as(state,'Procurement'),{type:'issuePO',id:state.pos[0].id}),'Accounting');}
 const record=(state,amount=400,reference='BANK-1',paymentId='credit-payment-1')=>({type:'recordCreditPayment',poId:state.pos[0].id,paymentId,amount,reference,method:'Bank',date:'2026-10-09',proofIds:[state.pos[0].paymentProofs.at(-1).id]});
 function proof(state,index=1,archive=true) {
   state=run(state,{type:'attachPaymentProofs',poId:state.pos[0].id,documents:[{name:`Proof-${index}.pdf`,mime:'application/pdf',size:20,localFileId:`proof-local-${index}`,sha256:index.toString(16).padStart(64,'0')}]});
@@ -93,7 +93,7 @@ test('issuance gates credit delivery but payment never blocks scheduling, receip
   state=run(as(state,'Site Personnel'),{type:'confirmBatch',id:state.batches[0].id,lines:{cement:{accepted:10,issue:''}}});
   state=run(state,{type:'postBatch',id:state.batches[0].id,accepted:{cement:10},reason:'Verified quantities'});
   const deliveries=structuredClone(state.batches),movements=structuredClone(state.movements);
-  state=proof(as(state,'Accounting / Auditing'));state=run(state,record(state));
+  state=proof(as(state,'Accounting'));state=run(state,record(state));
   assert.deepEqual(state.batches,deliveries); assert.deepEqual(state.movements,movements);
   assert.equal(requestMonitoring(state,state.requests[0].id).delivered.state,'complete');
   assert.equal(paymentStatus(state,state.pos[0]),'Partly Paid');
@@ -115,7 +115,7 @@ test('partial, final and voided payments preserve proof snapshots, balances, bud
   state=run(state,{type:'voidCreditPayment',poId:po.id,paymentId:'credit-payment-2',reason:'Incorrect amount entered'});
   assert.equal(paidTotal(state,po.id),400);assert.equal(state.pos[0].status,'released');
   assert.deepEqual(state.pos[0].creditPayments[0],original);
-  assert.equal(state.pos[0].creditPayments[1].voided.by.role,'Accounting / Auditing');
+  assert.equal(state.pos[0].creditPayments[1].voided.by.role,'Accounting');
   assert.equal(state.pos[0].creditPayments[1].proofs.length,1);
   state=proof(state,3);state=run(state,record(state,600,'BANK-2','credit-payment-3'));
   assert.equal(paidTotal(state,po.id),1000);assert.equal(state.pos[0].creditPayments.length,3);
@@ -157,7 +157,7 @@ test('Finance coordination validates ownership, status, dates and stale updates 
   let state=as(issued(),'Finance'),po=state.pos[0];
   const command={type:'savePaymentCoordination',poId:po.id,revision:0,priority:'Urgent',status:'Scheduled',plannedDate:'2026-10-12',note:'Bank processing planned'};
   const before={budget:budgetFor(state,state.requests[0].siteId),paid:paidTotal(state,po.id),status:po.status,due:po.paymentDueDate};
-  for(const role of ['Administrator','Project Manager','Accounting / Auditing','Procurement','Site Personnel','Logistics'])fail(as(state,role),command,/Finance/);
+  for(const role of ['Administrator','Project Manager','Accounting','Procurement','Site Personnel','Logistics'])fail(as(state,role),command,/Finance/);
   for(const patch of [{status:'Paid'},{priority:'Low'},{plannedDate:'2026-02-30'},{plannedDate:''},{status:'Delayed',note:'x'},{revision:8}])fail(state,{...command,...patch});
   const unissued=structuredClone(state);delete unissued.pos[0].issuance;fail(unissued,command,/issued/);
   state=run(state,command);po=state.pos[0];
@@ -173,9 +173,9 @@ test('Finance plans retain immutable history and priority across partial, full a
   let state=as(issued(),'Finance'),po=state.pos[0];
   state=run(state,{type:'savePaymentCoordination',poId:po.id,revision:0,priority:'High',status:'Awaiting Accounting verification',plannedDate:'2026-10-10',note:'External transfer reported'});
   const snapshot=structuredClone(state.pos[0].coordinationHistory[0]);
-  state=proof(as(state,'Accounting / Auditing'));state=run(state,record(state));po=state.pos[0];
+  state=proof(as(state,'Accounting'));state=run(state,record(state));po=state.pos[0];
   assert.equal(po.paymentCoordination.priority,'High');assert.equal(po.paymentCoordination.status,'Pending');assert.equal(po.paymentCoordination.plannedDate,'');
-  assert.deepEqual(po.coordinationHistory[0],snapshot);assert.equal(po.coordinationHistory[1].by.role,'Accounting / Auditing');
+  assert.deepEqual(po.coordinationHistory[0],snapshot);assert.equal(po.coordinationHistory[1].by.role,'Accounting');
   state=proof(state,2);state=run(state,record(state,600,'BANK-2','credit-payment-2'));
   assert.equal(coordinatedPOs(state).length,0);assert.equal(coordinationStatus(state,state.pos[0]),'Settled');
   fail(as(state,'Finance'),{type:'savePaymentCoordination',poId:po.id,revision:state.pos[0].paymentCoordination.revision,priority:'High',status:'Pending',plannedDate:'',note:''},/unpaid/);
