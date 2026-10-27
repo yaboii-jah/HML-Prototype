@@ -103,7 +103,7 @@ test('role and current assignment checks also apply to retries', () => {
     assert.equal(applyCommand(state, f.command, { ...f.ctx, siteIds: [] }).ok, false);
     assert.equal(applyCommand(state, f.command, { ...f.ctx, siteIds: undefined }).ok, false);
     assert.equal(applyCommand(state, f.command, { ...f.ctx, actor: undefined }).ok, false);
-    for (const role of ['Accounting / Auditing', 'Administrator', 'Project Manager']) assert.equal(applyCommand(state, f.command, { ...f.ctx, actor: { ...f.ctx.actor, role } }).ok, false);
+    for (const role of ['Accounting', 'Administrator', 'Project Manager']) assert.equal(applyCommand(state, f.command, { ...f.ctx, actor: { ...f.ctx.actor, role } }).ok, false);
   }
 });
 
@@ -118,7 +118,7 @@ test('usage routes, ownership and activity respect assigned projects; material r
   assert.equal(other.canReadActivity(saved.activity[0]), false);
   assert.equal(createReadAccess(saved, 'Site Personnel', []).canOpen('/inventory/usage/new'), false);
   assert.equal(assigned.canOpen(`/inventory/${f.siteId}/${f.cement}`), true);
-  assert.equal(createReadAccess(saved, 'Accounting / Auditing').canOpen('/inventory/usage/usage-test'), true);
+  assert.equal(createReadAccess(saved, 'Accounting').canOpen('/inventory/usage/usage-test'), true);
 });
 
 test('existing snapshots need no usage collection; malformed or orphaned groups are rejected on reload', () => {

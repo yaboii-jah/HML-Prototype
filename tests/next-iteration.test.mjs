@@ -56,16 +56,16 @@ test('credit payment coordination and verification coexist with Logistics and in
   const f=actionFixture(), split={...structuredClone(f.po),id:'split',ref:'SPLIT',status:'submitted'};f.state.pos.push(split);
   const before=structuredClone(f.state), actions=workflowActions(f.state,f.request.id);
   assert.ok(actions.some(a=>a.recordId===f.po.id&&a.department==='Finance'&&a.state==='ready'));
-  assert.ok(actions.some(a=>a.recordId===f.po.id&&a.department==='Accounting / Auditing'&&a.state==='ready'));
+  assert.ok(actions.some(a=>a.recordId===f.po.id&&a.department==='Accounting'&&a.state==='ready'));
   assert.ok(actions.some(a=>a.recordId===f.po.id&&a.department==='Logistics'&&a.state==='ready'));
-  assert.ok(actions.some(a=>a.recordId==='split'&&a.department==='Accounting / Auditing'));
+  assert.ok(actions.some(a=>a.recordId==='split'&&a.department==='Accounting'));
   assert.deepEqual(f.state,before);assert.equal(new Set(actions.map(a=>a.id)).size,actions.length);
   for(const role of ['Finance','Logistics']) for(const task of tasksFor({...f.state,role,siteFilter:'all'})) assert.ok(actions.some(a=>a.department===role&&a.href===task.href&&a.state==='ready'));
 });
 test('upfront clearance identifies its blocker while proof capture and Finance coordination remain actionable', () => {
   const f=actionFixture();f.po.status='approved';f.po.paymentMode='upfront';delete f.po.externalCredit;
   const actions=workflowActions(f.state,f.request.id), clearance=actions.find(a=>a.id.startsWith('clear-delivery/'));
-  assert.equal(clearance.state,'blocked');assert.match(clearance.blocker,/full external payment/i);assert.equal(canActOnWorkflowAction(clearance,'Accounting / Auditing',[]),false);
+  assert.equal(clearance.state,'blocked');assert.match(clearance.blocker,/full external payment/i);assert.equal(canActOnWorkflowAction(clearance,'Accounting',[]),false);
   assert.ok(actions.some(a=>a.department==='Finance'&&a.state==='ready'));assert.ok(actions.some(a=>a.id.startsWith('verify-payment/')&&a.state==='ready'));
   assert.equal(actions.some(a=>a.department==='Logistics'&&a.state==='ready'),false);
 });
@@ -85,7 +85,7 @@ test('returned requests expose revision and block dependent work; completed/reje
 });
 test('all roles have consistent Reports and Administration section visibility without losing inventory reads', () => {
   const f=actionFixture();
-  for(const role of ['Finance','Procurement','Logistics','Accounting / Auditing','Project Manager','Administrator']) {
+  for(const role of ['Finance','Procurement','Logistics','Accounting','Project Manager','Administrator']) {
     const access=createReadAccess(f.state,role);assert.equal(access.canOpen('/admin'),role==='Administrator');assert.equal(access.canOpen('/reports'),role!=='Site Personnel');assert.equal(access.canOpen('/inventory'),true);assert.equal(access.canOpen('https://outside.example/admin'),false);
   }
 });

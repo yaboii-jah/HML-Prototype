@@ -150,7 +150,7 @@ try {
   assert.equal(await run("return document.querySelector('.record-dialog[open]').textContent.includes('63 bag');"),true,'Stock details use live posting preview');await closeRecord();
   console.log('Delivery scheduling, receiving and stock posting details passed.');
 
-  await load('/accounting/po3','Accounting / Auditing',deliveryData);
+  await load('/accounting/po3','Accounting',deliveryData);
   await wait("return !!document.querySelector('[aria-label="+'"Editable purchase order materials"'+"] .material-details-row');");
   await fill('input[aria-label="PO quantity 1"]',12);await click('input[aria-label="PO quantity 1"]');await noModal('PO quantity stays editable');
   await cellClick('[aria-label="Editable purchase order materials"] tbody td:nth-child(5)');

@@ -83,10 +83,10 @@ try {
   await wait("return document.querySelector('.account-label small').textContent==='Procurement';");
   assert.equal(await railWidth(), 72, "Choice survives account switching");
   await click('.masthead-account');
-  assert.equal(await run("return [...document.querySelectorAll('.role-options button strong')].some(el=>el.textContent==='Accounting')&&!document.querySelector('.role-options').textContent.includes('/ Auditing');"), true, "Switcher displays Accounting");
+  assert.equal(await run("return [...document.querySelectorAll('.role-options button strong')].some(el=>el.textContent==='Accounting');"), true, "Switcher displays Accounting");
   await run("[...document.querySelectorAll('.role-options button')].find(el=>el.querySelector('strong').textContent==='Accounting').click();return true;");
   await wait("return document.querySelector('.account-label small').textContent==='Accounting';");
-  assert.equal(await run("return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).role;"), 'Accounting / Auditing', "Stored role remains compatible");
+  assert.equal(await run("return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).role;"), 'Accounting', "Stored role is Accounting");
   await navigate('/accounting');
   assert.equal(await run("return document.querySelector('.workspace-content h1').textContent;"), 'Accounting queue', "Accounting workspace remains accessible");
   await click('.masthead-account');

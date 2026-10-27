@@ -129,7 +129,7 @@ test("receiving posts only once and site usage cannot create negative stock", ()
 });
 
 test("payment entries move committed value to spent without reducing available twice", () => {
-  let state = execute(seedDemo(), { type: "setRole", role: "Accounting / Auditing" });
+  let state = execute(seedDemo(), { type: "setRole", role: "Accounting" });
   const before = budgetFor(state, "site-a");
   state = execute(state, { type: "savePaymentRequest", poId: "po1", amount: 5000, note: "Partial supplier payment", submit: true });
   const paymentRequestId = state.paymentRequests.at(-1).id;

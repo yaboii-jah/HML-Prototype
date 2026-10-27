@@ -1,4 +1,4 @@
-export const ROLES = ["Site Personnel", "Project Manager", "Procurement", "Finance", "Logistics", "Accounting / Auditing", "Administrator"] as const;
+export const ROLES = ["Site Personnel", "Project Manager", "Procurement", "Finance", "Logistics", "Accounting", "Administrator"] as const;
 export type Role = (typeof ROLES)[number];
 // Historical records keep their recorded department and identity.
 export type HistoricalActor = Role | "Management";

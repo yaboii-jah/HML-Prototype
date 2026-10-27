@@ -184,7 +184,7 @@ try {
   await navigate('/requests/quote-smoke/quotes'); await click('Compare & award'); await run("[...document.querySelectorAll('details')].find(d=>d.querySelector('summary strong')?.textContent==='Comparison reports').open=true;return true;");
   await wait("return ![...document.querySelectorAll('button')].some(button=>button.textContent==='Generate new version');");
   const downloadsBefore=await run("return window.__bidDownloads.length;"); await click('Download Excel'); await wait(`return window.__bidDownloads.length>${downloadsBefore};`);
-  await role('Accounting / Auditing');
+  await role('Accounting');
   await navigate(`/accounting/${firstPo.id}`); await fill('select[name="paymentMode"]','credit');
   const sourceBeforeReview = (await snapshot()).quotes.find(value => value.id === firstPo.quoteId);
   await fill('[aria-label="PO unit price 1"]', firstPo.lines[0].unitPrice + 100);
@@ -218,7 +218,7 @@ try {
   await run("document.querySelector('input[name=financialReviewed]').click();return true;");
   await click('Submit to Accounting');
   await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).pos.find(value=>value.id===${JSON.stringify(firstPo.id)}).status==='submitted';`);
-  await role('Accounting / Auditing'); await navigate(`/accounting/${firstPo.id}`); await fill('select[name="paymentMode"]','credit');
+  await role('Accounting'); await navigate(`/accounting/${firstPo.id}`); await fill('select[name="paymentMode"]','credit');
   await run("document.querySelector('.accounting-po-form input[name=financialReviewed]').click();return true;");
   await click('Approve PO');
   await wait(`return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).pos.find(value=>value.id===${JSON.stringify(firstPo.id)}).archive?.status==='complete';`);

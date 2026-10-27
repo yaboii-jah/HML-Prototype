@@ -5,6 +5,7 @@ import { validTransferState } from "../domain/transfer-document.ts";
 import { newId } from "../domain/ids.ts";
 import { blankWorkspace } from "./blank-workspace.ts";
 import { normalizeKnownPlaceholders } from "./normalize.ts";
+import { normalizeStoredRoles } from "../app-state/stored-roles.ts";
 import { upgradeLegacyQuotes } from "../domain/procurement.ts";
 import { ROLES, type AuditIdentity, type DemoSnapshot, type LegacySnapshot } from "../domain/types.ts";
 import { clearQuoteFiles } from "../documents/files.ts";
@@ -72,7 +73,7 @@ export function migrateV10(value: unknown): DemoSnapshot | null {
   return normalizeKnownPlaceholders({ ...structuredClone(value), version: 11 } as unknown as DemoSnapshot);
 }
 export const parseCurrent = (raw: string): DemoSnapshot | null => {
-  const saved: unknown = JSON.parse(raw);
+  const saved: unknown = JSON.parse(normalizeStoredRoles(raw));
   const parsed = isRecord(saved) && saved.role === "Management" ? { ...saved, role: "Project Manager" } : saved;
   if (!isSnapshotShape(parsed) || parsed.version !== 12 || !Array.isArray(parsed.paymentRequests) || !Array.isArray(parsed.pendingAwards) || !Array.isArray(parsed.bidReports)) return null;
   const state = parsed as DemoSnapshot;
@@ -146,8 +147,10 @@ export class LocalDemoRepository implements DemoRepository {
     }
     try {
       if (current) {
-        const parsed = parseCurrent(current);
+        const normalized = normalizeStoredRoles(current);
+        const parsed = parseCurrent(normalized);
         this.view = parsed ? { snapshot: parsed, status: "ready" } : { snapshot: null, status: "recovery", message: "Saved workspace data could not be read. Restore the workspace to continue." };
+        if (parsed && normalized !== current) this.view = this.write(parsed);
         return this.view;
       }
       if (previous) {

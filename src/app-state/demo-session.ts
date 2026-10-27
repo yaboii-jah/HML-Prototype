@@ -1,5 +1,6 @@
 import type { Role } from "../domain/types.ts";
 import { userDirectory, LocalUserDirectory, USER_STORAGE_KEY, type ManagedUser } from "./user-directory.ts";
+import { normalizeStoredRoles } from "./stored-roles.ts";
 export { ACCOUNT_FIXTURES } from "./account-fixtures.ts";
 
 export type AccountIdentity = { email: string; role: Role; userId?: string; revision?: number };
@@ -41,7 +42,7 @@ export class LocalDemoSession {
       localStorage.removeItem(LEGACY_SESSION_KEY);
       const saved = localStorage.getItem(SESSION_STORAGE_KEY);
       let account: AccountIdentity | null = null;
-      if (saved) { try { account = this.storedIdentity(JSON.parse(saved)); } catch {} }
+      if (saved) { try { account = this.storedIdentity(JSON.parse(normalizeStoredRoles(saved))); } catch {} }
       if (saved && !account) localStorage.removeItem(SESSION_STORAGE_KEY);
       if (account) localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(account));
       this.view = account ? { ...account, status: "ready" } : { email: null, role: null, status: "ready" };

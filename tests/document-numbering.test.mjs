@@ -117,7 +117,7 @@ test("Upload archive names prefix legacy parents without rewriting source names/
   const proofPO = state.pos[0];
   Object.assign(proofPO, { workflow: "pm-external-v1", status: "approved", paymentMode: "upfront", issuance: { at, by: { name: "Buyer", email: "buyer@example.com", role: "Procurement" } } });
   const proof = { name: "Bank receipt.pdf", mime: "application/pdf", size: 120, localFileId: "proof-original", sha256: "a".repeat(64) };
-  state = run(state, { type: "attachPaymentProofs", poId: proofPO.id, documents: [proof] }, "Accounting / Auditing");
+  state = run(state, { type: "attachPaymentProofs", poId: proofPO.id, documents: [proof] }, "Accounting");
   const savedProof = state.pos[0].paymentProofs[0];
   assert.equal(savedProof.name, proof.name);
   assert.equal(savedProof.sha256, proof.sha256);

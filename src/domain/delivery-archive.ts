@@ -6,14 +6,14 @@ export const receivedDelivery = (batch: Batch) => ["confirmed", "posted"].includ
 export function canAttachDelivery(state: DemoSnapshot, poId: string, batchId: string | undefined, role: Role) {
   const po = state.pos.find(value => value.id === poId);
   if (!po || !["approved", "released"].includes(po.status)) return false;
-  if (!batchId) return role === "Accounting / Auditing";
+  if (!batchId) return role === "Accounting";
   const batch = state.batches.find(value => value.id === batchId && value.poId === poId);
-  return !!batch && receivedDelivery(batch) && (role === "Accounting / Auditing" || role === (isSiteBatch(batch) ? "Site Personnel" : "Procurement"));
+  return !!batch && receivedDelivery(batch) && (role === "Accounting" || role === (isSiteBatch(batch) ? "Site Personnel" : "Procurement"));
 }
 export function canArchiveAccounting(state: DemoSnapshot, poId: string, documentId: string, role: Role) {
   const document = state.accounting.find(value => value.poId === poId)?.documents?.find(value => value.id === documentId);
   if (!document) return false;
-  if (["Accounting / Auditing", "Administrator"].includes(role)) return true;
+  if (["Accounting", "Administrator"].includes(role)) return true;
   const batch = state.batches.find(value => value.id === document.batchId && value.poId === poId);
   return !!batch && role === (isSiteBatch(batch) ? "Site Personnel" : "Procurement");
 }

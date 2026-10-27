@@ -41,7 +41,7 @@ function submittedPO() {
   state = run(state, { type: 'createAwardPO', requestId: request.id, quoteId: 'offer', lines: [{ itemId: 'cement', quoteLineId: 'offer-cement', quantity: 10, unitPrice: 100 }], tax: 0, freight: 0, discount: 0, reason: 'Confirmed supplier offer', notes: '' });
   state = run(state, { type: 'savePO', id: state.pos[0].id, quoteId: 'offer', notes: '', finalize: true });
   assert.equal(state.pos[0].status, 'submitted');
-  return as(state, 'Accounting / Auditing');
+  return as(state, 'Accounting');
 }
 function approve(state, mode = 'upfront') {
   const po = state.pos[0];
@@ -50,7 +50,7 @@ function approve(state, mode = 'upfront') {
 }
 const archive = state => run(state, { type: 'completePOArchive', id: state.pos[0].id, fileId: 'po-drive', url: 'https://drive.google.com/file/d/po-drive/view' });
 function requestPayment(state, amount = poTotal(state, state.pos[0]) - paidTotal(state, state.pos[0].id)) {
-  return run(as(state, 'Accounting / Auditing'), { type: 'savePaymentRequest', poId: state.pos[0].id, amount, note: 'Supplier payment', submit: true });
+  return run(as(state, 'Accounting'), { type: 'savePaymentRequest', poId: state.pos[0].id, amount, note: 'Supplier payment', submit: true });
 }
 function pay(state) {
   const id = state.paymentRequests.at(-1).id;
@@ -63,7 +63,7 @@ function pay(state) {
 const proofCommand = poId => ({ type: 'attachPaymentProofs', poId, documents: [{ name: 'Bank proof.pdf', mime: 'application/pdf', size: 100, localFileId: 'bank-proof', sha256: 'a'.repeat(64) }] });
 const verifyCommand = poId => ({ type: 'verifyExternalPayment', poId, method: 'Bank', date: '2026-10-05', reference: 'BANK-FULL-001' });
 function issued(withVat = false) { let state = submittedPO(); if (withVat) state = run(state, { type: "saveAccountingPO", id: state.pos[0].id, paymentMode: "upfront", financial: { ...state.pos[0].financial, vatStatus: "VAT", priceBasis: "inclusive", vatRate: 12, ewtMode: "automatic", reviewed: true } }); state = archive(approve(state)); return run(as(state, 'Procurement'), { type: 'issuePO', id: state.pos[0].id }); }
-function withProof(state) { state = run(as(state, 'Accounting / Auditing'), proofCommand(state.pos[0].id)); return run(state, { type: 'completePaymentProofArchive', poId: state.pos[0].id, documentId: state.pos[0].paymentProofs[0].id, fileId: 'proof-drive', url: 'https://drive.google.com/file/d/proof-drive/view' }); }
+function withProof(state) { state = run(as(state, 'Accounting'), proofCommand(state.pos[0].id)); return run(state, { type: 'completePaymentProofArchive', poId: state.pos[0].id, documentId: state.pos[0].paymentProofs[0].id, fileId: 'proof-drive', url: 'https://drive.google.com/file/d/proof-drive/view' }); }
 
 test('new MRFs require PM review, inherit flow on PO, and supplier issuance marks Served before delivery clearance', () => {
   let state = approve(submittedPO()), po = state.pos[0];
@@ -84,7 +84,7 @@ test('new MRFs require PM review, inherit flow on PO, and supplier issuance mark
 });
 
 test('Accounting requires archived proof and complete details, verifies computed net after EWT, then clears delivery separately', () => {
-  let state = as(issued(true), 'Accounting / Auditing'); const poId = state.pos[0].id, siteId = state.sites[0].id;
+  let state = as(issued(true), 'Accounting'); const poId = state.pos[0].id, siteId = state.sites[0].id;
   fail(state, verifyCommand(poId), /proof/);
   state = run(state, proofCommand(poId));
   fail(state, verifyCommand(poId), /proof/);
@@ -98,11 +98,11 @@ test('Accounting requires archived proof and complete details, verifies computed
   assert.equal(state.pos[0].externalPayment.amount, poTotal(state,state.pos[0])); assert.ok(state.pos[0].externalPayment.amount < 1000, 'EWT is deducted from verified net'); assert.equal(state.payments.length, 0);
   assert.equal(state.pos[0].status, 'approved'); assert.equal(state.batches.length, 0);
   assert.equal(budgetFor(state,siteId).available, prior.available); assert.equal(budgetFor(state,siteId).spent, poTotal(state,state.pos[0]));
-  assert.equal(state.pos[0].externalPayment.verifiedBy.role, 'Accounting / Auditing');
+  assert.equal(state.pos[0].externalPayment.verifiedBy.role, 'Accounting');
   fail(state, { type: 'removePaymentProof', poId, documentId: state.pos[0].paymentProofs[0].id });
   fail(as(state, 'Finance'), { type: 'releasePO', id: poId });
   state = run(state, { type: 'releasePO', id: poId });
-  assert.equal(state.pos[0].releasedBy, 'Accounting / Auditing');
+  assert.equal(state.pos[0].releasedBy, 'Accounting');
   fail(state, { type: 'reopenPaymentVerification', poId, reason: 'Wrong bank reference' });
   state = run(as(state, 'Logistics'), { type: 'createBatch', poId, scheduledDate: '2026-10-06', evidence: 'Delivery', delayReason: '', expected: { cement: 10 } });
   assert.equal(state.batches.length, 1);
@@ -132,10 +132,10 @@ test('costing recheck retains prior approval, invalidates commitment/archive, re
   assert.equal(state.pos[0].approvalHistory[0].archive.fileId,'po-drive'); assert.equal(budgetFor(state,state.sites[0].id).committed,0);
   state = run(state,{type:'savePO',id:poId,quoteId:'offer',notes:'Costing rechecked',lines:state.pos[0].lines.map(line=>({...line,unitPrice:120})),finalize:true});
   assert.equal(poTotal(state,state.pos[0]),1200); assert.equal(state.quotes[0].lines[0].unitPrice,100,'Recheck retains original quotation');
-  state = approve(as(state,'Accounting / Auditing')); state = archive(state);
+  state = approve(as(state,'Accounting')); state = archive(state);
   state = run(as(state,'Procurement'),{type:'issuePO',id:poId});
   fail(state,{type:'reopenPOReview',id:poId,reason:'Change issued financials'});
-  fail(as(state,'Accounting / Auditing'),{type:'saveAccountingPO',id:poId,paymentMode:'credit',financial:state.pos[0].financial});
+  fail(as(state,'Accounting'),{type:'saveAccountingPO',id:poId,paymentMode:'credit',financial:state.pos[0].financial});
 });
 
 test('previously approved credit arrangements keep their Finance workflow without migration', () => {
@@ -148,7 +148,7 @@ test('previously approved credit arrangements keep their Finance workflow withou
 });
 
 test('proof validation rejects oversize, invalid hashes, duplicates and cross-PO archive identities', () => {
-  const state=as(issued(),'Accounting / Auditing'), poId=state.pos[0].id;
+  const state=as(issued(),'Accounting'), poId=state.pos[0].id;
   for (const patch of [{size:21*1024*1024},{mime:'text/plain'},{sha256:'invalid'}]) fail(state,{...proofCommand(poId),documents:[{...proofCommand(poId).documents[0],...patch}]});
   const attached=run(state,proofCommand(poId));
   fail(attached,proofCommand(poId));

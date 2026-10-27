@@ -23,11 +23,11 @@ function received(leg = 'supplier-site') {
   return state;
 }
 const complete = { type: 'saveDocuments', poId: 'po1', invoiceRef: 'INV', receiptRef: 'DR', review: 'Complete', note: 'Verified' };
-const archive = (state, batch = state.batches[0], role = 'Accounting / Auditing') => run(state, { type: 'completeDeliveryReceiptArchive', batchId: batch.id, receiptId: batch.receiptVersions.at(-1).id, fileId: 'generated-file', url: 'https://drive.google.com/file/d/generated-file/view' }, role);
+const archive = (state, batch = state.batches[0], role = 'Accounting') => run(state, { type: 'completeDeliveryReceiptArchive', batchId: batch.id, receiptId: batch.receiptVersions.at(-1).id, fileId: 'generated-file', url: 'https://drive.google.com/file/d/generated-file/view' }, role);
 const signed = (state, batch = state.batches[0], name = 'signed') => {
-  state = run(state, { type: 'attachAccountingDocuments', poId: batch.poId, batchId: batch.id, documents: [doc(name)] }, 'Accounting / Auditing');
+  state = run(state, { type: 'attachAccountingDocuments', poId: batch.poId, batchId: batch.id, documents: [doc(name)] }, 'Accounting');
   const document = state.accounting.find(value => value.poId === batch.poId).documents.at(-1);
-  return run(state, { type: 'completeAccountingArchive', poId: batch.poId, documentId: document.id, fileId: `signed-${name}`, url: `https://drive.google.com/file/d/signed-${name}/view` }, 'Accounting / Auditing');
+  return run(state, { type: 'completeAccountingArchive', poId: batch.poId, documentId: document.id, fileId: `signed-${name}`, url: `https://drive.google.com/file/d/signed-${name}/view` }, 'Accounting');
 };
 
 test('receipt confirmation captures immutable data and corrections create a separate version', () => {
@@ -57,18 +57,18 @@ test('unchanged stock posting creates no duplicate receipt and completed archive
 test('Accounting requires archived current generated and signed receipts, and preserves review history', () => {
   let state = received();
   assert.equal(deliveryDocumentIssues(state, 'po1').length, 2);
-  assert.equal(execute(state, complete, 'Accounting / Auditing').ok, false);
+  assert.equal(execute(state, complete, 'Accounting').ok, false);
   state = archive(state); state = signed(state);
   assert.deepEqual(deliveryDocumentIssues(state, 'po1'), []);
-  state = run(state, complete, 'Accounting / Auditing');
+  state = run(state, complete, 'Accounting');
   state = run(state, { type: 'postBatch', id: state.batches[0].id, accepted: { 'm1-i1': 9 }, reason: 'One damaged unit removed' });
   assert.equal(state.accounting[0].review, 'Under Review');
   assert.equal(state.accounting[0].reviewHistory[0].review, 'Complete');
-  assert.equal(state.accounting[0].reviewHistory[0].by.role, 'Accounting / Auditing');
+  assert.equal(state.accounting[0].reviewHistory[0].by.role, 'Accounting');
   assert.equal(deliveryDocumentIssues(state, 'po1').length, 2);
-  state = archive(state); assert.equal(execute(state, complete, 'Accounting / Auditing').ok, false);
+  state = archive(state); assert.equal(execute(state, complete, 'Accounting').ok, false);
   state = signed(state, state.batches[0], 'corrected');
-  state = run(state, complete, 'Accounting / Auditing');
+  state = run(state, complete, 'Accounting');
   assert.equal(state.accounting[0].review, 'Complete');
 });
 
@@ -77,7 +77,7 @@ test('warehouse evidence belongs to Procurement or Accounting and every delivery
   const attach = { type: 'attachAccountingDocuments', poId: 'po1', batchId: parent.id, documents: [doc()] };
   assert.equal(execute(state, attach).ok, false);
   assert.equal(execute(state, attach, 'Procurement').ok, true);
-  assert.equal(execute(state, attach, 'Accounting / Auditing').ok, true);
+  assert.equal(execute(state, attach, 'Accounting').ok, true);
   state = run(state, { type: 'createBatch', poId: 'po1', leg: 'warehouse-site', parentBatchId: parent.id, scheduledDate: '2026-10-09', evidence: 'ONWARD', delayReason: '', expected: { 'm1-i1': 5 } }, 'Logistics');
   const onward = state.batches.at(-1);
   state = run(state, { type: 'dispatchBatch', id: onward.id }, 'Logistics');
@@ -92,25 +92,25 @@ test('warehouse evidence belongs to Procurement or Accounting and every delivery
 test('Accounting can attach PO invoices before delivery; signed receipts require a received batch', () => {
   const state = received(); state.batches = []; state.pos.find(po => po.id === 'po1').status = 'approved';
   const command = { type: 'attachAccountingDocuments', poId: 'po1', documents: [{ ...doc(), kind: 'Invoice' }] };
-  assert.equal(execute(state, command, 'Accounting / Auditing').ok, true);
+  assert.equal(execute(state, command, 'Accounting').ok, true);
   for (const role of ['Site Personnel', 'Procurement', 'Finance', 'Administrator']) assert.equal(execute(state, command, role).ok, false);
-  assert.equal(execute(state, { ...command, documents: [doc()] }, 'Accounting / Auditing').ok, false);
-  assert.equal(execute(state, { ...command, batchId: 'foreign-batch' }, 'Accounting / Auditing').ok, false);
+  assert.equal(execute(state, { ...command, documents: [doc()] }, 'Accounting').ok, false);
+  assert.equal(execute(state, { ...command, batchId: 'foreign-batch' }, 'Accounting').ok, false);
 });
 
 test('historical receipts are captured only explicitly, while generic evidence requires classification', () => {
   let state = received(); delete state.batches[0].receiptVersions;
-  state = run(state, { type: 'captureDeliveryReceipt', id: state.batches[0].id }, 'Accounting / Auditing');
+  state = run(state, { type: 'captureDeliveryReceipt', id: state.batches[0].id }, 'Accounting');
   const receipt = structuredClone(state.batches[0].receiptVersions[0]);
-  state = run(state, { type: 'captureDeliveryReceipt', id: state.batches[0].id }, 'Accounting / Auditing');
+  state = run(state, { type: 'captureDeliveryReceipt', id: state.batches[0].id }, 'Accounting');
   assert.deepEqual(state.batches[0].receiptVersions, [receipt]);
   state = archive(state);
   state = run(state, { type: 'attachAccountingDocuments', poId: 'po1', batchId: state.batches[0].id, documents: [{ ...doc(), kind: 'Delivery receipt' }] });
   const document = state.accounting[0].documents[0];
-  state = run(state, { type: 'completeAccountingArchive', poId: 'po1', documentId: document.id, fileId: 'signed-file', url: 'https://drive.google.com/file/d/signed-file/view' }, 'Accounting / Auditing');
+  state = run(state, { type: 'completeAccountingArchive', poId: 'po1', documentId: document.id, fileId: 'signed-file', url: 'https://drive.google.com/file/d/signed-file/view' }, 'Accounting');
   assert.equal(deliveryDocumentIssues(state, 'po1').length, 1);
   assert.equal(execute(state, { type: 'classifyAccountingDocument', poId: 'po1', documentId: document.id, batchId: document.batchId, kind: 'Signed delivery receipt' }).ok, false);
-  state = run(state, { type: 'classifyAccountingDocument', poId: 'po1', documentId: document.id, batchId: document.batchId, kind: 'Signed delivery receipt' }, 'Accounting / Auditing');
+  state = run(state, { type: 'classifyAccountingDocument', poId: 'po1', documentId: document.id, batchId: document.batchId, kind: 'Signed delivery receipt' }, 'Accounting');
   assert.deepEqual(deliveryDocumentIssues(state, 'po1'), []);
 });
 

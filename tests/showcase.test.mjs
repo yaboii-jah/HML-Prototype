@@ -31,6 +31,6 @@ test('document ownership limits local file access and stale operation acknowledg
   const target={kind:'request',id:state.requests[0].id};
   assert.notEqual(operationFingerprint(state,target),operationFingerprint({...state,showcase:{...state.showcase,installationId:'replacement-install'}},target));
   const withImage=structuredClone(state),imageId='local-'+state.showcase.installationId+'-uploaded-image';
-  withImage.accounting.push({poId:state.pos[0].id,invoiceRef:'',receiptRef:'',review:'Incomplete',note:'',documents:[{id:'new-image',name:'Receiving photo.PNG',kind:'Other',mime:'image/png',size:100,localFileId:imageId,sha256:'0'.repeat(64),uploadedAt:state.showcase.seededAt,uploadedBy:'Accounting / Auditing',archive:{status:'complete',fileId:imageId,url:localArchiveUrl(imageId)}}]});
+  withImage.accounting.push({poId:state.pos[0].id,invoiceRef:'',receiptRef:'',review:'Incomplete',note:'',documents:[{id:'new-image',name:'Receiving photo.PNG',kind:'Other',mime:'image/png',size:100,localFileId:imageId,sha256:'0'.repeat(64),uploadedAt:state.showcase.seededAt,uploadedBy:'Accounting',archive:{status:'complete',fileId:imageId,url:localArchiveUrl(imageId)}}]});
   assert.equal(localArchiveFiles(withImage).find(file=>file.id===imageId).name,'Receiving photo.PNG','Image evidence keeps its original download extension');
 });

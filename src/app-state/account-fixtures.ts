@@ -7,6 +7,6 @@ export const ACCOUNT_FIXTURES: { name: string; role: Role; email: string; passwo
   { name: "Andrea Reyes", role: "Procurement", email: "hml.constructsync.procurement@gmail.com", password: "HML!PROC2026" },
   { name: "Paolo Mendoza", role: "Finance", email: "hml.constructsync.finance@gmail.com", password: "HML!FIN2026" },
   { name: "Carlo Villanueva", role: "Logistics", email: "hml.constructsync.logistics@gmail.com", password: "HML!LOG2026" },
-  { name: "Isabel Cruz", role: "Accounting / Auditing", email: "hml.constructsync.accounting@gmail.com", password: "HML!ACCT2026" },
+  { name: "Isabel Cruz", role: "Accounting", email: "hml.constructsync.accounting@gmail.com", password: "HML!ACCT2026" },
   { name: "Daniel Garcia", role: "Administrator", email: "hml.constructsync.admin@gmail.com", password: "HML!ADMIN2026" },
 ];

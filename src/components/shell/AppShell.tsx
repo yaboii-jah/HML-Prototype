@@ -66,7 +66,7 @@ const primary: Record<Role, string[]> = {
   Procurement: ["/dashboard", "/requests", "/purchase-orders", "/suppliers"],
   Finance: ["/dashboard", "/finance", "/purchase-orders", "/projects"],
   Logistics: ["/dashboard", "/deliveries", "/purchase-orders", "/projects"],
-  "Accounting / Auditing": ["/dashboard", "/accounting", "/inventory", "/purchase-orders"],
+  "Accounting": ["/dashboard", "/accounting", "/inventory", "/purchase-orders"],
   Administrator: ["/dashboard", "/admin", "/projects", "/suppliers", "/reports"],
 };
 

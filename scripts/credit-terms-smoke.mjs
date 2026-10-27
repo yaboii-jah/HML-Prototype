@@ -48,11 +48,11 @@ try {
   await call("Runtime.enable"); await prepareFixtureBrowser(call, base); await call("Page.enable");
 
   await wait("return !!document.querySelector('#signin-email');");
-  const account=ACCOUNT_FIXTURES.find(a=>a.role==='Accounting / Auditing');
+  const account=ACCOUNT_FIXTURES.find(a=>a.role==='Accounting');
   await fill('#signin-email',account.email);await fill('#signin-password',account.password);await click('.signin-form button');
   await wait("return location.pathname==='/dashboard'&&!!document.querySelector('.masthead-account');");
   const fixture=seedDemo(),po=fixture.pos[0],request=fixture.requests.find(value=>value.id===po.mrfId),quote=fixture.quotes.find(value=>value.id===po.quoteId),project=fixture.sites.find(value=>value.id===request.siteId);
-  project.driveFolderId='browser-credit-project';fixture.role='Accounting / Auditing';fixture.pos=[po];fixture.paymentRequests=[];fixture.payments=[];fixture.batches=[];fixture.movements=[];fixture.accounting=[];
+  project.driveFolderId='browser-credit-project';fixture.role='Accounting';fixture.pos=[po];fixture.paymentRequests=[];fixture.payments=[];fixture.batches=[];fixture.movements=[];fixture.accounting=[];
   request.workflow='pm-external-v1';request.status='approved';request.archive={status:'complete',approvedAt:'2026-10-09T00:00:00Z',versions:[]};
   initializePoDocument(po,request,quote,project,'2026-10-09T00:00:00Z');po.document.vendorName=fixture.suppliers.find(value=>value.id===quote.supplierId).name;po.status='submitted';po.paymentMode=undefined;po.financial.reviewed=true;po.archive=undefined;
   const due=philippineDate(new Date(Date.now()-86400000)),date=philippineDate();
@@ -79,7 +79,7 @@ try {
   assert.equal(await run(`return ${saved}.pos[0].status;`),'approved','Finance cannot clear delivery');
   await fillCoordination('Awaiting Accounting verification');await press('Save coordination');await confirmed();await wait(`return ${saved}.pos[0].paymentCoordination?.revision===2;`);
   assert.equal(await run(`return ${saved}.pos[0].creditPayments?.length||0;`),0,'Reporting external payment does not verify money');
-  await role('Accounting / Auditing');await navigate(`/accounting/${po.id}`);await wait("return !!document.querySelector('.credit-payment-panel');");
+  await role('Accounting');await navigate(`/accounting/${po.id}`);await wait("return !!document.querySelector('.credit-payment-panel');");
   await press('Confirm delivery clearance');await confirmed();await wait(`return ${saved}.pos[0].status==='released';`);
   assert.equal(await run(`return ${saved}.pos[0].creditPayments?.length||0;`),0,'Unpaid credit PO is cleared');
   const stored=await run(`return ${saved};`),total=poTotal(stored,stored.pos[0]),part=Math.round(total*.4*100)/100;
@@ -94,7 +94,7 @@ try {
   await role('Finance');await navigate('/finance');assert.equal(await run("return !!document.querySelector('.register table tbody tr');"),false,'Settled PO leaves active queue');
   await run("const t=[...document.querySelectorAll('.view-tabs button')].find(b=>b.textContent.startsWith('Settled ('));t.focus();t.click();return true;");await sleep(150);await wait("return !!document.querySelector('.register table tbody tr');");
   await navigate(`/finance/${po.id}`);assert.equal(await run("return !!document.querySelector('.payment-coordination-form');"),false,'Settled coordination is read-only');
-  await role('Accounting / Auditing');await navigate(`/accounting/${po.id}`);
+  await role('Accounting');await navigate(`/accounting/${po.id}`);
 
   await wait("return !!document.querySelector('.credit-payment-history details');");await run("document.querySelector('.credit-payment-history details').open=true;return true;");await press('Void incorrect payment');await fill('.credit-payment-history textarea[name=reason]','Incorrect payment recorded for correction');await press('Continue to confirmation');await confirmed();await wait(`return !!${saved}.pos[0].creditPayments[1].voided;`);
   assert.equal(await run(`return ${saved}.pos[0].status;`),'released','Voiding preserves delivery clearance');

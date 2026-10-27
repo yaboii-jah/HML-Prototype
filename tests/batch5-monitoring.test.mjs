@@ -12,7 +12,7 @@ function base() {
 }
 const row = state => requestMonitoring(state, "m1");
 const batch = (id, amount, status = "confirmed", extra = {}) => ({ id, ref: `DEL-${id}`, poId: "po1", scheduledDate: "2026-10-07", evidence: "DR", delayReason: "", status, lines: [{ itemId: "m1-i1", expected: amount, accepted: amount, issue: "" }], createdAt: "2026-10-07T01:00:00Z", updatedAt: "2026-10-07T01:00:00Z", ...extra });
-const payment = (id, poId, amount, status = "submitted") => ({ id, ref: `PAY-${id}`, poId, amount, note: "Supplier payment", status, priority: "Normal", createdAt: "2026-10-07T01:00:00Z", updatedAt: "2026-10-07T01:00:00Z", createdBy: "Accounting / Auditing" });
+const payment = (id, poId, amount, status = "submitted") => ({ id, ref: `PAY-${id}`, poId, amount, note: "Supplier payment", status, priority: "Normal", createdAt: "2026-10-07T01:00:00Z", updatedAt: "2026-10-07T01:00:00Z", createdBy: "Accounting" });
 const pay = (state, poId, amount) => { const id = `payment-${state.paymentRequests.length}`; state.paymentRequests.push(payment(id,poId,amount,"disbursed")); state.payments.push({ id:`paid-${id}`,paymentRequestId:id,poId,amount,method:"Bank",reference:"BANK",date:"2026-10-07",actor:"Finance" }); };
 
 test("monitoring is a readonly projection and empty/draft requests never receive completed milestones", () => {
@@ -97,7 +97,7 @@ test("project filtering, historical attribution and latest activity follow expli
   assert.ok(monitoringRequests(state,"site-a").every(value=>value.request.siteId==="site-a"));
   state.requests.find(value=>value.id==="m1").updatedAt="2099-01-01T00:00:00Z";
   assert.equal(row(state).latestActivity,undefined); assert.equal(row(state).scopeName,"Scope not assigned");
-  state.activity.push({id:"old",entity:"po1",at:"2026-10-07T01:00:00Z",actor:"Accounting / Auditing",action:"PO released"},{id:"other",entity:"m3",at:"2026-10-07T02:00:00Z",actor:"Procurement",action:"Other project"});
+  state.activity.push({id:"old",entity:"po1",at:"2026-10-07T01:00:00Z",actor:"Accounting",action:"PO released"},{id:"other",entity:"m3",at:"2026-10-07T02:00:00Z",actor:"Procurement",action:"Other project"});
   const before=structuredClone(state), result=row(state);
   assert.equal(result.latestActivity.id,"old"); assert.equal(result.latestActivity.actorIdentity,undefined); assert.deepEqual(state,before);
 });

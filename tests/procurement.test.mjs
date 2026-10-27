@@ -88,7 +88,7 @@ test("Accounting approval waits for PO PDF archive before release", () => {
   state = execute(state, { type: "createAwardPO", requestId: request.id, quoteId: quote.id, lines: [{ itemId: request.items[0].id, quoteLineId: quote.lines[0].id, quantity: 2, unitPrice: 700 }], tax: 0, freight: 0, discount: 0, reason: "Supplier selected for price", notes: "" });
   const po = state.pos.at(-1);
   state = execute(state, { type: "savePO", id: po.id, quoteId: quote.id, lines: po.lines, tax: 0, freight: 0, discount: 0, notes: "", reason: po.selectionReason, finalize: true });
-  state = execute(state, { type: "setRole", role: "Accounting / Auditing" });
+  state = execute(state, { type: "setRole", role: "Accounting" });
   state = execute(state, { type: "saveAccountingPO", id: po.id, paymentMode: "credit", financial: { ...po.financial, reviewed: true }, adjustments: po.adjustments.map(value => ({ ...value, confirmed: true })) });
   state = execute(state, { type: "reviewPO", id: po.id, decision: "approve" });
   assert.equal(state.pos.at(-1).archive.status, "pending");

@@ -27,11 +27,11 @@ export function AccountingDocuments({ poId, batchId, readOnly = false }: { poId:
   if (!snapshot || !access.canReadRecord(poId)) return null;
   const documents = snapshot.accounting.find(value => value.poId === poId)?.documents?.filter(value => !batchId || value.batchId === batchId) || [];
   const batch = snapshot.batches.find(value => value.id === batchId);
-  const accounting = !readOnly && snapshot.role === "Accounting / Auditing";
+  const accounting = !readOnly && snapshot.role === "Accounting";
   const attachmentBatch = batchId || selectedBatch || undefined;
   const batches = snapshot.batches.filter(value => value.poId === poId && receivedDelivery(value));
   const canUpload = !readOnly && canAttachDelivery(snapshot, poId, attachmentBatch, snapshot.role);
-  const canRetry = !readOnly && ["Site Personnel", "Procurement", "Accounting / Auditing", "Administrator"].includes(snapshot.role);
+  const canRetry = !readOnly && ["Site Personnel", "Procurement", "Accounting", "Administrator"].includes(snapshot.role);
   const isArchiving = (id: string) => jobs.some(job => job.id === `accounting-${id}` && job.phase !== "complete" && !job.error);
   const archive = async (document: AccountingDocument, state = snapshot, pipeline?: CommandRunner) => perform(`accounting-${document.id}`, document.name, async progress => {
     const target = { kind: "evidence" as const, poId, documentId: document.id };

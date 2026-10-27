@@ -14,7 +14,7 @@ const actors = {
   site: { name: "Miguel Santos", email: "site@example.com", role: "Site Personnel" },
   pm: { name: "Project Manager", email: "pm@example.com", role: "Project Manager" },
   buyer: { name: "Andrea Reyes", email: "buyer@example.com", role: "Procurement" },
-  accounting: { name: "Camille Torres", email: "accounting@example.com", role: "Accounting / Auditing" },
+  accounting: { name: "Camille Torres", email: "accounting@example.com", role: "Accounting" },
   finance: { name: "Paolo Mendoza", email: "finance@example.com", role: "Finance" },
 };
 let sequence = 0;

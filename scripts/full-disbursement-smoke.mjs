@@ -64,7 +64,7 @@ try {
   await press('Confirm supplier issuance');await wait("return !!document.querySelector('.confirm-dialog[open]');");await click('.confirm-dialog[open] .confirm-actions button:first-child');
   assert.equal(await run(`return !!${saved}.pos[0].issuance;`),false);
   await press('Confirm supplier issuance');await confirmed();await wait(`return !!${saved}.pos[0].issuance;`);
-  const accounting=ACCOUNT_FIXTURES.find(a=>a.role==='Accounting / Auditing');
+  const accounting=ACCOUNT_FIXTURES.find(a=>a.role==='Accounting');
   await run(`localStorage.setItem('hml-constructsync-session-v2',${JSON.stringify(JSON.stringify({email:accounting.email,role:accounting.role}))});return true;`);
   await navigate(`/accounting/${po.id}`);await wait("return !!document.querySelector('.external-payment-panel');");
   assert.equal(await run("return [...document.querySelectorAll('.external-payment-panel button')].find(b=>b.textContent==='Confirm full payment').disabled;"),true);

@@ -32,7 +32,7 @@ test('VAT replaces inherited taxes once, EWT reduces all payable and budget figu
   const financial = poFinancialBreakdown(po);
   assert.equal(financial.gross, 1108); assert.equal(financial.net, 1078); assert.equal(poTotal(state,po),1078);
   assert.equal(budgetFor(state, 'site-a').committed,1078);
-  state.payments.push({id:'net-payment',poId:po.id,amount:1078,method:'Bank',reference:'payment',date:'2026-09-30',actor:'Accounting / Auditing'});
+  state.payments.push({id:'net-payment',poId:po.id,amount:1078,method:'Bank',reference:'payment',date:'2026-09-30',actor:'Accounting'});
   assert.equal(paymentStatus(state,po),'Paid');
   state.sites[0].driveFolderId='financial-test-folder';const financialData=captureBidReport(state,po.mrfId);const financialBook=buildBidWorkbook({id:'financial-report',requestId:po.mrfId,version:1,generatedAt:context.now(),fileName:'financial.xlsx',archive:{status:'pending'},data:financialData});const awardSheet=financialBook.getWorksheet('Awards');const netRow=awardSheet.getRows(1,awardSheet.rowCount).find(row=>row.getCell(6).value==='Net supplier payable');assert.equal(netRow.getCell(17).result,1078);assert.match(netRow.getCell(17).formula,/ROUND/);assert.equal(awardSheet.getCell('Q9').result,1008); assert.equal(budgetFor(state,'site-a').committed,0); assert.equal(budgetFor(state,'site-a').spent,1078);
   po.financial.priceBasis='inclusive'; assert.equal(poTotal(state,po),970);
@@ -42,7 +42,7 @@ test('Accounting approval requires reviewed finances and essential fields; faile
   const { state, po } = fixture(); state.role='Procurement'; po.status='draft'; po.financial.reviewed=false;
   const submitted = applyCommand(state,{type:'savePO',id:po.id,quoteId:po.quoteId,notes:'',finalize:true},context);
   assert.equal(submitted.ok,true,submitted.message); assert.equal(submitted.snapshot.pos[0].status,'submitted');
-  const review = submitted.snapshot; review.role='Accounting / Auditing'; const purchase = review.pos[0]; purchase.paymentMode='credit';
+  const review = submitted.snapshot; review.role='Accounting'; const purchase = review.pos[0]; purchase.paymentMode='credit';
   const command = {type:'reviewPO',id:po.id,decision:'approve'};
   const failure=applyCommand(review,command,context); assert.equal(failure.ok,false); assert.match(failure.message,/VAT basis/);
   purchase.financial.reviewed=true;

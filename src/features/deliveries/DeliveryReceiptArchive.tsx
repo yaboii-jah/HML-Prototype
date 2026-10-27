@@ -57,7 +57,7 @@ export function DeliveryReceiptArchive({ batch, readOnly = false }: { batch: Bat
   const [error, setError] = useState(""), [busy, setBusy] = useState(false);
   if (!state) return null;
   const receipts = batch.receiptVersions || [], current = receipts.at(-1);
-  const eligible = !readOnly && ["Accounting / Auditing", "Administrator", isSiteBatch(batch) ? "Site Personnel" : "Procurement"].includes(state.role);
+  const eligible = !readOnly && ["Accounting", "Administrator", isSiteBatch(batch) ? "Site Personnel" : "Procurement"].includes(state.role);
   const active = busy || receipts.some(receipt => jobs.some(job => job.id === `delivery-receipt-${receipt.id}` && job.phase !== "complete" && !job.error));
   const retry = async () => {
     if (active) return; setBusy(true); setError("");

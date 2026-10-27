@@ -7,3 +7,19 @@ This version has breaking changes — APIs, conventions, and file structure may 
 This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
 
 <!-- END:nextjs-agent-rules -->
+
+## Project workflow
+
+At the start of every project task, read all five core context documents before planning or making changes:
+
+1. [Project overview](docs/project-overview.md): product scope, workflows and acceptance criteria.
+2. [Architecture context](docs/architecture.md): boundaries, storage/access decisions and invariants.
+3. [AI workflow rules](docs/ai-workflow-rules.md): scoping, execution and verification process.
+4. [Code standards](docs/code-standards.md): implementation conventions.
+5. [Progress tracker](docs/progress-tracker.md): current phase, goal, pending changes, open questions and verification history.
+
+Read them again when resuming without their current contents or when the documentation has changed. Distinguish production targets from implemented behavior and preserve unrelated pending work.
+
+Before completing a task, review its documentation impact and update affected documents in the same change. Update the tracker after meaningful changes or decisions. In the completion report, identify the documents updated or briefly explain why no update was necessary. Keep the five core documents plus the production checklist companion; follow the workflow rules for the detailed update responsibilities.
+
+For foundation or migration milestone work, also read the companion [production checklist](docs/checklist.md) before planning or completing the unit. Update it as milestone progress changes; check a step only after verification, with its completion date and a brief evidence note. Keep active work, blockers and detailed evidence in the progress tracker.
