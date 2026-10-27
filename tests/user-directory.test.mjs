@@ -88,6 +88,41 @@ test('directory changes invalidate sessions and captured commands; presenter swi
   } finally { globalThis.window = previousWindow; globalThis.localStorage = previousStorage; }
 });
 
+test('reading a canonical session cannot restore an identity cleared or replaced by another tab', async () => {
+  const { directory, storage, admin } = await setup();
+  const manager = directory.getSnapshot().users.find(user => user.role === 'Project Manager');
+  const identity = user => JSON.stringify({ email: user.email, role: user.role, userId: user.id, revision: user.revision });
+  const previousWindow = globalThis.window, previousStorage = globalThis.localStorage;
+  let onStorage;
+  globalThis.window = { addEventListener(type, listener) { if (type === 'storage') onStorage = listener; } };
+  globalThis.localStorage = storage;
+  const getItem = storage.getItem;
+  try {
+    for (const replacement of [null, identity(manager)]) {
+      storage.setItem(SESSION_STORAGE_KEY, identity(admin));
+      let interleaved = false;
+      storage.getItem = key => {
+        const value = getItem(key);
+        if (key === SESSION_STORAGE_KEY && !interleaved) {
+          interleaved = true;
+          if (replacement === null) storage.removeItem(key);
+          else storage.setItem(key, replacement);
+        }
+        return value;
+      };
+      const session = new LocalDemoSession(directory);
+      session.read();
+      assert.equal(getItem(SESSION_STORAGE_KEY), replacement, 'A read must not undo the other tab\'s session change');
+      onStorage({ key: SESSION_STORAGE_KEY });
+      assert.equal(session.read().role, replacement === null ? null : manager.role);
+    }
+  } finally {
+    storage.getItem = getItem;
+    globalThis.window = previousWindow;
+    globalThis.localStorage = previousStorage;
+  }
+});
+
 test('workspace reset preserves users and retired Management history without reactivating its session', async () => {
   const { directory, saved, storage } = await setup(), priorWindow = globalThis.window, priorStorage = globalThis.localStorage;
   globalThis.window = { addEventListener() {} }; globalThis.localStorage = initializedWorkspaceStorage(storage);

@@ -7,6 +7,7 @@ import { seedDemo } from '../tests/fixtures/workspace.ts';
 import { LocalUserDirectory, USER_STORAGE_KEY } from '../src/app-state/user-directory.ts';
 import { SESSION_STORAGE_KEY } from '../src/app-state/demo-session.ts';
 import { materialId } from '../src/domain/ids.ts';
+import { configureBrowserChecks, navigateDocument } from './helpers/browser-environment.mjs';
 
 const base = (process.argv[2] || 'http://127.0.0.1:3100').replace(/\/$/, '');
 const profile = await mkdtemp(path.join(os.tmpdir(), 'constructsync-iteration-'));
@@ -39,11 +40,12 @@ try {
   const call = (method, params = {}) => new Promise((resolve, reject) => { const id = ++counter, timer = setTimeout(() => { pending.delete(id); reject(new Error(`Timeout: ${method}`)); }, 60000); pending.set(id, { resolve: value => { clearTimeout(timer); resolve(value); }, reject: error => { clearTimeout(timer); reject(error); } }); ws.send(JSON.stringify({ id, method, params })); });
   const run = async code => { const r = await call('Runtime.evaluate', { expression: `(()=>{${code}})()`, returnByValue: true, awaitPromise: true }); if (r.exceptionDetails) throw new Error(r.exceptionDetails.exception?.description || r.exceptionDetails.text); return r.result.value; };
   const wait = async code => { for (let i = 0; i < 400; i++) { if (await run(code)) return; await sleep(100); } throw new Error(`Timed out: ${code}\n${await run('return document.body.innerText.slice(-3500);')}`); };
-  const navigate = async route => { await call('Page.navigate', { url: base + route }); await wait(`return location.pathname + location.search === ${JSON.stringify(route)} && !!document.querySelector('h1');`); };
+  const navigate = async route => { await navigateDocument(call, base + route); await wait(`return location.pathname + location.search === ${JSON.stringify(route)} && !!document.querySelector('h1');`); };
   const fill = async (selector, value) => { await run(`const el=document.querySelector(${JSON.stringify(selector)});if(!el)throw new Error('Missing '+${JSON.stringify(selector)}); const proto=el.tagName==='SELECT'?HTMLSelectElement.prototype:el.tagName==='TEXTAREA'?HTMLTextAreaElement.prototype:HTMLInputElement.prototype;Object.getOwnPropertyDescriptor(proto,'value').set.call(el,${JSON.stringify(String(value))});el.dispatchEvent(new Event(el.tagName==='SELECT'?'change':'input',{bubbles:true}));return true;`); await sleep(60); };
   const button = async text => { await run(`const el=[...document.querySelectorAll('button')].find(b=>b.textContent.trim()===${JSON.stringify(text)});if(!el)throw new Error('Missing button '+${JSON.stringify(text)});el.focus();el.click();return true;`); await sleep(100); };
   const snapshot = () => run("return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12'));");
   await call('Page.enable'); await call('Runtime.enable');
+  await configureBrowserChecks(call);
   const initializer = await call('Page.addScriptToEvaluateOnNewDocument', { source: `if(location.origin===${JSON.stringify(new URL(base).origin)}&&!sessionStorage.getItem('usage-smoke-initialized')){localStorage.setItem('hml-constructsync-empty-workspace-v1','1');localStorage.setItem('hml-constructsync-demo-v12',${JSON.stringify(JSON.stringify(fixture))});localStorage.setItem(${JSON.stringify(USER_STORAGE_KEY)},${JSON.stringify(JSON.stringify(data))});localStorage.setItem(${JSON.stringify(SESSION_STORAGE_KEY)},${JSON.stringify(JSON.stringify(identity(author)))});sessionStorage.setItem('usage-smoke-initialized','true');}` });
   await navigate('/inventory?view=consumption');
   await wait("return !!document.querySelector('[aria-label=\"Consumption from date\"]');");
@@ -133,7 +135,8 @@ try {
   await run("document.querySelector('.masthead-account').click();return true;");
   await wait("return document.querySelector('.account-modal')?.open;");
   await run(`const button=[...document.querySelectorAll('.role-options button')].find(button=>button.querySelector('small')?.textContent===${JSON.stringify(author.name)});if(!button)throw new Error('Site account missing');button.click();return true;`);
-  await wait("return document.querySelector('h1')?.textContent==='Access unavailable';");
+  await wait("return location.pathname==='/dashboard'&&!!document.querySelector('#role-tasks')&&JSON.parse(localStorage.getItem('hml-constructsync-session-v2'))?.role==='Site Personnel';");
+  assert.equal(await run("return !!document.querySelector('.report-summary-grid');"), false, 'Role handoff leaves the protected report');
   assert.equal(await run("return !!document.querySelector('.side-nav a[href=\"/reports\"]');"),false,'Site Personnel loses Reports navigation immediately after switching');
   await navigate('/reports?source=direct');await wait("return document.querySelector('h1')?.textContent==='Access unavailable';");
   await call('Page.reload');await wait("return document.querySelector('h1')?.textContent==='Access unavailable';");

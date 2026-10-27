@@ -6,6 +6,7 @@ import path from 'node:path';
 import { ACCOUNT_FIXTURES } from '../src/app-state/account-fixtures.ts';
 import { localArchiveFixture } from '../tests/fixtures/local-archive.ts';
 import { EMPTY_WORKSPACE_MARKER } from '../src/mock/workspace-initialization.ts';
+import { configureBrowserChecks, navigateDocument } from './helpers/browser-environment.mjs';
 
 const base = (process.argv[2] || 'http://127.0.0.1:3100').replace(/\/$/, '');
 const profile = await mkdtemp(path.join(os.tmpdir(), 'constructsync-empty-workspace-'));
@@ -31,7 +32,7 @@ try {
   });
   const run = async code => { const result = await call('Runtime.evaluate', { expression: `(async()=>{${code}})()`, returnByValue: true, awaitPromise: true }); if (result.exceptionDetails) throw new Error(result.exceptionDetails.exception?.description || result.exceptionDetails.text); return result.result.value; };
   const wait = async code => { for (let i = 0; i < 400; i++) { if (await run(code)) return; await sleep(100); } throw new Error(`Timed out: ${code}; ${await run('return document.body.innerText.slice(-2000);')}`); };
-  const navigate = async route => { await call('Page.navigate', { url: base + route }); await wait(`return location.pathname===${JSON.stringify(route)}&&!!document.querySelector('h1,h2');`); };
+  const navigate = async route => { await navigateDocument(call, base + route); await wait(`return location.pathname===${JSON.stringify(route)}&&!!document.querySelector('h1,h2');`); };
   const fill = async (selector, value) => { await run(`const el=document.querySelector(${JSON.stringify(selector)});if(!el)throw Error('Missing input');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(el,${JSON.stringify(String(value))});el.dispatchEvent(new Event('input',{bubbles:true}));`); await sleep(70); };
   const press = async (label, scope = 'body') => { await run(`const button=[...document.querySelector(${JSON.stringify(scope)}).querySelectorAll('button')].find(value=>value.checkVisibility()&&value.textContent.trim()===${JSON.stringify(label)});if(!button)throw Error('Missing button: '+${JSON.stringify(label)});button.click();`); await sleep(100); };
   const state = () => run("return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12'));");
@@ -44,6 +45,7 @@ try {
   const administrator = ACCOUNT_FIXTURES.find(account => account.role === 'Administrator');
   const signIn = async () => { await wait("return !!document.querySelector('#signin-email');"); await fill('#signin-email', administrator.email); await fill('#signin-password', administrator.password); await press('Sign in', '.signin-form'); await wait("return location.pathname==='/dashboard'&&!!document.querySelector('.masthead-account');"); };
   await call('Page.enable'); await call('Runtime.enable'); await call('Network.enable');
+  await configureBrowserChecks(call);
   await call('Page.addScriptToEvaluateOnNewDocument', { source: `if(location.origin===${JSON.stringify(new URL(base).origin)}){const originalFetch=window.fetch.bind(window);window.fetch=(input,init)=>{if(input==='/api/drive/projects'){const calls=Number(sessionStorage.getItem('drive-project-calls')||0)+1;sessionStorage.setItem('drive-project-calls',String(calls));return Promise.resolve(calls===1?Response.json({error:'Simulated Drive outage'},{status:503}):Response.json({id:'verified-drive-folder'}));}return originalFetch(input,init);};}` });
   await navigate('/sign-in'); await wait("return !!document.querySelector('#signin-email');");
   empty(await state()); assert.equal((await directory()).users.length, 7);

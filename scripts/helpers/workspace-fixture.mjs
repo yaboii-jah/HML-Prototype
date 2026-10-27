@@ -1,6 +1,7 @@
 import { LocalUserDirectory, USER_STORAGE_KEY } from '../../src/app-state/user-directory.ts';
 import { seedDemo } from '../../tests/fixtures/workspace.ts';
 import { blankWorkspace } from '../../src/mock/blank-workspace.ts';
+import { configureBrowserChecks } from './browser-environment.mjs';
 
 /** Legacy workflow suites use an explicit fixture; showcase-smoke owns empty-workspace initialization coverage. */
 export async function prepareFixtureBrowser(call, base, options = {}) {
@@ -15,8 +16,7 @@ export async function prepareFixtureBrowser(call, base, options = {}) {
     directoryScript = `localStorage.setItem(${JSON.stringify(USER_STORAGE_KEY)},${JSON.stringify(JSON.stringify(directory))});`;
   }
   const source = `if(location.origin===${JSON.stringify(new URL(base).origin)}&&!sessionStorage.getItem('workflow-fixture-ready')){localStorage.setItem('hml-constructsync-empty-workspace-v1','1');localStorage.setItem('hml-constructsync-demo-v12',${JSON.stringify(JSON.stringify(fixture))});${directoryScript}sessionStorage.setItem('workflow-fixture-ready','true');}`;
-  await call('Page.enable');
-  await call('Emulation.setFocusEmulationEnabled', {enabled:true});
+  await configureBrowserChecks(call);
   const initializer = await call('Page.addScriptToEvaluateOnNewDocument', {source});
   if (options.navigate !== false) {
     await call('Page.navigate', {url:base});

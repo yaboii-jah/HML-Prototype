@@ -1,4 +1,5 @@
 import { prepareFixtureBrowser } from "./helpers/workspace-fixture.mjs";
+import { navigateDocument } from "./helpers/browser-environment.mjs";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { mkdtemp, writeFile } from "node:fs/promises";
@@ -39,7 +40,7 @@ try {
     return result.result.value;
   };
   const wait = async code => { for (let i = 0; i < 300; i++) { if (await run(code)) return; await sleep(100); } throw new Error(`Timed out: ${code}; ${await run("return JSON.stringify({page:location.pathname,body:document.body.innerText.slice(-600),sidebar:document.documentElement.dataset.sidebar,focus:document.activeElement.outerHTML});")}`); };
-  const navigate = async route => { await call("Page.navigate", { url: base + route }); await wait(`return location.pathname===${JSON.stringify(route)}&&!!document.querySelector('h1');`); await sleep(180); };
+  const navigate = async route => { await navigateDocument(call, base + route); await wait(`return location.pathname===${JSON.stringify(route)}&&!!document.querySelector('h1');`); };
   const fill = async (selector, value) => run(`const el=document.querySelector(${JSON.stringify(selector)});const proto=el.tagName==='SELECT'?HTMLSelectElement.prototype:HTMLInputElement.prototype;Object.getOwnPropertyDescriptor(proto,'value').set.call(el,${JSON.stringify(String(value))});el.dispatchEvent(new Event(el.tagName==='SELECT'?'change':'input',{bubbles:true}));return true;`);
   const click = async selector => { await run(`const el=document.querySelector(${JSON.stringify(selector)});el.focus();el.click();return true;`); await sleep(100); };
   await call("Runtime.enable"); await prepareFixtureBrowser(call, base); await call("Page.enable");

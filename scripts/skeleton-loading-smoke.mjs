@@ -104,7 +104,7 @@ try {
   }
   await call("Emulation.setEmulatedMedia", { features: [{ name: "prefers-reduced-motion", value: "reduce" }] });
   assert.equal(await run("return getComputedStyle(document.querySelector('.drive-project-files .skeleton'),'::after').animationName;"), "none", "Reduced motion disables shimmer");
-  await call("Emulation.setEmulatedMedia", { features: [] });
+  await call("Emulation.setEmulatedMedia", { features: [{ name: "prefers-reduced-motion", value: "no-preference" }] });
   await call("Emulation.setDeviceMetricsOverride", { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false });
   await run("document.querySelector('.drive-project-files').scrollIntoView({block:'center'});return true;");
   await writeFile(path.join(profile, "drive-skeleton.png"), Buffer.from((await call("Page.captureScreenshot", { format: "png" })).data, "base64"));

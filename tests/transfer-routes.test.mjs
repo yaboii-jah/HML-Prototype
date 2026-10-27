@@ -50,6 +50,8 @@ test('transfer upload tickets reject tampering and cannot be used for PO evidenc
   const shared = { documentId: 'signed', total: 1024, mime: 'application/pdf', sessionUri: 'https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&upload_id=test' };
   const encoded = sealTransferUploadTicket({ ...shared, transferId: 'transfer', deliveryId: 'trip' }); assert.equal(openTransferUploadTicket(encoded).deliveryId, 'trip');
   assert.throws(() => openAccountingUploadTicket(encoded)); assert.throws(() => openTransferUploadTicket(sealAccountingUploadTicket({ ...shared, poId: 'po' })));
-  assert.throws(() => openTransferUploadTicket(encoded.slice(0, 10) + 'x' + encoded.slice(11)));
+  const damaged = Buffer.from(encoded, 'base64url');
+  damaged[7] ^= 1;
+  assert.throws(() => openTransferUploadTicket(damaged.toString('base64url')), /invalid/);
   assert.throws(() => sealTransferUploadTicket({ ...shared, transferId: 'transfer', deliveryId: 'trip', sessionUri: 'https://evil.test/upload' }));
 });
