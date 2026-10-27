@@ -1,3 +1,4 @@
+import { browserCallTimeout } from "./helpers/browser-environment.mjs";
 import { prepareFixtureBrowser } from "./helpers/workspace-fixture.mjs";
 import { spawn } from "node:child_process";
 import { mkdtemp, writeFile } from "node:fs/promises";
@@ -39,7 +40,7 @@ try {
   await new Promise((resolve, reject) => { ws.onopen = resolve; ws.onerror = reject; });
   let nextId = 0; const pending = new Map(); const browserExceptions = [];
   ws.onmessage = event => { const message = JSON.parse(event.data); if (message.method === "Runtime.exceptionThrown") browserExceptions.push(message.params?.exceptionDetails?.exception?.description || message.params?.exceptionDetails?.text); if (message.method === "Page.javascriptDialogOpening") ws.send(JSON.stringify({ id: ++nextId, method: "Page.handleJavaScriptDialog", params: { accept: true } })); if (message.id && pending.has(message.id)) { const promise = pending.get(message.id); pending.delete(message.id); if (message.error) promise.reject(new Error(JSON.stringify(message.error))); else promise.resolve(message.result); } };
-  const call = (method, params = {}) => new Promise((resolve, reject) => { const id = ++nextId; const timer = setTimeout(() => { pending.delete(id); reject(new Error(`CDP timeout: ${method}`)); }, 15000); pending.set(id, { resolve: value => { clearTimeout(timer); resolve(value); }, reject: error => { clearTimeout(timer); reject(error); } }); ws.send(JSON.stringify({ id, method, params })); });
+  const call = (method, params = {}) => new Promise((resolve, reject) => { const id = ++nextId; const timer = setTimeout(() => { pending.delete(id); reject(new Error(`CDP timeout: ${method}`)); }, browserCallTimeout(method, 15000)); pending.set(id, { resolve: value => { clearTimeout(timer); resolve(value); }, reject: error => { clearTimeout(timer); reject(error); } }); ws.send(JSON.stringify({ id, method, params })); });
   await call("Runtime.enable"); await prepareFixtureBrowser(call, baseUrl, {empty:true});
   await call("Page.enable");
   await call("Page.addScriptToEvaluateOnNewDocument", { source: `(() => {

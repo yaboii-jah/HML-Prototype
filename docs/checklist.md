@@ -10,7 +10,7 @@ Use this companion to track the steps toward production. See the [progress track
 
 - [ ] **2. Prepare Node, npm and CI for deployment.**
   Done when Node 26 development and Node 24 deployment use the declared npm version, deployment runtime checks pass, and local verification plus all four Linux/Windows CI combinations pass.
-  All four jobs passed at `79772a6`; later runs exposed a startup-skeleton timing failure and clustered Windows Node 24 browser timeouts. Reopened 2026-10-27; the skeleton fix passed hosted checks, and serial CI browser execution is being verified. Hosted deployment remains part of step 7.
+  Reopened 2026-10-27 after intermittent browser failures. The shared navigation policy passed local standard checks and all 28 browser suites on 2026-10-28; the final hosted matrix is pending. Hosted deployment remains part of step 7.
 
 - [ ] **3. Add secure accounts, permissions and shared data.**
   Done when authorized users can share permitted records and unauthorized or revoked access is rejected.

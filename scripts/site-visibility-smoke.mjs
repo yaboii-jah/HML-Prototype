@@ -1,3 +1,4 @@
+import { browserCallTimeout } from "./helpers/browser-environment.mjs";
 import { prepareFixtureBrowser } from "./helpers/workspace-fixture.mjs";
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
@@ -33,7 +34,7 @@ try {
     if (request) { pending.delete(message.id); if (message.error) request.reject(new Error(JSON.stringify(message.error))); else request.resolve(message.result); }
   };
   const call = (method, params = {}) => new Promise((resolve, reject) => {
-    const id = ++sequence, timer = setTimeout(() => { pending.delete(id); reject(new Error(`Timeout: ${method}`)); }, 30000);
+    const id = ++sequence, timer = setTimeout(() => { pending.delete(id); reject(new Error(`Timeout: ${method}`)); }, browserCallTimeout(method, 30000));
     pending.set(id, { resolve: value => { clearTimeout(timer); resolve(value); }, reject: error => { clearTimeout(timer); reject(error); } });
     ws.send(JSON.stringify({ id, method, params }));
   });

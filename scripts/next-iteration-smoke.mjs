@@ -7,7 +7,7 @@ import { seedDemo } from '../tests/fixtures/workspace.ts';
 import { LocalUserDirectory, USER_STORAGE_KEY } from '../src/app-state/user-directory.ts';
 import { SESSION_STORAGE_KEY } from '../src/app-state/demo-session.ts';
 import { materialId } from '../src/domain/ids.ts';
-import { configureBrowserChecks, navigateDocument } from './helpers/browser-environment.mjs';
+import { browserCallTimeout, configureBrowserChecks, navigateDocument } from './helpers/browser-environment.mjs';
 
 const base = (process.argv[2] || 'http://127.0.0.1:3100').replace(/\/$/, '');
 const profile = await mkdtemp(path.join(os.tmpdir(), 'constructsync-iteration-'));
@@ -37,7 +37,7 @@ try {
   ws = new WebSocket(target.webSocketDebuggerUrl); await new Promise((resolve, reject) => { ws.onopen = resolve; ws.onerror = reject; });
   let counter = 0; const pending = new Map(), errors = [];
   ws.onmessage = event => { const m = JSON.parse(event.data); if (m.method === 'Runtime.exceptionThrown') errors.push(m.params.exceptionDetails.text); const p = pending.get(m.id); if (p) { pending.delete(m.id); if (m.error) p.reject(new Error(JSON.stringify(m.error))); else p.resolve(m.result); } };
-  const call = (method, params = {}) => new Promise((resolve, reject) => { const id = ++counter, timer = setTimeout(() => { pending.delete(id); reject(new Error(`Timeout: ${method}`)); }, 60000); pending.set(id, { resolve: value => { clearTimeout(timer); resolve(value); }, reject: error => { clearTimeout(timer); reject(error); } }); ws.send(JSON.stringify({ id, method, params })); });
+  const call = (method, params = {}) => new Promise((resolve, reject) => { const id = ++counter, timer = setTimeout(() => { pending.delete(id); reject(new Error(`Timeout: ${method}`)); }, browserCallTimeout(method, 60000)); pending.set(id, { resolve: value => { clearTimeout(timer); resolve(value); }, reject: error => { clearTimeout(timer); reject(error); } }); ws.send(JSON.stringify({ id, method, params })); });
   const run = async code => { const r = await call('Runtime.evaluate', { expression: `(()=>{${code}})()`, returnByValue: true, awaitPromise: true }); if (r.exceptionDetails) throw new Error(r.exceptionDetails.exception?.description || r.exceptionDetails.text); return r.result.value; };
   const wait = async code => { for (let i = 0; i < 400; i++) { if (await run(code)) return; await sleep(100); } throw new Error(`Timed out: ${code}\n${await run('return document.body.innerText.slice(-3500);')}`); };
   const navigate = async route => { await navigateDocument(call, base + route); await wait(`return location.pathname + location.search === ${JSON.stringify(route)} && !!document.querySelector('h1');`); };

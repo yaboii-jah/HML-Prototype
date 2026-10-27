@@ -6,7 +6,7 @@ import path from 'node:path';
 import { ACCOUNT_FIXTURES } from '../src/app-state/account-fixtures.ts';
 import { localArchiveFixture } from '../tests/fixtures/local-archive.ts';
 import { EMPTY_WORKSPACE_MARKER } from '../src/mock/workspace-initialization.ts';
-import { configureBrowserChecks, navigateDocument } from './helpers/browser-environment.mjs';
+import { browserCallTimeout, configureBrowserChecks, navigateDocument } from './helpers/browser-environment.mjs';
 
 const base = (process.argv[2] || 'http://127.0.0.1:3100').replace(/\/$/, '');
 const profile = await mkdtemp(path.join(os.tmpdir(), 'constructsync-empty-workspace-'));
@@ -27,7 +27,7 @@ try {
     if (request) { pending.delete(message.id); if (message.error) request.reject(new Error(JSON.stringify(message.error))); else request.resolve(message.result); }
   };
   const call = (method, params = {}) => new Promise((resolve, reject) => {
-    const id = ++nextId, timer = setTimeout(() => { pending.delete(id); reject(new Error('Timeout: ' + method)); }, method === 'Page.navigate' ? 60000 : 20000);
+    const id = ++nextId, timer = setTimeout(() => { pending.delete(id); reject(new Error('Timeout: ' + method)); }, browserCallTimeout(method, 20000));
     pending.set(id, { resolve: value => { clearTimeout(timer); resolve(value); }, reject: error => { clearTimeout(timer); reject(error); } }); ws.send(JSON.stringify({ id, method, params }));
   });
   const run = async code => { const result = await call('Runtime.evaluate', { expression: `(async()=>{${code}})()`, returnByValue: true, awaitPromise: true }); if (result.exceptionDetails) throw new Error(result.exceptionDetails.exception?.description || result.exceptionDetails.text); return result.result.value; };

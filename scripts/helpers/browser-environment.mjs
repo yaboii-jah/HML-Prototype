@@ -1,6 +1,11 @@
 import { randomUUID } from 'node:crypto';
 import { setTimeout as delay } from 'node:timers/promises';
 
+/** Full navigation may wait for a cold server response; other calls keep their existing limits. */
+export function browserCallTimeout(method, ordinaryTimeout) {
+  return method === 'Page.navigate' ? 60000 : ordinaryTimeout;
+}
+
 /** Keep test defaults independent of the runner's desktop accessibility settings. */
 export async function configureBrowserChecks(call) {
   await call('Page.enable');
