@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { seedDemo } from '../src/mock/fixtures/seed.ts';
+import { seedDemo } from './fixtures/workspace.ts';
 import { applyCommand } from '../src/domain/commands.ts';
 import { accountingGroups, accountingSignature, MAX_ACCOUNTING_FILE } from '../src/domain/accounting-documents.ts';
 import { openAccountingUploadTicket, sealAccountingUploadTicket } from '../src/server/accounting-upload-ticket.ts';

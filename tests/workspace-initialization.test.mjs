@@ -4,8 +4,8 @@ import { clearOperationalStorage, EMPTY_WORKSPACE_MARKER } from '../src/mock/wor
 import { LocalUserDirectory, USER_STORAGE_KEY } from '../src/app-state/user-directory.ts';
 import { LocalDemoRepository } from '../src/mock/repository.ts';
 import { SESSION_STORAGE_KEY } from '../src/app-state/demo-session.ts';
-import { blankWorkspace } from '../src/mock/fixtures/blank.ts';
-import { seedDemo } from '../src/mock/fixtures/seed.ts';
+import { blankWorkspace } from '../src/mock/blank-workspace.ts';
+import { seedDemo } from './fixtures/workspace.ts';
 import { applyCommand } from '../src/domain/commands.ts';
 
 const currentKey = 'hml-constructsync-demo-v12';

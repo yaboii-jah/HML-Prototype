@@ -5,8 +5,8 @@ import { applyCommand } from "../src/domain/commands.ts";
 import { projectScopes, scopeBudgetFor } from "../src/domain/scope-budgets.ts";
 import { budgetFor, poTotal } from "../src/domain/selectors.ts";
 import { MATERIAL_CLASSIFICATION, adjustmentClassification } from "../src/domain/expense-classification.ts";
-import { blankWorkspace } from "../src/mock/fixtures/blank.ts";
-import { seedDemo } from "../src/mock/fixtures/seed.ts";
+import { blankWorkspace } from "../src/mock/blank-workspace.ts";
+import { seedDemo } from "./fixtures/workspace.ts";
 import { LocalDemoRepository } from "../src/mock/repository.ts";
 
 const actors = {

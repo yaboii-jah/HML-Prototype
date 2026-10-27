@@ -5,7 +5,7 @@ import { PdfDocumentViewer } from "@/src/components/PdfDocumentViewer";
 import { DocumentLoading } from "@/src/components/ui/Skeleton";
 import { LoadingImage } from "@/src/components/ui/LoadingImage";
 import type { Quote } from "@/src/domain/types";
-import { readQuoteFile } from "./quote-files";
+import { readQuoteFile } from "../../documents/files.ts";
 
 type SourceDocument = Quote["documents"][number];
 const sourceQuery = "(min-width:1280px)";

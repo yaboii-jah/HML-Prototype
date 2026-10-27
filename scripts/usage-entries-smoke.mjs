@@ -3,7 +3,7 @@ import { spawn } from 'node:child_process';
 import { mkdtemp, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { seedDemo } from '../src/mock/fixtures/seed.ts';
+import { seedDemo } from '../tests/fixtures/workspace.ts';
 import { LocalUserDirectory, USER_STORAGE_KEY } from '../src/app-state/user-directory.ts';
 import { SESSION_STORAGE_KEY } from '../src/app-state/demo-session.ts';
 import { materialId } from '../src/domain/ids.ts';

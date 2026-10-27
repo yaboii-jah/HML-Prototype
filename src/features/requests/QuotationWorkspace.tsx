@@ -20,7 +20,7 @@ import type { DemoSnapshot, DocumentRef, Quote, QuoteAdjustment, QuoteLine } fro
 import { QuoteDraftEditor } from "./QuoteDraftEditor";
 import { QuotationReviewNavigation } from "./QuotationReviewNavigation";
 import { QuoteDocumentsDialog } from "./QuoteDocumentsDialog";
-import { deleteLocalFile, readQuoteFile, saveQuoteFiles } from "./quote-files";
+import { deleteLocalFile, readQuoteFile, saveQuoteFiles } from "../../documents/files.ts";
 import { syncFinalizedQuote } from "./archive-purchasing";
 import { QuotationExtractionDialog, type QuotationExtractionProgress } from "./QuotationExtractionDialog";
 import { CompareAllocate } from "./CompareAllocate";

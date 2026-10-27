@@ -1,6 +1,8 @@
 import { validArchiveFileLink } from "./archive-destination.ts";
 import { exactStockMatch, reviewIsCurrent, suitabilityQuantityFor } from "./stock-suitability.ts";
 import { materialId } from "./ids.ts";
+import { equivalentStockUnit } from "./stock-matching.ts";
+import { resolveTransferStockPosting } from "./transfer-stock-posting.ts";
 import { normalizedQuantity, orderedQuantity } from "./delivery-flow.ts";
 import { procurementReady } from "./request-archive.ts";
 import { projectCodeRequired, issueDocumentReference } from "./document-numbering.ts";
@@ -8,7 +10,7 @@ import { copyIdentity } from "./audit.ts";
 import { COMPANY_WAREHOUSE } from "./company.ts";
 import { canManageTransferDocuments, canReceiveTransfer, isTransferSiteDelivery, isTransferSourceDelivery, transferLegFor, transferWarehouseAvailableFor } from "./transfer-delivery-flow.ts";
 import type { CommandContext, CommandResult } from "./commands.ts";
-import type { DemoSnapshot, Item, MRF, StockTransfer, TransferDelivery, TransferDeliveryLeg, TransferEvidence, TransferReceiptData, TransferReceiptVersion } from "./types.ts";
+import type { DemoSnapshot, Item, MRF, StockTransfer, TransferDelivery, TransferDeliveryLeg, TransferEvidence, TransferReceiptData, TransferReceiptVersion, TransferStockDestination, TransferStockPosting } from "./types.ts";
 
 const q = normalizedQuantity;
 const positive = (value: number) => Number.isFinite(value) && value > 0;
@@ -62,7 +64,7 @@ export type TransferCommand =
   | { type: "scheduleTransferDelivery"; transferId: string; leg?: TransferDeliveryLeg; parentDeliveryId?: string; scheduledDate: string; evidence: string; quantities: Record<string, number> }
   | { type: "cancelTransferDelivery" | "dispatchTransferDelivery"; id: string; reason?: string }
   | { type: "receiveTransferDelivery"; id: string; lines: Record<string, { accepted: number; issue: string }> }
-  | { type: "postTransferDelivery"; id: string; quantities: Record<string, number>; reason: string }
+  | { type: "postTransferDelivery"; id: string; quantities: Record<string, number>; reason: string; destinations: Record<string, TransferStockDestination> }
   | { type: "completeTransferReceiptArchive"; deliveryId: string; receiptId: string; fileId: string; url: string }
   | { type: "failTransferReceiptArchive"; deliveryId: string; receiptId: string; error: string }
   | { type: "attachTransferEvidence"; transferId: string; documents: TransferEvidence[] }
@@ -118,7 +120,7 @@ export function applyTransferCommand(state: DemoSnapshot, command: TransferComma
     const byItem = new Map<string, number>(), byStock = new Map<string, number>();
     for (const line of command.lines) {
       const item = request.items.find(value => value.id === line.itemId), stockId = materialId(line.sourceName, line.unit);
-      if (!item || !positive(line.quantity) || q(line.quantity) <= 0 || !line.sourceName.trim() || !sameStockUnit(item.unit, line.unit) || line.suitabilityConfirmed !== true) return fail("Confirm the selected stock is suitable and uses the requested unit.");
+      if (!item || !positive(line.quantity) || q(line.quantity) <= 0 || !line.sourceName.trim() || !equivalentStockUnit(item.unit, line.unit) || line.suitabilityConfirmed !== true) return fail("Confirm the selected stock is suitable and uses the requested unit.");
       const review = line.suitabilityReviewId ? state.stockSuitabilityReviews?.find(value => value.id === line.suitabilityReviewId) : undefined;
       if (line.suitabilityReviewId ? !review || review.status !== "used" || review.transferId !== undefined || !reviewIsCurrent(state, review) || review.requestId !== request.id || review.itemId !== item.id || review.sourceSiteId !== source.id || review.sourceMaterialId !== stockId || review.released !== q(line.quantity) : !exactStockMatch(item, line.sourceName, line.unit)) return fail("Alternative stock requires the requesting site approval before source release.");
       byItem.set(item.id, q((byItem.get(item.id) || 0) + line.quantity));
@@ -199,6 +201,7 @@ export function applyTransferCommand(state: DemoSnapshot, command: TransferComma
   if (command.type === "receiveTransferDelivery" || command.type === "postTransferDelivery") {
     if (!delivery || !canReceiveTransfer(actor, ctx.siteIds || [], transfer, delivery) || command.type === "postTransferDelivery" && !isTransferSiteDelivery(delivery) || delivery.status !== (command.type === "receiveTransferDelivery" ? "dispatched" : "confirmed")) return fail("Procurement receives warehouse trips; destination-assigned Site Personnel receive and post site trips once.");
     const request = state.requests.find(value => value.id === transfer.requestId)!;
+    const postings = new Map<string, TransferStockPosting>();
     const changed = command.type === "postTransferDelivery" && delivery.lines.some(line => command.quantities[line.transferLineId] !== line.accepted);
     if (changed && !reasonOK(command.reason)) return fail("Explain corrections before stock posting.");
     for (const line of delivery.lines) {
@@ -207,6 +210,11 @@ export function applyTransferCommand(state: DemoSnapshot, command: TransferComma
       if (input.accepted < line.expected && !reasonOK(input.issue)) return fail("Explain missing or damaged materials.");
       const item = request.items.find(value => value.id === line.itemId)!;
       if (command.type === "postTransferDelivery" && input.accepted > line.accepted && input.accepted - line.accepted > requestSourcing(state, request, item).unassigned) return fail("The shortage has already been sourced elsewhere. Resolve overlapping allocations before increasing accepted stock.");
+      if (command.type === "postTransferDelivery" && q(input.accepted) > 0) {
+        const resolved = resolveTransferStockPosting(state, transfer.destinationSiteId, item, command.destinations?.[line.transferLineId]);
+        if (resolved.error !== undefined) return fail(resolved.error);
+        postings.set(line.transferLineId, resolved.posting);
+      }
       line.accepted = q(input.accepted); line.issue = input.issue.trim();
     }
     if (command.type === "receiveTransferDelivery") {
@@ -216,7 +224,10 @@ export function applyTransferCommand(state: DemoSnapshot, command: TransferComma
       delivery.status = "posted"; delivery.postedAt = at; delivery.postedBy = identity;
       for (const line of delivery.lines.filter(value => value.accepted > 0)) {
         const item = request.items.find(value => value.id === line.itemId)!;
-        state.movements.push({ id: ctx.id("movement"), siteId: transfer.destinationSiteId, itemName: item.name, unit: item.unit, quantity: line.accepted, kind: "transfer-in", reason: "Posted " + delivery.ref + " from " + delivery.origin.name, transferId: transfer.id, transferDeliveryId: delivery.id, requestItemId: item.id, actor, actorIdentity: identity, at });
+        const posting = postings.get(line.transferLineId)!;
+        line.stockPosting = posting;
+        const detail = posting.mode === "existing" ? "Same specifications confirmed; credited " : "New material" + (posting.reason ? " (" + posting.reason + ")" : "") + ": ";
+        state.movements.push({ id: ctx.id("movement"), siteId: transfer.destinationSiteId, itemName: posting.name, unit: posting.unit, quantity: line.accepted, kind: "transfer-in", reason: "Posted " + delivery.ref + " from " + delivery.origin.name + ". " + detail + posting.name + " [" + posting.unit + "]", transferId: transfer.id, transferDeliveryId: delivery.id, requestItemId: item.id, actor, actorIdentity: identity, at });
       }
     }
     delivery.updatedAt = at; delivery.reason = command.type === "postTransferDelivery" ? command.reason.trim() : undefined;

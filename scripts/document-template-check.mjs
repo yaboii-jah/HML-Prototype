@@ -1,5 +1,5 @@
 import fs from 'node:fs';
-import { seedDemo } from '../src/mock/fixtures/seed.ts';
+import { seedDemo } from '../tests/fixtures/workspace.ts';
 import { captureBidReport } from '../src/domain/bid-reports.ts';
 import { initializePoDocument } from '../src/domain/po-document.ts';
 import { resolveComparisonSelections } from '../src/domain/comparison-report.ts';

@@ -5,7 +5,7 @@ import { applyCommand } from "../src/domain/commands.ts";
 import { actorName, auditTime } from "../src/domain/audit.ts";
 import { requestLifecycle, groupAuditEvents } from "../src/domain/request-lifecycle.ts";
 import { bindAccountCommands } from "../src/app-state/command-gateway.ts";
-import { seedDemo } from "../src/mock/fixtures/seed.ts";
+import { seedDemo } from "./fixtures/workspace.ts";
 import { LocalDemoRepository } from "../src/mock/repository.ts";
 
 const andrea = { name: "Andrea Reyes", email: "hml.constructsync.procurement@gmail.com", role: "Procurement" };

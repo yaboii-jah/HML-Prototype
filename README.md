@@ -27,23 +27,20 @@ New projects use Google Drive document archives. Copy `.env.example` to `.env.lo
 
 ## Verification
 
-```bash
-npm test
-npm run lint
-npx tsc --noEmit
-npm run build
-npm run start -- --port 3100
-```
-
-With that production server running in a separate terminal:
+Use Node 26.12.1 and npm 11.20.0, matching `.nvmrc` and the package metadata. Install the locked dependencies with `npm ci`.
 
 ```bash
-npm run test:browser -- http://127.0.0.1:3100
+npm run verify
+npm run verify:browser
 ```
 
-The aggregate runner launches isolated headless Edge profiles, runs the audited browser suite set plus usage/iteration checks, writes logs and a machine-readable result under `artifacts/iteration-2`, and exits nonzero if a selected suite fails. To rerun selected suites, append names, for example `next-iteration usage-entries`. Fixture-based suites explicitly mark their workspaces initialized; `showcase` verifies empty startup, one-time cleanup, retained accounts and Google Drive routing. Populated fixtures are used only by automated tests. Screenshot paths are printed by each suite. These are local prototype checks, not live AI/Drive or production authorization certification.
+The first command runs lint, route type generation, TypeScript, unit/API tests and a production build. The browser command starts its own production server with real integrations disabled and runs all maintained suites using isolated headless Edge profiles. Windows with Microsoft Edge is required for browser verification. Select individual suites with `npm run verify:browser -- next-iteration usage-entries`. `npm run test:browser` is an alias. Logs and machine-readable results are written under ignored `.verification/`; screenshots stay in temporary browser profiles. Pull-request CI runs the same commands without live credentials.
 
-See [iteration verification](docs/qa/ITERATION_2_VERIFICATION.md) for delivered behavior, audit follow-up and scope limits.
+```bash
+npm run test:live
+```
+
+Live verification is separate and uses the application's configured Drive and Gemini credentials. It creates a unique test subfolder under the configured Drive root, uses synthetic documents, runs an isolated application rooted at that folder, checks extraction/upload/download integrity, and trashes only its run-owned folder afterward. It incurs AI usage. Check `.verification/live.json` for results and any cleanup failure. See [Drive setup](docs/GOOGLE_DRIVE_SETUP.md) and [production readiness](docs/PRODUCTION_READINESS.md).
 
 ## Repository layout
 
@@ -51,5 +48,6 @@ See [iteration verification](docs/qa/ITERATION_2_VERIFICATION.md) for delivered 
 - `src/features/`: department workflows and screens.
 - `src/domain/`: business commands, read permissions, actions, stock and report calculations.
 - `src/mock/` and `src/app-state/`: browser persistence, accounts and empty-workspace initialization.
+- `src/documents/`: shared browser document storage, hashes and resumable uploads.
 - `tests/` and `scripts/`: domain/API tests and browser checks.
 - `docs/WORKFLOW.md`: business walkthrough and acceptance references.

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { registerHooks } from 'node:module';
 import ExcelJS from 'exceljs';
 import { PDFDocument, PDFName } from 'pdf-lib';
-import { buildShowcase } from '../src/mock/fixtures/showcase.ts';
+import { localArchiveFixture } from './fixtures/local-archive.ts';
 
 registerHooks({resolve(specifier, context, nextResolve) {
   if (specifier.startsWith('@/')) return nextResolve(new URL('../'+specifier.slice(2)+'.ts',import.meta.url).href,context);
@@ -13,7 +13,7 @@ const { POST } = await import('../app/api/bid-comparisons/route.ts');
 
 test('downloaded XLSX and PDF local source links use the validated browser origin for both loopback aliases', async t => {
   const prior=process.env.VERCEL_ENV;delete process.env.VERCEL_ENV;t.after(()=>{if(prior===undefined)delete process.env.VERCEL_ENV;else process.env.VERCEL_ENV=prior;});
-  const report=buildShowcase('origin-verification',new Date('2026-10-17T00:00:00Z')).snapshot.bidReports[0];
+  const report=localArchiveFixture('origin-verification',new Date('2026-10-17T00:00:00Z')).snapshot.bidReports[0];
   for(const browser of ['http://localhost:3100','http://127.0.0.1:3100'])for(const format of ['xlsx','pdf']){
     const req=new Request(`http://localhost:3100/api/bid-comparisons?format=${format}`,{method:'POST',headers:{origin:browser,host:new URL(browser).host,'content-type':'application/json'},body:JSON.stringify(report)});
     const response=await POST(req);assert.equal(response.status,200);const bytes=await response.arrayBuffer(),links=[];

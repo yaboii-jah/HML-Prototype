@@ -1,7 +1,7 @@
 import { initializedWorkspaceStorage } from './helpers/initialized-storage.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { blankWorkspace } from '../src/mock/fixtures/blank.ts';
+import { blankWorkspace } from '../src/mock/blank-workspace.ts';
 import { applyCommand } from '../src/domain/commands.ts';
 import { coordinatedPOs, coordinationStatus } from '../src/domain/payment-coordination.ts';
 import { budgetFor, paidTotal, poTotal } from '../src/domain/selectors.ts';

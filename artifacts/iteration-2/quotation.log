@@ -1,5 +1,0 @@
-(node:20600) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/src/app-state/user-directory.ts is not specified and it doesn't parse as CommonJS.
-Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
-To eliminate this warning, add "type": "module" to \\?\C:\Users\Jahmell Dorias\Desktop\Projects\buildsync-prototype\package.json.
-(Use `node --trace-warnings ...` to show where the warning was created)
-Quotation browser smoke passed: grouped uploads, saved draft and allocation, split POs, Accounting approval and credit release, print status, versioned Excel and PDF reports, independent Drive retry, exact cache recovery, and Finance downloads.

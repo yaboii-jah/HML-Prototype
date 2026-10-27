@@ -4,7 +4,7 @@ import { mkdtemp, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { ACCOUNT_FIXTURES } from '../src/app-state/account-fixtures.ts';
-import { buildShowcase } from '../src/mock/fixtures/showcase.ts';
+import { localArchiveFixture } from '../tests/fixtures/local-archive.ts';
 import { EMPTY_WORKSPACE_MARKER } from '../src/mock/workspace-initialization.ts';
 
 const base = (process.argv[2] || 'http://127.0.0.1:3100').replace(/\/$/, '');
@@ -74,7 +74,7 @@ try {
   previousDirectory.users.find(user => user.role === 'Site Personnel').siteIds = ['old-project'];
   previousDirectory.users.push({ ...structuredClone(previousDirectory.users[0]), id: 'manually-added-account', name: 'Actual user', email: 'actual.user@example.test', active: false, siteIds: ['old-project'] });
   previousDirectory.activity.push({ id: 'preserved-account-event', action: 'User added', at: new Date().toISOString() });
-  const old = buildShowcase('old-browser-install', new Date('2026-10-15T08:00:00Z')).snapshot;
+  const old = localArchiveFixture('old-browser-install', new Date('2026-10-15T08:00:00Z')).snapshot;
   await run(`localStorage.setItem('hml-constructsync-demo-v12',${JSON.stringify(JSON.stringify(old))});localStorage.setItem('hml-constructsync-users-v1',${JSON.stringify(JSON.stringify(previousDirectory))});localStorage.setItem('hml-constructsync-demo-v11','old-workflow');localStorage.setItem('hml-constructsync-showcase-installed-v1','installed');localStorage.setItem('hml-constructsync-showcase-installing-v1','old-journal');localStorage.setItem('constructsync-usage-draft-v1/old','draft');localStorage.setItem('constructsync-stock-draft-v1/old','draft');localStorage.removeItem(${JSON.stringify(EMPTY_WORKSPACE_MARKER)});`);
   await run("for(const [name,store,keyPath] of [['hml-quotation-files','files',undefined],['hml-constructsync-showcase-backups','backups','id']]){const db=await new Promise((resolve,reject)=>{const r=indexedDB.open(name,1);r.onupgradeneeded=()=>r.result.createObjectStore(store,keyPath?{keyPath}:undefined);r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);});await new Promise((resolve,reject)=>{const tx=db.transaction(store,'readwrite');if(keyPath)tx.objectStore(store).put({id:'old-backup',records:'old records',files:[new Blob(['old bytes'])]});else tx.objectStore(store).put(new Blob(['old file']),'old-file');tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);});db.close();}");
   const other = await call('Target.createTarget', { url: base + '/sign-in' });

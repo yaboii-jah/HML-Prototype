@@ -1,5 +1,5 @@
-import { blankWorkspace } from "./fixtures/blank.ts";
-import { clearQuoteFiles } from "../features/requests/quote-files.ts";
+import { blankWorkspace } from "./blank-workspace.ts";
+import { clearQuoteFiles, deleteLocalFile } from "../documents/files.ts";
 import { clearProjectAssignments, USER_STORAGE_KEY, userDirectory } from "../app-state/user-directory.ts";
 import { demoSession, SESSION_STORAGE_KEY } from "../app-state/demo-session.ts";
 import type { Role } from "../domain/types.ts";
@@ -51,7 +51,13 @@ let initialization: Promise<void> | undefined;
 export function initializeEmptyWorkspace(): Promise<void> {
   if (initialization) return initialization;
   const initialize = async () => {
-    if (localStorage.getItem(EMPTY_WORKSPACE_MARKER) === "1") return;
+    if (localStorage.getItem(EMPTY_WORKSPACE_MARKER) === "1") {
+      if (process.env.NODE_ENV === "development") {
+        const { retireStockMatchingSamples } = await import("./retire-stock-matching-samples.ts");
+        if (await retireStockMatchingSamples(localStorage, async ids => { await Promise.all(ids.map(deleteLocalFile)); })) userDirectory.refresh();
+      }
+      return;
+    }
     await userDirectory.load();
     if (userDirectory.getSnapshot().status !== "ready") throw new Error("Saved user accounts must be available before clearing operational data.");
     await clearOperationalStorage({ storage: localStorage, clearFiles: clearQuoteFiles, clearBackups: clearShowcaseBackups });

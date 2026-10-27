@@ -8,7 +8,7 @@ import path from "node:path";
 import { ACCOUNT_FIXTURES } from "../src/app-state/demo-session.ts";
 import { poTotal } from "../src/domain/selectors.ts";
 import { PDFDocument } from "pdf-lib";
-import { seedDemo } from "../src/mock/fixtures/seed.ts";
+import { seedDemo } from "../tests/fixtures/workspace.ts";
 
 const base = (process.argv[2] || "http://localhost:3100").replace(/\/$/, "");
 const profile = await mkdtemp(path.join(os.tmpdir(), "constructsync-qa-"));

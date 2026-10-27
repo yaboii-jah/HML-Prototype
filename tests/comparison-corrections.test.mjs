@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { PDFDocument, PDFName } from 'pdf-lib';
 import ExcelJS from 'exceljs';
-import { seedDemo } from '../src/mock/fixtures/seed.ts';
+import { seedDemo } from './fixtures/workspace.ts';
 import { applyCommand } from '../src/domain/commands.ts';
 import { captureBidReport, validBidReport } from '../src/domain/bid-reports.ts';
 import { resolveComparisonSelections } from '../src/domain/comparison-report.ts';

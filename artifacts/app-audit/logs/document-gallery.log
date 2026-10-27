@@ -1,5 +1,0 @@
-(node:19652) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///C:/Users/Jahmell%20Dorias/Desktop/Projects/buildsync-prototype/src/app-state/demo-session.ts is not specified and it doesn't parse as CommonJS.
-Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
-To eliminate this warning, add "type": "module" to \\?\C:\Users\Jahmell Dorias\Desktop\Projects\buildsync-prototype\package.json.
-(Use `node --trace-warnings ...` to show where the warning was created)
-Document gallery smoke passed. Screenshots: C:\Users\JAHMEL~1\AppData\Local\Temp\constructsync-registers-jcxarC

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { seedDemo } from '../src/mock/fixtures/seed.ts';
+import { seedDemo } from './fixtures/workspace.ts';
 import { businessDate, businessRangeError, inBusinessRange } from '../src/domain/business-dates.ts';
 import { consumptionRows, consumptionCsv } from '../src/domain/consumption.ts';
 import { workflowActions, canActOnWorkflowAction } from '../src/domain/workflow-actions.ts';

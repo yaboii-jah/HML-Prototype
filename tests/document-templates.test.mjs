@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { PDFDocument, PDFName } from 'pdf-lib';
-import { seedDemo } from '../src/mock/fixtures/seed.ts';
+import { seedDemo } from './fixtures/workspace.ts';
 import { applyCommand } from '../src/domain/commands.ts';
 import { initializePoDocument } from '../src/domain/po-document.ts';
 import { poFinancialBreakdown } from '../src/domain/pricing.ts';

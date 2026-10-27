@@ -5,7 +5,7 @@ import { mkdtemp, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { ACCOUNT_FIXTURES } from "../src/app-state/demo-session.ts";
-import { seedDemo } from "../src/mock/fixtures/seed.ts";
+import { seedDemo } from "../tests/fixtures/workspace.ts";
 import { PDFDocument } from "pdf-lib";
 
 const base = (process.argv[2] || "http://127.0.0.1:3000").replace(/\/$/, "");

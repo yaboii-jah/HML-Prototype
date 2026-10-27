@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { seedDemo } from "../src/mock/fixtures/seed.ts";
+import { seedDemo } from "./fixtures/workspace.ts";
 import { materialId } from "../src/domain/ids.ts";
 import { receivedMaterialScopes } from "../src/domain/inventory-scopes.ts";
 import { inventoryFor } from "../src/domain/selectors.ts";

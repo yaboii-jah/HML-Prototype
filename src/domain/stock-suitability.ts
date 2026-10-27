@@ -2,13 +2,13 @@ import { materialId } from "./ids.ts";
 import { copyIdentity, validIdentity } from "./audit.ts";
 import { normalizedQuantity } from "./delivery-flow.ts";
 import { procurementReady } from "./request-archive.ts";
-import { applyTransferCommand, requestSourcing, sameStockUnit, sourceStockAvailable } from "./stock-transfers.ts";
+import { applyTransferCommand, requestSourcing, sourceStockAvailable } from "./stock-transfers.ts";
+import { equivalentStockUnit, matchingStockDescription } from "./stock-matching.ts";
 import type { CommandContext, CommandResult } from "./commands.ts";
 import type { DemoSnapshot, Item, StockSuitabilityReview } from "./types.ts";
 
 const q = normalizedQuantity;
-const normalizedMatch = (value: string) => value.trim().toLowerCase().replace(/\s+/g, " ");
-export const exactStockMatch = (item: Pick<Item, "name" | "unit">, name: string, unit: string) => normalizedMatch(item.name) === normalizedMatch(name) && sameStockUnit(item.unit, unit);
+export const exactStockMatch = (item: Pick<Item, "name" | "unit">, name: string, unit: string) => matchingStockDescription(item, name, unit);
 export function reviewIsCurrent(state: DemoSnapshot, review: StockSuitabilityReview) {
   const request = state.requests.find(value => value.id === review.requestId);
   const item = request?.items.find(value => value.id === review.itemId);
@@ -25,7 +25,7 @@ export function invalidateStockReviews(state: DemoSnapshot, requestId: string, a
 export type StockSourcingSelection = { itemId: string; sourceSiteId: string; sourceName: string; unit: string; quantity: number; matchConfirmed: boolean; needsReview: boolean; explanation: string };
 export type StockSourcingCommand =
   | { type: "submitStockSourcingPlan"; requestId: string; note: string; selections: StockSourcingSelection[] }
-  | { type: "reviewStockSuitability"; id: string; decision: "approve" | "reject"; quantity: number; reason: string }
+  | { type: "reviewStockSuitability"; specificationsConfirmed?: boolean; id: string; decision: "approve" | "reject"; quantity: number; reason: string }
   | { type: "cancelStockSuitability"; id: string; reason: string }
   | { type: "requestApprovedStockRelease"; id: string; quantity: number };
 export const isStockSourcingCommand = (command: { type: string }): command is StockSourcingCommand => ["submitStockSourcingPlan", "reviewStockSuitability", "cancelStockSuitability", "requestApprovedStockRelease"].includes(command.type);
@@ -45,7 +45,7 @@ export function applyStockSourcingCommand(state: DemoSnapshot, command: StockSou
     const byItem = new Map<string, number>(), byStock = new Map<string, number>();
     for (const line of command.selections) {
       const item = request.items.find(value => value.id === line.itemId);
-      if (!item || !state.sites.some(site => site.id === line.sourceSiteId) || line.sourceSiteId === request.siteId || !sameStockUnit(item.unit, line.unit) || !line.sourceName.trim() || !Number.isFinite(line.quantity) || line.quantity <= 0 || q(line.quantity) <= 0) return fail("Choose another project's stock and enter a positive quantity in the requested unit.");
+      if (!item || !state.sites.some(site => site.id === line.sourceSiteId) || line.sourceSiteId === request.siteId || !equivalentStockUnit(item.unit, line.unit) || !line.sourceName.trim() || !Number.isFinite(line.quantity) || line.quantity <= 0 || q(line.quantity) <= 0) return fail("Choose another project's stock and enter a positive quantity in the requested unit.");
       if (!line.needsReview && (!exactStockMatch(item, line.sourceName, line.unit) || line.matchConfirmed !== true)) return fail("Verify the matching description, or request site approval for alternative or uncertain stock.");
       if (line.needsReview && !line.explanation.trim()) return fail("Explain why each alternative might meet the request.");
       const stockKey = line.sourceSiteId + "/" + materialId(line.sourceName, line.unit);
@@ -80,8 +80,10 @@ export function applyStockSourcingCommand(state: DemoSnapshot, command: StockSou
     if (command.type === "reviewStockSuitability") {
       if (identity.role !== "Site Personnel" || !ctx.siteIds?.includes(review.destinationSiteId) || review.status !== "pending") return fail("Only Site Personnel assigned to the requesting project can review this material.");
       if (command.decision !== "approve" && command.decision !== "reject") return fail("Approve or reject the proposed material.");
+      if (command.decision === "approve" && command.specificationsConfirmed !== true) return fail("Confirm the proposed stock has the same specifications as the requested material.");
       if (command.decision === "approve" && (!Number.isFinite(command.quantity) || q(command.quantity) <= 0 || command.quantity > review.proposed)) return fail("Approve a positive quantity within the proposed amount, or reject the selection.");
       if ((command.decision === "reject" || command.quantity < review.proposed) && command.reason.trim().length < 5) return fail("Explain rejection or reduced quantities.");
+      if (command.decision === "approve") review.specificationsConfirmed = true;
       review.status = command.decision === "approve" ? "approved" : "rejected"; review.approved = command.decision === "approve" ? q(command.quantity) : 0; review.reason = command.reason.trim(); review.reviewedAt = at; review.reviewedBy = identity;
     } else {
       if (identity.role !== "Procurement" || review.status !== "approved") return fail("Procurement requests release after suitability approval.");
@@ -94,7 +96,7 @@ export function applyStockSourcingCommand(state: DemoSnapshot, command: StockSou
     }
   }
   review.updatedAt = at;
-  const message = review.status === "approved" ? "Alternative approved. Procurement must recheck availability and request release." : review.status === "used" ? "Source release requested. Any unused approved quantity is available to purchase." : "Review closed; its quantity is available to purchase.";
+  const message = review.status === "approved" ? "Same specifications confirmed. Procurement must recheck availability and request release." : review.status === "used" ? "Source release requested. Any unused approved quantity is available to purchase." : "Review closed; its quantity is available to purchase.";
   log(review, message);
   return { ok: true, snapshot: state, message, recordId: review.id };
 }
@@ -105,9 +107,10 @@ export function validStockReviews(state: DemoSnapshot) {
     if (reviews === undefined) return true;
     if (!Array.isArray(reviews) || new Set(reviews.map(value => value.id)).size !== reviews.length) return false;
     for (const review of reviews) {
+      if (review.specificationsConfirmed !== undefined && review.specificationsConfirmed !== true) return false;
       const request = state.requests.find(value => value.id === review.requestId);
       if (typeof review.id !== "string" || !review.id || typeof review.itemId !== "string" || !review.itemId || typeof review.note !== "string" || (review.reason !== undefined && typeof review.reason !== "string") || !request || request.siteId !== review.destinationSiteId || review.sourceSiteId === review.destinationSiteId || !state.sites.some(site => site.id === review.sourceSiteId) || !["pending", "approved", "rejected", "cancelled", "used", "stale"].includes(review.status)) return false;
-      if (![review.requestedName, review.requestedUnit, review.sourceName, review.unit, review.explanation].every(value => typeof value === "string" && value.trim()) || review.sourceMaterialId !== materialId(review.sourceName, review.unit) || !sameStockUnit(review.requestedUnit, review.unit)) return false;
+      if (![review.requestedName, review.requestedUnit, review.sourceName, review.unit, review.explanation].every(value => typeof value === "string" && value.trim()) || review.sourceMaterialId !== materialId(review.sourceName, review.unit) || !equivalentStockUnit(review.requestedUnit, review.unit)) return false;
       if (![review.proposed, review.approved, review.requestedQuantity].every(value => Number.isFinite(value) && value >= 0) || review.proposed <= 0 || review.requestedQuantity <= 0 || review.proposed > review.requestedQuantity || review.approved > review.proposed || !validIdentity(review.createdBy) || review.createdBy.role !== "Procurement" || !Number.isFinite(Date.parse(review.createdAt)) || !Number.isFinite(Date.parse(review.updatedAt))) return false;
       if (["pending", "approved"].includes(review.status) && !reviewIsCurrent(state, review)) return false;
       if (["approved", "used", "rejected"].includes(review.status) && (!review.reviewedBy || !validIdentity(review.reviewedBy) || review.reviewedBy.role !== "Site Personnel" || !Number.isFinite(Date.parse(review.reviewedAt || "")))) return false;

@@ -22,7 +22,14 @@ export function WorkspaceTitle() {
         if (item) title = `${item.itemName} · Site inventory`;
       }
     }
-    document.title = `${title} | HML ConstructSync`;
+    const expected = `${title} | HML ConstructSync`;
+    const updateTitle = () => { if (document.title !== expected) document.title = expected; };
+    updateTitle();
+    // Next can stream layout metadata after this browser-owned record has loaded.
+    // Keep the current record title when that late metadata replaces the default.
+    const observer = new MutationObserver(updateTitle);
+    observer.observe(document.head, { childList: true, subtree: true, characterData: true });
+    return () => observer.disconnect();
   }, [pathname, snapshot, access]);
   return null;
 }

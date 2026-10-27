@@ -1,7 +1,7 @@
 import { initializedWorkspaceStorage } from './helpers/initialized-storage.mjs';
 import test from "node:test";
 import assert from "node:assert/strict";
-import { seedDemo } from "../src/mock/fixtures/seed.ts";
+import { seedDemo } from "./fixtures/workspace.ts";
 import { applyCommand } from "../src/domain/commands.ts";
 import { initializePoDocument } from "../src/domain/po-document.ts";
 import { poFinancialBreakdown, quoteFinancialBreakdown } from "../src/domain/pricing.ts";

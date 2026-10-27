@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { seedDemo } from '../src/mock/fixtures/seed.ts';
+import { seedDemo } from './fixtures/workspace.ts';
 import { createReadAccess } from '../src/domain/read-access.ts';
 import { dashboardMetrics } from '../src/domain/queues.ts';
 import { applyCommand } from '../src/domain/commands.ts';

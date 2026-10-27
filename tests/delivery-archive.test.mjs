@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { seedDemo } from '../src/mock/fixtures/seed.ts';
+import { seedDemo } from './fixtures/workspace.ts';
 import { applyCommand } from '../src/domain/commands.ts';
 import { deliveryDocumentIssues } from '../src/domain/delivery-archive.ts';
 import { validDeliveryReceipt } from '../src/domain/delivery-document.ts';

@@ -7,8 +7,9 @@ import { Badge, Field, InlineError } from "@/src/components/ui/Primitives";
 import { revealField } from "@/src/components/ui/CollapsibleSection";
 import { RecordModal } from "@/src/components/ui/RecordModal";
 import { inventoryFor } from "@/src/domain/selectors";
+import { equivalentStockUnit, rankStockCandidates } from "@/src/domain/stock-matching";
 import { materialId } from "@/src/domain/ids";
-import { requestSourcing, sameStockUnit, sourceStockAvailable, transfersForRequest } from "@/src/domain/stock-transfers";
+import { requestSourcing, sourceStockAvailable, transfersForRequest } from "@/src/domain/stock-transfers";
 import { exactStockMatch } from "@/src/domain/stock-suitability";
 import { procurementReady } from "@/src/domain/request-archive";
 import type { DemoSnapshot, MRF } from "@/src/domain/types";
@@ -35,6 +36,7 @@ function Editor({ state, request, onPurchase, storageKey }: { state: DemoSnapsho
   const [draft,setDraft] = useState<Draft>(() => restore(storageKey));
   const sourceSites = state.sites.filter(site => site.id !== request.siteId);
   const [sourceId,setSourceId] = useState(() => draft.choices.find(c => sourceSites.some(s => s.id === c.sourceSiteId))?.sourceSiteId || sourceSites[0]?.id || "");
+  const [stockSearch,setStockSearch] = useState<Record<string,string>>({});
   const [extraRows,setExtraRows] = useState<Record<string,boolean>>({});
   const [reviewConfirmed,setReviewConfirmed] = useState(false);
   const [errors,setErrors] = useState<Record<string,string>>({}), [error,setError] = useState(""), [storageError,setStorageError] = useState(""), [busy,setBusy] = useState(false), [reviewOpen,setReviewOpen] = useState(false);
@@ -56,11 +58,11 @@ function Editor({ state, request, onPurchase, storageKey }: { state: DemoSnapsho
     for (const c of draft.choices) {
       const item = request.items.find(i => i.id === c.itemId), quantity = Number(c.quantity);
       if (!item || item.name !== c.requestedName || item.unit !== c.requestedUnit || item.quantity !== c.requestedQuantity) invalid[c.id] = "This material changed. Remove the selection and choose stock again.";
-      else if (!exactStockMatch(item,c.sourceName,c.unit)) invalid[c.id] = "Only matching stock can now be selected. Remove this selection and choose matching stock.";
+      else if (!exactStockMatch(item,c.sourceName,c.unit) && !c.explanation.trim()) invalid[c.id] = "Explain why the differently named stock has the same specifications.";
       else if (!c.quantity.trim() || !Number.isFinite(quantity) || quantity <= 0) invalid[c.id] = "Enter a positive quantity.";
       else if (draftAmount(item.id) > requestSourcing(state,request,item).unassigned) invalid[c.id] = "Selections exceed the remaining material need.";
       else if (sourceUsed(c.sourceSiteId,c.sourceName,c.unit) > sourceStockAvailable(state,c.sourceSiteId,c.sourceName,c.unit)) invalid[c.id] = "Combined selections exceed current stock availability.";
-      else if (!state.sites.some(s => s.id === c.sourceSiteId) || c.sourceSiteId === request.siteId || !sameStockUnit(c.unit,item.unit)) invalid[c.id] = "Choose another project's stock in the requested unit.";
+      else if (!state.sites.some(s => s.id === c.sourceSiteId) || c.sourceSiteId === request.siteId || !equivalentStockUnit(c.unit,item.unit)) invalid[c.id] = "Choose another project's stock in the requested unit.";
     }
     setErrors(invalid);return invalid;
   }
@@ -82,8 +84,8 @@ function Editor({ state, request, onPurchase, storageKey }: { state: DemoSnapsho
     working.current = true;setBusy(true);setError("");
     const toast = notify({ tone:"progress",title:"Sending stock release requests…" });
     try {
-      const result = await run({ type:"submitStockSourcingPlan",requestId:request.id,note:draft.note,selections:draft.choices.map(c => ({ ...c,quantity:Number(c.quantity),matchConfirmed:reviewConfirmed,needsReview:false,explanation:"" })) });
-      if (result.ok) { save(blank());setReviewOpen(false);updateToast(toast,{ tone:"success",title:"Stock release requests sent.",detail:"Source sites will confirm the quantities they can release." }); } else { setError(result.message);setReviewOpen(false);updateToast(toast,{ tone:"error",title:result.message }); }
+      const result = await run({ type:"submitStockSourcingPlan",requestId:request.id,note:draft.note,selections:draft.choices.map(c => ({ ...c,quantity:Number(c.quantity),matchConfirmed:reviewConfirmed,needsReview:!exactStockMatch(request.items.find(item => item.id === c.itemId)!,c.sourceName,c.unit) })) });
+      if (result.ok) { save(blank());setReviewOpen(false);updateToast(toast,{ tone:"success",title:"Stock requests sent.",detail:"Differently named stock goes to the requesting site for specification confirmation before release." }); } else { setError(result.message);setReviewOpen(false);updateToast(toast,{ tone:"error",title:result.message }); }
     } catch (cause) {
       const text = cause instanceof Error ? cause.message : "Stock release requests could not be sent. Try again.";
       setError(text);setReviewOpen(false);updateToast(toast,{ tone:"error",title:text });
@@ -95,7 +97,7 @@ function Editor({ state, request, onPurchase, storageKey }: { state: DemoSnapsho
       <Field label="Source project"><select aria-label="Source project" value={sourceId} disabled={busy || !sourceSites.length} onChange={e => setSourceId(e.target.value)}>{!sourceSites.length && <option value="">No other projects available</option>}{sourceSites.map(site => <option key={site.id} value={site.id}>{site.name}</option>)}</select></Field>
       <Field label="Transfer note (optional)"><input placeholder="Explain which spare materials can be used" value={draft.note} disabled={!editable || busy} onChange={e => save({ ...draft,note:e.target.value })}/></Field>
     </div>
-    <p className="helper-note">Choose stock with the same description and unit. After your final verification, the source site confirms how much it can release.</p>
+    <p className="helper-note">Exact descriptions appear first. Similar names are suggestions only: the requesting site must confirm the same specifications before release. Equivalent unit labels are allowed; quantities are not converted.</p>
     <InlineError message={storageError}/>
     {draft.choices.some(c => c.sourceSiteId !== sourceId) && <p className="stock-other-projects" role="status">Your draft also includes {draft.choices.filter(c => c.sourceSiteId !== sourceId).length} selection(s) from other projects. Switch source project to edit them; all selections appear in the final review.</p>}
     <div className="qa-bounded-table stock-table-scroll" role="region" aria-label="Site stock materials" tabIndex={0}>
@@ -108,17 +110,18 @@ function Editor({ state, request, onPurchase, storageKey }: { state: DemoSnapsho
           if (!rows.length || extraRows[item.id]) rows.push(undefined);
           const otherQuantity = amount(draft.choices.filter(c => c.itemId === item.id && c.sourceSiteId !== sourceId));
           return <tbody key={item.id} data-stock-material={item.id}>{rows.map((c,rowIndex) => {
-            const candidates = stock.filter(m => m.siteId === sourceId && m.available > 0 && exactStockMatch(item,m.name,m.unit) && !choices.some(choice => choice.id !== c?.id && materialId(choice.sourceName,choice.unit) === m.id));
+            const searchKey = sourceId + "/" + item.id;
+            const candidates = rankStockCandidates(item,stock.filter(m => m.siteId === sourceId && m.available > 0 && !choices.some(choice => choice.id !== c?.id && materialId(choice.sourceName,choice.unit) === m.id)),stockSearch[searchKey] || "");
             const matchingCandidates = candidates.length;
             const selectedStock = c ? stock.find(m => m.siteId === sourceId && materialId(c.sourceName,c.unit) === m.id) : undefined;
-            if (c && !candidates.some(m => m.id === materialId(c.sourceName,c.unit))) candidates.unshift(selectedStock || {id:materialId(c.sourceName,c.unit),name:c.sourceName,unit:c.unit,siteId:sourceId,siteName:sourceSites.find(s => s.id === sourceId)?.name || "",available:sourceStockAvailable(state,sourceId,c.sourceName,c.unit),onHand:0});
+            if (c && !candidates.some(m => m.id === materialId(c.sourceName,c.unit))) candidates.unshift({ ...(selectedStock || {id:materialId(c.sourceName,c.unit),name:c.sourceName,unit:c.unit,siteId:sourceId,siteName:sourceSites.find(s => s.id === sourceId)?.name || "",available:sourceStockAvailable(state,sourceId,c.sourceName,c.unit),onHand:0}),exact:exactStockMatch(item,c.sourceName,c.unit),similarity:0,suggested:false });
             const available = c ? sourceStockAvailable(state,sourceId,c.sourceName,c.unit) : 0;
             const choose = (id: string) => {
               const m = stock.find(m => m.siteId === sourceId && m.id === id);
-              if (m && !exactStockMatch(item,m.name,m.unit)) return;
+              if (m && !equivalentStockUnit(item.unit,m.unit)) return;
               const remaining = draft.choices.filter(choice => choice.id !== c?.id);
               if (!m) { save({ ...draft,choices:remaining });return; }
-              const choice: Choice = {id:item.id+"/"+sourceId+"/"+m.id,itemId:item.id,requestedName:item.name,requestedUnit:item.unit,requestedQuantity:item.quantity,sourceSiteId:sourceId,sourceName:m.name,unit:m.unit,quantity:"",matchConfirmed:false,needsReview:false,explanation:""};
+              const choice: Choice = {id:item.id+"/"+sourceId+"/"+m.id,itemId:item.id,requestedName:item.name,requestedUnit:item.unit,requestedQuantity:item.quantity,sourceSiteId:sourceId,sourceName:m.name,unit:m.unit,quantity:"",matchConfirmed:false,needsReview:!exactStockMatch(item,m.name,m.unit),explanation:""};
               save({ ...draft,choices:[...remaining,choice] });
               setExtraRows(v => ({ ...v,[item.id]:false }));
             };
@@ -128,16 +131,17 @@ function Editor({ state, request, onPurchase, storageKey }: { state: DemoSnapsho
                 <td rowSpan={rows.length}><div className="stock-sourced-breakdown"><span>Transfers: {sourcing.transfers}</span><span>Site review: {sourcing.suitability}</span><span>Orders: {sourcing.ordered}</span><span>Awards: {sourcing.staged}</span></div></td>
                 <td rowSpan={rows.length}><strong className="stock-count">{sourcing.unassigned}</strong><span className="stock-unit">{item.unit}</span>{draftAmount(item.id) > 0 && <small className="stock-cell-note">After draft: {Math.max(0,sourcing.unassigned-draftAmount(item.id))}</small>}</td></>}
               <td><div className="stock-source-control">
-                <select title={c?.sourceName} aria-label={"Stock for "+item.name} value={c ? materialId(c.sourceName,c.unit) : ""} disabled={!editable || busy || (!c && sourcing.unassigned <= 0)} onChange={e => choose(e.target.value)}><option value="">Choose stock</option>{candidates.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}</select>
+                <input aria-label={"Search source stock for "+item.name} placeholder="Search stock names" value={stockSearch[searchKey] || ""} disabled={!editable || busy} onChange={event => setStockSearch(value => ({ ...value,[searchKey]:event.target.value }))}/>
+                <select title={c?.sourceName} aria-label={"Stock for "+item.name} value={c ? materialId(c.sourceName,c.unit) : ""} disabled={!editable || busy || (!c && sourcing.unassigned <= 0)} onChange={e => choose(e.target.value)}><option value="">Choose stock</option>{["Exact description","Similar names: site review","Other stock: site review"].map((label,index) => <optgroup key={label} label={label}>{candidates.filter(m => index === 0 ? m.exact : !m.exact && (index === 1 ? m.suggested : !m.suggested)).map(m => <option key={m.id} value={m.id}>{m.name} ({m.unit})</option>)}</optgroup>)}</select>
                 {c && <><small className="stock-cell-note">On hand: {selectedStock?.onHand ?? 0} · Reserved: {Math.max(0,(selectedStock?.onHand ?? 0)-available)}</small></>}
                 {editable && rowIndex === rows.length-1 && sourcing.unassigned > 0 && <div className="stock-search-controls">
-                  {!matchingCandidates && !c && <small className="stock-cell-note">No matching stock at this project. Choose another source project or continue to supplier quotations.</small>}
+                  {!matchingCandidates && !c && <small className="stock-cell-note">No stock matches this search and unit. Clear the search, choose another project, or continue to supplier quotations.</small>}
                   {c && candidates.some(m => m.id !== materialId(c.sourceName,c.unit)) && <button type="button" className="button secondary stock-row-button" disabled={busy} onClick={() => setExtraRows(v => ({ ...v,[item.id]:true }))}>Add another selection</button>}
                 </div>}
               </div></td>
               <td>{c ? <><span className="stock-available-count"><span className="stock-count">{available}</span><span className="stock-unit">{c.unit}</span></span><small className="stock-cell-note">Draft balance: {Math.max(0,available-sourceUsed(sourceId,c.sourceName,c.unit))}</small></> : <span className="stock-cell-note">Choose stock first</span>}</td>
               <td>{c ? <div className="stock-quantity-control"><div className="stock-quantity-line"><input aria-label={"Quantity from "+sourceId+" for "+item.name} type="number" min="0" step="any" required aria-required="true" value={c.quantity} disabled={!editable || busy} aria-invalid={!!errors[c.id]} aria-describedby={errors[c.id] ? "stock-error-"+c.id : undefined} onChange={e => update(c.id,{ quantity:e.target.value })}/><span className="stock-unit">{c.unit}</span></div></div> : <span className="stock-cell-note">Enter quantity after selecting stock</span>}{c && errors[c.id] && <p id={"stock-error-"+c.id} className="field-error" role="alert">{errors[c.id]}</p>}</td>
-              <td>{c && <div className="stock-match-control"><Badge>{exactStockMatch(item,c.sourceName,c.unit) ? "Matches request" : "Matching stock required"}</Badge><button type="button" className="button danger-outline stock-row-button" aria-label={"Remove "+c.sourceName+" selection"} disabled={!editable || busy} onClick={() => save({ ...draft,choices:draft.choices.filter(choice => choice.id !== c.id) })}>Remove</button></div>}</td>
+              <td>{c && <div className="stock-match-control"><Badge>{exactStockMatch(item,c.sourceName,c.unit) ? "Matches description" : "Requesting-site review"}</Badge>{!exactStockMatch(item,c.sourceName,c.unit) && <Field label="Why these are the same material"><textarea aria-label={"Match explanation for "+c.sourceName} value={c.explanation} disabled={!editable || busy} onChange={event => update(c.id,{ explanation:event.target.value })}/></Field>}<button type="button" className="button danger-outline stock-row-button" aria-label={"Remove "+c.sourceName+" selection"} disabled={!editable || busy} onClick={() => save({ ...draft,choices:draft.choices.filter(choice => choice.id !== c.id) })}>Remove</button></div>}</td>
             </tr>;
           })}</tbody>;
         })}
@@ -149,11 +153,11 @@ function Editor({ state, request, onPurchase, storageKey }: { state: DemoSnapsho
     <StockSuitabilityList state={state} request={request}/>
     <InlineError message={error}/>
     <RecordModal open={reviewOpen} title="Review stock selections" onClose={() => { if (!busy) setReviewOpen(false); }}>
-      <p>All selections go directly to their source sites for release confirmation after you verify the descriptions and units.</p>
-      {[...new Set(draft.choices.map(c => c.sourceSiteId))].map(siteId => <div className="stock-review-group" key={siteId}><h3>{state.sites.find(s => s.id === siteId)?.name}</h3>{draft.choices.filter(c => c.sourceSiteId === siteId).map(c => <div key={c.id} className="stock-review-choice"><strong>{c.quantity} {c.unit} · {c.sourceName}</strong><p>For: {request.items.find(i => i.id === c.itemId)?.name}</p><Badge>Source release request</Badge></div>)}</div>)}
+      <p>Exact descriptions go to the source site for release. Differently named stock goes to the requesting site first to confirm the same specifications. Similar wording alone does not establish a match.</p>
+      {[...new Set(draft.choices.map(c => c.sourceSiteId))].map(siteId => <div className="stock-review-group" key={siteId}><h3>{state.sites.find(s => s.id === siteId)?.name}</h3>{draft.choices.filter(c => c.sourceSiteId === siteId).map(c => <div key={c.id} className="stock-review-choice"><strong>{c.quantity} {c.unit} · {c.sourceName}</strong><p>For: {request.items.find(i => i.id === c.itemId)?.name}</p>{c.explanation && <p>Match explanation: {c.explanation}</p>}<Badge>{exactStockMatch(request.items.find(item => item.id === c.itemId)!,c.sourceName,c.unit) ? "Source release request" : "Requesting-site specification review"}</Badge></div>)}</div>)}
       <h3>Remaining to buy after sending</h3>{request.items.map(item => <p key={item.id}><strong>{Math.max(0,requestSourcing(state,request,item).unassigned-draftAmount(item.id))} {item.unit}</strong> · {item.name}</p>)}
       {draft.note && <p>Note: {draft.note}</p>}
-      <label className="stock-check stock-final-verification"><input type="checkbox" checked={reviewConfirmed} disabled={busy} onChange={e => setReviewConfirmed(e.target.checked)}/><span>I verified the descriptions and units of all matching selections.</span></label>
+      <label className="stock-check stock-final-verification"><input type="checkbox" checked={reviewConfirmed} disabled={busy} onChange={e => setReviewConfirmed(e.target.checked)}/><span>I verified descriptions, equivalent units and specifications for exact selections, and flagged differently named stock for requesting-site review.</span></label>
       <div className="button-row"><button type="button" className="button secondary" disabled={busy} onClick={() => setReviewOpen(false)}>Edit selections</button><button type="button" className="button primary" disabled={busy || !reviewConfirmed || !draft.choices.length} onClick={() => void submit()}>{busy ? "Sending…" : "Send requests"}</button></div>
     </RecordModal>
   </section>;

@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { useDemo } from "@/src/app-state/DemoProvider";
 import { localArchiveFiles } from "@/src/domain/local-files";
-import { readQuoteFile } from "@/src/features/requests/quote-files";
+import { readQuoteFile } from "@/src/documents/files";
 import { PdfDocumentViewer } from "@/src/components/PdfDocumentViewer";
 import { PageHeader } from "@/src/components/ui/Primitives";
 import { DocumentLoading } from "@/src/components/ui/Skeleton";

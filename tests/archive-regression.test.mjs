@@ -1,8 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { seedDemo } from '../src/mock/fixtures/seed.ts';
+import { seedDemo } from './fixtures/workspace.ts';
 import { applyCommand } from '../src/domain/commands.ts';
-import { archiveBidWorkbook, workbookDigest } from '../src/features/requests/bid-report-files.ts';
+import { archiveBidWorkbook } from '../src/features/requests/bid-report-files.ts';
+import { documentDigest as workbookDigest } from '../src/documents/digest.ts';
 import { generateBidWorkbook } from '../src/server/bid-workbook.ts';
 
 test('an acknowledged spreadsheet archive completes and retry preserves its identity', async () => {

@@ -5,9 +5,9 @@ import type { AccountingDocument, DemoSnapshot } from "../../domain/types.ts";
 import type { ArchiveProgressListener } from "../../domain/archive-progress.ts";
 import { accountingSignature, ACCOUNTING_MIMES, MAX_ACCOUNTING_BATCH, MAX_ACCOUNTING_FILE } from "../../domain/accounting-documents.ts";
 import { newId } from "../../domain/ids.ts";
-import { saveGeneratedFile, readQuoteFile, deleteLocalFile } from "../requests/quote-files.ts";
-import { workbookDigest } from "../requests/bid-report-files.ts";
-import { uploadDocument } from "../requests/archive-purchasing.ts";
+import { saveGeneratedFile, readQuoteFile, deleteLocalFile } from "../../documents/files.ts";
+import { documentDigest as workbookDigest } from "../../documents/digest.ts";
+import { uploadDocument } from "../../documents/resumable-upload.ts";
 type Run = (command: Command) => Promise<CommandResult>;
 type Upload = { error?: string; driveFileId?: string; url?: string; ticket?: string; offset?: number };
 async function responseJson(response: Response): Promise<Upload> { const value = await response.json() as Upload; if (!response.ok) throw new Error(value.error || "The accounting file request failed."); return value; }

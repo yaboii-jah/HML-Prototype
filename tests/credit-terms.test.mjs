@@ -1,7 +1,7 @@
 import { initializedWorkspaceStorage } from './helpers/initialized-storage.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { blankWorkspace } from '../src/mock/fixtures/blank.ts';
+import { blankWorkspace } from '../src/mock/blank-workspace.ts';
 import { applyCommand } from '../src/domain/commands.ts';
 import { validBidReport } from '../src/domain/bid-reports.ts';
 import { ACCOUNT_FIXTURES } from '../src/app-state/demo-session.ts';

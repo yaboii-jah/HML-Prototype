@@ -7,7 +7,7 @@ import { CloseButton } from "@/src/components/ui/CloseButton";
 import { PdfDocumentViewer } from "@/src/components/PdfDocumentViewer";
 import type { DocumentRef, MRF } from "@/src/domain/types";
 import { supportingPdf } from "@/src/domain/request-archive";
-import { readQuoteFile } from "./quote-files";
+import { readQuoteFile } from "../../documents/files.ts";
 import type { PDFDocumentLoadingTask, RenderTask } from "pdfjs-dist";
 
 type GalleryDocument = DocumentRef & { driveUrl?: string; drivePreviewUrl?: string };

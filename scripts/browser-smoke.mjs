@@ -4,7 +4,7 @@ import { mkdtemp, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import assert from "node:assert/strict";
-import { seedDemo } from "../src/mock/fixtures/seed.ts";
+import { seedDemo } from "../tests/fixtures/workspace.ts";
 import { ACCOUNT_FIXTURES, SESSION_STORAGE_KEY } from "../src/app-state/demo-session.ts";
 import { materialId } from "../src/domain/ids.ts";
 import { PDFDocument } from "pdf-lib";

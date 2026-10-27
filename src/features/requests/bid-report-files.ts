@@ -1,16 +1,15 @@
+import { documentDigest as workbookDigest } from "../../documents/digest.ts";
 import { archiveLocal } from "./local-archive.ts";
 import type { ArchiveProgressListener } from "../../domain/archive-progress.ts";
 import type { Command, CommandResult } from "../../domain/commands.ts";
 import type { BidReport } from "../../domain/types.ts";
 import { XLSX_MIME } from "../../domain/bid-reports.ts";
-import { readQuoteFile, saveGeneratedFile } from "./quote-files.ts";
-import { uploadDocument } from "./archive-purchasing.ts";
+import { readQuoteFile, saveGeneratedFile } from "../../documents/files.ts";
+import { uploadDocument } from "../../documents/resumable-upload.ts";
 
 export type RunBidCommand = (command: Command) => Promise<CommandResult>;
 const errorMessage = (cause: unknown) => cause instanceof Error ? cause.message : "The bid report could not be processed.";
-export async function workbookDigest(blob: Blob) {
-  return Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", await blob.arrayBuffer())), value => value.toString(16).padStart(2, "0")).join("");
-}
+
 async function checked(response: Response) {
   if (!response.ok) { const result = await response.json(); throw new Error(result.error || "The report request failed."); }
   return response;

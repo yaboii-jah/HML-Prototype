@@ -3,7 +3,7 @@ import { spawn } from 'node:child_process';
 import { mkdtemp, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { seedDemo } from '../src/mock/fixtures/seed.ts';
+import { seedDemo } from '../tests/fixtures/workspace.ts';
 import { applyCommand } from '../src/domain/commands.ts';
 import { validTransferState } from '../src/domain/transfer-document.ts';
 import { sourceStockOnHand, transferQuantityFor } from '../src/domain/stock-transfers.ts';
@@ -98,6 +98,7 @@ try {
   await fill(`${trip(child.id)} [aria-label="Issue for Cement stock"]`, 'One bag damaged');
   await button('Confirm receiving', trip(child.id)); await confirm();
   await wait("return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).transferDeliveries[1].status==='confirmed';");
+  await fill(`${trip(child.id)} [aria-label="Destination stock for Cement stock"]`, 'new');
   await button('Post accepted stock', trip(child.id)); await confirm();
   await wait("return JSON.parse(localStorage.getItem('hml-constructsync-demo-v12')).transferDeliveries[1].status==='posted';");
   const posted = await snapshot();

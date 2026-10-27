@@ -5,9 +5,9 @@ import type { CommandRunner } from "../../app-state/command-gateway.ts";
 import type { DemoSnapshot, PaymentProof } from "../../domain/types.ts";
 import { accountingSignature, ACCOUNTING_MIMES, MAX_ACCOUNTING_FILE, MAX_ACCOUNTING_BATCH } from "../../domain/accounting-documents.ts";
 import { newId } from "../../domain/ids.ts";
-import { saveGeneratedFile, readQuoteFile, deleteLocalFile } from "../requests/quote-files.ts";
-import { workbookDigest } from "../requests/bid-report-files.ts";
-import { uploadDocument } from "../requests/archive-purchasing.ts";
+import { saveGeneratedFile, readQuoteFile, deleteLocalFile } from "../../documents/files.ts";
+import { documentDigest as workbookDigest } from "../../documents/digest.ts";
+import { uploadDocument } from "../../documents/resumable-upload.ts";
 export async function attachPaymentProofFiles(state: DemoSnapshot, poId: string, files: File[], run: CommandRunner) {
   const po = state.pos.find(po => po.id === poId);
   const existing = po?.paymentProofs?.filter(proof => !isExternalCredit(po) || !proofAssigned(po!, proof.id)) || [];

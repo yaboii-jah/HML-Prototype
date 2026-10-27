@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { applyCommand } from "../src/domain/commands.ts";
 import { bindAccountCommands } from "../src/app-state/command-gateway.ts";
-import { seedDemo } from "../src/mock/fixtures/seed.ts";
+import { seedDemo } from "./fixtures/workspace.ts";
 const admin = { name: "Folder Admin", email: "admin@example.com", role: "Administrator" };
 let seq = 0;
 const context = actor => ({ actor, now: () => "2026-10-09T00:00:00Z", id: prefix => `${prefix}-${++seq}` });
