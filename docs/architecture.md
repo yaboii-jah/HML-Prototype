@@ -13,9 +13,10 @@ Today the app is a browser-local prototype: accounts, sessions and business reco
 | Runtime and hosting | Node.js 24.x on Vercel; Node.js 26 locally | Keep local development on Node 26.12.1 and npm 11.20.0. The production baseline is Node 24.22.1 with the same npm version; CI is configured to verify both runtimes on Linux and Windows. Node type definitions follow the production major. Vercel installation and build checks require Node 24 rather than silently selecting another accepted development runtime. See [Vercel's supported Node.js versions](https://vercel.com/docs/functions/runtimes/node-js/node-js-versions). |
 | Authentication | Supabase Auth | Individual, invitation-only email/password accounts, sessions, password recovery and revocation. |
 | Business data | Supabase Postgres | Shared authoritative records, access grants, audit history, document metadata and job state. |
+| Live updates | Supabase Realtime Broadcast | Private change notifications that refresh permitted views; introduced with each shared record/workflow. |
 | Document files | Google Drive | Permanent originals, generated documents and related evidence, organized in company-controlled project folders. |
 | Background work | Vercel Workflows | Durable, retryable processing for integrations and document work that may outlast an ordinary request. |
-| Authentication email | Resend via Supabase custom SMTP | Invitation and account recovery email from a verified sender domain. |
+| Authentication email | Resend via Supabase custom SMTP | Production invitation and recovery email from a verified sender domain; step 3 uses CI Mailpit capture and restricted synthetic-account link generation for hosted manual checks. |
 | Document extraction | Gemini | Assist with MRF and quotation extraction; a person reviews the result before it affects official records. |
 | Document generation | Existing PDF and Excel libraries | Generate and render the application's PDFs and spreadsheets. |
 
@@ -42,7 +43,7 @@ public/                Public assets such as company branding
 tests/                 Automated tests, helpers and isolated fixtures
 scripts/               Verification, browser checks and document tooling
 .github/workflows/     GitHub Actions continuous integration
-docs/                  Five core context documents plus a checklist companion
+docs/                  Five core documents, checklist and step 3 companion
 ```
 
 | Current area | Responsibility during migration |
@@ -62,12 +63,34 @@ The intended request flow is: an authenticated user acts in a Next.js screen; a 
 
 Workflow jobs retain the initiating audit identity and are bound to the intended record, source version and permitted acknowledgements. Current authorization and business conditions still need server-side checks at the relevant steps; a captured identity is not unrestricted authority after an account or access change. Manual retries record the retrying actor without rewriting earlier responsibility.
 
+### Step 3 Boundary
+
+Checklist step 3 delivers the account/project foundation: individual identities, current role/project permissions, shared projects/scopes, protected foundation audits and realtime updates. See the [implementation guide](step-3-implementation.md) for ordered units and acceptance criteria; these are planned capabilities.
+
+Keep operational records and their authoritative reads/writes together during step 4. Step 3 may explicitly disable unfinished screens and server handlers on an isolated migration branch. The supported shell uses projects as its initial landing screen and operates without a global demo workspace. Operational counters, commitments/spending, stock and workflow panels stay unavailable until their sources migrate; absence of migrated data is not a zero balance.
+
+Project setup retains names, locations, document codes, PHP budgets and scope allocations. Enforce allocation caps atomically even before purchasing exists. Site Personnel receive permitted project/scope information without financial values through any exposed interface. Existing purchasing/tax policy questions remain unresolved by this foundation.
+
+Project Drive folder creation, validation and browsing wait for step 5, including the currently automatic folder creation during project setup. Disable those provider operations in the migration runtime until their protected replacement is verified. MRF/PO self-approval enforcement and transactional document numbering are verified with the relevant workflows in step 4. Preserve the committed prototype in Git rather than treating old browser records or simulated identities as production authority.
+
+Module organization follows Option A in [code standards](code-standards.md#file-organization): group business areas within the existing layers and replace broad snapshot/command dependencies as each area migrates. Styling remains a separate track.
+
 ## Storage Model
 
 - **Postgres:** The source of truth for users' application profiles, role and project assignments, projects, MRFs, quotations, purchase orders, budgets, payments, deliveries, stock, document references, audit events and workflow/job status. Related changes such as stock, budgets and document numbering need database transactions, concurrency control and safe retries.
 - **Google Drive:** The permanent file store for originals, generated PDFs/spreadsheets and supporting evidence. Postgres stores the record relationship, Drive file identifier, version and archive status; a browser cache or an attempted upload does not count as a completed archive. Supabase Storage is not part of the intended permanent file architecture.
 - **Browser storage:** May hold UI preferences and unsent drafts for convenience. Official business actions require an online connection and server confirmation; browser data is not the shared system of record. Apply access and privacy controls to any locally retained draft or file cache.
 - **Workflow state:** Persist small identifiers, status and retry information. Keep document bytes and provider secrets inside server-side steps rather than workflow payloads or results. Use bounded uploads, targeting roughly 3 MiB chunks where appropriate, and verify the actual request encoding against [Vercel's function limits](https://vercel.com/docs/functions/limitations).
+
+### Development Environments
+
+Step 3 is reviewed through a local Next.js app connected to hosted staging when session integration arrives in unit 3.2. Local Docker is optional and is not required by the supported development workflow. GitHub Actions uses a disposable Docker-backed Supabase stack for clean migration/security checks, adding Mailpit/account-flow coverage as those flows migrate. Automated tests use explicitly validated loopback endpoints and never reset or depend on staging. See [Supabase's email testing](https://supabase.com/docs/guides/auth/testing-auth-flows).
+
+The user has provisioned both projects in organization `szmmzavejsnmqgvnyqbn`: **ConstructSync Staging** (`gxphubtycnvhpgstruqb`) and **ConstructSync Production** (`caiasmpfhueuouxqhalo`). Both were verified healthy in `eu-west-1` on the Free plan on 2026-10-30. Retain those projects and regions. Development, migration tooling and scoped synthetic checks target staging explicitly; production configuration and promotion belong to step 7. Prefer available free resources; any required purchase or upgrade needs a concrete cost decision. Keep a hosted application preview for the later protected rehearsal.
+
+Versioned SQL migrations are the schema authority. Review and verify them against the disposable CI stack before applying to staging. Development commands preview/apply migrations and generate types remotely without requiring Docker-based schema pulls/diffs. Keep staging data between sessions; synthetic cleanup is restricted to the run's own resources. Hosted manual account testing uses restricted developer tooling to generate invitation/recovery links for synthetic identities; tokens stay outside source control and ordinary application responses/logs. Those checks verify token handling rather than email delivery.
+
+Real email delivery remains unverified until a suitable sender domain is available, verified and configured with Resend/custom SMTP. A sending domain is independent of the application's local development address. Real invitation/recovery delivery and company-owned production services are release requirements; local capture and developer-owned services do not satisfy them. See [Resend's SMTP prerequisites](https://resend.com/docs/send-with-supabase-smtp).
 
 For hosted testing, the existing Google Drive integration may use OAuth with an authorized My Drive account. Configure the OAuth application out of External Testing where Google permits; Drive-scoped refresh tokens in External Testing expire after seven days. Credentials can still be revoked, so failures must be visible and reconnection supported. See [Google's OAuth token expiration guidance](https://developers.google.com/identity/protocols/oauth2#expiration).
 
@@ -97,10 +120,23 @@ For repeatable verification and ownership-checked test cleanup, follow [AI workf
 - Each staff member has an individual Supabase Auth identity and signs in with email and password. Administrators invite and manage accounts; public self-registration is disabled. Recovery and account removal or deactivation require controlled procedures.
 - Account administration must retain at least one active Administrator and prevent self-deactivation. Apply these safeguards when changing role grants or account status as well as during account provisioning.
 - HML is the single company in this design. Administrators grant application roles and, where required, project access. A person may hold multiple non-Site Personnel roles and switch the active role only among their own grants. Site Personnel is exclusive and cannot be combined with another role.
+- Remember a multi-role user's last still-permitted role per browser; otherwise show a role chooser. A single-role user enters directly. The preference grants no authority, and role switching keeps the same permanent identity.
 - Site Personnel access is limited to assigned projects and permitted operations. Other roles receive the record and operation access explicitly assigned to their responsibilities; a visible screen or role name alone never grants authority.
 - Server operations verify the signed-in user's permanent identity and current database grants for the requested record and action. Use row-level security for exposed tables, explicit grants where the Data API is used, and appropriately scoped server authorization. Never rely on editable user metadata or stale client-provided role claims. Keep service-role credentials on the server only. See [Supabase row-level security](https://supabase.com/docs/guides/database/postgres/row-level-security).
+- Administrator changes to roles or project assignments require fresh sign-in for affected application sessions; deactivation rejects access immediately. The application design binds a verified Supabase session ID to an application-owned access revision after fresh authentication. Change grants and invalidate old bindings atomically, enforce the binding in server/database authorization, and keep binding creation privileged. JWT refresh never renews invalidated access. Verify the current Auth session as well as its application binding; JWT validity alone is insufficient. See [Supabase sessions](https://supabase.com/docs/guides/auth/sessions).
+- Provision the first Administrator through a controlled server-side procedure with explicit inputs and no default credentials. Deactivate/reactivate accounts while retaining permanent identities and audit history. Invitation/recovery partial failures must remain visible and recoverable without duplicate identities or premature access grants.
 - A user cannot approve their own submitted MRF or their own prepared purchase order, even after switching roles or reassignment. Enforce this using the permanent user ID on the server.
 - Audit events capture the permanent actor identity, the active role used for the action, the affected record and the action time. Role switches or later account changes must not rewrite past attribution.
+
+## Realtime Updates
+
+Use private Supabase Broadcast notifications to refresh permitted views after committed changes. Supabase recommends Broadcast for database-driven updates; see [subscribing to database changes](https://supabase.com/docs/guides/realtime/subscribing-to-database-changes). Step 3 covers accounts, access and projects/scopes; operational updates follow their step 4 migration.
+
+Keep business records authoritative in Postgres. Broadcast minimal invalidation signals, then fetch current role-safe data through authorized server modules. Browser clients cannot publish authoritative record changes. Fresh reads must remain isolated between users and omit Site Personnel financial data.
+
+Private-channel authorization is cached during a connection, so a grant edit alone cannot be treated as an immediate socket revocation. Use current authorized recipients and user/access-revision topics. Require the current session binding to subscribe to the matching topic; send no later record notifications to obsolete revisions. An access-change signal may tell the old session to clear protected state and sign in again, while server/database rejection takes effect independently. See [Realtime authorization](https://supabase.com/docs/guides/realtime/authorization).
+
+Refetch after subscription establishment/reconnect and when returning to the app to recover missed changes. Show stale/reconnecting status with a manual retry path. Preserve ordinary unsaved input during refreshes; edits carry a record version and a stale save requires review/reapplication. Access invalidation instead clears protected client state. Realtime availability never replaces online server confirmation for official writes.
 
 ## Invariants
 
@@ -114,5 +150,6 @@ For repeatable verification and ownership-checked test cleanup, follow [AI workf
 8. Secrets and privileged credentials remain server-side. AI-generated values require human review before an official business action uses them.
 9. Production starts with fresh company records and provisioned individual accounts. It contains no default demonstration credentials, automatic demonstration data seeding or prototype workspace-clearing initialization.
 10. Production requires a verified deployment, appropriate hosting and company-owned Drive access, tested backup and recovery, and operational monitoring; a successful build or tidy folder structure alone does not establish readiness.
+11. Realtime notifications reveal only permitted change signals and cannot establish authority. Current database access and session bindings remain enforced when notifications are delayed, missed or forged.
 
 Current production gaps, their migration order and dated verification evidence are maintained in the [progress tracker](progress-tracker.md).

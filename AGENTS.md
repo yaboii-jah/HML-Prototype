@@ -20,6 +20,8 @@ At the start of every project task, read all five core context documents before 
 
 Read them again when resuming without their current contents or when the documentation has changed. Distinguish production targets from implemented behavior and preserve unrelated pending work.
 
-Before completing a task, review its documentation impact and update affected documents in the same change. Update the tracker after meaningful changes or decisions. In the completion report, identify the documents updated or briefly explain why no update was necessary. Keep the five core documents plus the production checklist companion; follow the workflow rules for the detailed update responsibilities.
+Before completing a task, review its documentation impact and update affected documents in the same change. Update the tracker after meaningful changes or decisions. In the completion report, identify the documents updated or briefly explain why no update was necessary. Keep the five core documents and the agreed companion documents; follow the workflow rules for their detailed update responsibilities.
 
 For foundation or migration milestone work, also read the companion [production checklist](docs/checklist.md) before planning or completing the unit. Update it as milestone progress changes; check a step only after verification, with its completion date and a brief evidence note. Keep active work, blockers and detailed evidence in the progress tracker.
+
+When planning, implementing, reviewing or resuming checklist step 3, also read the [step 3 implementation guide](docs/step-3-implementation.md). It owns the agreed unit sequence and completion criteria. Before continuing, check the tracker for the active unit, blockers and next action; update unit checkboxes only after verification and keep detailed evidence in the tracker.

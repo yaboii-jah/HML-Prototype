@@ -12,6 +12,8 @@ Check the [progress tracker](docs/progress-tracker.md) for completed work, migra
 
 Use the companion [production checklist](docs/checklist.md) to follow foundational and future steps and mark them complete after verification.
 
+For checklist step 3, read the [implementation guide](docs/step-3-implementation.md) for the agreed account/project foundation, ordered units and acceptance criteria. This is a plan; the application remains the prototype described below.
+
 ## Run locally
 
 Use Node 26.12.1 (the local `.nvmrc` pin) and npm 11.20.0. The deployment baseline is Node 24.22.1; both supported majors accept later stable patch/minor releases within the declared package engine ranges. Installation rejects an unsupported Node or npm version.
@@ -70,4 +72,4 @@ See [architecture context](docs/architecture.md) for the current structure and a
 - `src/mock/` and `src/app-state/`: browser persistence, accounts and empty-workspace initialization.
 - `src/documents/`: shared browser document storage, hashes and resumable uploads.
 - `tests/` and `scripts/`: domain/API tests and browser checks.
-- `docs/`: five core context documents plus the production checklist companion; workflows and acceptance criteria are in the [project overview](docs/project-overview.md).
+- `docs/`: five core context documents, the production checklist and the step 3 implementation companion; product workflows and release acceptance criteria are in the [project overview](docs/project-overview.md).

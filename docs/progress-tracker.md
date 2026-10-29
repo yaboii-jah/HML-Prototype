@@ -1,18 +1,20 @@
 # Progress Tracker
 
-Update this file after every meaningful implementation or documentation change and consequential decision. Keep completed work, active work and plans distinct. **Last reviewed: 2026-10-28.**
+Update this file after every meaningful implementation or documentation change and consequential decision. Keep completed work, active work and plans distinct. **Last reviewed: 2026-10-30.**
 
 ## Current Phase
 
 - Production preparation: runtime/CI milestone 2 is complete. Published revision `cc87c65` passed all four Linux/Windows jobs on Node 24/26, including all browser suites on both Windows runtimes. Production identity and shared-data implementation have not started.
+- Step 3's account/project foundation and gradual structural cleanup are agreed. Its [implementation guide](step-3-implementation.md) records the sequence; documentation preparation is separate from application implementation.
 - Local checks demonstrate the current prototype baseline; production authentication, shared persistence and operational readiness remain pending.
 
 ## Current Goal
 
-- Agree a bounded first unit for individual identity, permissions and shared data under checklist step 3. Runtime/CI preparation is verified. Follow the [production checklist](checklist.md); implementation of each unit requires its own agreed scope.
+- Implement [unit 3.1](step-3-implementation.md#31-establish-hosted-staging-and-database-foundations), hosted staging/database foundations. First checkpoint the revised documentation, then create `feat/step-3-hosted-foundation`. Staging already exists; implementation and verification follow the guide's gates.
 
 ## Completed
 
+- **Documentation checkpoint 3.0, 2026-10-29:** Created the [step 3 guide](step-3-implementation.md), recorded the agreed scope and seven ordered units, synchronized affected core/checklist documentation and required-reading pointers, and created branch `docs/step-3-implementation-plan` from `0a7fb00`. Documentation checks passed; no application implementation, provisioning, migration, commit, push or deployment was performed by this unit.
 - **Committed baseline:** Cleanup and verification tooling in `104640a`, included in the current staging baseline. Historical artifact/sample collections were removed, reusable fixtures isolated under tests, document/upload/AI helpers shared, and CI plus repeatable verification introduced. This did not implement the production backend.
 - **Committed in `a26983a`:** Accounting is the canonical role across the app, permissions, fixtures and tests. Compatibility handling preserves existing browser accounts, sessions, permanent IDs and records; tests cover identity checks and blocked storage writes.
 - **Committed in `a26983a`:** Five-document context set, including this tracker, with README/agent pointers and active progress-maintenance rules. Actionable legacy requirements, integration setup, open decisions and dated evidence were consolidated; 15 superseded Markdown files and two empty subfolders were removed. The documents distinguish production targets from current implementation and establish proportionate verification.
@@ -32,15 +34,17 @@ Update this file after every meaningful implementation or documentation change a
 
 ## In Progress
 
-- No implementation unit is active. The runtime/CI fixes are published on [PR #25](https://github.com/yaboii-jah/HML-Prototype/pull/25), and checklist step 2 is complete. Step 3 has not started.
+- Unit 3.1 is active: preparing its documentation/Git checkpoint. Database/application implementation has not started. Units 3.2-3.6 remain planned; step 3 stays unchecked.
 
 ## Next Up
 
 Use the [production checklist](checklist.md#steps) for the ordered milestones and their completion conditions.
 
-- Agree a bounded first unit for checklist step 3: individual identity, current server-checked grants and shared authoritative records. Preserve the existing access and self-approval rules during migration.
+- **Exact next action:** validate and commit the revised documentation checkpoint, create `feat/step-3-hosted-foundation`, then add pinned tooling, migrations and isolated database CI for unit 3.1. Local development requires no Docker; GitHub Actions hosts the disposable stack. Hosted CI execution remains dependent on later authorized publication; staging migration application follows disposable verification.
+- Follow the guide's dependencies and completion criteria. The prototype's role switch currently selects another account, and its approval commands do not enforce the target permanent-user self-approval restriction. Preserve the documented target rules; verify approval enforcement with the migrated workflows in step 4.
 - Retain local Node 26.12.1, the Vercel Node 24.x target, CI baseline 24.22.1 and npm 11.20.0 across environments. Hosted deployment verification belongs to the later protected rehearsal.
 - Work foundations first: individual identity, shared records and server authorization before business-workflow migration. Tailwind remains a separate track.
+- The agreed step 3 completion boundary is accounts, permissions, shared projects/scopes and protected realtime. Operational records move with their workflows in step 4; Drive folder operations wait for step 5. Temporary unavailable screens and explicitly deferred browser suites are permitted during migration, with restoration tracked against their workflow milestone.
 - Keep the active unit and blockers here rather than duplicating the checklist. Future milestones do not authorize starting unrelated work or publishing changes.
 
 **Release blockers:** Real server authentication and record/provider authorization, shared authoritative records, transactional stock/budget/payment/numbering updates, protected audits, removal of prototype reset/demo paths, and demonstrated backup/restore are required before operational reliance. Monitoring/incident handling, department acceptance and a successful protected deployment rehearsal also remain unverified. A clean structure or successful build does not clear these requirements.
@@ -67,6 +71,7 @@ Request one worked company transaction covering material amounts, each discount/
 
 ### Operational Ownership
 
+- The user has provisioned ConstructSync Staging (`gxphubtycnvhpgstruqb`) and ConstructSync Production (`caiasmpfhueuouxqhalo`) in organization `szmmzavejsnmqgvnyqbn`; both are healthy in `eu-west-1`, organization plan Free (verified 2026-10-30). Staging is the development target; production promotion/readiness remains step 7. No additional project or region change is planned. CI Mailpit and restricted synthetic-account link generation cover development auth flows; verified-sender delivery remains release work. Required purchases/upgrades need a concrete cost decision.
 - Agree recovery objectives, database/file backup coverage, restore responsibility and how a successful restore will be demonstrated.
 - Identify monitoring/alert and incident owners, credential-renewal responsibility, and company ownership/provisioning details for Drive, the email sender and deployment services.
 - Identify department acceptance owners and who signs off the protected staging rehearsal and operational release. The service choices are settled; these ownership and acceptance details are not.
@@ -83,15 +88,20 @@ The [architecture document](architecture.md) is the detailed source of truth. Ke
 | Durable jobs and reviewed AI results | Allows bounded retries and visible partial failure while retaining accountable actors and human business decisions. |
 | Independent transfers, purchases and workflow milestones | Avoids fictional financial obligations for owned stock and allows split sourcing and credit-payment/delivery independence. |
 | Next.js/Vercel target, Node 26 locally and Node 24 for deployment | Retains the user's development runtime while testing both supported runtimes and enforcing the production version. Tailwind remains an independently verifiable conversion. |
+| Account/project foundation in step 3; operational records with workflows in step 4 | Keeps each shared-data migration paired with authoritative writes. Temporary disabled areas avoid relying on a partially migrated browser workspace. |
+| Option A: business-area groups inside the existing UI/domain/server layers | Improves module responsibilities gradually while limiting file relocation; accounts and projects migrate first. |
+| Private realtime signals and current authorized reads | Open permitted views update automatically; access-revision topics and session checks keep notifications independent from authority. |
 
 ## Session Notes
 
-- **Resume context:** Branch `docs/restructure-project-documentation` is based on staging commit `aead301`; runtime/toolchain checkpoint `aa14273` follows documentation checkpoint `abcbc5e`. [PR #25](https://github.com/yaboii-jah/HML-Prototype/pull/25) contains the migration preparation. CI fixes through `cc87c65` are published and passed the complete hosted matrix. Consult Git for the current publication and merge status. This work does not deploy the application.
+- **Resume context:** Documentation branch `docs/step-3-implementation-plan` was created from `0a7fb00` on `docs/restructure-project-documentation`. [PR #25](https://github.com/yaboii-jah/HML-Prototype/pull/25) contains the earlier migration preparation and verified runtime/CI fixes. Consult Git for current commit, publication and merge state; creating this branch does not publish or deploy the documentation or application.
 - **Dependency follow-up:** The unchanged `npm audit --audit-level=high` gate passes with two moderate findings through ExcelJS 4.4.0's UUID 8.3.2 dependency. The suggested forced fix downgrades ExcelJS to 3.4.0 across a major version; it was not applied. Assess a compatible upstream fix or scoped spreadsheet-library change separately; do not report zero vulnerabilities.
-- **Read before the next unit:** [Project overview](project-overview.md), [architecture](architecture.md), [AI workflow rules](ai-workflow-rules.md) and [code standards](code-standards.md), plus the companion [checklist](checklist.md) for milestone work. Runtime/CI preparation is complete; do not mark identity, storage, workflows or Tailwind complete because their target design is documented.
+- **Read before the next unit:** All five core documents required by [AGENTS.md](../AGENTS.md), the [checklist](checklist.md) and the [step 3 guide](step-3-implementation.md#purpose-and-resume-procedure). Use this tracker's current goal and exact next action with the guide's first unfinished unit. Runtime/CI preparation is complete; identity, storage, realtime, workflows and Tailwind remain implementation work.
 
 | Date | Verification scope | Recorded result and limit |
 | --- | --- | --- |
+| 2026-10-30 | Hosted environment reference inspection | Supabase confirmed both existing projects healthy on Postgres 17.11.0.003 in `eu-west-1`, organization Free. Staging has no tables in the inspected `public`/`private` schemas and no recorded migrations. Read-only inspection; no credentials, Auth configuration, schema or company data changed. |
+| 2026-10-29 | Step 3 documentation checkpoint 3.0 | Verified the seven-document context/companion inventory, required-reading pointers and inherited CLAUDE instructions, all local documentation links/anchors, unit dependencies/completion criteria, production checklist status and whitespace. Compared the managed Next.js block with Git and confirmed it is unchanged. Only the intended nine Markdown files changed; application source/configuration and historical runtime evidence were preserved. No application tests/builds, live provider checks, backend setup or migrations were run. Only documentation unit 3.0 is complete. |
 | 2026-10-27 | Earlier cleanup baseline | 357 unit/API tests, lint/type generation/TypeScript/build, all 28 browser suites, plus recorded dependency/secret/link checks passed. These are historical baseline results, not a fresh run for later changes. |
 | 2026-10-27 | Earlier live integration check | Synthetic MRF/quotation extraction and Drive project/upload/download integrity passed; the run-owned folder was trashed and its state verified. No newer live check is claimed. |
 | 2026-10-27 | Accounting rename | 360 unit/API tests, lint, type generation/TypeScript and production build passed. Exactly four selected browser suites passed: user-management, shell-controls, full-disbursement and credit-terms. This was not a rerun of all 28 suites. |

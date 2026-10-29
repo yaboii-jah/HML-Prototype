@@ -51,6 +51,7 @@ Roles describe responsibilities; the server must still authorize each record and
 - Project setup with document codes, budgets, scope allocations and project document folders.
 - Individual staff accounts, assigned roles and Administrator-managed access. Site Personnel access follows project assignments.
 - Active-role switching among a person's own grants, with Site Personnel kept exclusive from other roles. A person cannot approve their own submitted MRF or prepared PO after switching roles.
+- A multi-role user resumes the last still-permitted role on that browser or chooses a role; a single-role user enters directly. Administrator changes to roles or project assignments require fresh sign-in for affected sessions. Deactivated accounts lose application access immediately.
 - Scope allocations must fit within the project budget and cannot be reduced below committed plus spent amounts. Draft requests may remain unassigned; submission and initial/full-correction approval require a valid funded scope. Document-only corrections retain their scope and may proceed after existing POs consume the allocation. Requests do not themselves reserve money; the company must confirm the budget charging basis identified in the [open questions](progress-tracker.md#open-questions).
 - Document numbers are allocated automatically per project and series, continue without an annual reset and are not reused. Saving a numbered record fixes its project ownership. The numbering operation must be transactional in production.
 
@@ -99,6 +100,7 @@ Roles describe responsibilities; the server must still authorize each record and
 
 ### Monitoring and Documents
 
+- Permitted shared changes appear automatically on open screens through Supabase Realtime. Reconnecting catches up from authoritative records; ordinary refreshes preserve unsaved form input, and conflicting edits require review before saving. This capability is a production target and is added as each record/workflow migrates.
 - Dashboards, notifications and lifecycle views showing outstanding actions, blockers and permitted record links.
 - Operational reports and protected audit history identifying the person and active role responsible for an action.
 - Google Drive archives for originals, generated documents and evidence, with visible pending or failed status and retry controls.
@@ -128,7 +130,7 @@ Roles describe responsibilities; the server must still authorize each record and
 
 These are acceptance criteria for the intended production release, not claims that the migration is complete.
 
-1. Authorized staff can open the same permitted project records from separate accounts and devices, and confirmed changes remain available after refresh or a new session.
+1. Authorized staff can open the same permitted project records from separate accounts and devices, confirmed changes remain available after refresh or a new session, and open screens receive permitted changes automatically with recovery after a realtime disconnection.
 2. An MRF can be followed through its applicable transfer and purchasing branches, with links to the relevant quotations, awards, POs, payment proofs, deliveries, archive status and outstanding departmental actions. Split and partial fulfilment remain visible.
 3. Users can perform only actions allowed by their current grants and project access. A person cannot approve their own submitted MRF or prepared PO, including after a role switch, and action history retains the original actor identity.
 4. An upfront purchase remains blocked from delivery clearance until Accounting verifies full payment. A credit purchase can progress through delivery while its unpaid balance and due date remain visible.
