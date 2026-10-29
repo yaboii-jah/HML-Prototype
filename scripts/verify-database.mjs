@@ -1,10 +1,11 @@
 import assert from 'node:assert/strict';
-import { createHash, randomUUID } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 import { spawn } from 'node:child_process';
 import { mkdir, readFile, readdir, writeFile, cp } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { supabase } from './helpers/supabase-cli.mjs';
 import { requireLoopback } from './helpers/supabase-target.mjs';
+import { migrationHash } from './helpers/database-migrations.mjs';
 
 if (process.env.GITHUB_ACTIONS !== 'true' || !/^\d+$/.test(process.env.GITHUB_RUN_ID ?? '') || process.platform !== 'linux') {
   throw new Error('verify:db runs on disposable GitHub Linux runners. Use db:staging:check for scoped hosted checks.');
@@ -35,10 +36,10 @@ async function sql(query, { allowFailure = false } = {}) {
   return result;
 }
 
-const hash = createHash('sha256');
 const migrationNames = (await readdir('supabase/migrations')).filter(name => name.endsWith('.sql')).sort();
-for (const name of migrationNames) hash.update(name).update(await readFile(`supabase/migrations/${name}`));
-const migrationHash = hash.digest('hex');
+const files = [];
+for (const name of migrationNames) files.push({ name, sql: await readFile(`supabase/migrations/${name}`, 'utf8') });
+const verifiedMigrationHash = migrationHash(files);
 let networkCreated = false;
 let passed = false;
 let typeMatch = false;
@@ -118,17 +119,18 @@ try {
   const created = [];
   const testProject = randomUUID();
   const request = (path, { token = anon, ...options } = {}) => fetch(`${api}${path}`, {
-    ...options, headers: { apikey: anon, Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', ...options.headers },
+    signal: AbortSignal.timeout(15000), ...options, headers: { apikey: anon, Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', ...options.headers },
   });
   const admin = (path, options = {}) => request(path, { ...options, token: secret, headers: { apikey: secret } });
   try {
     await sql(`insert into public.projects(id,name) values ('${testProject}','HTTP ${testProject}'); insert into public.project_budgets values ('${testProject}',100);`);
-    const signup = await request('/auth/v1/signup', { method: 'POST', body: JSON.stringify({ email: `${randomUUID()}@example.invalid`, password: randomUUID() }) });
+    const signup = await request('/auth/v1/signup', { method: 'POST', body: JSON.stringify({ email: `${randomUUID()}@example.com`, password: randomUUID() }) });
     assert.ok(signup.status >= 400, 'Public signup is disabled');
+    assert.equal((await signup.json()).error_code, 'signup_disabled', 'Signup fails because registration is disabled');
     const anonymousSignup = await request('/auth/v1/signup', { method: 'POST', body: '{}' });
     assert.ok(anonymousSignup.status >= 400, 'Anonymous signup is disabled');
     for (const role of ['Project Manager', 'Site Personnel']) {
-      const email = `${randomUUID()}@example.invalid`;
+      const email = `${randomUUID()}@example.com`;
       const password = randomUUID();
       const response = await admin('/auth/v1/admin/users', { method: 'POST', body: JSON.stringify({ email, password, email_confirm: true, user_metadata: { role: 'Administrator' } }) });
       assert.equal(response.status, 200, 'Create synthetic Auth identity');
@@ -136,7 +138,10 @@ try {
       assert.match(user.id, /^[\da-f-]{36}$/i);
       created.push(user.id);
       const login = await request('/auth/v1/token?grant_type=password', { method: 'POST', body: JSON.stringify({ email, password }) });
-      assert.equal(login.status, 200, 'Sign in through Auth');
+      if (login.status !== 200) {
+        const failure = await login.json();
+        throw new Error(`Synthetic Auth sign-in failed (${login.status}, ${failure.error_code ?? failure.code ?? 'unknown'}).`);
+      }
       const session = await login.json();
       const claims = JSON.parse(Buffer.from(session.access_token.split('.')[1], 'base64url').toString());
       assert.match(claims.session_id, /^[\da-f-]{36}$/i);
@@ -196,7 +201,7 @@ try {
   finally {
     if (networkCreated) assert.equal((await command('docker', ['network', 'rm', network])).code, 0, 'Remove only run-owned Docker network');
   }
-  await writeFile('.verification/database-ci.json', JSON.stringify({ passed, typeMatch, migrationHash,
+  await writeFile('.verification/database-ci.json', JSON.stringify({ passed, typeMatch, migrationHash: verifiedMigrationHash,
     runUrl: `https://github.com/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}` }, null, 2));
 }
 assert.ok(typeMatch, 'Commit the generated database.types.ts artifact, then rerun CI to verify type consistency.');

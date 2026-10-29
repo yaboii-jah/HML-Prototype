@@ -2,6 +2,7 @@ import { readFile, mkdir, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { requireStaging, STAGING_REF } from './helpers/supabase-target.mjs';
 import { supabase } from './helpers/supabase-cli.mjs';
+import { migrationHash } from './helpers/database-migrations.mjs';
 
 const action = process.argv[2];
 if (!['preview', 'apply', 'types', 'check', 'auth-check', 'auth-apply'].includes(action) || process.argv.length > 3) {
@@ -12,6 +13,7 @@ requireStaging(process.env);
 const authSettings = {
   disable_signup: true,
   external_anonymous_users_enabled: false,
+  external_email_enabled: true,
   site_url: 'http://127.0.0.1:3000',
   uri_allow_list: 'http://127.0.0.1:3000/auth/confirm',
   password_min_length: 8,
@@ -41,13 +43,12 @@ if (action.startsWith('auth-')) {
 } else {
   if (action === 'apply') {
     const evidence = JSON.parse(await readFile('.verification/database-ci.json', 'utf8'));
-    const { createHash } = await import('node:crypto');
     const { readdir } = await import('node:fs/promises');
-    const hash = createHash('sha256');
+    const files = [];
     for (const file of (await readdir('supabase/migrations')).filter(name => name.endsWith('.sql')).sort()) {
-      hash.update(file).update(await readFile(`supabase/migrations/${file}`));
+      files.push({ name: file, sql: await readFile(`supabase/migrations/${file}`, 'utf8') });
     }
-    if (evidence.migrationHash !== hash.digest('hex') || evidence.passed !== true || evidence.typeMatch !== true || !evidence.runUrl?.startsWith('https://github.com/')) {
+    if (evidence.migrationHash !== migrationHash(files) || evidence.passed !== true || evidence.typeMatch !== true || !evidence.runUrl?.startsWith('https://github.com/')) {
       throw new Error('Download passing database CI evidence for these exact migrations before applying to staging.');
     }
   }
