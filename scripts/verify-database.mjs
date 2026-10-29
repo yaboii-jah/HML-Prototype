@@ -6,7 +6,7 @@ import { resolve } from 'node:path';
 import { supabase } from './helpers/supabase-cli.mjs';
 import { requireLoopback } from './helpers/supabase-target.mjs';
 import { migrationHash } from './helpers/database-migrations.mjs';
-import { normalizeDatabaseTypes } from './helpers/database-types.mjs';
+import { generateDatabaseTypes, normalizeDatabaseTypes } from './helpers/database-types.mjs';
 
 if (process.env.GITHUB_ACTIONS !== 'true' || !/^\d+$/.test(process.env.GITHUB_RUN_ID ?? '') || process.platform !== 'linux') {
   throw new Error('verify:db runs on disposable GitHub Linux runners. Use db:staging:check for scoped hosted checks.');
@@ -190,9 +190,12 @@ try {
     await sql(`delete from public.projects where id='${testProject}';`);
   }
   console.log('SQL, concurrent allocation and real Auth/Data API checks passed.');
-  const { output } = await cli(['gen', 'types', '--local', '--lang', 'typescript', '--schema', 'public,private'], { capture: true });
-  assert.ok(output.includes('export type Database ='), 'Generated database types returned');
-  const generated = normalizeDatabaseTypes(output);
+  const generated = await generateDatabaseTypes(async query => {
+    const statement = query.trim().replace(/;$/, '');
+    const result = await sql(`select coalesce(json_agg(row_to_json(typegen_rows)), '[]'::json) from (${statement}) typegen_rows;`);
+    return JSON.parse(result.output.trim());
+  });
+  assert.ok(generated.includes('export type Database ='), 'Generated database types returned');
   await writeFile('.verification/database.types.ts', generated);
   let expected = '';
   try { expected = await readFile('src/server/database/database.types.ts', 'utf8'); } catch (error) { if (error.code !== 'ENOENT') throw error; }

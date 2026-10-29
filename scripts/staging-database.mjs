@@ -3,7 +3,7 @@ import { resolve } from 'node:path';
 import { requireStaging, STAGING_REF } from './helpers/supabase-target.mjs';
 import { supabase } from './helpers/supabase-cli.mjs';
 import { migrationHash } from './helpers/database-migrations.mjs';
-import { normalizeDatabaseTypes } from './helpers/database-types.mjs';
+import { generateDatabaseTypes } from './helpers/database-types.mjs';
 
 const action = process.argv[2];
 if (!['preview', 'apply', 'types', 'check', 'auth-check', 'auth-apply'].includes(action) || process.argv.length > 3) {
@@ -34,10 +34,18 @@ if (action.startsWith('auth-')) {
   if (differences.length) throw new Error(`Staging Auth settings differ: ${differences.join(', ')}. Review before db:staging:auth:apply.`);
   console.log('Staging Auth settings match the invitation-only development configuration.');
 } else if (action === 'types') {
-  const { output } = await supabase(['gen', 'types', '--lang', 'typescript', '--project-id', STAGING_REF, '--schema', 'public,private'], { capture: true });
-  if (!output.includes('export type Database =')) throw new Error('Type generation did not return database types.');
+  const output = await generateDatabaseTypes(async query => {
+    const response = await fetch(`https://api.supabase.com/v1/projects/${STAGING_REF}/database/query`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${process.env.SUPABASE_ACCESS_TOKEN}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query, read_only: true }),
+      signal: AbortSignal.timeout(30000),
+    });
+    if (!response.ok) throw new Error(`Staging type introspection failed (${response.status}).`);
+    return response.json();
+  });
   await mkdir('src/server/database', { recursive: true });
-  await writeFile('src/server/database/database.types.ts', normalizeDatabaseTypes(output));
+  await writeFile('src/server/database/database.types.ts', output);
   console.log('Generated staging database types.');
 } else if (action === 'check') {
   await supabase(['db', 'query', '--linked', '--project-ref', STAGING_REF, '--file', resolve('supabase/checks/staging.sql')]);
