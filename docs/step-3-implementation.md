@@ -62,7 +62,7 @@ Completed 2026-10-29: documentation-only verification is recorded in the [tracke
 
 ### 3.1 Establish Hosted Staging and Database Foundations
 
-- [ ] Hosted staging and foundation schema verified.
+- [x] Hosted staging and foundation schema verified.
 
 **Depends on:** 3.0.
 
@@ -74,6 +74,8 @@ Completed 2026-10-29: documentation-only verification is recorded in the [tracke
 - Update environment guidance and the tracker. A required purchase/upgrade needs a concrete cost decision. Publication, merging and app deployment remain separate actions.
 
 **Done when:** disposable CI replays all migrations and passes database/security/type checks, the same migrations and scoped checks pass on staging, standard code/documentation checks pass, and cleanup preserves development/company data. Keep the unit unchecked while hosted CI or staging verification is pending. This unit can be verified before a usable account screen exists.
+
+Completed 2026-10-30: local checks, [final disposable CI](https://github.com/yaboii-jah/HML-Prototype/actions/runs/40962444259), hosted migration/Auth/security checks, matching generated types and synthetic cleanup passed. Detailed evidence and informational advisor findings are recorded in the [tracker](progress-tracker.md#session-notes). App/session integration begins in 3.2; the whole step 3 milestone remains unchecked.
 
 **Tooling:** copy the environment template's staging settings into private `.env.local` and supply a staging-authorized `SUPABASE_ACCESS_TOKEN`; tooling deliberately avoids another account's global CLI identity. Use `npm run db:staging:preview`, `db:staging:apply`, `db:staging:types`, `db:staging:check` and `db:staging:auth:check`/`db:staging:auth:apply`. The Auth command enables the email provider, disables public/anonymous registration and sets the declared password/local callback settings; it leaves SMTP and other providers alone. CLI `auth.email.enable_signup` must remain true for existing-user email sign-in; root `auth.enable_signup = false` blocks public registration. The local callback is `http://127.0.0.1:3000/auth/confirm`, implemented in 3.2.
 
