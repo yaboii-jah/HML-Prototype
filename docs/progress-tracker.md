@@ -4,16 +4,17 @@ Update this file after every meaningful implementation or documentation change a
 
 ## Current Phase
 
-- Production preparation: runtime/CI milestone 2 is complete. Published revision `cc87c65` passed all four Linux/Windows jobs on Node 24/26, including all browser suites on both Windows runtimes. Production identity and shared-data implementation have not started.
+- Production preparation: runtime/CI milestone 2 is complete. Published revision `cc87c65` passed all four Linux/Windows jobs on Node 24/26, including all browser suites on both Windows runtimes. Unit 3.1 database foundation implementation is active; application identity/shared-data integration follows in later units.
 - Step 3's account/project foundation and gradual structural cleanup are agreed. Its [implementation guide](step-3-implementation.md) records the sequence; documentation preparation is separate from application implementation.
 - Local checks demonstrate the current prototype baseline; production authentication, shared persistence and operational readiness remain pending.
 
 ## Current Goal
 
-- Implement [unit 3.1](step-3-implementation.md#31-establish-hosted-staging-and-database-foundations), hosted staging/database foundations. First checkpoint the revised documentation, then create `feat/step-3-hosted-foundation`. Staging already exists; implementation and verification follow the guide's gates.
+- Implement [unit 3.1](step-3-implementation.md#31-establish-hosted-staging-and-database-foundations), hosted staging/database foundations, on `feat/step-3-hosted-foundation`. Complete disposable database CI and generated types before applying to staging; retain the unit's unchecked status until its verification gates pass.
 
 ## Completed
 
+- **Documentation checkpoint, 2026-10-30:** Committed the nine documentation changes as `0b9d3ae`, validated 65 local links/anchors and whitespace, then created `feat/step-3-hosted-foundation`. The revised guide uses the two existing hosted projects and confines required Docker execution to CI.
 - **Documentation checkpoint 3.0, 2026-10-29:** Created the [step 3 guide](step-3-implementation.md), recorded the agreed scope and seven ordered units, synchronized affected core/checklist documentation and required-reading pointers, and created branch `docs/step-3-implementation-plan` from `0a7fb00`. Documentation checks passed; no application implementation, provisioning, migration, commit, push or deployment was performed by this unit.
 - **Committed baseline:** Cleanup and verification tooling in `104640a`, included in the current staging baseline. Historical artifact/sample collections were removed, reusable fixtures isolated under tests, document/upload/AI helpers shared, and CI plus repeatable verification introduced. This did not implement the production backend.
 - **Committed in `a26983a`:** Accounting is the canonical role across the app, permissions, fixtures and tests. Compatibility handling preserves existing browser accounts, sessions, permanent IDs and records; tests cover identity checks and blocked storage writes.
@@ -34,13 +35,14 @@ Update this file after every meaningful implementation or documentation change a
 
 ## In Progress
 
-- Unit 3.1 is active: preparing its documentation/Git checkpoint. Database/application implementation has not started. Units 3.2-3.6 remain planned; step 3 stays unchecked.
+- Unit 3.1 is active: pinned CLI 2.122.0, foundation migration, target-checked staging commands, rollback-only synthetic SQL checks and a disposable Ubuntu/Node 24 CI workflow are implemented locally. Initial generated types, hosted database verification, staging migration and Auth-setting changes remain pending. Prototype screens/session behavior are unchanged; units 3.2-3.6 remain planned.
+- **Access dependency:** The existing CLI identity cannot see ConstructSync staging. Preserve that global login; hosted scripts require an explicit staging-authorized `SUPABASE_ACCESS_TOKEN`. The Supabase plugin can inspect staging but has no Auth-configuration tool. GitHub CLI is unauthenticated; repository Git access works. Required hosted CI follows separately authorized branch publication.
 
 ## Next Up
 
 Use the [production checklist](checklist.md#steps) for the ordered milestones and their completion conditions.
 
-- **Exact next action:** validate and commit the revised documentation checkpoint, create `feat/step-3-hosted-foundation`, then add pinned tooling, migrations and isolated database CI for unit 3.1. Local development requires no Docker; GitHub Actions hosts the disposable stack. Hosted CI execution remains dependent on later authorized publication; staging migration application follows disposable verification.
+- **Exact next action:** review and checkpoint the implementation, publish the isolated branch within authorized scope to run database CI, retrieve its generated-type artifact and commit the generated file, then obtain a passing type-consistent run. Apply/check the same migration on staging afterward; inspect/apply its invitation-only Auth settings using a staging-authorized tooling token. Keep production excluded.
 - Follow the guide's dependencies and completion criteria. The prototype's role switch currently selects another account, and its approval commands do not enforce the target permanent-user self-approval restriction. Preserve the documented target rules; verify approval enforcement with the migrated workflows in step 4.
 - Retain local Node 26.12.1, the Vercel Node 24.x target, CI baseline 24.22.1 and npm 11.20.0 across environments. Hosted deployment verification belongs to the later protected rehearsal.
 - Work foundations first: individual identity, shared records and server authorization before business-workflow migration. Tailwind remains a separate track.
@@ -100,6 +102,7 @@ The [architecture document](architecture.md) is the detailed source of truth. Ke
 
 | Date | Verification scope | Recorded result and limit |
 | --- | --- | --- |
+| 2026-10-30 | Initial unit 3.1 local implementation checks | `npm run verify` passed lint, route types, TypeScript, 367 unit/API tests and the production build on Node 26.12.1/npm 11.20.0. The two new guard tests reject production/missing/alternate remote targets and non-loopback disposable endpoints. Node syntax and Git whitespace checks passed. No UI change or browser rerun; SQL/concurrency/real Auth/Data API checks require the new disposable CI workflow and have not run yet. No staging schema/Auth or production changes made. |
 | 2026-10-30 | Hosted environment reference inspection | Supabase confirmed both existing projects healthy on Postgres 17.11.0.003 in `eu-west-1`, organization Free. Staging has no tables in the inspected `public`/`private` schemas and no recorded migrations. Read-only inspection; no credentials, Auth configuration, schema or company data changed. |
 | 2026-10-29 | Step 3 documentation checkpoint 3.0 | Verified the seven-document context/companion inventory, required-reading pointers and inherited CLAUDE instructions, all local documentation links/anchors, unit dependencies/completion criteria, production checklist status and whitespace. Compared the managed Next.js block with Git and confirmed it is unchanged. Only the intended nine Markdown files changed; application source/configuration and historical runtime evidence were preserved. No application tests/builds, live provider checks, backend setup or migrations were run. Only documentation unit 3.0 is complete. |
 | 2026-10-27 | Earlier cleanup baseline | 357 unit/API tests, lint/type generation/TypeScript/build, all 28 browser suites, plus recorded dependency/secret/link checks passed. These are historical baseline results, not a fresh run for later changes. |

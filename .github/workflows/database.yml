@@ -1,0 +1,32 @@
+name: Database foundation
+on:
+  pull_request:
+  push:
+    branches: [main, staging, 'feat/step-3-hosted-foundation']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  database:
+    name: Disposable Supabase (Ubuntu, Node 24)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24.22.1'
+          cache: npm
+      - name: Install declared npm
+        run: npm install --global npm@11.20.0
+      - run: npm ci
+      - run: npm run verify:db
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: database-foundation
+          path: |
+            .verification/database-ci.json
+            .verification/database.types.ts
+          include-hidden-files: true
+          retention-days: 7

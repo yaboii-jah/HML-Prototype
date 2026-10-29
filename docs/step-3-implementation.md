@@ -75,6 +75,10 @@ Completed 2026-10-29: documentation-only verification is recorded in the [tracke
 
 **Done when:** disposable CI replays all migrations and passes database/security/type checks, the same migrations and scoped checks pass on staging, standard code/documentation checks pass, and cleanup preserves development/company data. Keep the unit unchecked while hosted CI or staging verification is pending. This unit can be verified before a usable account screen exists.
 
+**Tooling:** copy the environment template's staging settings into private `.env.local` and supply a staging-authorized `SUPABASE_ACCESS_TOKEN`; tooling deliberately avoids another account's global CLI identity. Use `npm run db:staging:preview`, `db:staging:apply`, `db:staging:types`, `db:staging:check` and `db:staging:auth:check`/`db:staging:auth:apply`. The Auth command changes only the declared invitation/anonymous-signup, password and local callback settings; it leaves SMTP and other provider settings alone. The local callback is `http://127.0.0.1:3000/auth/confirm`, implemented in 3.2.
+
+`npm run verify:db` runs only on disposable GitHub Linux runners and creates its own workdir, project and loopback-bound network. Its artifact contains verification evidence and generated database types. The first run supplies the initial generated types; commit that artifact as `src/server/database/database.types.ts`, then rerun for type consistency. Download the passing `database-ci.json` artifact into ignored `.verification/`; staging application verifies its migration hash and successful type check. Synthetic SQL checks run inside a rollback-only transaction. Hosted migration application never resets staging, and ordinary unit/API checks require neither Docker nor hosted credentials.
+
 ### 3.2 Replace Session Handling and Gate the Workspace
 
 - [ ] Real session handling and migration access gates verified.
