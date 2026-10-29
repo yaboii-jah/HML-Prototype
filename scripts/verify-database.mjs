@@ -6,6 +6,7 @@ import { resolve } from 'node:path';
 import { supabase } from './helpers/supabase-cli.mjs';
 import { requireLoopback } from './helpers/supabase-target.mjs';
 import { migrationHash } from './helpers/database-migrations.mjs';
+import { normalizeDatabaseTypes } from './helpers/database-types.mjs';
 
 if (process.env.GITHUB_ACTIONS !== 'true' || !/^\d+$/.test(process.env.GITHUB_RUN_ID ?? '') || process.platform !== 'linux') {
   throw new Error('verify:db runs on disposable GitHub Linux runners. Use db:staging:check for scoped hosted checks.');
@@ -191,10 +192,11 @@ try {
   console.log('SQL, concurrent allocation and real Auth/Data API checks passed.');
   const { output } = await cli(['gen', 'types', '--local', '--lang', 'typescript', '--schema', 'public,private'], { capture: true });
   assert.ok(output.includes('export type Database ='), 'Generated database types returned');
-  await writeFile('.verification/database.types.ts', output);
+  const generated = normalizeDatabaseTypes(output);
+  await writeFile('.verification/database.types.ts', generated);
   let expected = '';
   try { expected = await readFile('src/server/database/database.types.ts', 'utf8'); } catch (error) { if (error.code !== 'ENOENT') throw error; }
-  typeMatch = output.replaceAll('\r\n', '\n') === expected.replaceAll('\r\n', '\n');
+  typeMatch = generated === normalizeDatabaseTypes(expected);
   passed = typeMatch;
 } finally {
   try { await cli(['stop', '--project-id', project, '--no-backup'], { capture: true }); }

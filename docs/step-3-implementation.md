@@ -1,6 +1,6 @@
 # Step 3 Implementation Guide
 
-Agreed 2026-10-29. This guide describes planned work; application implementation has not started. Read the [progress tracker](progress-tracker.md#current-goal) for the active unit, blockers, next action and verification evidence.
+Agreed 2026-10-29; hosted environment strategy revised 2026-10-30. This guide owns the unit sequence and completion criteria. Read the [progress tracker](progress-tracker.md#current-goal) for actual implementation state, blockers, next action and verification evidence.
 
 ## Purpose and Resume Procedure
 

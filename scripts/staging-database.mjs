@@ -3,6 +3,7 @@ import { resolve } from 'node:path';
 import { requireStaging, STAGING_REF } from './helpers/supabase-target.mjs';
 import { supabase } from './helpers/supabase-cli.mjs';
 import { migrationHash } from './helpers/database-migrations.mjs';
+import { normalizeDatabaseTypes } from './helpers/database-types.mjs';
 
 const action = process.argv[2];
 if (!['preview', 'apply', 'types', 'check', 'auth-check', 'auth-apply'].includes(action) || process.argv.length > 3) {
@@ -36,7 +37,7 @@ if (action.startsWith('auth-')) {
   const { output } = await supabase(['gen', 'types', '--lang', 'typescript', '--project-id', STAGING_REF, '--schema', 'public,private'], { capture: true });
   if (!output.includes('export type Database =')) throw new Error('Type generation did not return database types.');
   await mkdir('src/server/database', { recursive: true });
-  await writeFile('src/server/database/database.types.ts', output);
+  await writeFile('src/server/database/database.types.ts', normalizeDatabaseTypes(output));
   console.log('Generated staging database types.');
 } else if (action === 'check') {
   await supabase(['db', 'query', '--linked', '--project-ref', STAGING_REF, '--file', resolve('supabase/checks/staging.sql')]);

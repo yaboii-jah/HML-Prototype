@@ -57,7 +57,7 @@ docs/                  Five core documents, checklist and step 3 companion
 | `src/styles/` | Migrate the current custom styles to Tailwind as part of the separate UI conversion. |
 | `tests/`, `scripts/` and `.github/workflows/` | Keep verification and CI, updating them as the production implementation replaces prototype behavior. |
 
-The migration is expected to introduce `src/server/workflows/` for application background work and `supabase/migrations/` for versioned database changes. These folders do not currently exist. Application workflows are separate from `.github/workflows/`, which runs repository checks.
+Versioned foundation changes now live in `supabase/migrations/`, with generated database types under `src/server/database/`. Their hosted application/verification state is recorded in the tracker. `src/server/workflows/` remains planned for application background work; it is separate from `.github/workflows/`, which runs repository checks.
 
 The intended request flow is: an authenticated user acts in a Next.js screen; a server handler verifies the session and current grants; server-side business logic reads and updates Postgres; and a durable workflow handles external operations when needed. A Drive upload or Gemini extraction may report pending, failed or completed status back to the application. Client-supplied roles, record contents and provider results are not authority for business decisions.
 
