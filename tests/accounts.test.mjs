@@ -21,8 +21,8 @@ test('account inputs validate roles, versions and assignments without trusting e
     { projectIds: [id] }, { roles: ['Site Personnel'], projectIds: [id, id] }, { name: ' ' }]) assert.equal(parseAccountCommand({ ...input, draft: { ...draft, ...change } }), null);
   assert.ok(parseAccountCommand({ ...input, draft: { ...draft, roles: ['Site Personnel'], projectIds: [] } }));
   assert.equal(parseAccountCommand({ type: 'save', requestId, id, version: 3, draft }), null);
-  assert.equal(parseDirectory({ users: [account], projects: [{ id, name: 'Project' }], history: [] }).users[0].id, id);
-  assert.equal(parseDirectory({ users: [{ ...account, roles: ['Site Personnel', 'Administrator'] }], projects: [], history: [] }), null);
+  assert.equal(parseDirectory({ users: [account], projects: [{ id, name: 'Project' }], history: [], pending: [] }).users[0].id, id);
+  assert.equal(parseDirectory({ users: [{ ...account, roles: ['Site Personnel', 'Administrator'] }], projects: [], history: [], pending: [] }), null);
 });
 
 test('provisioning reconciles a timed-out create by UUID and trusted marker; disabled email saves pending', async () => {

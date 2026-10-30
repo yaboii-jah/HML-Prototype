@@ -8,6 +8,7 @@ export type Account = {
 };
 export type AccountDirectory = {
   users: Account[]; projects: { id: string; name: string }[];
+  pending: { requestId: string; draft: AccountDraft & { email: string } }[];
   history: { id: string; actorName: string; action: string; targetId: string; at: string }[];
 };
 export type AccountCommand =
@@ -61,9 +62,10 @@ export function parseAccount(value: unknown): Account | null {
 
 export function parseDirectory(value: unknown): AccountDirectory | null {
   const v = object(value);
-  if (!v || !Array.isArray(v.users) || !Array.isArray(v.projects) || !Array.isArray(v.history)) return null;
+  if (!v || !Array.isArray(v.users) || !Array.isArray(v.projects) || !Array.isArray(v.history) || !Array.isArray(v.pending)) return null;
   const users = v.users.map(parseAccount);
   const projects: AccountDirectory["projects"] = [], history: AccountDirectory["history"] = [];
+  const pending: AccountDirectory["pending"] = [];
   if (users.some(user => !user)) return null;
   for (const value of v.projects) {
     const p = object(value);
@@ -75,5 +77,10 @@ export function parseDirectory(value: unknown): AccountDirectory | null {
     if (!h || !uuid(h.id) || !uuid(h.targetId) || !text(h.actorName, 100) || !text(h.action, 100) || typeof h.at !== "string" || !Number.isFinite(Date.parse(h.at))) return null;
     history.push({ id: h.id, targetId: h.targetId, actorName: h.actorName, action: h.action, at: h.at });
   }
-  return { users: users.filter((user): user is Account => user !== null), projects, history };
+  for (const value of v.pending) {
+    const p = object(value), command = parseAccountCommand({ ...p, type: "invite" });
+    if (!command || command.type !== "invite") return null;
+    pending.push({ requestId: command.requestId, draft: command.draft });
+  }
+  return { users: users.filter((user): user is Account => user !== null), projects, history, pending };
 }

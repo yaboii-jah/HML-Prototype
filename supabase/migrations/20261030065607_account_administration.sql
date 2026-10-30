@@ -134,6 +134,8 @@ begin
   return jsonb_build_object(
     'users',coalesce((select jsonb_agg(private.account_view(p.user_id) order by p.display_name,p.user_id) from public.profiles p),'[]'::jsonb),
     'projects',coalesce((select jsonb_agg(jsonb_build_object('id',p.id,'name',p.name) order by p.name) from public.projects p),'[]'::jsonb),
+    'pending',coalesce((select jsonb_agg(jsonb_build_object('requestId',o.id,'draft',o.payload) order by o.created_at)
+      from private.account_operations o where o.kind='provision' and o.state='reserved'),'[]'::jsonb),
     'history',coalesce((select jsonb_agg(h.entry order by h.occurred_at desc) from (
       select a.occurred_at,jsonb_build_object('id',a.id,'actorName',a.actor_name,'action',a.action,'targetId',a.entity_id,'at',a.occurred_at) entry
       from private.audit_events a where a.entity_type='profile' order by a.occurred_at desc limit 30) h),'[]'::jsonb));
@@ -151,7 +153,7 @@ begin
     raise exception 'Invalid email' using errcode='23514'; end if;
   select * into existing from private.account_operations o where o.id=operation;
   if found then
-    if existing.actor_id<>actor_id or existing.kind<>'provision' or existing.payload<>draft then
+    if existing.kind<>'provision' or existing.payload<>draft then
       raise exception 'Retry identity already used' using errcode='23514'; end if;
     return jsonb_build_object('id',existing.target_id,'state',existing.state);
   end if;
@@ -169,7 +171,7 @@ language plpgsql security definer set search_path = '' as $$
 declare actor_id uuid; op private.account_operations;
 begin
   actor_id:=private.account_actor(actor);
-  select * into op from private.account_operations o where o.id=operation and o.kind='provision' and o.actor_id=account_complete.actor_id for update;
+  select * into op from private.account_operations o where o.id=operation and o.kind='provision' for update;
   if not found then raise exception 'Unknown provisioning request' using errcode='42501'; end if;
   if op.state='complete' then return private.account_view(op.target_id); end if;
   perform 1 from auth.users u where u.id=op.target_id

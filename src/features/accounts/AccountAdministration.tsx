@@ -86,11 +86,21 @@ export function AccountAdministration({ directory }: { directory: Directory }) {
       : editor.draft.roles.filter(r => r !== next);
     update({ roles });
   };
+  const resume = async (pending: Directory["pending"][number]) => {
+    if (submitting.current) return;
+    submitting.current = true; setBusy(true); setError(""); setNotice("");
+    try {
+      if (!await confirm("Resume account provisioning?", `Finish the saved invitation for ${pending.draft.name} / ${pending.draft.email}. The same permanent identity will be reused.`, "Resume")) return;
+      const result = await run({ type: "invite", ...pending });
+      if (result.ok) setNotice(result.message); else setError(result.message);
+    } finally { submitting.current = false; setBusy(false); }
+  };
 
   return <>
     <PageHeader eyebrow="Administration" title="Users" description="Manage staff invitations, roles and workspace access." actions={<button className="button primary" disabled={busy} onClick={() => open()}>Invite staff</button>}/>
     {!directory.emailEnabled && <p className="account-capability">Email sending is unavailable. You can save pending accounts; invitations will remain unsent.</p>}
     {!editor && <InlineError message={error}/>}{notice && <p className="account-notice" role="status">{notice}</p>}
+    {directory.pending.length > 0 && <section className="panel account-history"><h2>Provisioning needs attention</h2><p>These saved requests have not yet completed. Resume to reconcile their existing identity and finish setup.</p><ul>{directory.pending.map(p => <li key={p.requestId}><strong>{p.draft.name}</strong> · {p.draft.email} <button type="button" className="button secondary" disabled={busy} onClick={() => void resume(p)}>Resume provisioning</button></li>)}</ul></section>}
     <Register rows={rows} unit="users" resetKey={`${search}:${role}:${status}`} headers={<><th>Name / email</th><th>Roles / projects</th><th>Access / setup</th><th>Latest message</th><th>Actions</th></>}
       filters={<><input type="search" aria-label="Search users" placeholder="Search name or email" value={search} onChange={event => setSearch(event.target.value)}/>
         <select aria-label="Filter users by role" value={role} onChange={event => setRole(event.target.value)}><option value="all">All roles</option>{AUTH_ROLES.map(r => <option key={r}>{r}</option>)}</select>

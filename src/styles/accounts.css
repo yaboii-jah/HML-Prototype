@@ -1,8 +1,8 @@
-.account-capability, .account-notice { padding: 14px 18px; border: 1px solid var(--border); border-radius: 10px; margin: 0 0 18px; }
+.account-capability, .account-notice { padding: 14px 18px; border: 1px solid var(--line); border-radius: 10px; margin: 0 0 18px; }
 .account-row-actions { display: flex; flex-wrap: wrap; gap: 6px; min-width: 210px; }
 .account-row-actions .button { font-size: 12px; padding: 7px 10px; }
 .account-editor { display: grid; gap: 20px; }
-.account-editor fieldset { border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin: 0; }
+.account-editor fieldset { border: 1px solid var(--line); border-radius: 10px; padding: 16px; margin: 0; }
 .account-editor legend { font-weight: 700; padding: 0 6px; }
 .account-editor fieldset p { font-size: 13px; color: var(--muted); margin-top: 0; }
 .account-choices { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
