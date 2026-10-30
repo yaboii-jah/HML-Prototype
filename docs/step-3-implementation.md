@@ -85,7 +85,7 @@ Type generation uses pinned `@supabase/postgrest-typegen` 0.6.0 in both environm
 
 ### 3.2 Replace Session Handling and Gate the Workspace
 
-- [ ] Real session handling and migration access gates verified.
+- [x] Real session handling and migration access gates verified.
 
 **Depends on:** 3.1.
 
@@ -100,6 +100,10 @@ Type generation uses pinned `@supabase/postgrest-typegen` 0.6.0 in both environm
 Projects is a protected unavailable landing state until 3.4. Disabled provider endpoints keep JSON error contracts and perform no body/provider work (`401` for an invalid application session, `503` for an authenticated unavailable operation). Bring the portable browser launcher and focused real-account/Mailpit coverage forward from 3.6. Name deferred prototype suites and their restoration milestones; isolated legacy handler fixtures are provider regression coverage, not proof that those application endpoints remain enabled.
 
 **Done when:** real sessions can enter the supported shell; anonymous, inactive and revoked sessions cannot read or mutate protected data; forged roles and browser snapshots grant no authority; unfinished direct endpoints perform no provider work. Invitation/recovery callbacks handle invalid or expired links and unsafe redirects without granting access.
+
+Completed 2026-10-30: local standard checks passed with 371 tests/build; all four standard CI jobs and disposable database/Auth/browser/email/type checks passed at published code `270c9d4`. Staging migration, Auth settings, rollback security checks, matching generated types and scoped session/recovery parity passed with synthetic cleanup. The [tracker](progress-tracker.md#session-notes) records exact runs, deferred browser coverage, Free-plan limits and remaining release advisories. The first permanent Administrator still requires the private local setup command; production is unchanged.
+
+**Local use:** configure the staging URL/publishable key and server-only `SUPABASE_SECRET_KEY` in private `.env.local`. Run `npm run auth:staging:bootstrap` once in a private terminal to enter the first Administrator's name/email and hidden password, then `npm run dev` and open `http://127.0.0.1:3000/sign-in`. Keep the ignored bootstrap checkpoint on partial failure and retry the same identity; the password from initial creation remains in use. No default credentials or real invitation email are installed. `npm run auth:staging:check` verifies scoped synthetic session/recovery behavior without sending mail and cleans its own identity. Hosted Auth tooling applies security/URL settings; committed templates run in Mailpit CI because the Free/default email provider rejects template modification. Standard verification builds deliberately omit live credentials; use the configured development server for local review.
 
 ### 3.3 Implement Account Administration
 
@@ -147,7 +151,7 @@ Projects is a protected unavailable landing state until 3.4. Disabled provider e
 
 **Depends on:** 3.5.
 
-- Retain standard Linux/Windows and Node 24/26 checks. Extend 3.1's Ubuntu 24.04/production-Node database job with disposable Supabase/Mailpit and real-account browser tests. Adapt a shared browser launcher for Linux CI and local Windows Edge while retaining bounded CDP waits and isolated profiles.
+- Retain standard Linux/Windows and Node 24/26 checks. Extend the disposable Supabase/Mailpit and real-account browser coverage introduced in 3.2 to complete foundation acceptance. Keep its shared Linux Chrome/Windows Edge launcher, bounded CDP waits and isolated profiles.
 - Configure local-only Auth/Data/Realtime endpoints before building test bundles. Validate endpoints explicitly: the existing Node-fetch network guard does not isolate browser requests or Realtime WebSockets. Automated tests must never reset or depend on the hosted development project.
 - Map the acceptance scenarios below to maintained tests. Preserve existing domain tests and record each deferred browser workflow, its reason and restoration milestone; deferred cases are never counted as passed.
 - Run synthetic parity checks against the existing staging project using accounts provisioned without sending email. Keep cleanup scoped to run-owned resources. Keep the app review local; a hosted application preview and production promotion are deferred to step 7.
