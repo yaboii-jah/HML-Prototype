@@ -7,8 +7,12 @@ declare
   sa uuid:=gen_random_uuid(); sb uuid:=gen_random_uuid(); fresh uuid:=gen_random_uuid();
   project uuid:=gen_random_uuid(); operation uuid:=gen_random_uuid(); change_id uuid:=gen_random_uuid();
   actor jsonb; other_actor jsonb; preflight jsonb; draft jsonb; saved jsonb; original jsonb; result jsonb;
-  audit_count bigint; signature text;
+  audit_count bigint; signature text; retained_usable_admins bigint;
 begin
+  select count(*) into retained_usable_admins from public.profiles p join auth.users u on u.id=p.user_id
+    join public.role_grants g on g.user_id=p.user_id and g.role='Administrator'
+    where p.is_active and p.first_signed_in_at is not null and u.email_confirmed_at is not null
+      and not u.is_anonymous and (u.banned_until is null or u.banned_until<=now());
   foreach signature in array array['public.accounts_directory(jsonb)','public.account_reserve(jsonb,uuid,jsonb)',
     'public.account_complete(jsonb,uuid)','public.account_save(jsonb,uuid,uuid,text,jsonb)',
     'public.account_message(jsonb,uuid,uuid,text,text,text)'] loop
@@ -75,7 +79,17 @@ begin
   begin perform private.account_save(actor,gen_random_uuid(),a,private.account_view(a)->>'version',draft||'{"active":true,"roles":["Accounting"]}'::jsonb); raise exception 'Self-demotion accepted'; exception when check_violation then null; end;
   -- A pending Administrator is not a qualified backup, even with confirmed Auth.
   update public.profiles set first_signed_in_at=null where user_id=b;
-  begin perform private.account_save(other_actor,gen_random_uuid(),a,private.account_view(a)->>'version',draft); raise exception 'Last usable Administrator removed'; exception when check_violation then null; end;
+  if retained_usable_admins=0 then
+    begin perform private.account_save(other_actor,gen_random_uuid(),a,private.account_view(a)->>'version',draft); raise exception 'Last usable Administrator removed'; exception when check_violation then null; end;
+  else
+    -- A populated staging workspace legitimately has another usable Admin.
+    -- Do not change retained accounts to manufacture an empty-workspace case.
+    -- The full global-count and competing-lock scenarios run in disposable CI.
+    if (select count(*) from public.profiles p where p.user_id in(a,b) and p.is_active and p.first_signed_in_at is not null)<>1 then
+      raise exception 'Pending fixture Administrator counted as onboarded';
+    end if;
+    raise notice 'Global last-Administrator removal is covered in disposable CI; retained staging Administrators are untouched';
+  end if;
   update public.profiles set first_signed_in_at=now() where user_id=b;
   preflight:=private.login_preflight(a::text||'@example.invalid');
   update auth.users set encrypted_password='after-reset' where id=a;
