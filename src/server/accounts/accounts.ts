@@ -51,7 +51,13 @@ export async function runAccountCommand(input: unknown): Promise<AccountResult> 
     if (!actor) return { ok: false, message: "Use your Administrator role to manage users." };
     const command = parseAccountCommand(input);
     if (!command) return { ok: false, message: "Check the name, roles and project assignments." };
-    return await executeAccountCommand(command, actor, gateway());
+    const result = await executeAccountCommand(command, actor, gateway());
+    if (result.ok && command.type === "save" && command.id === actor.userId) {
+      const current = await readSession();
+      const before = [...(current?.context.roles ?? [])].sort().join(",");
+      if (before !== [...command.draft.roles].sort().join(",")) return { ...result, signInRequired: true };
+    }
+    return result;
   } catch (error) {
     if (error instanceof ServiceCommandError) {
       if (error.code === "40001") return { ok: false, conflict: true, message: "The account changed. Your draft is preserved. Review the latest account and reapply your changes." };

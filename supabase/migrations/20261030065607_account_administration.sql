@@ -73,6 +73,7 @@ create function private.account_actor(actor jsonb, writing boolean default true)
 language plpgsql security definer set search_path = '' as $$
 declare actor_id uuid := (actor->>'userId')::uuid;
 begin
+  perform set_config('lock_timeout','5s',true);
   if writing then update private.account_guard set revision = revision + 1 where id; end if;
   perform 1 from auth.users u where u.id = actor_id and not u.is_anonymous
     and u.email_confirmed_at is not null and (u.banned_until is null or u.banned_until <= now()) for share;
@@ -115,7 +116,7 @@ begin
     or ('Site Personnel'=any(roles) and cardinality(roles)<>1)
     or (coalesce(cardinality(projects),0)>0 and not 'Site Personnel'=any(roles))
     or coalesce(cardinality(projects),0)<>(select count(distinct p) from unnest(projects) p)
-    or exists(select 1 from unnest(projects) id where not exists(select 1 from public.projects p where p.id=id))
+    or exists(select 1 from unnest(projects) assigned(id) where not exists(select 1 from public.projects p where p.id=assigned.id))
     then raise exception 'Invalid roles or project assignments' using errcode='23514'; end if;
 end;
 $$;
@@ -168,7 +169,7 @@ language plpgsql security definer set search_path = '' as $$
 declare actor_id uuid; op private.account_operations;
 begin
   actor_id:=private.account_actor(actor);
-  select * into op from private.account_operations o where o.id=operation and o.kind='provision' and o.actor_id=actor_id for update;
+  select * into op from private.account_operations o where o.id=operation and o.kind='provision' and o.actor_id=account_complete.actor_id for update;
   if not found then raise exception 'Unknown provisioning request' using errcode='42501'; end if;
   if op.state='complete' then return private.account_view(op.target_id); end if;
   perform 1 from auth.users u where u.id=op.target_id
