@@ -1,6 +1,6 @@
 # HML ConstructSync
 
-An internal construction operations application undergoing production migration. The supported foundation uses Supabase sign-in, current access grants and a protected workspace. Projects is the landing page; project editing, account administration and operational screens remain temporarily unavailable until their migration units are complete.
+An internal construction operations application undergoing production migration. The foundation uses Supabase sign-in, current access grants and a protected workspace. Unit 3.3 adds Administrator user management; consult the tracker for verification. Projects is the landing page; project editing and operational screens remain temporarily unavailable until their migration units are complete.
 
 See the [project overview](docs/project-overview.md) for the agreed production purpose, workflows, scope and success criteria.
 
@@ -20,11 +20,12 @@ Use Node 26.12.1 (the local `.nvmrc` pin) and npm 11.20.0. The deployment baseli
 
 ```bash
 npm ci
-npm run auth:staging:bootstrap
 npm run dev
 ```
 
-First copy `.env.example` to private `.env.local` and configure the existing staging URL, publishable key and server-only `SUPABASE_SECRET_KEY`. The project secret is separate from the maintenance PAT. Bootstrap prompts in a private interactive terminal for the first Administrator's name, email and hidden password. It refuses another initialization; preserve its ignored checkpoint and original identity/password on partial failure. No default account is created. Open `http://127.0.0.1:3000/sign-in` after starting development.
+First copy `.env.example` to private `.env.local` and configure the existing staging URL, publishable key and server-only `SUPABASE_SECRET_KEY`. The project secret is separate from the maintenance PAT. Staging already has its first permanent Administrator; sign in with that account. For a new empty environment only, `npm run auth:staging:bootstrap` prompts privately for explicit identity and a hidden password, refuses another initialization and retains its ignored retry checkpoint. No default account is created. Open `http://127.0.0.1:3000/sign-in` after starting development.
+
+With the Administrator role active, open **Users** to save staff invitations, edit names/roles/project assignments, deactivate/reactivate accounts or resume interrupted provisioning. Users set their own passwords. Email stays fixed after saving. Keep `ACCOUNT_EMAIL_ENABLED=false` until custom SMTP and matching templates are configured and verified: pending staff are saved with **Invitation not sent**. CI enables Mailpit; provider acceptance does not prove delivery. Recovery is available for already confirmed accounts, including interrupted invitation password setup. Sending recovery preserves sessions; a successful reset ends other sessions.
 
 Use `127.0.0.1:3000` consistently. Role switching selects only the signed-in person's grants. Prototype account switching, automatic browser initialization and workspace reset are disconnected from the supported runtime. Existing browser data is neither imported nor automatically cleared. Use `npm run dev` for staging review: standard verification deliberately builds without live credentials, so create a fresh configured build before reviewing staging with `npm run start`.
 
@@ -51,7 +52,7 @@ npm run verify:browser
 
 The first command checks the toolchain, then runs lint, route types, TypeScript, maintained unit/isolated-handler tests and a production build. The browser command runs `foundation-public` against an isolated server using Windows Edge or Linux Chrome, with external requests blocked. `npm run test:browser` is an alias. Logs and results live under ignored `.verification/`. The tracker names deferred prototype suites and their restoration milestones; they are not foundation passes.
 
-GitHub Actions retains clean installation, the high-severity audit and standard checks on Linux/Windows with Node 24/26. Both Windows jobs run the public browser suite. Separate Ubuntu database CI replays migrations, tests security/concurrency and real-account browser/email flows, compares generated types, and destroys only its own stack. Local Docker is not required. The workflow also verifies the active session-migration branch; consult the tracker for actual hosted results.
+GitHub Actions retains clean installation, the high-severity audit and standard checks on Linux/Windows with Node 24/26. Both Windows jobs run the public browser suite. Separate Ubuntu database CI replays migrations, tests security/concurrency and real-account browser/email flows, compares generated types, and destroys only its own stack with its immutable audits. Hosted SQL checks roll back their account fixtures; `npm run auth:staging:check` uses Auth-only identities, sends no mail and verifies retained profiles, revisions and audits stay unchanged. Successful audited account/UI workflows run in disposable CI. Local Docker is not required. CI also verifies the active accounts branch; consult the tracker for actual hosted results.
 
 Vercel remains a Node 24 deployment target. The repository's `vercel.json` invokes an installation bootstrap that rejects other Node majors before installing the declared npm version and running `npm ci`. Its `build:deployment` command checks Node 24 and npm again before building; it intentionally fails on local Node 26. Select Node 24 in Vercel project settings and check the build logs during the later protected deployment rehearsal. Package engine ranges admit local Node 26, so a hosting default must not silently change the intended production runtime. This configuration does not deploy the app or establish production readiness.
 

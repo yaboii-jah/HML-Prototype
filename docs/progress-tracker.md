@@ -40,6 +40,7 @@ Update this file after every meaningful implementation or documentation change a
 
 - Unit 3.3 is active. Unit 3.2 is complete; 3.4-3.6 remain planned. The accounts branch starts at documentation checkpoint `6e275f8`; no merge or app deployment is requested.
 - The first permanent staging Administrator has been provisioned and signed in. Preserve this identity and its version/access revision during verification; do not rerun bootstrap. The configured project secret and maintenance PAT remain private and separate.
+- Unit 3.3 implementation includes the grouped account domain/server/UI modules, service-only transactional commands, durable provisioning/message attempts, resumed provisioning, first-sign-in qualification and the credential/reset binding guard. Local lint/types/374 tests/build passed before the latest generated types and expanded browser coverage; final verification is pending. Disposable SQL checks passed at `dcba54b`; the browser run exposed a hydration readiness gap, corrected in `d4909a8`. Earlier SQL variable qualification failures at `ea9532f` and `f5133f9` are retained failures. No 3.3 migration has reached staging yet.
 
 ## Next Up
 

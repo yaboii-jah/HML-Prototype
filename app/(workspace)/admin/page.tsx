@@ -8,5 +8,5 @@ export default async function Page() {
   if (session.activeRole !== "Administrator") redirect("/projects");
   const directory = await accountDirectory();
   if (!directory) redirect("/sign-in");
-  return <AccountAdministration directory={directory}/>;
+  return <AccountAdministration directory={directory} />;
 }

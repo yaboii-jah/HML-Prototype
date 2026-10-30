@@ -94,8 +94,14 @@ export async function checkAccountAdministration({ browser, second, client, logi
   await second.wait("return location.pathname==='/sign-in'");
   assert.equal(ok(await staffClient.rpc('auth_session_context'), 'Old access after reset'), null, 'Native reset deletes old session and binding');
   assert.ok((await staffClient.auth.refreshSession()).error, 'Reset also rejects old refresh token');
-  assert.equal(ok(await client.rpc('auth_bind_session', { target_user: staff.id, target_session: verified.claims.session_id,
-    expected_revision: captured.revision, expected_credential: captured.credential }), 'Old challenge completion'), false, 'Credential proof captured before reset cannot bind');
+  const probe = passwordClient();
+  const issued = ok(await probe.auth.signInWithPassword({ email, password: changedPassword }), 'Issue a valid post-reset Auth session');
+  const issuedClaims = ok(await probe.auth.getClaims(issued.session.access_token), 'Verify post-reset session').claims;
+  const oldProof = { target_user: staff.id, target_session: issuedClaims.session_id, expected_revision: captured.revision, expected_credential: captured.credential };
+  assert.equal(ok(await client.rpc('auth_bind_session', oldProof), 'Old credential proof completion'), false, 'Pre-reset proof cannot bind even a valid newly issued session');
+  ok(await probe.auth.refreshSession(), 'Refresh the unbound post-reset session');
+  assert.equal(ok(await client.rpc('auth_bind_session', oldProof), 'Old credential proof after refresh'), false, 'Token refresh never repairs an old credential proof');
+  await probe.auth.signOut({ scope: 'local' });
   await login(second, { email, password: changedPassword });
   await second.wait("return location.pathname==='/projects'&&!!document.querySelector('.masthead-account')");
   const fresh = await sessionCookie(second);
