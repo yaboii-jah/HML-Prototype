@@ -10,7 +10,7 @@ Update this file after every meaningful implementation or documentation change a
 
 ## Current Goal
 
-- Plan [unit 3.3 account administration](step-3-implementation.md#33-implement-account-administration) from the verified 3.2 checkpoint on `feat/step-3-sessions`. No next-unit implementation has started.
+- Implement [unit 3.3 account administration](step-3-implementation.md#33-implement-account-administration) on `feat/step-3-accounts`, from the verified 3.2 checkpoint. Keep the unit unchecked until disposable CI and scoped staging verification pass.
 
 ## Completed
 
@@ -38,14 +38,14 @@ Update this file after every meaningful implementation or documentation change a
 
 ## In Progress
 
-- No implementation unit is active. Unit 3.2 is complete; 3.3-3.6 remain planned. The final completion documentation checkpoint is local; implementation/tooling through `270c9d4` is published, with no merge or app deployment.
-- The first permanent Administrator is not provisioned. Run `npm run auth:staging:bootstrap` privately with the chosen name/email and hidden password before manual account-management review, then use `npm run dev` at `http://127.0.0.1:3000/sign-in`. Its provisioning/retry/concurrency behavior is already verified in disposable CI. The configured project secret and maintenance PAT remain private and separate.
+- Unit 3.3 is active. Unit 3.2 is complete; 3.4-3.6 remain planned. The accounts branch starts at documentation checkpoint `6e275f8`; no merge or app deployment is requested.
+- The first permanent staging Administrator has been provisioned and signed in. Preserve this identity and its version/access revision during verification; do not rerun bootstrap. The configured project secret and maintenance PAT remain private and separate.
 
 ## Next Up
 
 Use the [production checklist](checklist.md#steps) for the ordered milestones and their completion conditions.
 
-- **Exact next action:** plan unit 3.3 within its guide boundary. Inspect the retained account-management UI and verified session modules, then define authorized invitations/resends, profile/grant/assignment/status operations, last-Administrator/self-deactivation safeguards, atomic audits/invalidation and recovery from Auth/database/email partial failures. Keep step 3 open until all foundation units pass.
+- **Exact next action:** implement the agreed 3.3 commands, account screen and acceptance coverage. Verify the migration in disposable CI before applying it to staging; use rollback SQL fixtures and Auth-only HTTP fixtures so retained audits and the real Administrator remain untouched. Keep step 3 open until all foundation units pass.
 - Follow the guide's dependencies and completion criteria. The prototype's role switch currently selects another account, and its approval commands do not enforce the target permanent-user self-approval restriction. Preserve the documented target rules; verify approval enforcement with the migrated workflows in step 4.
 - Retain local Node 26.12.1, the Vercel Node 24.x target, CI baseline 24.22.1 and npm 11.20.0 across environments. Hosted deployment verification belongs to the later protected rehearsal.
 - Work foundations first: individual identity, shared records and server authorization before business-workflow migration. Tailwind remains a separate track.

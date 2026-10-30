@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { chooseActiveRole, isAuthRole, parseLoginPreflight, parseSessionContext, rolePreferenceCookie, safeWorkspaceDestination, UUID_PATTERN } from "@/src/domain/auth/session";
 import { clearAuthCookies, cookieAuthClient, passwordClient, privilegedAuthClient } from "@/src/server/auth/clients";
 import { requireSession } from "@/src/server/auth/session";
+import { serviceRpc } from "@/src/server/auth/service-rpc";
 
 export type AuthFormState = { error: string };
 const unavailable = "Sign-in is temporarily unavailable. Please try again.";
@@ -33,10 +34,10 @@ export async function signInAction(_state: AuthFormState, form: FormData): Promi
     const sessionId: unknown = verified.data?.claims.session_id;
     if (verified.error || verified.data?.claims.sub !== data.user.id || typeof sessionId !== "string" || !UUID_PATTERN.test(sessionId)
       || !preflight || preflight.userId !== data.user.id) return { error: "Your account has no current workspace access. Contact an Administrator." };
-    const { data: bound, error: bindError } = await privileged.rpc("auth_bind_session", {
+    const bound = await serviceRpc("auth_bind_session", {
       target_user: data.user.id, target_session: sessionId, expected_revision: preflight.revision,
+      expected_credential: preflight.credential,
     });
-    if (bindError) return { error: unavailable };
     if (bound !== true) return { error: "Your access changed during sign-in. Sign in again." };
     const client = await cookieAuthClient(true);
     if (!client) return { error: unavailable };

@@ -9,7 +9,7 @@ test('remembered roles never establish a grant or change permanent identity', ()
   assert.equal(chooseActiveRole(['Accounting', 'Finance'], null), null);
   const projection = { userId: 'd2060a60-ab04-481a-8eee-bc1b806dfac5', displayName: 'Staff', email: 'staff@example.invalid', revision: '3', roles: ['Accounting', 'Finance'], projectIds: [] };
   assert.equal(parseSessionContext(projection).userId, projection.userId);
-  assert.deepEqual(parseLoginPreflight(projection), { userId: projection.userId, revision: '3' });
+  assert.deepEqual(parseLoginPreflight({ ...projection, credential: 'a'.repeat(64) }), { userId: projection.userId, revision: '3', credential: 'a'.repeat(64) });
   for (const value of [null, [], { userId: projection.userId, revision: 3 }, { userId: 'forged', revision: '3' }]) assert.equal(parseLoginPreflight(value), null);
   for (const override of [{ roles: ['Site Personnel', 'Administrator'] }, { roles: ['owner'] }, { revision: '0' }, { projectIds: ['forged'] }]) assert.equal(parseSessionContext({ ...projection, ...override }), null);
 });

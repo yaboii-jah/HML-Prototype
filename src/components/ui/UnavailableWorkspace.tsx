@@ -8,7 +8,7 @@ export async function UnavailableWorkspace({ title = "Area temporarily unavailab
       <span className="eyebrow">HML CONSTRUCTSYNC</span>
       <h1>{title}</h1>
       <p>This area is temporarily unavailable while the workspace is being updated.</p>
-      <Link className="button secondary" href="/projects">Back to projects</Link>
+      {title !== "Projects" && <Link className="button secondary" href="/projects">Back to projects</Link>}
     </section>
   );
 }

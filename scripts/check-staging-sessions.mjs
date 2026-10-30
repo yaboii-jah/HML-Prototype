@@ -34,7 +34,7 @@ const freshLogin = async () => {
   const login = ok(await browser.auth.signInWithPassword({ email, password }), 'Synthetic password sign-in');
   const verified = ok(await browser.auth.getClaims(login.session.access_token), 'Verify synthetic JWT');
   assert.equal(verified.claims.sub, userId);
-  const bound = ok(await admin.rpc('auth_bind_session', { target_user: userId, target_session: verified.claims.session_id, expected_revision: preflight.revision }), 'Bind fresh synthetic session');
+  const bound = ok(await admin.rpc('auth_bind_session', { target_user: userId, target_session: verified.claims.session_id, expected_revision: preflight.revision, expected_credential: preflight.credential }), 'Bind fresh synthetic session');
   assert.equal(bound, true);
   return { ...login.session, sessionId: verified.claims.session_id };
 };

@@ -17,12 +17,13 @@ export function isAuthRole(value: unknown): value is AuthRole {
   return typeof value === "string" && AUTH_ROLES.some(role => role === value);
 }
 
-export function parseLoginPreflight(value: unknown): { userId: string; revision: string } | null {
+export function parseLoginPreflight(value: unknown): { userId: string; revision: string; credential: string } | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const entry = value as Record<string, unknown>;
   return typeof entry.userId === "string" && UUID_PATTERN.test(entry.userId)
     && typeof entry.revision === "string" && /^[1-9]\d*$/.test(entry.revision)
-    ? { userId: entry.userId, revision: entry.revision } : null;
+    && typeof entry.credential === "string" && /^[a-f0-9]{64}$/.test(entry.credential)
+    ? { userId: entry.userId, revision: entry.revision, credential: entry.credential } : null;
 }
 
 export function parseSessionContext(value: unknown): SessionContext | null {

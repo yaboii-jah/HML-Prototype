@@ -2,7 +2,7 @@ name: Database foundation
 on:
   pull_request:
   push:
-    branches: [main, staging, 'feat/step-3-hosted-foundation', 'feat/step-3-sessions']
+    branches: [main, staging, 'feat/step-3-hosted-foundation', 'feat/step-3-sessions', 'feat/step-3-accounts']
   workflow_dispatch:
 permissions:
   contents: read

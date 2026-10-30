@@ -51,6 +51,7 @@ if (action.startsWith('auth-')) {
 } else if (action === 'check') {
   await supabase(['db', 'query', '--linked', '--project-ref', STAGING_REF, '--file', resolve('supabase/checks/staging.sql')]);
   await supabase(['db', 'query', '--linked', '--project-ref', STAGING_REF, '--file', resolve('supabase/checks/sessions.sql')]);
+  await supabase(['db', 'query', '--linked', '--project-ref', STAGING_REF, '--file', resolve('supabase/checks/accounts.sql')]);
 } else {
   if (action === 'apply') {
     const evidence = JSON.parse(await readFile('.verification/database-ci.json', 'utf8'));
