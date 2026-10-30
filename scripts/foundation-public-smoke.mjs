@@ -8,7 +8,7 @@ try {
   await browser.wait("return !!document.querySelector('#signin-email')");
   assert.equal(await browser.run("return document.querySelector('.signin-submit').disabled"), true, 'Missing configuration fails closed');
   assert.equal(await browser.run("return Object.keys(localStorage).some(k=>/hml-constructsync-(demo|users|session)/.test(k))"), false, 'No demo initialization');
-  await browser.run("localStorage.setItem('hml-constructsync-session-v1',JSON.stringify({role:'Administrator'}));");
+  await browser.run("localStorage.setItem('hml-constructsync-session-v2',JSON.stringify({email:'forged@example.invalid',role:'Administrator',userId:'forged',revision:1}));localStorage.setItem('hml-constructsync-demo-session-v1',JSON.stringify({role:'Administrator'}));");
   await browser.navigate('/projects');
   assert.equal(await browser.run('return location.pathname'), '/sign-in', 'Forged browser identity cannot enter');
   for (const route of ['/requests/new', '/admin/maintenance', '/demo-files/forged', '/reports']) {

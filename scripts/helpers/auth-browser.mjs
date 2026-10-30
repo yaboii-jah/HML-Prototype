@@ -8,7 +8,8 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { browserCallTimeout, configureBrowserChecks, navigateDocument } from './browser-environment.mjs';
 import { requireLoopback } from './supabase-target.mjs';
 
-export async function authBrowser(base) {
+export async function authBrowser(base, { startupTimeoutMs = 30000, onLaunch } = {}) {
+  if (!Number.isInteger(startupTimeoutMs) || startupTimeoutMs < 1000 || startupTimeoutMs > 30000) throw Error('Invalid bounded browser startup deadline');
   const appOrigin = requireLoopback(base).origin;
   const binaries = process.platform === 'win32'
     ? ['C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', 'C:/Program Files/Microsoft/Edge/Application/msedge.exe']
@@ -50,21 +51,26 @@ export async function authBrowser(base) {
     await rm(target, { recursive: true, force: true, maxRetries: 8, retryDelay: 200 });
   }
   try {
+    onLaunch?.(child);
     let target;
     let lastProbe = '';
-    for (let i = 0; i < 100 && !target; i++) {
+    while (Date.now() - startupStarted < startupTimeoutMs && !target) {
       if (failedStart || child.exitCode !== null) throw Error('Browser could not start');
       try {
         const port = Number((await readFile(join(profile, 'DevToolsActivePort'), 'utf8')).split('\n')[0]);
         if (!Number.isInteger(port) || port < 1 || port > 65535) throw Error('Invalid run-owned debugging port');
-        target = (await fetch(`http://127.0.0.1:${port}/json`).then(r => r.json())).find(page => page.type === 'page');
+        target = (await fetch(`http://127.0.0.1:${port}/json`, { signal: AbortSignal.timeout(2000) }).then(r => r.json())).find(page => page.type === 'page');
       } catch (error) { lastProbe = `${error.code ?? error.cause?.code ?? error.name}: ${error.message}`; }
       if (!target) await delay(100);
     }
     assert.ok(target, `Isolated browser started (${Date.now() - startupStarted}ms; ${lastProbe}; ${startupDiagnostics})`);
     discoveryComplete = true;
     socket = new WebSocket(target.webSocketDebuggerUrl);
-    await new Promise((done, reject) => { socket.onopen = done; socket.onerror = reject; });
+    await new Promise((done, reject) => {
+      const timer = setTimeout(() => { socket.close(); reject(Error('Browser debugging connection timed out')); }, 15000);
+      socket.onopen = () => { clearTimeout(timer); done(); };
+      socket.onerror = () => { clearTimeout(timer); reject(Error('Browser debugging connection failed')); };
+    });
     const call = (method, params = {}) => new Promise((done, reject) => {
       const id = ++nextId;
       const timer = setTimeout(() => { pending.delete(id); reject(Error('Browser timeout: ' + method)); }, browserCallTimeout(method, 15000));
@@ -108,6 +114,7 @@ export async function authBrowser(base) {
     const navigate = async route => { await navigateDocument(call, base + route); await wait("return !!document.querySelector('h1,h2')"); };
     const fill = async (selector, value) => run(`const el=document.querySelector(${JSON.stringify(selector)});if(!el)throw Error('Input missing');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(el,${JSON.stringify(value)});el.dispatchEvent(new Event('input',{bubbles:true}));`);
     const click = async selector => run(`const el=document.querySelector(${JSON.stringify(selector)});if(!el)throw Error('Control missing');el.click();`);
-    return { run, wait, navigate, fill, click, call, close, assertIsolated: () => assert.deepEqual(violations, [], 'Browser made no external HTTP/WebSocket requests') };
+    return { run, wait, navigate, fill, click, call, close, discoveryMs: Date.now() - startupStarted,
+      assertIsolated: () => assert.deepEqual(violations, [], 'Browser made no external HTTP/WebSocket requests') };
   } catch (error) { await close(); throw error; }
 }

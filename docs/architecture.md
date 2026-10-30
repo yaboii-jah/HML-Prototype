@@ -2,7 +2,7 @@
 
 This document describes the agreed **target architecture** for HML ConstructSync, an internal construction operations system for HML Technologies and Services Inc. It is a guide for the production migration, not a claim that the migration is complete. HML will start with fresh operational records; importing the prototype's browser data is not part of this plan.
 
-Today the app is a browser-local prototype: accounts, sessions and business records are stored in the browser, document originals and caches use IndexedDB, and Next.js server routes support document generation, Google Drive and Gemini. The current account switching simulates staff identities rather than enforcing production authentication. New workspaces start without operational sample records, but the app still includes demonstration accounts and reset/initialization behavior. Those must be retired before business use.
+The committed prototype remains recoverable in Git. On the migration branch, unit 3.2 replaces its browser-local identity and global workspace provider with Supabase sessions and a small protected shell; consult the tracker for verification. Unsupported account/project/operational screens and document/provider endpoints are disabled until their designated migrations. Prototype rules and isolated fixtures remain for regression coverage, but demonstration accounts, identity switching and reset/initialization are disconnected from the supported runtime. Production readiness requires the remaining milestones.
 
 ## Stack
 
@@ -37,7 +37,7 @@ src/
   domain/              Business rules, commands, permissions and calculations
   features/            Department screens and workflows
   mock/                Prototype browser repository and workspace initialization
-  server/              Server-side documents, Google Drive and AI integrations
+  server/              Authorized Auth/database operations and provider integrations
   styles/              Current custom CSS
 public/                Public assets such as company branding
 tests/                 Automated tests, helpers and isolated fixtures

@@ -28,6 +28,7 @@ const counts = async () => {
   return result;
 };
 const before = await counts();
+await writeFile('.verification/staging-sessions.json', JSON.stringify({ passed: false, cleaned: false, runId }, null, 2));
 const freshLogin = async () => {
   const preflight = ok(await admin.rpc('auth_login_preflight', { login_email: email }), 'Read login preflight');
   const login = ok(await browser.auth.signInWithPassword({ email, password }), 'Synthetic password sign-in');
@@ -71,6 +72,16 @@ try {
   passed = true;
 } finally {
   await browser.auth.signOut({ scope: 'local' }).catch(() => undefined);
+  if (!userId) {
+    // A create response may have been lost. Recover only this run's trusted
+    // marker, never adopt an existing user solely because an email matches.
+    for (let page = 1; page <= 100; page++) {
+      const list = ok(await admin.auth.admin.listUsers({ page, perPage: 100 }), `Synthetic cleanup discovery failed for run ${runId}.`);
+      const owned = list.users.find(user => user.email === email && user.app_metadata?.foundation_check_id === runId);
+      if (owned) { userId = owned.id; break; }
+      if (list.users.length < 100) break;
+    }
+  }
   if (userId) {
     const owned = ok(await admin.auth.admin.getUserById(userId), 'Verify synthetic cleanup ownership').user;
     if (owned.email !== email || owned.app_metadata?.foundation_check_id !== runId) throw Error(`Synthetic cleanup ownership mismatch for ${userId}.`);
@@ -80,7 +91,7 @@ try {
   }
   const after = await counts();
   assert.deepEqual(after, before, 'Retained staging record counts are unchanged');
-  await writeFile('.verification/staging-sessions.json', JSON.stringify({ passed, cleaned, retainedCountsMatch: true, emailSent: false, before, after }, null, 2));
+  await writeFile('.verification/staging-sessions.json', JSON.stringify({ passed, cleaned, runId, retainedCountsMatch: true, emailSent: false, before, after }, null, 2));
 }
 assert.ok(passed && cleaned);
 console.log('Staging session, revocation, refresh and recovery parity passed; synthetic identity cleaned; no email sent.');
