@@ -19,8 +19,6 @@ const authSettings = {
   uri_allow_list: 'http://127.0.0.1:3000/auth/confirm',
   password_min_length: 8,
   security_update_password_require_current_password: true,
-  mailer_templates_invite_content: await readFile('supabase/templates/invite.html', 'utf8'),
-  mailer_templates_recovery_content: await readFile('supabase/templates/recovery.html', 'utf8'),
 };
 
 if (action.startsWith('auth-')) {

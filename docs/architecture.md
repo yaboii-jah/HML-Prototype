@@ -115,6 +115,8 @@ Validate the project's mapped folder and resolve pending/failed archives through
 
 For repeatable verification and ownership-checked test cleanup, follow [AI workflow rules](ai-workflow-rules.md#before-moving-to-the-next-unit). Backup/restore targets and operational ownership remain [open decisions](progress-tracker.md#open-questions).
 
+On the Free plan, hosted projects using Supabase's default email provider cannot modify invitation/recovery templates (verified by the staging API in 3.2). The guarded staging Auth command applies security/URL settings only. CI uses the committed templates with Mailpit; hosted checks generate restricted synthetic links without sending mail. Configure the verified custom SMTP provider and matching templates before real email delivery is enabled.
+
 ## Auth and Access Model
 
 Unit 3.2 is implementing this model on the migration branch; its verification is pending in the tracker. The supported shell uses a small session projection and protected unavailable pages until later units migrate their records. Server-owned HttpOnly Auth cookies hold the session; browser role cookies are validated preferences. Proxy refreshes tokens, while server operations and database policies independently check current session bindings and grants. Private binding/provisioning implementations have service-only invoker RPC wrappers; the authenticated session-projection RPC returns only the caller's current context. Opening an invitation/recovery page does not consume its link or grant workspace access: password submission verifies the one-time proof in a temporary unbound session, then returns to password sign-in.
