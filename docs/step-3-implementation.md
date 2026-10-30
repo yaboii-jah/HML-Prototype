@@ -107,7 +107,7 @@ Completed 2026-10-30: local standard checks passed with 371 tests/build; all fou
 
 ### 3.3 Implement Account Administration
 
-- [ ] Account administration and access invalidation verified.
+- [x] Account administration and access invalidation verified.
 
 **Depends on:** 3.2.
 
@@ -122,11 +122,15 @@ Close the reset/login race by capturing a server-only opaque credential fingerpr
 Verification includes real commands/UI, captured invite/recovery/retry failures, non-Administrator/forged requests, no-op/conflict/Site rules, first-sign-in qualification, observed-lock last-Administrator races at both isolation levels, access revocation after refresh, and the reset/login race. Hosted SQL runs real commands inside a rollback-only fixture transaction; separate HTTP checks use owned Auth-only identities without application profiles. Full successful provisioning/UI workflows run only in disposable CI, whose whole stack is destroyed with its audits. Do not add audit-deletion or test-authorization exemptions. Compare retained counts and the real Administrator's version/revision before and after staging checks.
 
 - Adapt the existing account-management UI for invitations/resends, profile management, role grants, assignments, deactivation/reactivation and recovery links. Verify messages through CI Mailpit; hosted manual tests use restricted synthetic-account link generation without claiming email delivery.
-- Enforce Site Personnel exclusivity and assignment limits. Preserve at least one active Administrator under concurrent changes and prevent self-deactivation. Retain permanent identities and historical audit attribution.
+- Enforce Site Personnel exclusivity and valid unique project assignments, with zero or many projects. Preserve at least one active Administrator who has signed in under concurrent changes, prevent self-deactivation and require another Administrator to remove one's Administrator grant. Retain permanent identities and historical audit attribution.
 - Apply role/assignment changes and access-revision invalidation atomically. Require fresh sign-in for affected sessions across browsers; immediate rejection is enforced by the database/server even before realtime UI feedback exists.
 - Make Auth/database/email partial failures visible and recoverable. Retry provisioning without duplicate identities or granting access before valid application grants exist.
 
 **Done when:** Administrator-only account flows work with captured messages, including failed/resend cases; non-Administrators cannot bypass them; old sessions remain rejected after token refresh; last-Administrator and concurrent-change checks pass. Existing domain/self-approval requirements are retained for step 4, not reported as implemented approval flows.
+
+Completed 2026-10-30: code `f908fba` passed [all four standard jobs](https://github.com/yaboii-jah/HML-Prototype/actions/runs/41022302927) and [disposable SQL/Auth/account-browser/Mailpit/type/concurrency checks](https://github.com/yaboii-jah/HML-Prototype/actions/runs/41022302959). Local standard checks passed with 374 tests/build and the public browser suite. Migration `20261030065607` is applied to staging; rollback command checks, Auth-only recovery/access-denial parity, generated-type matching and retained-state checks passed. The existing Administrator and immutable audit history are preserved. Hosted email remains disabled; production is unchanged. Detailed evidence and advisor limits are in the [tracker](progress-tracker.md#session-notes).
+
+**Local review:** sign in with the existing staging Administrator, keep the Administrator role active and open **Users**. Pending staff can be saved without SMTP; incomplete provisioning requests can be resumed by a current Administrator. Account email is fixed in this workflow. Configure and verify custom SMTP/templates before enabling `ACCOUNT_EMAIL_ENABLED=true`. The retired prototype `user-management` suite is replaced by maintained real-session account coverage in disposable CI; its project and Drive portions remain with units 3.4 and checklist step 5.
 
 ### 3.4 Implement Shared Projects and Scopes
 
@@ -164,7 +168,7 @@ Verification includes real commands/UI, captured invite/recovery/retry failures,
 - Retain standard Linux/Windows and Node 24/26 checks. Extend the disposable Supabase/Mailpit and real-account browser coverage introduced in 3.2 to complete foundation acceptance. Keep its shared Linux Chrome/Windows Edge launcher, bounded CDP waits and isolated profiles.
 - Configure local-only Auth/Data/Realtime endpoints before building test bundles. Validate endpoints explicitly: the existing Node-fetch network guard does not isolate browser requests or Realtime WebSockets. Automated tests must never reset or depend on the hosted development project.
 - Map the acceptance scenarios below to maintained tests. Preserve existing domain tests and record each deferred browser workflow, its reason and restoration milestone; deferred cases are never counted as passed.
-- Run synthetic parity checks against the existing staging project using accounts provisioned without sending email. Keep cleanup scoped to run-owned resources. Keep the app review local; a hosted application preview and production promotion are deferred to step 7.
+- Run synthetic parity checks against the existing staging project without sending email: real account commands in rollback-only SQL fixtures and separate Auth-only HTTP identities without application profiles. Successful audited provisioning/UI workflows run in disposable CI, whose stack is destroyed with its audits. Keep hosted cleanup scoped to owned Auth identities and preserve retained profiles, revisions and audits. Keep the app review local; a hosted application preview and production promotion are deferred to step 7.
 - Review documentation, remaining release blockers and actual hosted/local evidence before checking step 3 complete.
 
 **Done when:** required local and hosted CI foundation checks pass, dedicated development-backend parity is recorded, deferred coverage is visible, and the tracker/checklist describe the supported foundation accurately. Captured-email verification does not satisfy real email delivery or production readiness.
