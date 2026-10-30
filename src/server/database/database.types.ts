@@ -4,7 +4,35 @@ export type Database = {
 
   "private": {
           Tables: {
-            "audit_events": {
+            "account_guard": {
+                  Row: {
+                    "id": boolean,"revision": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "id"?: boolean,"revision"?: number
+                  }
+                  Update: {
+                    "id"?: boolean,"revision"?: number
+                  }
+                  Relationships: [
+
+                  ]
+                },"account_operations": {
+                  Row: {
+                    "actor_id": string,"created_at": string,"id": string,"kind": string,"payload": NonNullable<Json>,"result": Json | null,"state": string,"target_id": string,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "actor_id": string,"created_at"?: string,"id": string,"kind": string,"payload": NonNullable<Json>,"result"?: Json | null,"state": string,"target_id": string,"updated_at"?: string
+                  }
+                  Update: {
+                    "actor_id"?: string,"created_at"?: string,"id"?: string,"kind"?: string,"payload"?: NonNullable<Json>,"result"?: Json | null,"state"?: string,"target_id"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+
+                  ]
+                },"audit_events": {
                   Row: {
                     "action": string,"actor_name": string,"actor_role": string,"actor_user_id": string,"details": NonNullable<Json>,"entity_id": string,"entity_type": string,"id": string,"occurred_at": string,"request_id": string
                   }
@@ -38,8 +66,35 @@ export type Database = {
             [_ in never]: never
           }
           Functions: {
-            "bind_session":
-{ Args: { "expected_revision": string,"target_session": string,"target_user": string }; Returns: boolean
+            "account_actor":
+{ Args: { "actor": Json,"writing"?: boolean }; Returns: string
+                           },
+"account_audit":
+{ Args: { "actor_id": string,"details"?: Json,"event": string,"operation": string,"target": string }; Returns: undefined
+                           },
+"account_complete":
+{ Args: { "actor": Json,"operation": string }; Returns: Json
+                           },
+"account_message":
+{ Args: { "actor": Json,"expected_version": string,"message_kind": string,"operation": string,"outcome"?: string,"target": string }; Returns: Json
+                           },
+"account_reserve":
+{ Args: { "actor": Json,"draft": Json,"operation": string }; Returns: Json
+                           },
+"account_save":
+{ Args: { "actor": Json,"draft": Json,"expected_version": string,"operation": string,"target": string }; Returns: Json
+                           },
+"account_validate":
+{ Args: { "draft": Json }; Returns: undefined
+                           },
+"account_view":
+{ Args: { "target": string }; Returns: Json
+                           },
+"accounts_directory":
+{ Args: { "actor": Json }; Returns: Json
+                           },
+"bind_session":
+{ Args: { "expected_credential": string,"expected_revision": string,"target_session": string,"target_user": string }; Returns: boolean
                            },
 "bootstrap_administrator":
 { Args: { "display_name": string,"request_id": string,"target_user": string }; Returns: string
@@ -76,14 +131,14 @@ export type Database = {
           Tables: {
             "profiles": {
                   Row: {
-                    "access_revision": number,"created_at": string,"display_name": string,"is_active": boolean,"updated_at": string,"user_id": string,"version": number
+                    "access_revision": number,"created_at": string,"display_name": string,"first_signed_in_at": string | null,"is_active": boolean,"updated_at": string,"user_id": string,"version": number
                   }
                   ComputedFields: never
                   Insert: {
-                    "access_revision"?: number,"created_at"?: string,"display_name": string,"is_active"?: boolean,"updated_at"?: string,"user_id": string,"version"?: number
+                    "access_revision"?: number,"created_at"?: string,"display_name": string,"first_signed_in_at"?: string | null,"is_active"?: boolean,"updated_at"?: string,"user_id": string,"version"?: number
                   }
                   Update: {
-                    "access_revision"?: number,"created_at"?: string,"display_name"?: string,"is_active"?: boolean,"updated_at"?: string,"user_id"?: string,"version"?: number
+                    "access_revision"?: number,"created_at"?: string,"display_name"?: string,"first_signed_in_at"?: string | null,"is_active"?: boolean,"updated_at"?: string,"user_id"?: string,"version"?: number
                   }
                   Relationships: [
 
@@ -214,8 +269,23 @@ isOneToOne: false
             [_ in never]: never
           }
           Functions: {
-            "auth_bind_session":
-{ Args: { "expected_revision": string,"target_session": string,"target_user": string }; Returns: boolean
+            "account_complete":
+{ Args: { "actor": Json,"operation": string }; Returns: Json
+                           },
+"account_message":
+{ Args: { "actor": Json,"expected_version": string,"message_kind": string,"operation": string,"outcome"?: string,"target": string }; Returns: Json
+                           },
+"account_reserve":
+{ Args: { "actor": Json,"draft": Json,"operation": string }; Returns: Json
+                           },
+"account_save":
+{ Args: { "actor": Json,"draft": Json,"expected_version": string,"operation": string,"target": string }; Returns: Json
+                           },
+"accounts_directory":
+{ Args: { "actor": Json }; Returns: Json
+                           },
+"auth_bind_session":
+{ Args: { "expected_credential": string,"expected_revision": string,"target_session": string,"target_user": string }; Returns: boolean
                            },
 "auth_bootstrap_administrator":
 { Args: { "display_name": string,"request_id": string,"target_user": string }; Returns: string

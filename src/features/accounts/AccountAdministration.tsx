@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type FormEvent } from "react";
+import { useRef, useState, useSyncExternalStore, type FormEvent } from "react";
 import { accountCommandAction } from "@/app/(workspace)/admin/actions";
 import { AUTH_ROLES, type AuthRole } from "@/src/domain/auth/session";
 import type { Account, AccountCommand, AccountDirectory, AccountDraft, AccountResult } from "@/src/domain/accounts/accounts";
@@ -12,8 +12,10 @@ import { useConfirmation } from "@/src/components/ui/ConfirmDialog";
 type Directory = AccountDirectory & { actorId: string; emailEnabled: boolean };
 type Editor = { id: string | null; version: string; email: string; draft: AccountDraft; conflict: boolean };
 const messageLabel = (status: Account["messageStatus"]) => ({ not_sent: "Invitation not sent", accepted: "Message accepted by provider", failed: "Message failed", uncertain: "Message outcome uncertain" })[status];
+const subscribeHydration = () => () => {};
 
 export function AccountAdministration({ directory }: { directory: Directory }) {
+  const hydrated = useSyncExternalStore(subscribeHydration, () => true, () => false);
   const [search, setSearch] = useState(""), [role, setRole] = useState("all"), [status, setStatus] = useState("all");
   const [editor, setEditor] = useState<Editor | null>(null), [busy, setBusy] = useState(false);
   const [error, setError] = useState(""), [notice, setNotice] = useState("");
@@ -50,7 +52,7 @@ export function AccountAdministration({ directory }: { directory: Directory }) {
       const key = JSON.stringify(payload);
       if (retry.current?.key !== key) retry.current = { key, requestId: crypto.randomUUID() };
       const result = await run({ ...payload, requestId: retry.current.requestId });
-      if (result.ok) { setEditor(null); setNotice(result.message); retry.current = null; }
+      if (result.ok || result.accountSaved) { setEditor(null); if (result.ok) setNotice(result.message); else setError(result.message); retry.current = null; }
       else { setError(result.message); if (result.conflict) setEditor(current => current && ({ ...current, conflict: true })); }
     } finally { submitting.current = false; setBusy(false); }
   };
@@ -97,7 +99,7 @@ export function AccountAdministration({ directory }: { directory: Directory }) {
   };
 
   return <>
-    <PageHeader eyebrow="Administration" title="Users" description="Manage staff invitations, roles and workspace access." actions={<button className="button primary" disabled={busy} onClick={() => open()}>Invite staff</button>}/>
+    <PageHeader eyebrow="Administration" title="Users" description="Manage staff invitations, roles and workspace access." actions={<button className="button primary" disabled={!hydrated || busy} onClick={() => open()}>Invite staff</button>}/>
     {!directory.emailEnabled && <p className="account-capability">Email sending is unavailable. You can save pending accounts; invitations will remain unsent.</p>}
     {!editor && <InlineError message={error}/>}{notice && <p className="account-notice" role="status">{notice}</p>}
     {directory.pending.length > 0 && <section className="panel account-history"><h2>Provisioning needs attention</h2><p>These saved requests have not yet completed. Resume to reconcile their existing identity and finish setup.</p><ul>{directory.pending.map(p => <li key={p.requestId}><strong>{p.draft.name}</strong> · {p.draft.email} <button type="button" className="button secondary" disabled={busy} onClick={() => void resume(p)}>Resume provisioning</button></li>)}</ul></section>}

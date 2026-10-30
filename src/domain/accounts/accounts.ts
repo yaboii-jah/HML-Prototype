@@ -15,7 +15,7 @@ export type AccountCommand =
   | { type: "invite"; requestId: string; draft: AccountDraft & { email: string } }
   | { type: "save"; requestId: string; id: string; version: string; draft: AccountDraft }
   | { type: "message"; requestId: string; id: string; version: string; kind: "invite" | "recovery" };
-export type AccountResult = { ok: boolean; message: string; conflict?: boolean; signInRequired?: boolean };
+export type AccountResult = { ok: boolean; message: string; conflict?: boolean; signInRequired?: boolean; accountSaved?: boolean };
 
 export function object(value: unknown): Record<string, unknown> | null {
   return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : null;

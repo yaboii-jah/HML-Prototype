@@ -66,8 +66,9 @@ export async function executeAccountCommand(command: AccountCommand, actor: Acco
   }
   const account = parseAccount(await gateway.rpc("account_complete", { actor, operation: command.requestId }));
   if (!account) throw Error("Invalid account result");
-  if (!gateway.emailEnabled) return { ok: true, message: "Account saved. Invitation not sent; email sending is unavailable." };
+  if (!gateway.emailEnabled) return { ok: true, accountSaved: true, message: "Account saved. Invitation not sent; email sending is unavailable." };
+  if (account.confirmed) return { ok: true, accountSaved: true, message: "Account saved. Email setup is already confirmed; use recovery if a new password is needed." };
   const sent = await message({ type: "message", id: account.id, version: account.version,
-    requestId: invitationAttempt(command.requestId), kind: account.confirmed ? "recovery" : "invite" }, actor, gateway);
-  return { ...sent, message: "Account saved. " + sent.message };
+    requestId: invitationAttempt(command.requestId), kind: "invite" }, actor, gateway);
+  return { ...sent, accountSaved: true, message: "Account saved. " + sent.message };
 }

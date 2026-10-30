@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
+import { setTimeout as delay } from 'node:timers/promises';
 
 /** Successful audited account workflows run only in the disposable CI stack. */
 export async function checkAccountAdministration({ browser, second, client, login, logout, sessionCookie, mailLink, savePassword, administrator, passwordClient, sql }) {
@@ -8,7 +9,7 @@ export async function checkAccountAdministration({ browser, second, client, logi
   await login(browser, administrator);
   await browser.wait("return location.pathname==='/projects'&&document.querySelector('.account-label small')?.textContent==='Administrator'");
   await browser.navigate('/admin');
-  await browser.wait("return !!document.querySelector('input[aria-label=\"Search users\"]')");
+  await browser.wait("return !!document.querySelector('input[aria-label=\"Search users\"]')&&!document.querySelector('.page-header .primary').disabled");
   assert.equal(await browser.run("return !!document.querySelector('input[name=password]')"), false, 'Administrator never chooses another user password');
   const rootSession = await sessionCookie(browser);
   const verified = ok(await client.auth.getClaims(rootSession.access_token), 'Verify Administrator test claims');
@@ -47,9 +48,17 @@ export async function checkAccountAdministration({ browser, second, client, logi
   await browser.click('.record-dialog .form-actions .primary'); await confirm();
   await browser.wait("return !document.querySelector('.record-dialog[open]')");
   assert.match(await browser.run(`return document.querySelector(${JSON.stringify(row)}).textContent`), /Preserved draft/);
+  let latest = ok(await client.rpc('accounts_directory', { actor }), 'Version before deactivation').users.find(user => user.id === staff.id);
+  latest = ok(await client.rpc('account_save', { actor, operation: randomUUID(), target: staff.id, expected_version: latest.version,
+    draft: { name: latest.name, roles: latest.roles, projectIds: [], active: false, clearAssignments: false } }), 'Deactivate before consuming issued invitation');
   await second.navigate(invitation);
   const password = randomUUID(); await savePassword(second, password);
   await second.wait("return location.pathname==='/sign-in'");
+  await login(second, { email, password });
+  await second.wait("return document.querySelector('#signin-error')?.textContent.includes('workspace access')");
+  assert.equal(ok(await client.rpc('accounts_directory', { actor }), 'Invitation did not reactivate').users.find(user => user.id === staff.id).active, false);
+  ok(await client.rpc('account_save', { actor, operation: randomUUID(), target: staff.id, expected_version: latest.version,
+    draft: { name: latest.name, roles: latest.roles, projectIds: [], active: true, clearAssignments: false } }), 'Reactivate retaining access grants');
   await login(second, { email, password });
   await second.wait("return location.pathname==='/choose-role'");
   await second.run("const el=document.querySelector('#active-role');el.value='Accounting';el.dispatchEvent(new Event('change',{bubbles:true}));");
@@ -76,6 +85,7 @@ export async function checkAccountAdministration({ browser, second, client, logi
   assert.ok(ok(await staffClient.rpc('auth_session_context'), 'Session remains before reset'), 'Sending recovery does not revoke');
   const captured = ok(await client.rpc('auth_login_preflight', { login_email: email }), 'Capture pre-reset credential proof');
   // A second successful recovery replaces the old same-kind link.
+  await delay(1100); // Respect the disposable provider's declared one-second resend limit.
   await browser.navigate('/admin'); await clickMessage();
   const replacement = await mailLink(email, 'recovery');
   await second.navigate(recovery); await savePassword(second, randomUUID());
@@ -103,6 +113,29 @@ export async function checkAccountAdministration({ browser, second, client, logi
   assert.ok(audit.some(event => event.targetId === staff.id && event.action === 'account.created'));
   assert.ok(audit.some(event => event.targetId === staff.id && event.action === 'account.updated'));
   assert.ok(audit.every(event => !/token|password|credential/i.test(JSON.stringify(event))), 'History has no credential material');
+
+  // Native verification confirms email before the separate password update.
+  // If that save fails, invitation resending cannot repair it; recovery can.
+  const partialEmail = `${randomUUID()}@example.invalid`, operation = randomUUID();
+  const partialDraft = { name: 'Interrupted password setup', email: partialEmail, roles: ['Administrator'], projectIds: [], active: true, clearAssignments: false };
+  const reserved = ok(await client.rpc('account_reserve', { actor, operation, draft: partialDraft }), 'Reserve interrupted setup');
+  ok(await client.auth.admin.createUser({ id: reserved.id, email: partialEmail, email_confirm: false, app_metadata: { account_request_id: operation } }), 'Create interrupted setup identity');
+  let partial = ok(await client.rpc('account_complete', { actor, operation }), 'Complete interrupted setup profile');
+  ok(await client.auth.admin.inviteUserByEmail(partialEmail), 'Send interrupted setup invitation');
+  const partialLink = new URL(await mailLink(partialEmail, 'invite'), 'http://127.0.0.1:3198');
+  const setup = passwordClient();
+  ok(await setup.auth.verifyOtp({ type: 'invite', token_hash: partialLink.searchParams.get('token_hash') }), 'Consume invitation proof');
+  assert.ok((await setup.auth.updateUser({ password: 'short' })).error, 'Simulate rejected password save after confirmation');
+  await setup.auth.signOut({ scope: 'local' });
+  assert.equal((await client.auth.admin.inviteUserByEmail(partialEmail)).error?.code, 'email_exists', 'Confirmed identity cannot be reinvited');
+  partial = ok(await client.rpc('accounts_directory', { actor }), 'Interrupted setup status').users.find(u => u.id === partial.id);
+  assert.equal(partial.confirmed, true); assert.equal(partial.firstSignedInAt, null, 'Confirmed pending Administrator is not usable backup');
+  assert.ok((await client.rpc('account_message', { actor, operation: randomUUID(), target: partial.id, expected_version: partial.version, message_kind: 'invite' })).error);
+  ok(await passwordClient().auth.resetPasswordForEmail(partialEmail), 'Send recovery for confirmed incomplete setup');
+  const repair = new URL(await mailLink(partialEmail, 'recovery'), 'http://127.0.0.1:3198');
+  ok(await setup.auth.verifyOtp({ type: 'recovery', token_hash: repair.searchParams.get('token_hash') }), 'Verify repair proof');
+  ok(await setup.auth.updateUser({ password: randomUUID() }), 'Recovery repairs interrupted password setup');
+  await setup.auth.signOut({ scope: 'local' });
   await logout(browser);
   // All audited synthetic rows remain until the owned CI stack is destroyed.
   assert.ok((await sql(`select count(*) from private.audit_events where entity_id='${staff.id}';`)).output.trim() !== '0');
