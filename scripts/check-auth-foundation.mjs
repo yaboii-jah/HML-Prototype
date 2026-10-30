@@ -153,7 +153,7 @@ export async function checkAuthFoundation({ api, anon, secret, mailpit, sql, env
     await browser.wait("return document.querySelector('.account-label small')?.textContent==='Finance'");
     const afterSwitch = await sessionCookie(browser);
     assert.equal(afterSwitch.user.id, beforeSwitch.user.id, 'Role switching preserves permanent identity');
-    assert.equal(afterSwitch.access_token, beforeSwitch.access_token, 'Role switching does not authenticate as another account');
+    assert.ok(afterSwitch.access_token === beforeSwitch.access_token, 'Role switching does not authenticate as another account');
     await logout(browser);
     await login(browser, multi);
     await browser.wait("return location.pathname==='/projects'&&document.querySelector('.account-label small')?.textContent==='Finance'");

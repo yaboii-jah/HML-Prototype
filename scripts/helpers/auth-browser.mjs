@@ -23,9 +23,17 @@ export async function authBrowser(base) {
     '--proxy-server=http://127.0.0.1:9', '--proxy-bypass-list=127.0.0.1;localhost;[::1]',
     ...(process.platform === 'linux' ? ['--no-sandbox', '--disable-dev-shm-usage'] : []),
     '--remote-debugging-port=0', `--user-data-dir=${profile}`, 'about:blank',
-  ], { windowsHide: true, stdio: 'ignore' });
+  ], { windowsHide: true, stdio: ['ignore', 'ignore', 'pipe'] });
   let socket;
   let failedStart;
+  let discoveryComplete = false;
+  let startupDiagnostics = '';
+  const startupStarted = Date.now();
+  child.stderr.on('data', chunk => {
+    // Stop collecting before any page receives an account/link. Startup-only
+    // diagnostics cannot contain application credentials or confirmation URLs.
+    if (!discoveryComplete) startupDiagnostics = (startupDiagnostics + chunk).slice(-3000);
+  });
   child.on('error', error => { failedStart = error; });
   const stopped = new Promise(done => child.once('close', done));
   const pending = new Map();
@@ -43,16 +51,18 @@ export async function authBrowser(base) {
   }
   try {
     let target;
+    let lastProbe = '';
     for (let i = 0; i < 100 && !target; i++) {
       if (failedStart || child.exitCode !== null) throw Error('Browser could not start');
       try {
         const port = Number((await readFile(join(profile, 'DevToolsActivePort'), 'utf8')).split('\n')[0]);
         if (!Number.isInteger(port) || port < 1 || port > 65535) throw Error('Invalid run-owned debugging port');
         target = (await fetch(`http://127.0.0.1:${port}/json`).then(r => r.json())).find(page => page.type === 'page');
-      } catch {}
+      } catch (error) { lastProbe = `${error.code ?? error.cause?.code ?? error.name}: ${error.message}`; }
       if (!target) await delay(100);
     }
-    assert.ok(target, 'Isolated browser started');
+    assert.ok(target, `Isolated browser started (${Date.now() - startupStarted}ms; ${lastProbe}; ${startupDiagnostics})`);
+    discoveryComplete = true;
     socket = new WebSocket(target.webSocketDebuggerUrl);
     await new Promise((done, reject) => { socket.onopen = done; socket.onerror = reject; });
     const call = (method, params = {}) => new Promise((done, reject) => {

@@ -20,6 +20,7 @@ jobs:
       - name: Install declared npm
         run: npm install --global npm@11.20.0
       - run: npm ci
+      - run: node scripts/check-browser-startup.mjs
       - run: npm run verify:db
       - uses: actions/upload-artifact@v7
         if: always()
@@ -31,5 +32,6 @@ jobs:
             .verification/auth-foundation.json
             .verification/auth-build.log
             .verification/auth-server.log
+            .verification/browser-startup.json
           include-hidden-files: true
           retention-days: 7
