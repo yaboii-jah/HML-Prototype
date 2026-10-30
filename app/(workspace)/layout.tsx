@@ -1,7 +1,8 @@
 import type { ReactNode } from "react";
-import { AppShell } from "@/src/components/shell/AppShell";
-import { DataGate } from "@/src/components/ui/States";
+import { WorkspaceShell } from "@/src/components/shell/WorkspaceShell";
+import { requireWorkspaceSession } from "@/src/server/auth/session";
 
-export default function WorkspaceLayout({ children }: { children: ReactNode }) {
-  return <DataGate><AppShell>{children}</AppShell></DataGate>;
+export default async function WorkspaceLayout({ children }: { children: ReactNode }) {
+  const session = await requireWorkspaceSession();
+  return <WorkspaceShell key={`${session.userId}:${session.revision}:${session.activeRole}`} session={session}>{children}</WorkspaceShell>;
 }

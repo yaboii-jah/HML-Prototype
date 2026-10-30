@@ -1,3 +1,11 @@
-export { POST, PUT } from "../../accounting-documents/chunk/route";
+import { unavailableOperation } from "@/src/server/auth/unavailable";
+
 export const runtime = "nodejs";
-export const maxDuration = 60;
+
+export async function POST() {
+  return unavailableOperation();
+}
+
+export async function PUT() {
+  return unavailableOperation();
+}

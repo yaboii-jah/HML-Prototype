@@ -18,6 +18,9 @@ const authSettings = {
   site_url: 'http://127.0.0.1:3000',
   uri_allow_list: 'http://127.0.0.1:3000/auth/confirm',
   password_min_length: 8,
+  security_update_password_require_current_password: true,
+  mailer_templates_invite_content: await readFile('supabase/templates/invite.html', 'utf8'),
+  mailer_templates_recovery_content: await readFile('supabase/templates/recovery.html', 'utf8'),
 };
 
 if (action.startsWith('auth-')) {
@@ -49,6 +52,7 @@ if (action.startsWith('auth-')) {
   console.log('Generated staging database types.');
 } else if (action === 'check') {
   await supabase(['db', 'query', '--linked', '--project-ref', STAGING_REF, '--file', resolve('supabase/checks/staging.sql')]);
+  await supabase(['db', 'query', '--linked', '--project-ref', STAGING_REF, '--file', resolve('supabase/checks/sessions.sql')]);
 } else {
   if (action === 'apply') {
     const evidence = JSON.parse(await readFile('.verification/database-ci.json', 'utf8'));

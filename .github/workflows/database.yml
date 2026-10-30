@@ -2,7 +2,7 @@ name: Database foundation
 on:
   pull_request:
   push:
-    branches: [main, staging, 'feat/step-3-hosted-foundation']
+    branches: [main, staging, 'feat/step-3-hosted-foundation', 'feat/step-3-sessions']
   workflow_dispatch:
 permissions:
   contents: read
@@ -10,7 +10,7 @@ jobs:
   database:
     name: Disposable Supabase (Ubuntu, Node 24)
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -28,5 +28,8 @@ jobs:
           path: |
             .verification/database-ci.json
             .verification/database.types.ts
+            .verification/auth-foundation.json
+            .verification/auth-build.log
+            .verification/auth-server.log
           include-hidden-files: true
           retention-days: 7

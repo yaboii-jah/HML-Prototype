@@ -1,3 +1,5 @@
-import { PurchaseOrderDetail } from "@/src/features/purchase/PurchaseOrders";
+import { UnavailableWorkspace } from "@/src/components/ui/UnavailableWorkspace";
 
-export default async function Page({ params }: { params: Promise<{ id: string }> }) { const { id } = await params; return <PurchaseOrderDetail id={id}/>; }
+export default function Page() {
+  return <UnavailableWorkspace title="Area temporarily unavailable"/>;
+}

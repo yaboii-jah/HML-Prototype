@@ -14,8 +14,8 @@ registerHooks({ resolve(specifier, context, nextResolve) {
   if (specifier.startsWith('@/')) return nextResolve(new URL(`../${specifier.slice(2)}.ts`,import.meta.url).href,context);
   return nextResolve(specifier,context);
 } });
-const routes = await import('../app/api/drive/accounting-documents/route.ts');
-const chunks = await import('../app/api/drive/accounting-documents/chunk/route.ts');
+const routes = await import('./fixtures/prototype-api/drive/accounting-documents/route.ts');
+const chunks = await import('./fixtures/prototype-api/drive/accounting-documents/chunk/route.ts');
 const body = () => ({
   document:{id:'document',batchId:'batch',name:'Receipt.pdf',kind:'Payment receipt',mime:'application/pdf',size:12,localFileId:'local',sha256:'a'.repeat(64),archive:{status:'pending'}},
   po:{id:'po',ref:'PO-1',mrfId:'mrf',status:'released'},

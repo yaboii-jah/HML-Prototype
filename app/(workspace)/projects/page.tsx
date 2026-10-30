@@ -1,4 +1,5 @@
-export const metadata = { title: "Projects | HML ConstructSync" };
-import { Projects } from "@/src/features/projects/Projects";
+import { UnavailableWorkspace } from "@/src/components/ui/UnavailableWorkspace";
 
-export default function Page() { return <Projects/>; }
+export default function Page() {
+  return <UnavailableWorkspace title="Projects"/>;
+}

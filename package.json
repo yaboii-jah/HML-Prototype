@@ -27,17 +27,21 @@
     "db:staging:check": "node --env-file-if-exists=.env.local scripts/staging-database.mjs check",
     "db:staging:auth:check": "node --env-file-if-exists=.env.local scripts/staging-database.mjs auth-check",
     "db:staging:auth:apply": "node --env-file-if-exists=.env.local scripts/staging-database.mjs auth-apply",
-    "verify:db": "node scripts/verify-database.mjs"
+    "verify:db": "node scripts/verify-database.mjs",
+    "auth:staging:bootstrap": "node --env-file-if-exists=.env.local scripts/bootstrap-staging-administrator.mjs"
   },
   "dependencies": {
     "@pdf-lib/fontkit": "^1.1.1",
+    "@supabase/ssr": "0.12.7",
+    "@supabase/supabase-js": "2.118.0",
     "exceljs": "4.4.0",
     "google-auth-library": "^11.1.0",
     "next": "16.4.3",
     "pdf-lib": "^1.17.1",
     "pdfjs-dist": "6.4.299",
     "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "react-dom": "19.2.8",
+    "server-only": "0.0.1"
   },
   "devDependencies": {
     "@supabase/postgrest-typegen": "0.6.0",

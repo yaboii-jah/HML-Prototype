@@ -7,6 +7,8 @@ import { supabase } from './helpers/supabase-cli.mjs';
 import { requireLoopback } from './helpers/supabase-target.mjs';
 import { migrationHash } from './helpers/database-migrations.mjs';
 import { generateDatabaseTypes, normalizeDatabaseTypes } from './helpers/database-types.mjs';
+import { configureDisposableAuth } from './helpers/disposable-auth-config.mjs';
+import { checkAuthFoundation } from './check-auth-foundation.mjs';
 
 if (process.env.GITHUB_ACTIONS !== 'true' || !/^\d+$/.test(process.env.GITHUB_RUN_ID ?? '') || process.platform !== 'linux') {
   throw new Error('verify:db runs on disposable GitHub Linux runners. Use db:staging:check for scoped hosted checks.');
@@ -45,8 +47,13 @@ let networkCreated = false;
 let passed = false;
 let typeMatch = false;
 await mkdir(`${workdir}/supabase`, { recursive: true });
-await writeFile(`${workdir}/supabase/config.toml`, (await readFile('supabase/config.toml', 'utf8')).replace('project_id = "constructsync-ci"', `project_id = "${project}"`));
+await writeFile(`${workdir}/supabase/config.toml`, (await readFile('supabase/config.toml', 'utf8'))
+  .replace('project_id = "constructsync-ci"', `project_id = "${project}"`)
+  .replaceAll('http://127.0.0.1:3000', 'http://127.0.0.1:3198')
+  .replace('email_sent = 2', 'email_sent = 200')
+  .replace('sign_in_sign_ups = 30', 'sign_in_sign_ups = 200'));
 await cp('supabase/migrations', `${workdir}/supabase/migrations`, { recursive: true });
+await cp('supabase/templates', `${workdir}/supabase/templates`, { recursive: true });
 
 try {
   const networkResult = await command('docker', ['network', 'create', '--driver', 'bridge', '--opt', 'com.docker.network.bridge.host_binding_ipv4=127.0.0.1', network]);
@@ -54,8 +61,10 @@ try {
   networkCreated = true;
   console.log('Starting disposable Supabase and replaying foundation migrations.');
   await cli(['start', '--network-id', network, '--exclude', 'storage-api,imgproxy,postgres-meta,studio,edge-runtime,logflare,vector,supavisor'], { capture: true });
+  await configureDisposableAuth(project, network);
   console.log('Checking SQL constraints, permissions and session revocation.');
   await sql(await readFile('supabase/checks/staging.sql', 'utf8'));
+  await sql(await readFile('supabase/checks/sessions.sql', 'utf8'));
 
   // Hold the parent lock in one connection; the second must observe committed allocation.
   const projectId = randomUUID();
@@ -117,6 +126,12 @@ try {
   const anon = status.ANON_KEY ?? status.anon_key;
   const secret = status.SERVICE_ROLE_KEY ?? status.service_role_key;
   assert.ok(anon && secret, 'Disposable API credentials available');
+  let authReady = false;
+  for (let attempt = 0; attempt < 100 && !authReady; attempt++) {
+    try { authReady = (await fetch(api + '/auth/v1/health', { signal: AbortSignal.timeout(2000) })).ok; } catch {}
+    if (!authReady) await new Promise(done => setTimeout(done, 100));
+  }
+  assert.ok(authReady, 'Reconfigured disposable Auth is ready');
   const created = [];
   const testProject = randomUUID();
   const request = (path, { token = anon, ...options } = {}) => fetch(`${api}${path}`, {
@@ -190,6 +205,9 @@ try {
     await sql(`delete from public.projects where id='${testProject}';`);
   }
   console.log('SQL, concurrent allocation and real Auth/Data API checks passed.');
+  await checkAuthFoundation({ api, anon, secret,
+    mailpit: requireLoopback(status.INBUCKET_URL ?? status.MAILPIT_URL ?? status.inbucket_url).origin,
+    sql, environment });
   const generated = await generateDatabaseTypes(async query => {
     const statement = query.trim().replace(/;$/, '');
     const result = await sql(`select coalesce(json_agg(row_to_json(typegen_rows)), '[]'::json) from (${statement}) typegen_rows;`);

@@ -1,3 +1,5 @@
-import { ProjectDetail } from "@/src/features/projects/Projects";
+import { UnavailableWorkspace } from "@/src/components/ui/UnavailableWorkspace";
 
-export default async function Page({ params }: { params: Promise<{ siteId: string }> }) { const { siteId } = await params; return <ProjectDetail id={siteId}/>; }
+export default function Page() {
+  return <UnavailableWorkspace title="Area temporarily unavailable"/>;
+}

@@ -11,7 +11,7 @@ registerHooks({ resolve(specifier, context, nextResolve) {
   if (specifier.startsWith('@/')) return nextResolve(new URL(`../${specifier.slice(2)}.ts`, import.meta.url).href, context);
   return nextResolve(specifier, context);
 } });
-const { POST } = await import('../app/api/drive/delivery-receipts/route.ts');
+const { POST } = await import('./fixtures/prototype-api/drive/delivery-receipts/route.ts');
 const post = (body, headers = {}) => new Request('http://localhost/api/drive/delivery-receipts', { method: 'POST', headers: { 'Content-Type': 'application/json', ...headers }, body: JSON.stringify(body) });
 function receipt() {
   const state = seedDemo(), batch = state.batches.find(value => value.status === 'expected');

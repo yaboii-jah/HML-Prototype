@@ -9,5 +9,5 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
     if (typeof value === "string") params.set(key, value);
     else if (Array.isArray(value) && value[0]) params.set(key, value[0]);
   }
-  redirect(legacyDestination(params) ?? "/dashboard");
+  redirect(legacyDestination(params) ?? "/projects");
 }

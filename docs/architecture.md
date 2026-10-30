@@ -117,6 +117,8 @@ For repeatable verification and ownership-checked test cleanup, follow [AI workf
 
 ## Auth and Access Model
 
+Unit 3.2 is implementing this model on the migration branch; its verification is pending in the tracker. The supported shell uses a small session projection and protected unavailable pages until later units migrate their records. Server-owned HttpOnly Auth cookies hold the session; browser role cookies are validated preferences. Proxy refreshes tokens, while server operations and database policies independently check current session bindings and grants. Private binding/provisioning implementations have service-only invoker RPC wrappers; the authenticated session-projection RPC returns only the caller's current context. Opening an invitation/recovery page does not consume its link or grant workspace access: password submission verifies the one-time proof in a temporary unbound session, then returns to password sign-in.
+
 - Each staff member has an individual Supabase Auth identity and signs in with email and password. Administrators invite and manage accounts; public self-registration is disabled. Recovery and account removal or deactivation require controlled procedures.
 - Account administration must retain at least one active Administrator and prevent self-deactivation. Apply these safeguards when changing role grants or account status as well as during account provisioning.
 - HML is the single company in this design. Administrators grant application roles and, where required, project access. A person may hold multiple non-Site Personnel roles and switch the active role only among their own grants. Site Personnel is exclusive and cannot be combined with another role.

@@ -10,7 +10,7 @@ Update this file after every meaningful implementation or documentation change a
 
 ## Current Goal
 
-- Prepare for [unit 3.2](step-3-implementation.md#32-replace-session-handling-and-gate-the-workspace), real session handling and workspace gates, using the verified 3.1 foundation on `feat/step-3-hosted-foundation`. Unit 3.2 is planned, not active; checklist step 3 remains unchecked.
+- Implement [unit 3.2](step-3-implementation.md#32-replace-session-handling-and-gate-the-workspace), real session handling and workspace gates, on `feat/step-3-sessions`, based on the verified 3.1 checkpoint. The unit and checklist step 3 remain unchecked until verification passes.
 
 ## Completed
 
@@ -36,14 +36,17 @@ Update this file after every meaningful implementation or documentation change a
 
 ## In Progress
 
-- No implementation unit is active. Unit 3.1 is complete; 3.2-3.6 remain planned. The app still uses prototype sessions and browser data until their designated units replace them.
+- **Unit 3.2 is active, not verified.** Pinned Supabase SDKs, a session/bootstrap migration, server authorization modules, password/confirmation/role actions and initial replacement screens are in progress. The supported runtime is being disconnected from the demo provider; unsupported pages and provider endpoints return unavailable states. Existing provider-handler tests use isolated prototype fixtures and do not establish current endpoint authorization. Database CI, real-account browser coverage, staging migration/parity and completion checks are pending.
+- **Setup decision:** the user selected a private staging setup command for the first Administrator, with explicit locally entered name/email and a hidden password. A staging `SUPABASE_SECRET_KEY` is present; it is distinct from the maintenance PAT. No Administrator has been provisioned. Projects remains a placeholder until 3.4, and account administration remains 3.3. Bring the browser launcher and focused real-account/Mailpit checks forward from 3.6 to verify 3.2 now.
+- **Interim local verification:** standard lint/type/unit/build checks passed with 371 tests (one unused-parameter warning subsequently removed); the focused `foundation-public` browser suite passed. Real-account/confirmation/browser and bootstrap-concurrency checks are implemented for disposable CI but have not run yet. CLI 2.122 does not expose the current-password toggle: the guarded Linux CI adapter recreates only its run-owned Auth container with that setting, retaining its isolated config/network and keeping transient keys out of artifacts. Staging is still unchanged by 3.2.
+- **Deferred prototype browser suites:** `showcase` (demo-only, retired); `shell-controls`, `skeleton-loading` (replaced public checks now, restore authenticated assertions in 3.6); `user-management` (3.3); `site-visibility` (3.4/3.6); `register`, `browser`, `quotation`, `compare-allocate`, `full-disbursement`, `credit-terms`, `site-stock-transfers`, `stock-transfer-forwarding`, `quotation-editor`, `quotation-worksheet`, `quotation-financial-review`, `quotation-confirmations`, `suggestions`, `document-numbering`, `material-rows`, `qa-fixes`, `usage-entries`, `next-iteration` (operational workflows, step 4); `delivery-documents`, `document-gallery`, `supplier-upload`, `quotation-extraction`, `project-folder` (documents/providers, step 5). These 28 suites are deferred/retired, not passed. Pure/domain and isolated legacy-handler regressions remain maintained unit coverage.
 - **Access dependency resolved:** The user configured the scoped PAT in private `.env.local`; the guarded commands work without changing the global CLI login. The publishable-key field was blank on resume and was restored from staging's existing active publishable key. Auth settings enable email sign-in, disable public/anonymous registration, require eight-character passwords and allow only the declared local callback. Production was not changed.
 
 ## Next Up
 
 Use the [production checklist](checklist.md#steps) for the ordered milestones and their completion conditions.
 
-- **Exact next action:** plan unit 3.2 within its guide boundary. Read current Supabase session/SSR guidance and installed Next.js authentication/security guides, then inspect the existing session provider, shell/page guards and server/provider handlers. Carry forward access-revision binding, same-person role switching, projects landing and disabled unsupported paths. Controlled first-Administrator provisioning belongs to that unit; staging currently has no application/Auth users.
+- **Exact next action:** finish unit 3.2 UI/actions and controlled bootstrap tooling, add focused security/browser tests, and verify the migration in disposable CI before applying it to staging. Record actual results and deferred prototype browser suites. Staging currently has no application/Auth users; never initialize a default identity.
 - Follow the guide's dependencies and completion criteria. The prototype's role switch currently selects another account, and its approval commands do not enforce the target permanent-user self-approval restriction. Preserve the documented target rules; verify approval enforcement with the migrated workflows in step 4.
 - Retain local Node 26.12.1, the Vercel Node 24.x target, CI baseline 24.22.1 and npm 11.20.0 across environments. Hosted deployment verification belongs to the later protected rehearsal.
 - Work foundations first: individual identity, shared records and server authorization before business-workflow migration. Tailwind remains a separate track.

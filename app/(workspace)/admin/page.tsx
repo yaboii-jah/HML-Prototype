@@ -1,4 +1,5 @@
-export const metadata = { title: "Administration | HML ConstructSync" };
-import { Admin } from "@/src/features/admin/Admin";
+import { UnavailableWorkspace } from "@/src/components/ui/UnavailableWorkspace";
 
-export default function Page() { return <Admin/>; }
+export default function Page() {
+  return <UnavailableWorkspace title="Area temporarily unavailable"/>;
+}

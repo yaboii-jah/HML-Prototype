@@ -1,13 +1,11 @@
-import { mrfSourceSignature } from "@/src/domain/mrf-extraction";
-import { openQuoteUploadTicket } from "@/src/server/quote-upload-ticket";
-import { createDocumentChunkHandlers } from "@/src/server/document-chunks";
+import { unavailableOperation } from "@/src/server/auth/unavailable";
+
 export const runtime = "nodejs";
-export const maxDuration = 60;
-const handlers = createDocumentChunkHandlers({
-  openTicket: openQuoteUploadTicket,
-  mime: ticket => ticket.mime,
-  signature: (bytes, ticket) => mrfSourceSignature(bytes, ticket.mime),
-  invalidMessage: "The quotation file chunk is invalid.",
-});
-export const POST = handlers.POST;
-export const PUT = handlers.PUT;
+
+export async function POST() {
+  return unavailableOperation();
+}
+
+export async function PUT() {
+  return unavailableOperation();
+}

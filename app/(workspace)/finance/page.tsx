@@ -1,4 +1,5 @@
-export const metadata = { title: "Finance | HML ConstructSync" };
-import { FinanceQueue } from "@/src/features/finance/Finance";
+import { UnavailableWorkspace } from "@/src/components/ui/UnavailableWorkspace";
 
-export default function Page() { return <FinanceQueue/>; }
+export default function Page() {
+  return <UnavailableWorkspace title="Area temporarily unavailable"/>;
+}

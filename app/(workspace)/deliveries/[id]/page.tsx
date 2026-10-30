@@ -1,3 +1,5 @@
-import { BatchDetail } from "@/src/features/deliveries/Deliveries";
+import { UnavailableWorkspace } from "@/src/components/ui/UnavailableWorkspace";
 
-export default async function Page({ params }: { params: Promise<{ id: string }> }) { const { id } = await params; return <BatchDetail id={id}/>; }
+export default function Page() {
+  return <UnavailableWorkspace title="Area temporarily unavailable"/>;
+}

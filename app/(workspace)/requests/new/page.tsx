@@ -1,3 +1,5 @@
-import { RequestForm } from "@/src/features/requests/Requests";
+import { UnavailableWorkspace } from "@/src/components/ui/UnavailableWorkspace";
 
-export default function Page() { return <RequestForm/>; }
+export default function Page() {
+  return <UnavailableWorkspace title="Area temporarily unavailable"/>;
+}
