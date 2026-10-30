@@ -2,7 +2,7 @@ name: Verify
 on:
   pull_request:
   push:
-    branches: [main, staging]
+    branches: [main, staging, 'feat/step-3-sessions']
   workflow_dispatch:
 permissions:
   contents: read

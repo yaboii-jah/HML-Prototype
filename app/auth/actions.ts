@@ -2,7 +2,7 @@
 
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { chooseActiveRole, isAuthRole, rolePreferenceCookie, safeWorkspaceDestination, UUID_PATTERN } from "@/src/domain/auth/session";
+import { chooseActiveRole, isAuthRole, parseLoginPreflight, parseSessionContext, rolePreferenceCookie, safeWorkspaceDestination, UUID_PATTERN } from "@/src/domain/auth/session";
 import { clearAuthCookies, cookieAuthClient, passwordClient, privilegedAuthClient } from "@/src/server/auth/clients";
 import { requireSession } from "@/src/server/auth/session";
 
@@ -23,16 +23,16 @@ export async function signInAction(_state: AuthFormState, form: FormData): Promi
     const privileged = privilegedAuthClient();
     // Capture authority BEFORE the password challenge. A racing grant edit
     // makes completion fail rather than silently authorizing the new revision.
-    const { data: preflight, error: preflightError } = await privileged.rpc("auth_login_preflight", { login_email: email });
+    const { data: rawPreflight, error: preflightError } = await privileged.rpc("auth_login_preflight", { login_email: email });
+    const preflight = parseLoginPreflight(rawPreflight);
     if (preflightError) return { error: unavailable };
     const { data, error } = await temporary.auth.signInWithPassword({ email, password });
     if (error || !data.session) return { error: "Invalid email or password." };
     issuedToken = data.session.access_token;
     const verified = await temporary.auth.getClaims(data.session.access_token);
     const sessionId: unknown = verified.data?.claims.session_id;
-    if (verified.error || typeof sessionId !== "string" || !UUID_PATTERN.test(sessionId)
-      || !preflight || typeof preflight !== "object" || preflight.userId !== data.user.id
-      || typeof preflight.revision !== "string") return { error: "Your account has no current workspace access. Contact an Administrator." };
+    if (verified.error || verified.data?.claims.sub !== data.user.id || typeof sessionId !== "string" || !UUID_PATTERN.test(sessionId)
+      || !preflight || preflight.userId !== data.user.id) return { error: "Your account has no current workspace access. Contact an Administrator." };
     const { data: bound, error: bindError } = await privileged.rpc("auth_bind_session", {
       target_user: data.user.id, target_session: sessionId, expected_revision: preflight.revision,
     });
@@ -42,11 +42,11 @@ export async function signInAction(_state: AuthFormState, form: FormData): Promi
     if (!client) return { error: unavailable };
     const { error: saveError } = await client.auth.setSession({ access_token: data.session.access_token, refresh_token: data.session.refresh_token });
     if (saveError) return { error: unavailable };
-    const { data: projection, error: projectionError } = await client.rpc("auth_session_context");
-    if (projectionError || !projection || typeof projection !== "object" || !Array.isArray(projection.roles)) return { error: unavailable };
-    const roles = projection.roles.filter(isAuthRole);
+    const { data: rawProjection, error: projectionError } = await client.rpc("auth_session_context");
+    const projection = parseSessionContext(rawProjection);
+    if (projectionError || !projection) return { error: unavailable };
     const preference = (await cookies()).get(rolePreferenceCookie(data.user.id))?.value;
-    if (!chooseActiveRole(roles, preference)) destination = "/choose-role";
+    if (!chooseActiveRole(projection.roles, preference)) destination = "/choose-role";
     issuedToken = undefined;
   } catch {
     return { error: unavailable };

@@ -1,9 +1,7 @@
-export const AUTH_ROLES = [
-  "Site Personnel", "Project Manager", "Procurement", "Finance",
-  "Logistics", "Accounting", "Administrator",
-] as const;
+import { ROLES, type Role } from "../types.ts";
 
-export type AuthRole = typeof AUTH_ROLES[number];
+export const AUTH_ROLES = ROLES;
+export type AuthRole = Role;
 export type SessionContext = {
   userId: string;
   displayName: string;
@@ -17,6 +15,14 @@ export const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-
 
 export function isAuthRole(value: unknown): value is AuthRole {
   return typeof value === "string" && AUTH_ROLES.some(role => role === value);
+}
+
+export function parseLoginPreflight(value: unknown): { userId: string; revision: string } | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const entry = value as Record<string, unknown>;
+  return typeof entry.userId === "string" && UUID_PATTERN.test(entry.userId)
+    && typeof entry.revision === "string" && /^[1-9]\d*$/.test(entry.revision)
+    ? { userId: entry.userId, revision: entry.revision } : null;
 }
 
 export function parseSessionContext(value: unknown): SessionContext | null {

@@ -1,5 +1,9 @@
 -- Private implementations; exposed wrappers are invoker functions granted only
 -- to the server's service role. JWT refresh and browser RPC calls cannot bind.
+-- A uniqueness constraint backs the bootstrap lock even at stronger isolation.
+create unique index audit_initial_administrator_key on private.audit_events(action)
+  where action = 'administrator.bootstrapped';
+
 create function private.login_preflight(login_email text) returns jsonb
 language sql stable security definer set search_path = '' as $$
   select jsonb_build_object('userId', p.user_id, 'revision', p.access_revision::text)
@@ -17,7 +21,7 @@ declare
 begin
   select p.access_revision into current_revision from public.profiles p
     where p.user_id = target_user and p.is_active for update;
-  if current_revision is null or current_revision::text <> expected_revision
+  if expected_revision is null or current_revision is null or current_revision::text <> expected_revision
     or not exists (select 1 from public.role_grants g where g.user_id = target_user)
     or not exists (
       select 1 from auth.sessions s join auth.users u on u.id = s.user_id
@@ -70,6 +74,7 @@ begin
   end if;
   if not exists (select 1 from auth.users u where u.id = target_user
     and u.email_confirmed_at is not null and not u.is_anonymous
+    and (u.banned_until is null or u.banned_until <= now())
     and u.encrypted_password is not null and u.encrypted_password <> ''
     and u.raw_app_meta_data->>'bootstrap_request_id' = request_id::text) then
     raise exception 'Invalid bootstrap identity' using errcode = '42501';

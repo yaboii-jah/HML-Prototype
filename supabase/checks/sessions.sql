@@ -26,6 +26,7 @@ begin
   insert into public.profiles(user_id,display_name,is_active) values (staff,'Session fixture',true);
   insert into public.role_grants values (staff,'Accounting');
   before_login := private.login_preflight(staff::text || '@example.invalid');
+  if private.bind_session(staff,session_a,null) then raise exception 'Missing expected revision accepted'; end if;
   if before_login is null or not private.bind_session(staff,session_a,before_login->>'revision') then raise exception 'Fresh session binding failed'; end if;
   perform set_config('request.jwt.claims',jsonb_build_object('sub',staff,'session_id',session_a,'role','authenticated')::text,true);
   if not private.current_user_authorized() or private.session_context()->>'userId' <> staff::text then raise exception 'Own session projection unavailable'; end if;

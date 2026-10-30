@@ -28,7 +28,8 @@
     "db:staging:auth:check": "node --env-file-if-exists=.env.local scripts/staging-database.mjs auth-check",
     "db:staging:auth:apply": "node --env-file-if-exists=.env.local scripts/staging-database.mjs auth-apply",
     "verify:db": "node scripts/verify-database.mjs",
-    "auth:staging:bootstrap": "node --env-file-if-exists=.env.local scripts/bootstrap-staging-administrator.mjs"
+    "auth:staging:bootstrap": "node --env-file-if-exists=.env.local scripts/bootstrap-staging-administrator.mjs",
+    "auth:staging:check": "node --env-file-if-exists=.env.local scripts/check-staging-sessions.mjs"
   },
   "dependencies": {
     "@pdf-lib/fontkit": "^1.1.1",

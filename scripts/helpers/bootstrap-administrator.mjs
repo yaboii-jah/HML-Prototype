@@ -41,7 +41,7 @@ export async function bootstrapAdministrator({ client, load, save, name, email, 
     target_user: checkpoint.userId, display_name: checkpoint.name, request_id: checkpoint.requestId,
   });
   if (result.error) {
-    if (result.error.code === '23514') {
+    if (['23514', '23505'].includes(result.error.code)) {
       // A competing bootstrap won. Delete only our marked, unreferenced identity.
       const profile = await client.from('profiles').select('user_id').eq('user_id', checkpoint.userId).maybeSingle();
       if (!profile.error && !profile.data) {

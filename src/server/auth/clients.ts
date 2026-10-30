@@ -3,11 +3,12 @@ import { createClient } from "@supabase/supabase-js";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { publicAuthConfiguration } from "./config";
+import type { Database } from "@/src/server/database/database.types";
 
 export function passwordClient() {
   const config = publicAuthConfiguration();
   if (!config) throw new Error("Authentication is unavailable.");
-  return createClient(config.url, config.key, {
+  return createClient<Database>(config.url, config.key, {
     auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
     global: { fetch: (input, init) => fetch(input, { ...init, cache: "no-store", signal: init?.signal ?? AbortSignal.timeout(15000) }) },
   });
@@ -17,7 +18,7 @@ export function privilegedAuthClient() {
   const config = publicAuthConfiguration();
   const secret = process.env.SUPABASE_SECRET_KEY;
   if (!config || !secret) throw new Error("Authentication is unavailable.");
-  return createClient(config.url, secret, {
+  return createClient<Database>(config.url, secret, {
     auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
     global: { fetch: (input, init) => fetch(input, { ...init, cache: "no-store", signal: init?.signal ?? AbortSignal.timeout(15000) }) },
   });
@@ -28,7 +29,7 @@ export async function cookieAuthClient(writable = false) {
   const config = publicAuthConfiguration();
   if (!config) return null;
   const store = await cookies();
-  return createServerClient(config.url, config.key, {
+  return createServerClient<Database>(config.url, config.key, {
     global: { fetch: (input, init) => fetch(input, { ...init, cache: "no-store", signal: init?.signal ?? AbortSignal.timeout(15000) }) },
     cookieOptions: { sameSite: "lax", secure: process.env.APP_ORIGIN?.startsWith("https:") ?? false, httpOnly: true },
     cookies: {

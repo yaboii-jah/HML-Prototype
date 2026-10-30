@@ -205,9 +205,6 @@ try {
     await sql(`delete from public.projects where id='${testProject}';`);
   }
   console.log('SQL, concurrent allocation and real Auth/Data API checks passed.');
-  await checkAuthFoundation({ api, anon, secret,
-    mailpit: requireLoopback(status.INBUCKET_URL ?? status.MAILPIT_URL ?? status.inbucket_url).origin,
-    sql, environment });
   const generated = await generateDatabaseTypes(async query => {
     const statement = query.trim().replace(/;$/, '');
     const result = await sql(`select coalesce(json_agg(row_to_json(typegen_rows)), '[]'::json) from (${statement}) typegen_rows;`);
@@ -218,6 +215,9 @@ try {
   let expected = '';
   try { expected = await readFile('src/server/database/database.types.ts', 'utf8'); } catch (error) { if (error.code !== 'ENOENT') throw error; }
   typeMatch = generated === normalizeDatabaseTypes(expected);
+  await checkAuthFoundation({ api, anon, secret,
+    mailpit: requireLoopback(status.INBUCKET_URL ?? status.MAILPIT_URL ?? status.inbucket_url).origin,
+    sql, environment });
   passed = typeMatch;
 } finally {
   try { await cli(['stop', '--project-id', project, '--no-backup'], { capture: true }); }

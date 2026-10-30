@@ -38,7 +38,13 @@ export type Database = {
             [_ in never]: never
           }
           Functions: {
-            "can_read_financials":
+            "bind_session":
+{ Args: { "expected_revision": string,"target_session": string,"target_user": string }; Returns: boolean
+                           },
+"bootstrap_administrator":
+{ Args: { "display_name": string,"request_id": string,"target_user": string }; Returns: string
+                           },
+"can_read_financials":
 { Args: { "target_project": string }; Returns: boolean
                            },
 "can_read_project":
@@ -49,6 +55,15 @@ export type Database = {
                            },
 "has_role":
 { Args: { "required_role": string }; Returns: boolean
+                           },
+"login_preflight":
+{ Args: { "login_email": string }; Returns: Json
+                           },
+"session_context":
+{ Args: Record<PropertyKey, never>; Returns: Json
+                           },
+"unbind_session":
+{ Args: { "target_session": string,"target_user": string }; Returns: undefined
                            }
           }
           Enums: {
@@ -199,7 +214,21 @@ isOneToOne: false
             [_ in never]: never
           }
           Functions: {
-            [_ in never]: never
+            "auth_bind_session":
+{ Args: { "expected_revision": string,"target_session": string,"target_user": string }; Returns: boolean
+                           },
+"auth_bootstrap_administrator":
+{ Args: { "display_name": string,"request_id": string,"target_user": string }; Returns: string
+                           },
+"auth_login_preflight":
+{ Args: { "login_email": string }; Returns: Json
+                           },
+"auth_session_context":
+{ Args: Record<PropertyKey, never>; Returns: Json
+                           },
+"auth_unbind_session":
+{ Args: { "target_session": string,"target_user": string }; Returns: undefined
+                           }
           }
           Enums: {
             [_ in never]: never

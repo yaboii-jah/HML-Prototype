@@ -121,6 +121,9 @@ export async function checkAuthFoundation({ api, anon, secret, mailpit, sql, env
       assert.ok(encoded.startsWith('base64-'));
       return JSON.parse(Buffer.from(encoded.slice(7), 'base64url').toString());
     };
+    await login(browser, { ...manager, password: randomUUID() });
+    await browser.wait("return !!document.querySelector('#signin-error')");
+    assert.match(await browser.run("return document.querySelector('#signin-error').textContent"), /Invalid email or password/);
     await login(browser, manager);
     await browser.wait("return location.pathname==='/projects'&&!!document.querySelector('.masthead-account')");
     const managerSession = await sessionCookie(browser);
@@ -130,6 +133,7 @@ export async function checkAuthFoundation({ api, anon, secret, mailpit, sql, env
     assert.equal(await browser.run("return /auth-token/.test(document.cookie)"), false, 'Browser JS cannot read Auth cookies');
     assert.equal(await browser.run("return Object.keys(localStorage).some(k=>/hml-constructsync-(demo|users|session)/.test(k))"), false, 'Authenticated runtime does not initialize demo state');
     assert.equal(await browser.run("return (await fetch('/api/drive/projects',{method:'POST',body:'forged'})).status"), 503);
+    assert.match(await browser.run("return (await fetch('/projects')).headers.get('cache-control')"), /no-store/, 'Protected responses cannot be shared from cache');
     await second.navigate('/projects');
     assert.equal(await second.run('return location.pathname'), '/sign-in', 'Another browser does not inherit the session');
     for (const route of ['/requests/new', '/admin/maintenance', '/demo-files/forged']) {
@@ -206,6 +210,10 @@ export async function checkAuthFoundation({ api, anon, secret, mailpit, sql, env
     await second.navigate(invitation);
     assert.equal(await second.run("return !!document.querySelector('#new-password')"), true, 'GET does not consume invitation');
     const savePassword = async (browser, password) => { await browser.fill('#new-password', password); await browser.fill('#confirm-password', password); await browser.click('.signin-form button'); };
+    await second.fill('#new-password', invite.password); await second.fill('#confirm-password', randomUUID());
+    await second.click('.signin-form button');
+    await second.wait("return !!document.querySelector('[role=alert]')");
+    assert.match(await second.run("return document.querySelector('[role=alert]').textContent"), /matching passwords/);
     await savePassword(second, invite.password);
     await second.wait("return location.pathname==='/sign-in'&&!!document.querySelector('#signin-email')");
     await login(second, invite); await second.wait("return location.pathname==='/projects'&&!!document.querySelector('.masthead-account')");
