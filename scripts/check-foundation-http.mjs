@@ -94,8 +94,8 @@ export async function checkFoundationHttp({ browser, second, client, login, logo
   }
   assert.equal(await browser.run("const r=await fetch('/api/realtime/session');return r.status"), 200);
   const after = await sessionCookie(browser);
-  assert.notEqual(after.access_token, before.access_token, 'Real Auth renewal returns a new signed JWT');
-  assert.notEqual(after.refresh_token, before.refresh_token, 'Real refresh cookie rotates');
+  assert.ok(after.access_token !== before.access_token, 'Real Auth renewal returns a new signed JWT');
+  assert.ok(after.refresh_token !== before.refresh_token, 'Real refresh cookie rotates');
   assert.equal(after.user.id, before.user.id);
   const beforeClaims = ok(await client.auth.getClaims(before.access_token), 'Pre-renewal claims').claims;
   const afterClaims = ok(await client.auth.getClaims(after.access_token), 'Renewed claims').claims;
