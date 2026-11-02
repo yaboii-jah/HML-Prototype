@@ -104,6 +104,20 @@ export async function authBrowser(base, { startupTimeoutMs = 30000, onLaunch, su
       }
     };
     await configureBrowserChecks(call);
+    // Guard the constructor before application code can open a WebSocket.
+    // CDP observation alone would detect an unexpected socket after its attempt.
+    await call('Page.addScriptToEvaluateOnNewDocument', { source: `
+      const NativeWebSocket=window.WebSocket;
+      const expected=${JSON.stringify(realtimeUrl?.href ?? null)};
+      window.WebSocket=class extends NativeWebSocket {
+        constructor(address,...protocols) {
+          const target=new URL(address,location.href), allowed=expected&&new URL(expected);
+          if(!allowed||target.origin!==allowed.origin||target.pathname!==allowed.pathname||target.username||target.password)
+            throw Error('Unexpected Realtime WebSocket destination');
+          super(address,...protocols);
+        }
+      };
+    ` });
     await call('Runtime.enable');
     await call('Network.enable');
     await call('Fetch.enable', { patterns: [{ urlPattern: '*', requestStage: 'Request' }] });

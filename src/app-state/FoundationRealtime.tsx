@@ -81,10 +81,12 @@ export function FoundationRealtime({ session, children }: { session: WorkspaceSe
         if (client) {
           if (tokenChanged) {
             await client.realtime.setAuth(token);
+            if (stopped) return;
           }
           if (topic !== credentials.topic) {
             topic = credentials.topic;
             await client.removeAllChannels();
+            if (stopped) return;
             client.channel(topic, { config: { private: true, broadcast: { replication_ready: true } } })
               .on("broadcast", { event: "foundation_changed" }, schedule)
               .on("broadcast", { event: "access_changed" }, schedule)
