@@ -7,14 +7,20 @@ import { migrationHash } from './database-migrations.mjs';
 // Normalize checkout line endings so Linux and Windows produce the same digest.
 export async function verificationSource() {
   const sourcePaths = [
-    'app', 'src', 'scripts', 'tests', 'supabase', '.github/workflows', 'package.json', 'package-lock.json',
+    'app', 'src', 'scripts', 'tests', 'supabase', 'public', '.github/workflows', 'package.json', 'package-lock.json',
+    'proxy.ts', 'middleware.ts', 'vercel.json', '.node-version', '.npmrc', '.env.example',
     'next.config.*', 'tsconfig.json', 'eslint.config.*', 'postcss.config.*'];
-  const paths = execFileSync('git', ['ls-files', '--cached', '--others', '--exclude-standard', '--', ...sourcePaths], { encoding: 'utf8', windowsHide: true })
-    .trim().split(/\r?\n/).filter(Boolean);
+  const paths = execFileSync('git', ['ls-files', '-z', '--cached', '--others', '--exclude-standard', '--', ...sourcePaths], { encoding: 'utf8', windowsHide: true })
+    .split('\0').filter(Boolean);
   const hash = createHash('sha256');
   for (const path of [...new Set(paths)].sort()) {
     hash.update(path + '\0');
-    try { hash.update((await readFile(path, 'utf8')).replaceAll('\r\n', '\n')); }
+    try {
+      const contents = await readFile(path);
+      const textFile = /\.(?:[cm]?[jt]sx?|json|sql|toml|css|html|xml|ya?ml|md|svg|txt)$/.test(path)
+        || ['.npmrc', '.node-version', '.env.example', 'supabase/.gitignore'].includes(path);
+      hash.update(textFile ? contents.toString('utf8').replaceAll('\r\n', '\n') : contents);
+    }
     catch (error) { if (error.code !== 'ENOENT') throw error; hash.update('<deleted>'); }
     hash.update('\0');
   }

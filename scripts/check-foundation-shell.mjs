@@ -95,7 +95,8 @@ export async function checkFoundationShell({ browser, client, login, logout, adm
   await browser.wait(ready);
   console.log('Server read failure recovers through the page retry control.');
   await browser.navigate('/projects/' + randomUUID());
-  await browser.wait("return !document.querySelector('[aria-busy=true]')&&/not found|not available|unavailable|removed/i.test(document.body.innerText)");
+  await browser.wait("return !document.querySelector('[aria-busy=true]')&&document.querySelector('h1')?.textContent==='404'&&document.body.innerText.includes('This page could not be found.')");
+  console.log('Missing project completes with the supported 404 state.');
   await logout(browser);
   // Storage errors are injected into this isolated profile before any app code.
   const blocked = await browser.call('Page.addScriptToEvaluateOnNewDocument', { source: `
@@ -107,12 +108,14 @@ export async function checkFoundationShell({ browser, client, login, logout, adm
     const previous = await browser.run('return document.documentElement.dataset.theme');
     await browser.click('.theme-toggle');
     await browser.wait(`return document.documentElement.dataset.theme!==${JSON.stringify(previous)}`);
+    const previousSidebar = await browser.run('return document.documentElement.dataset.sidebar');
     await browser.click('.sidebar-toggle');
-    await browser.wait("return ['expanded','collapsed'].includes(document.documentElement.dataset.sidebar)");
+    await browser.wait(`return document.documentElement.dataset.sidebar!==${JSON.stringify(previousSidebar)}`);
     await logout(browser);
   } finally {
     await browser.call('Page.removeScriptToEvaluateOnNewDocument', { identifier: blocked.identifier });
   }
+  console.log('Blocked browser storage preserves working shell controls.');
   // Delay only the disposable RPC, retaining its real authorization and records.
   // Observe the streaming fallback before the document finishes loading.
   await sql(`create or replace function public.projects_read(actor jsonb,target_project uuid default null) returns jsonb
