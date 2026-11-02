@@ -75,6 +75,7 @@ try {
   await sql(await readFile('supabase/checks/sessions.sql', 'utf8'));
   await sql(await readFile('supabase/checks/accounts.sql', 'utf8'));
   await sql(await readFile('supabase/checks/projects.sql', 'utf8'));
+  await sql(await readFile('supabase/checks/realtime.sql', 'utf8'));
 
   // Hold the parent lock in one connection; the second must observe committed allocation.
   const projectId = randomUUID();

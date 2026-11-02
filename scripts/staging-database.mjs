@@ -8,10 +8,23 @@ import assert from 'node:assert/strict';
 import { stagingSnapshot } from './helpers/staging-snapshot.mjs';
 
 const action = process.argv[2];
-if (!['preview', 'apply', 'types', 'check', 'auth-check', 'auth-apply'].includes(action) || process.argv.length > 3) {
+if (!['preview', 'apply', 'types', 'check', 'auth-check', 'auth-apply', 'realtime-check', 'realtime-apply'].includes(action) || process.argv.length > 3) {
   throw new Error('Use preview, apply, types, check, auth-check or auth-apply without extra arguments.');
 }
 requireStaging(process.env);
+
+async function requireVerifiedMigrations() {
+  const evidence = JSON.parse(await readFile('.verification/database-ci.json', 'utf8'));
+  const { readdir } = await import('node:fs/promises');
+  const files = [];
+  for (const name of (await readdir('supabase/migrations')).filter(name => name.endsWith('.sql')).sort()) {
+    files.push({ name, sql: await readFile('supabase/migrations/' + name, 'utf8') });
+  }
+  if (evidence.migrationHash !== migrationHash(files) || evidence.passed !== true || evidence.typeMatch !== true
+    || !evidence.runUrl?.startsWith('https://github.com/')) {
+    throw Error('Download passing database CI evidence for these exact migrations before applying to staging.');
+  }
+}
 
 const authSettings = {
   disable_signup: true,
@@ -23,7 +36,19 @@ const authSettings = {
   security_update_password_require_current_password: true,
 };
 
-if (action.startsWith('auth-')) {
+if (action.startsWith('realtime-')) {
+  const endpoint = `https://api.supabase.com/v1/projects/${STAGING_REF}/config/realtime`;
+  const headers = { Authorization: `Bearer ${process.env.SUPABASE_ACCESS_TOKEN}`, 'Content-Type': 'application/json' };
+  if (action === 'realtime-apply') {
+    await requireVerifiedMigrations();
+    const updated = await fetch(endpoint, { method: 'PATCH', headers, body: JSON.stringify({ private_only: true }), signal: AbortSignal.timeout(30000) });
+    if (!updated.ok) throw Error(`Staging Realtime configuration failed (${updated.status}).`);
+  }
+  const response = await fetch(endpoint, { headers, signal: AbortSignal.timeout(30000) });
+  if (!response.ok) throw Error(`Staging Realtime inspection failed (${response.status}).`);
+  if ((await response.json()).private_only !== true) throw Error('Staging private-only channels are not enabled.');
+  console.log('Staging Realtime accepts private channels only.');
+} else if (action.startsWith('auth-')) {
   const endpoint = `https://api.supabase.com/v1/projects/${STAGING_REF}/config/auth`;
   const headers = { Authorization: `Bearer ${process.env.SUPABASE_ACCESS_TOKEN}`, 'Content-Type': 'application/json' };
   if (action === 'auth-apply') {
@@ -56,6 +81,7 @@ if (action.startsWith('auth-')) {
   await supabase(['db', 'query', '--linked', '--project-ref', STAGING_REF, '--file', resolve('supabase/checks/sessions.sql')]);
   await supabase(['db', 'query', '--linked', '--project-ref', STAGING_REF, '--file', resolve('supabase/checks/accounts.sql')]);
   await supabase(['db', 'query', '--linked', '--project-ref', STAGING_REF, '--file', resolve('supabase/checks/projects.sql')]);
+  await supabase(['db', 'query', '--linked', '--project-ref', STAGING_REF, '--file', resolve('supabase/checks/realtime.sql')]);
   const after = await stagingSnapshot();
   assert.deepEqual(after, before, 'Rollback checks preserve retained staging state');
   await mkdir('.verification', { recursive: true });

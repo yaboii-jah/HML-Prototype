@@ -9,6 +9,7 @@ import { authBrowser } from './helpers/auth-browser.mjs';
 import { requireLoopback } from './helpers/supabase-target.mjs';
 import { checkAccountAdministration } from './check-account-administration.mjs';
 import { checkProjectFoundation } from './check-project-foundation.mjs';
+import { checkRealtimeBrowser } from './check-realtime-browser.mjs';
 
 export async function checkAuthFoundation({ api, anon, secret, mailpit, sql, environment }) {
   requireLoopback(api);
@@ -240,6 +241,8 @@ export async function checkAuthFoundation({ api, anon, secret, mailpit, sql, env
       administrator: bootstrapInputs[winner], passwordClient, sql });
     await checkProjectFoundation({ browser, second, client, login, logout, sessionCookie,
       administrator: bootstrapInputs[winner], passwordClient });
+    await checkRealtimeBrowser({ browser, second, client, login, logout, sessionCookie,
+      administrator: bootstrapInputs[winner] });
     for (const browser of browsers) browser.assertIsolated();
     await writeFile('.verification/auth-foundation.json', JSON.stringify({ passed: true, projects: true, accounts: true, bootstrap: true, sessions: true, roles: true, revocation: true, capturedEmail: true, isolated: true }, null, 2));
     console.log('Real-account browser, session revocation, role, bootstrap and captured-email checks passed.');
