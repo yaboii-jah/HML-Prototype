@@ -32,6 +32,7 @@ async function denied(privateChannel) {
       });
     });
     if (!privateChannel) assert.match(rejection, /PrivateOnly|only allows private channels/, 'Protocol explicitly enforces private-only access');
+    else assert.match(rejection, /permission|unauthorized|not authorized/i, 'Anonymous private access is explicitly denied');
     return true;
   } finally {
     await client.removeChannel(channel);

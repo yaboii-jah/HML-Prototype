@@ -6,9 +6,10 @@ import { migrationHash } from './database-migrations.mjs';
 // Excludes private configuration, generated outputs and unrelated agent tooling.
 // Normalize checkout line endings so Linux and Windows produce the same digest.
 export async function verificationSource() {
-  const paths = execFileSync('git', ['ls-files', '--cached', '--others', '--exclude-standard', '--',
+  const sourcePaths = [
     'app', 'src', 'scripts', 'tests', 'supabase', '.github/workflows', 'package.json', 'package-lock.json',
-    'next.config.*', 'tsconfig.json', 'eslint.config.*', 'postcss.config.*'], { encoding: 'utf8', windowsHide: true })
+    'next.config.*', 'tsconfig.json', 'eslint.config.*', 'postcss.config.*'];
+  const paths = execFileSync('git', ['ls-files', '--cached', '--others', '--exclude-standard', '--', ...sourcePaths], { encoding: 'utf8', windowsHide: true })
     .trim().split(/\r?\n/).filter(Boolean);
   const hash = createHash('sha256');
   for (const path of [...new Set(paths)].sort()) {
@@ -22,7 +23,9 @@ export async function verificationSource() {
     migrations.push({ name, sql: await readFile('supabase/migrations/' + name, 'utf8') });
   }
   return {
-    sourceRevision: execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8', windowsHide: true }).trim(),
+    // A documentation-only checkpoint does not change the tested implementation.
+    sourceRevision: execFileSync('git', ['log', '-1', '--format=%H', '--', ...sourcePaths], { encoding: 'utf8', windowsHide: true }).trim(),
+    checkoutRevision: execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8', windowsHide: true }).trim(),
     sourceHash: hash.digest('hex'), migrationHash: migrationHash(migrations),
     environment: { platform: process.platform, node: process.versions.node, ci: process.env.GITHUB_ACTIONS === 'true' },
     ...(process.env.GITHUB_RUN_ID ? { runUrl: `https://github.com/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}` } : {}),
