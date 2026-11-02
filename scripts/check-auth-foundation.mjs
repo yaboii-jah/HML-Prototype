@@ -124,6 +124,7 @@ export async function checkAuthFoundation({ api, anon, secret, mailpit, sql, env
       await browser.wait("return !!document.querySelector('#signin-email')&&!document.querySelector('.signin-submit').disabled");
       await browser.fill('#signin-email', account.email); await browser.fill('#signin-password', account.password);
       await browser.click('.signin-submit');
+      await browser.wait("return (location.pathname==='/projects'&&!!document.querySelector('.page-header')&&!document.querySelector('.foundation-status'))||(location.pathname==='/choose-role'&&!!document.querySelector('#active-role'))||!!document.querySelector('#signin-error')");
     };
     const logout = async browser => {
       await browser.click('.masthead-account');

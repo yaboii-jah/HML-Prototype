@@ -32,6 +32,7 @@ export async function checkFoundationShell({ browser, client, login, logout, adm
     const screenshot = await browser.call('Page.captureScreenshot', { format: 'png' });
     await writeFile(`.verification/foundation-shell-${width}.png`, Buffer.from(screenshot.data, 'base64'));
   }
+  console.log('Authenticated shell keyboard and responsive controls passed.');
   await browser.call('Emulation.setDeviceMetricsOverride', { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false });
   for (const theme of ['dark', 'light']) {
     if (await browser.run('return document.documentElement.dataset.theme') !== theme) await browser.click('.theme-toggle');
@@ -66,6 +67,7 @@ export async function checkFoundationShell({ browser, client, login, logout, adm
   assert.equal(await browser.run('return document.documentElement.dataset.theme'), 'light', 'Role switching retains theme');
   await logout(browser);
   await login(browser, administrator); await browser.wait(ready);
+  console.log('Authenticated shell preferences and role switching passed.');
   await browser.click('a.side-link[href="/admin"]');
   await browser.wait("return location.pathname==='/admin'&&!!document.querySelector('input[aria-label=\"Search users\"]')");
   assert.equal(await browser.run("return document.querySelector('a.side-link[href=\"/admin\"]').getAttribute('aria-current')"), 'page');
@@ -83,6 +85,7 @@ export async function checkFoundationShell({ browser, client, login, logout, adm
   }
   await browser.click('.state-card .primary');
   await browser.wait(ready);
+  console.log('Server read failure recovers through the page retry control.');
   await browser.navigate('/projects/' + randomUUID());
   await browser.wait("return !document.querySelector('[aria-busy=true]')&&/not found|not available|unavailable|removed/i.test(document.body.innerText)");
   await logout(browser);
