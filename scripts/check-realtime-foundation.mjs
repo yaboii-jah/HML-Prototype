@@ -86,6 +86,7 @@ export async function checkRealtimeFoundation({ api, anon, secret, sql }) {
     const refreshed = ok(await receiver.client.auth.refreshSession(), 'Refresh revoked session');
     assert.ok(refreshed.session);
     assert.equal(ok(await receiver.client.rpc('auth_session_context'), 'Current check after refresh'), null);
+    await receiver.client.removeChannel(receiverSocket.channel);
     const retry = await subscribe(receiver, receiver.topic);
     assert.notEqual(retry.status, 'SUBSCRIBED', 'Refreshed JWT cannot rejoin obsolete binding');
     console.log('Private Realtime delivery, data-free payloads, isolation, denial, retries and exact-session revocation passed.');

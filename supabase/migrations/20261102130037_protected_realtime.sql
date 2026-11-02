@@ -91,9 +91,14 @@ begin
         and not u.is_anonymous and u.email_confirmed_at is not null
         and (u.banned_until is null or u.banned_until<=now())
         and (
-          exists(select 1 from public.role_grants g where g.user_id=p.user_id and g.role<>'Site Personnel')
-          or (kind='project' and exists(select 1 from public.project_assignments a where a.user_id=p.user_id and a.project_id=affected_project))
-          or (kind<>'project' and p.user_id=target)
+          (kind='project' and (
+            exists(select 1 from public.role_grants g where g.user_id=p.user_id and g.role<>'Site Personnel')
+            or exists(select 1 from public.project_assignments a where a.user_id=p.user_id and a.project_id=affected_project)))
+          or (kind<>'project' and (
+            p.user_id=target
+            or exists(select 1 from public.role_grants g where g.user_id=p.user_id and g.role='Administrator')
+            or (kind='save' and before_value->'projectIds' is distinct from after_value->'projectIds'
+              and exists(select 1 from public.role_grants g where g.user_id=p.user_id and g.role='Project Manager'))))
         )
     loop
       perform realtime.send('{}'::jsonb,'foundation_changed',
