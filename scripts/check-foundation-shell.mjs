@@ -2,10 +2,11 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { writeFile } from 'node:fs/promises';
 
-export async function checkFoundationShell({ browser, login, logout, administrator, sql }) {
-  const ready = "return location.pathname==='/projects'&&!!document.querySelector('.masthead-account')";
+export async function checkFoundationShell({ browser, client, login, logout, administrator, sql }) {
+  const ready = "return location.pathname==='/projects'&&!!document.querySelector('.masthead-account')&&!!document.querySelector('.page-header')&&!document.querySelector('.foundation-status')";
   const key = async name => {
-    await browser.call('Input.dispatchKeyEvent', { type: 'keyDown', key: name, code: name, windowsVirtualKeyCode: { Enter: 13, Tab: 9, Escape: 27 }[name] });
+    await browser.call('Input.dispatchKeyEvent', { type: 'keyDown', key: name, code: name,
+      windowsVirtualKeyCode: { Enter: 13, Tab: 9, Escape: 27 }[name], ...(name === 'Enter' ? { text: '\r' } : {}) });
     await browser.call('Input.dispatchKeyEvent', { type: 'keyUp', key: name, code: name });
   };
   await login(browser, administrator); await browser.wait(ready);
@@ -43,6 +44,28 @@ export async function checkFoundationShell({ browser, login, logout, administrat
   const sidebar = await browser.run('return document.documentElement.dataset.sidebar');
   await browser.navigate('/projects'); await browser.wait(ready);
   assert.equal(await browser.run('return document.documentElement.dataset.sidebar'), sidebar);
+  await logout(browser);
+  const account = { email: randomUUID() + '@example.invalid', password: randomUUID() };
+  const created = await client.auth.admin.createUser({ ...account, email_confirm: true });
+  assert.equal(created.error, null);
+  const id = created.data.user.id;
+  assert.equal((await client.from('profiles').insert({ user_id: id, display_name: 'Shell roles', is_active: true })).error, null);
+  assert.equal((await client.from('role_grants').insert(['Accounting', 'Finance'].map(role => ({ user_id: id, role })))).error, null);
+  await login(browser, account);
+  await browser.wait("return location.pathname==='/choose-role'&&!!document.querySelector('#active-role')");
+  await browser.run("const el=document.querySelector('#active-role');el.value='Accounting';el.dispatchEvent(new Event('change',{bubbles:true}))");
+  await browser.click('.signin-form button'); await browser.wait(ready);
+  assert.equal(await browser.run("return !!document.querySelector('a.side-link[href=\"/admin\"]')"), false);
+  await browser.click('.masthead-account');
+  await browser.wait("return !!document.querySelector('.account-modal[open]')");
+  await browser.run("const el=document.querySelector('#switch-role');el.value='Finance';el.dispatchEvent(new Event('change',{bubbles:true}))");
+  await browser.click('.account-modal .signin-form button');
+  await browser.wait("return document.querySelector('.account-label small')?.textContent==='Finance'&&!document.querySelector('.foundation-status')");
+  await browser.navigate('/projects'); await browser.wait(ready);
+  assert.equal(await browser.run('return document.documentElement.dataset.sidebar'), sidebar, 'Role switching retains sidebar preference');
+  assert.equal(await browser.run('return document.documentElement.dataset.theme'), 'light', 'Role switching retains theme');
+  await logout(browser);
+  await login(browser, administrator); await browser.wait(ready);
   await browser.click('a.side-link[href="/admin"]');
   await browser.wait("return location.pathname==='/admin'&&!!document.querySelector('input[aria-label=\"Search users\"]')");
   assert.equal(await browser.run("return document.querySelector('a.side-link[href=\"/admin\"]').getAttribute('aria-current')"), 'page');

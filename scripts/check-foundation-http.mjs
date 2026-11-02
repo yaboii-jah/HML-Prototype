@@ -47,6 +47,7 @@ export async function checkFoundationHttp({ browser, second, client, login, logo
     if (role === 'Site Personnel') ok(await client.from('project_assignments').insert({ user_id: id, project_id: ids[0] }), 'HTTP assignment');
     await login(second, account);
     await second.wait("return location.pathname==='/projects'&&!!document.querySelector('.masthead-account')");
+    assert.equal(await second.run("return !!document.querySelector('a.side-link[href=\"/admin\"]')"), role === 'Administrator', 'Current role controls supported navigation');
     const cookies = await cookie(second);
     const directory = await read(paths[0], cookies), detail = await read('/api/foundation/view?view=project&projectId=' + ids[0], cookies);
     assert.equal(directory.status, 200, role + ' directory'); assert.equal(detail.status, 200, role + ' detail');
