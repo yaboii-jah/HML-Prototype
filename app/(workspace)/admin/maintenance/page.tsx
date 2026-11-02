@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
+import { UnavailableWorkspace } from "@/src/components/ui/UnavailableWorkspace";
 
 export default function Page() {
-  redirect("/admin");
+  return <UnavailableWorkspace title="Area temporarily unavailable"/>;
 }

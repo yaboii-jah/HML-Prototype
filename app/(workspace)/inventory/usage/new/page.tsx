@@ -1,6 +1,5 @@
-import { RecordUsage } from "@/src/features/inventory/UsageEntries";
+import { UnavailableWorkspace } from "@/src/components/ui/UnavailableWorkspace";
 
-export default async function Page({ searchParams }: { searchParams: Promise<{ siteId?: string | string[] }> }) {
-  const { siteId } = await searchParams;
-  return <RecordUsage initialSiteId={typeof siteId === "string" ? siteId : undefined}/>;
+export default function Page() {
+  return <UnavailableWorkspace title="Area temporarily unavailable"/>;
 }

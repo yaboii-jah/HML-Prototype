@@ -9,7 +9,7 @@ registerHooks({resolve(specifier, context, nextResolve) {
   if (specifier.startsWith('@/')) return nextResolve(new URL('../'+specifier.slice(2)+'.ts',import.meta.url).href,context);
   return nextResolve(specifier==='next/server'?'next/server.js':specifier,context);
 }});
-const { POST } = await import('../app/api/bid-comparisons/route.ts');
+const { POST } = await import('./fixtures/prototype-api/bid-comparisons/route.ts');
 
 test('downloaded XLSX and PDF local source links use the validated browser origin for both loopback aliases', async t => {
   const prior=process.env.VERCEL_ENV;delete process.env.VERCEL_ENV;t.after(()=>{if(prior===undefined)delete process.env.VERCEL_ENV;else process.env.VERCEL_ENV=prior;});

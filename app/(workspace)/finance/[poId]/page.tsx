@@ -1,3 +1,5 @@
-import { FinanceReview } from "@/src/features/finance/Finance";
+import { UnavailableWorkspace } from "@/src/components/ui/UnavailableWorkspace";
 
-export default async function Page({ params }: { params: Promise<{ poId: string }> }) { const { poId } = await params; return <FinanceReview id={poId}/>; }
+export default function Page() {
+  return <UnavailableWorkspace title="Area temporarily unavailable"/>;
+}

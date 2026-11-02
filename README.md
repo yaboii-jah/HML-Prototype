@@ -1,6 +1,6 @@
 # HML ConstructSync
 
-A browser-local construction operations prototype for projects, suppliers, purchasing, payments, deliveries, stock transfers and material usage. Business records and accounts stay in the current browser profile; server routes assist with document generation and AI/Google Drive integrations. Account switching demonstrates department workflows and is not production server authentication.
+An internal construction operations application undergoing production migration. The foundation uses Supabase sign-in, current access grants, Administrator user management and shared project/scope setup; consult the tracker for verification. Projects is the landing page. Operational screens remain temporarily unavailable until their migration units are complete.
 
 See the [project overview](docs/project-overview.md) for the agreed production purpose, workflows, scope and success criteria.
 
@@ -12,6 +12,8 @@ Check the [progress tracker](docs/progress-tracker.md) for completed work, migra
 
 Use the companion [production checklist](docs/checklist.md) to follow foundational and future steps and mark them complete after verification.
 
+For checklist step 3, read the [implementation guide](docs/step-3-implementation.md) for the agreed account/project foundation, ordered units, local setup and acceptance criteria. The tracker distinguishes verified behavior from remaining migration work.
+
 ## Run locally
 
 Use Node 26.12.1 (the local `.nvmrc` pin) and npm 11.20.0. The deployment baseline is Node 24.22.1; both supported majors accept later stable patch/minor releases within the declared package engine ranges. Installation rejects an unsupported Node or npm version.
@@ -21,11 +23,17 @@ npm ci
 npm run dev
 ```
 
-Open `http://127.0.0.1:3000`. New browser profiles start with an empty operational workspace. The current local build still bootstraps test accounts defined in [account fixtures](src/app-state/account-fixtures.ts); these are prototype-only and must be retired before company operations. Individual production authentication and shared records remain migration work in the [progress tracker](docs/progress-tracker.md). Sign out preserves saved work.
+First copy `.env.example` to private `.env.local` and configure the existing staging URL, publishable key and server-only `SUPABASE_SECRET_KEY`. The project secret is separate from the maintenance PAT. Staging already has its first permanent Administrator; sign in with that account. For a new empty environment only, `npm run auth:staging:bootstrap` prompts privately for explicit identity and a hidden password, refuses another initialization and retains its ignored retry checkpoint. No default account is created. Open `http://127.0.0.1:3000/sign-in` after starting development.
 
-Use the same hostname, port and browser profile throughout a walkthrough: localStorage and IndexedDB belong to that origin. The first load of this version clears all prior operational records, drafts, browser document files and demonstration backups once, including manually entered work. Accounts, credentials and account-management history are retained; old project assignments and sessions are cleared. A failed cleanup offers **Retry setup** and blocks workspace use until it finishes. After completion, newly entered records survive refreshes. Administrator can use **Clear workspace** in Administration after confirmation. It removes local projects, transactions, drafts, documents and old workspace backups, while preserving accounts, passwords and account-management history. Project assignments are removed; Google Drive archives are preserved.
+With the Administrator role active, open **Users** to save staff invitations, edit names/roles/project assignments, deactivate/reactivate accounts or resume interrupted provisioning. Users set their own passwords. Email stays fixed after saving. Keep `ACCOUNT_EMAIL_ENABLED=false` until custom SMTP and matching templates are configured and verified: pending staff are saved with **Invitation not sent**. CI enables Mailpit; provider acceptance does not prove delivery. Recovery is available for already confirmed accounts, including interrupted invitation password setup. Sending recovery preserves sessions; a successful reset ends other sessions.
 
-## Main workflow
+Use `127.0.0.1:3000` consistently. Role switching selects only the signed-in person's grants. Prototype account switching, automatic browser initialization and workspace reset are disconnected from the supported runtime. Existing browser data is neither imported nor automatically cleared. Use `npm run dev` for staging review: standard verification deliberately builds without live credentials, so create a fresh configured build before reviewing staging with `npm run start`.
+
+In **Projects**, Administrator and Project Manager can add/edit a project with a name, location, unique document code and explicit PHP budget, then maintain its scopes from the standard list. Zero budgets are valid. Scope allocations share the project cap; unallocated budget is the difference between that cap and scope allocations. Financial values use exact decimal strings throughout the new contracts. Site Personnel see assigned project/scope metadata without financial values; non-Site roles can also view change history.
+
+Project deletion retains history and user identities. A Project Manager must wait for assignments to be cleared; an Administrator can confirm deletion plus clearing the reviewed personnel assignments, requiring fresh sign-in for those users. Pending account provisioning and document-use locks block deletion. After a conflicting edit, the draft stays available for explicit review and reapplication. Another browser needs a refresh until realtime arrives in unit 3.5. Drive setup and operational balances/counters remain unavailable.
+
+## Target workflow (later migration)
 
 Site Personnel submits an MRF, then the Project Manager reviews it. Procurement checks site stock and quotations and prepares POs for Accounting review and approval, then confirms supplier issuance. Upfront payment verification precedes delivery clearance; credit payment and delivery can progress independently. Logistics dispatches; receiving teams confirm quantities; Site Personnel posts accepted stock and records usage. Legacy records keep their original approval/payment path.
 
@@ -33,9 +41,9 @@ MRF lifecycle details show outstanding actions by department, their blockers and
 
 ## Storage and integrations
 
-Snapshot version 12 uses `hml-constructsync-demo-v12`; sessions use `hml-constructsync-session-v2`, and the named account directory uses `hml-constructsync-users-v1`. The completed one-time cleanup is recorded in `hml-constructsync-empty-workspace-v1`. Uploaded originals and document caches use IndexedDB. No operational sample data is installed. After initialization, unreadable or older workflow snapshots require explicit recovery. Browser-storage failures show an in-memory warning; usage drafts remain available for safe retry where browser storage permits.
+Supabase owns identity, profiles, grants, application session bindings and project/scope setup. Realtime follows in unit 3.5. Prototype rules and isolated test fixtures remain while operational records move with their server workflows; their browser snapshots do not establish authority in the supported runtime.
 
-New projects use Google Drive document archives. Copy `.env.example` to `.env.local` and follow [Drive and AI configuration](docs/architecture.md#google-drive-and-ai-configuration). Missing configuration or failed uploads leave archives pending with retry controls; saving a browser cache does not complete a Drive upload. Existing files in Google Drive are preserved by workspace cleanup. Keep secrets out of Git. See [architecture context](docs/architecture.md) for current boundaries and the production target.
+Document generation, Drive and AI endpoints are disabled before provider work until step 5. CI captures invitation/recovery messages in Mailpit; hosted synthetic checks generate restricted links without sending email. Free projects using Supabase's default provider cannot modify email templates. Real delivery requires the verified custom SMTP setup. Keep secrets out of Git; see [architecture context](docs/architecture.md) for boundaries and remaining release requirements.
 
 ## Verification
 
@@ -46,19 +54,15 @@ npm run verify
 npm run verify:browser
 ```
 
-The first command checks the toolchain, then runs lint, route type generation, TypeScript, unit/API tests and a production build. The browser command starts its own production server with real integrations disabled and runs all maintained suites using isolated headless Edge profiles. Windows with Microsoft Edge is required for browser verification. Select individual suites with `npm run verify:browser -- next-iteration usage-entries`. `npm run test:browser` is an alias. Logs and machine-readable results are written under ignored `.verification/`; screenshots stay in temporary browser profiles.
+The first command checks the toolchain, then runs lint, route types, TypeScript, maintained unit/isolated-handler tests and a production build. The browser command runs `foundation-public` against an isolated server using Windows Edge or Linux Chrome, with external requests blocked. `npm run test:browser` is an alias. Logs and results live under ignored `.verification/`. The tracker names deferred prototype suites and their restoration milestones; they are not foundation passes.
 
-GitHub Actions is configured to run clean installation, the high-severity dependency audit and standard verification on Linux and Windows using Node 24.22.1 and 26.12.1. Both Windows jobs also run all 28 browser suites. The workflow runs for pull requests, pushes to `main`/`staging` and manual dispatch, with a separate artifact for each combination. Check hosted results before treating this configuration as verified.
+GitHub Actions retains clean installation, the high-severity audit and standard checks on Linux/Windows with Node 24/26. Both Windows jobs run the public browser suite. Separate Ubuntu database CI replays migrations, tests security/concurrency and real-account browser/email flows, compares generated types, and destroys only its own stack with its immutable audits. Hosted SQL checks roll back synthetic account/project commands; `npm run auth:staging:check` uses Auth-only identities and sends no mail. Deterministic retained-record hashes, counts and profile revisions protect staging data. Successful audited UI workflows run in disposable CI. Local Docker is not required. CI also verifies the active projects branch; consult the tracker for actual hosted results.
 
 Vercel remains a Node 24 deployment target. The repository's `vercel.json` invokes an installation bootstrap that rejects other Node majors before installing the declared npm version and running `npm ci`. Its `build:deployment` command checks Node 24 and npm again before building; it intentionally fails on local Node 26. Select Node 24 in Vercel project settings and check the build logs during the later protected deployment rehearsal. Package engine ranges admit local Node 26, so a hosting default must not silently change the intended production runtime. This configuration does not deploy the app or establish production readiness.
 
 Development, verification and deployment builds use Next.js's `--webpack` option. It also supports Next.js's WebAssembly compiler fallback when Windows Application Control blocks the native compiler; Turbopack requires native bindings.
 
-```bash
-npm run test:live
-```
-
-Live verification is separate and uses the application's configured Drive and Gemini credentials. It creates a unique test subfolder under the configured Drive root, uses synthetic documents, runs an isolated application rooted at that folder, checks extraction/upload/download integrity, and trashes only its run-owned folder afterward. It incurs AI usage. Check `.verification/live.json` for results and any cleanup failure. See [integration setup](docs/architecture.md#google-drive-and-ai-configuration), [verification profiles](docs/ai-workflow-rules.md#verification-profiles) and [readiness progress](docs/progress-tracker.md).
+Guarded `db:staging:preview`, `db:staging:check` and `auth:staging:check` commands target the existing staging project. Migration application requires CI evidence for the exact migrations. Auth parity creates and removes only its own synthetic identity and sends no email. Live provider verification is deferred to step 5; its retained tooling is outside the supported foundation checks. See [verification profiles](docs/ai-workflow-rules.md#verification-profiles).
 
 ## Repository layout
 
@@ -67,7 +71,7 @@ See [architecture context](docs/architecture.md) for the current structure and a
 - `app/`: route adapters and server endpoints; installed Next.js guides govern route conventions.
 - `src/features/`: department workflows and screens.
 - `src/domain/`: business commands, read permissions, actions, stock and report calculations.
-- `src/mock/` and `src/app-state/`: browser persistence, accounts and empty-workspace initialization.
+- `src/server/`: authorized Auth/database operations and provider modules; `src/mock/` and legacy `src/app-state/` retain prototype coverage outside the supported data/authentication path.
 - `src/documents/`: shared browser document storage, hashes and resumable uploads.
 - `tests/` and `scripts/`: domain/API tests and browser checks.
-- `docs/`: five core context documents plus the production checklist companion; workflows and acceptance criteria are in the [project overview](docs/project-overview.md).
+- `docs/`: five core context documents, the production checklist and the step 3 implementation companion; product workflows and release acceptance criteria are in the [project overview](docs/project-overview.md).

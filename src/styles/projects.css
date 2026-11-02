@@ -1,0 +1,11 @@
+.project-history,.project-removal,.project-scope-panel,.project-unavailable { padding: 22px; margin-top: 22px; }
+.project-history ol { padding-left: 20px; display: grid; gap: 14px; }
+.project-history small { display: block; color: var(--muted); }
+.project-history pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; }
+.project-history details { margin-top: 6px; }
+.project-editor fieldset,.scope-editor fieldset { padding: 0; margin: 0; border: 0; }
+.project-financials { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); margin-bottom: 24px; }
+.project-financials strong { display: block; overflow-wrap: anywhere; }
+.project-scope-panel .panel-heading { gap: 14px; flex-wrap: wrap; }
+.project-notice { padding: 12px; border: 1px solid var(--line); border-radius: 10px; }
+@media(max-width:650px) { .project-financials { grid-template-columns: 1fr; } }

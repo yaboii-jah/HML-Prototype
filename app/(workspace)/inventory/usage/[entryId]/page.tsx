@@ -1,5 +1,5 @@
-import { UsageEntryDetail } from "@/src/features/inventory/UsageEntries";
+import { UnavailableWorkspace } from "@/src/components/ui/UnavailableWorkspace";
 
-export default async function Page({ params }: { params: Promise<{ entryId: string }> }) {
-  return <UsageEntryDetail entryId={(await params).entryId}/>;
+export default function Page() {
+  return <UnavailableWorkspace title="Area temporarily unavailable"/>;
 }

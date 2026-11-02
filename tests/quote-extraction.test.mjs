@@ -8,7 +8,7 @@ registerHooks({
   },
 });
 
-const { POST } = await import("../app/api/quotes/extract/route.ts");
+const { POST } = await import("./fixtures/prototype-api/quotes/extract/route.ts");
 
 const quotationRequest = () => {
   const form = new FormData();

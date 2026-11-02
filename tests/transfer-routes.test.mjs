@@ -13,8 +13,8 @@ registerHooks({ resolve(specifier, context, nextResolve) {
   if (specifier.startsWith('@/')) return nextResolve(new URL('../' + specifier.slice(2) + '.ts', import.meta.url).href, context);
   return nextResolve(specifier, context);
 } });
-const receiptRoute = await import('../app/api/drive/transfer-receipts/route.ts');
-const evidenceRoute = await import('../app/api/drive/transfer-evidence/route.ts');
+const receiptRoute = await import('./fixtures/prototype-api/drive/transfer-receipts/route.ts');
+const evidenceRoute = await import('./fixtures/prototype-api/drive/transfer-evidence/route.ts');
 function fixture() {
   let state = seedDemo(), next = 0; state.pos = []; state.pendingAwards = []; state.movements = []; state.batches = [];
   const request = state.requests[0], source = state.sites.find(site => site.id !== request.siteId); request.items = [{ ...request.items[0], id: 'material', quantity: 10, name: 'Cement', unit: 'bag' }]; request.status = 'approved'; delete request.archive;

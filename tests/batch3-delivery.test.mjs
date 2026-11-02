@@ -19,7 +19,7 @@ registerHooks({ resolve(specifier, context, nextResolve) {
   if (specifier === "server-only") return { url: "data:text/javascript,export{}", shortCircuit: true };
   return specifier.startsWith("@/") ? nextResolve(new URL(`../${specifier.slice(2)}.ts`, import.meta.url).href, context) : nextResolve(specifier, context);
 } });
-const { POST } = await import("../app/api/documents/preview/route.ts");
+const { POST } = await import("./fixtures/prototype-api/documents/preview/route.ts");
 const identity = role => { const { name, email } = ACCOUNT_FIXTURES.find(value => value.role === role); return { name, email, role }; };
 let sequence = 0;
 const context = role => ({ actor: identity(role), id: prefix => `${prefix}-delivery-${++sequence}`, now: () => new Date(Date.parse("2026-10-07T02:00:00Z") + sequence * 1000).toISOString() });

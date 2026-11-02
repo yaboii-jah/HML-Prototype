@@ -1,3 +1,5 @@
-import { BatchForm } from "@/src/features/deliveries/Deliveries";
+import { UnavailableWorkspace } from "@/src/components/ui/UnavailableWorkspace";
 
-export default async function Page({ searchParams }: { searchParams: Promise<{ poId?: string; parentBatchId?: string }> }) { const { poId, parentBatchId } = await searchParams; return <BatchForm poId={poId} parentBatchId={parentBatchId}/>; }
+export default function Page() {
+  return <UnavailableWorkspace title="Area temporarily unavailable"/>;
+}

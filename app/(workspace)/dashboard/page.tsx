@@ -1,4 +1,5 @@
-export const metadata = { title: "Operations dashboard | HML ConstructSync" };
-import { Dashboard } from "@/src/features/dashboard/Dashboard";
+import { UnavailableWorkspace } from "@/src/components/ui/UnavailableWorkspace";
 
-export default function Page() { return <Dashboard/>; }
+export default function Page() {
+  return <UnavailableWorkspace title="Area temporarily unavailable"/>;
+}

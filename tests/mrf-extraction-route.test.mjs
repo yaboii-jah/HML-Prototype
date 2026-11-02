@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { POST } from "../app/api/requests/extract/route.ts";
+import { POST } from "./fixtures/prototype-api/requests/extract/route.ts";
 
 const rawMrf = () => ({ documentType: "single_mrf", details: { projectName: "Project", ref: "MRF-API", requestDate: "2026-10-05", requestedBy: "Site", approvedBy: "Signatory", purchaser: "Buyer", financeOfficer: "Finance", specialInstructions: null }, items: [{ name: "Cement", quantity: 10, unit: "bag", neededDate: "2026-10-08", purpose: null, location: "Site", remarks: null }], warnings: [] });
 const pdf = () => new File(["%PDF-1.4\nMRF"], "MRF.pdf", { type: "application/pdf" });

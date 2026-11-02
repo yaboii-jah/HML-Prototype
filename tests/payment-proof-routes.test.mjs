@@ -14,8 +14,8 @@ registerHooks({ resolve(specifier, context, nextResolve) {
   if (specifier.startsWith('@/')) return nextResolve(new URL(`../${specifier.slice(2)}.ts`,import.meta.url).href,context);
   return nextResolve(specifier,context);
 } });
-const routes = await import('../app/api/drive/payment-proof/route.ts');
-const chunks = await import('../app/api/drive/accounting-documents/chunk/route.ts');
+const routes = await import('./fixtures/prototype-api/drive/payment-proof/route.ts');
+const chunks = await import('./fixtures/prototype-api/drive/accounting-documents/chunk/route.ts');
 const body = () => {
   const proof={id:'document',name:'Receipt.pdf',mime:'application/pdf',size:12,localFileId:'local',sha256:'a'.repeat(64),archive:{status:'pending'}};
   return {proof, po:{workflow:'pm-external-v1',paymentMode:'upfront',id:'po',ref:'PO-1',mrfId:'mrf',status:'approved',issuance:{at:'2026-10-09T00:00:00Z',by:{name:'Buyer',role:'Procurement',email:'buyer@example.com'}},archive:{status:'complete'},paymentProofs:[proof]}, mrf:{id:'mrf',ref:'MRF-1',workflow:'pm-external-v1',status:'approved',archive:{status:'complete'}},projectFolderId:'project-folder'};

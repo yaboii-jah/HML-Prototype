@@ -28,6 +28,7 @@ These standards apply to new or substantially changed code. Improve the affected
 - Default pages and layouts to Server Components. Add `"use client"` at the boundary that needs state, event handlers, hooks or browser-only APIs, keeping that boundary as small as practical.
 - Keep page adapters and route handlers focused on routing and orchestration. Put reusable business rules and provider operations in their responsible modules.
 - Keep privileged database access, credentials and provider secrets on the server. Pass only the data needed by the client; navigation visibility is not authorization.
+- Keep authoritative per-user reads fresh and isolated between users. Realtime refreshes must obtain current authorized data while preserving ordinary unsaved form state; shared caching must never reuse another user's permissions or view.
 - Treat current browser-state-dependent screens as migration work. Move authoritative reads and mutations server-side in coherent, verified units rather than claiming a client-side permission check already meets the production target.
 - Use effects to synchronize with external systems when needed; derive values directly from current data when no synchronization is required.
 
@@ -56,6 +57,7 @@ These standards apply to new or substantially changed code. Improve the affected
 - Protect related business updates with the transaction, concurrency and idempotency guarantees required by the architecture. Keep external provider calls outside database transactions.
 - Preserve permanent actor identity and historical names/timestamps when normalizing stored values. Treat compatibility handling as an explicit boundary and verify that it does not reset records, widen access or duplicate effects.
 - Keep large file bytes and secrets out of ordinary record and workflow payloads. Never place private business documents in `public/` merely to make them accessible.
+- Edit commands carry an expected record version; reject stale saves with an actionable conflict instead of silently replacing newer data. Use stable retry identities for operations that can create duplicate effects, and apply related business/audit changes atomically.
 
 ## File Organization
 
@@ -63,6 +65,8 @@ Follow the current structure and migration responsibilities in [architecture con
 
 - Keep Next.js route conventions under `app/`, feature-specific screens and interaction code under `src/features/`, and reusable UI under `src/components/`.
 - Put pure business rules and calculations in `src/domain/`, and privileged data access, document generation and provider integration code in `src/server/`. Avoid browser, framework or provider I/O in pure domain functions.
+- Group migrated business areas within these existing layers (Option A): `src/features/<area>/` owns screens and forms, `src/domain/<area>/` owns pure types/rules, and `src/server/<area>/` owns authorized queries/commands. Start with accounts and projects; organize other areas as their workflows migrate.
+- Give callers a focused interface: queries return only permitted view data and commands describe explicit record operations. Separate session/UI projections from business records and retire migrated dependencies on the global demo snapshot and command dispatcher. Keep server-only implementations out of browser import graphs.
 - Use `src/app-state/` for client interaction/session projections and `src/documents/` for browser document helpers. The prototype repository must not become the production data authority.
 - Keep synthetic datasets and test helpers isolated under `tests/`; keep maintained verification tooling under `scripts/`. Generate outputs in their designated ignored locations.
 - Use PascalCase for component files and descriptive kebab-case names for non-component modules. Prefer named exports for reusable modules while retaining framework-required default exports.
