@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { spawn } from 'node:child_process';
 import { writeFile } from 'node:fs/promises';
+import { createServer } from 'node:net';
 import { setTimeout as delay } from 'node:timers/promises';
 import { createClient } from '@supabase/supabase-js';
 import { bootstrapAdministrator } from './helpers/bootstrap-administrator.mjs';
@@ -10,11 +11,21 @@ import { requireLoopback } from './helpers/supabase-target.mjs';
 import { checkAccountAdministration } from './check-account-administration.mjs';
 import { checkProjectFoundation } from './check-project-foundation.mjs';
 import { checkRealtimeBrowser } from './check-realtime-browser.mjs';
+import { checkFoundationHttp } from './check-foundation-http.mjs';
+import { checkFoundationShell } from './check-foundation-shell.mjs';
+import { disposableHttpOrigin } from './helpers/disposable-endpoints.mjs';
+import { verificationSource } from './helpers/verification-evidence.mjs';
 
 export async function checkAuthFoundation({ api, anon, secret, mailpit, sql, environment }) {
-  requireLoopback(api);
-  requireLoopback(mailpit);
+  disposableHttpOrigin(api);
+  disposableHttpOrigin(mailpit);
+  const source = await verificationSource();
+  const checks = [];
+  await writeFile('.verification/auth-foundation.json', JSON.stringify({ ...source, passed: false, complete: false, checks }));
   const base = 'http://127.0.0.1:3198';
+  const probe = createServer();
+  await new Promise((done, reject) => { probe.once('error', reject); probe.listen(3198, '127.0.0.1', done); });
+  await new Promise(done => probe.close(done));
   const client = createClient(api, secret, { auth: { persistSession: false, autoRefreshToken: false } });
   const passwordClient = () => createClient(api, anon, { auth: { persistSession: false, autoRefreshToken: false } });
   const ok = (result, label) => { assert.equal(result.error?.message, undefined, label); return result.data; };
@@ -241,14 +252,23 @@ export async function checkAuthFoundation({ api, anon, secret, mailpit, sql, env
     await second.navigate(expiring); await savePassword(second, randomUUID());
     await second.wait("return !!document.querySelector('[role=alert]')");
     assert.match(await second.run("return document.querySelector('[role=alert]').textContent"), /invalid or expired/);
+    checks.push('sessions', 'captured-email');
     await checkAccountAdministration({ browser, second, client, login, logout, sessionCookie, mailLink, savePassword,
       administrator: bootstrapInputs[winner], passwordClient, sql });
+    checks.push('accounts');
     await checkProjectFoundation({ browser, second, client, login, logout, sessionCookie,
       administrator: bootstrapInputs[winner], passwordClient });
+    checks.push('projects');
     await checkRealtimeBrowser({ browser, second, client, login, logout, sessionCookie,
       administrator: bootstrapInputs[winner] });
+    checks.push('realtime-browser');
+    await checkFoundationShell({ browser, client, login, logout, administrator: bootstrapInputs[winner], sql });
+    checks.push('shell-loading');
+    await checkFoundationHttp({ browser, second, client, login, logout, sessionCookie,
+      administrator: bootstrapInputs[winner], base, passwordClient });
+    checks.push('http-roles-renewal');
     for (const browser of browsers) browser.assertIsolated();
-    await writeFile('.verification/auth-foundation.json', JSON.stringify({ passed: true, projects: true, accounts: true, bootstrap: true, sessions: true, roles: true, revocation: true, capturedEmail: true, isolated: true }, null, 2));
+    checks.push('isolation');
     console.log('Real-account browser, session revocation, role, bootstrap and captured-email checks passed.');
   } finally {
     const cleanup = await Promise.allSettled(browsers.map(browser => browser.close()));
@@ -256,4 +276,6 @@ export async function checkAuthFoundation({ api, anon, secret, mailpit, sql, env
     await writeFile('.verification/auth-server.log', serverLog);
     if (cleanup.some(result => result.status === 'rejected')) throw Error('Run-owned browser profile cleanup failed');
   }
+  await writeFile('.verification/auth-foundation.json', JSON.stringify({ ...source, at: new Date().toISOString(),
+    passed: true, complete: true, checks, isolated: true, cleaned: true }, null, 2));
 }

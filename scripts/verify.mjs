@@ -1,6 +1,7 @@
 import { spawn } from 'node:child_process';
 import { mkdir, writeFile, readdir } from 'node:fs/promises';
 import { verificationEnvironment } from './helpers/verification-environment.mjs';
+import { verificationSource } from './helpers/verification-evidence.mjs';
 
 await mkdir('.verification', { recursive: true });
 const checks = [
@@ -12,6 +13,8 @@ const checks = [
   ['build', ['node_modules/next/dist/bin/next', 'build', '--webpack']],
 ];
 const results = [];
+const source = await verificationSource();
+await writeFile('.verification/checks.json', JSON.stringify({ ...source, complete: false, passed: false, results }));
 for (const [name, args] of checks) {
   const start = Date.now();
   const child = spawn(process.execPath, args, { windowsHide: true, env: verificationEnvironment(name === 'unit') });
@@ -22,4 +25,5 @@ for (const [name, args] of checks) {
   results.push({ name, code, durationMs: Date.now() - start });
   if (code !== 0) { process.exitCode = 1; break; }
 }
-await writeFile('.verification/checks.json', JSON.stringify({ at: new Date().toISOString(), results }, null, 2));
+await writeFile('.verification/checks.json', JSON.stringify({ ...source, at: new Date().toISOString(),
+  complete: results.length === checks.length, passed: results.length === checks.length && results.every(result => result.code === 0), results }, null, 2));

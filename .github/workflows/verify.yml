@@ -2,7 +2,7 @@ name: Verify
 on:
   pull_request:
   push:
-    branches: [main, staging, 'feat/step-3-sessions', 'feat/step-3-accounts', 'feat/step-3-projects', 'feat/step-3-realtime']
+    branches: [main, staging, 'feat/step-3-sessions', 'feat/step-3-accounts', 'feat/step-3-projects', 'feat/step-3-realtime', 'feat/step-3-acceptance']
   workflow_dispatch:
 permissions:
   contents: read
@@ -33,6 +33,7 @@ jobs:
       - run: npm run verify
       - run: npm run verify:browser
         if: runner.os == 'Windows'
+      - run: npm run verify:foundation -- standard
       - uses: actions/upload-artifact@v7
         if: always()
         with:

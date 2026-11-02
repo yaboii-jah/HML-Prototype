@@ -14,8 +14,8 @@ Use this companion to track the steps toward production. See the [progress track
 
 - [ ] **3. Add secure accounts, permissions and shared project data.**
   Done when individual accounts, current role/project permissions, shared projects/scopes and protected realtime updates pass the [implementation guide's](step-3-implementation.md) foundation checks, including rejection of unauthorized or revoked access. CI captures invitation/recovery email; hosted synthetic checks use restricted generated links. Operational records move in step 4.
-  Progress 2026-11-02: units 3.1-3.4 are verified, including accounts, access invalidation and shared project/scope setup with staging parity. Protected realtime and full foundation acceptance remain. See the [tracker](progress-tracker.md#session-notes) for evidence.
-  Unit 3.5 code/CI and staging migration checks pass; hosted private-only configuration is blocked by the maintenance token's missing Realtime permissions. Unit 3.5 and step 3 remain unchecked.
+  Progress 2026-11-02: units 3.1-3.5 are verified, including accounts, access invalidation, shared projects/scopes and protected realtime with staging verification. Whole-foundation acceptance remains unit 3.6. See the [tracker](progress-tracker.md#session-notes) for evidence.
+  Unit 3.5 completed 2026-11-02: code/CI, staging migration/checks, explicit private-only WebSocket denial and user-reported manual review pass. Step 3 remains unchecked until 3.6 passes.
 
 - [ ] **4. Move operational records and business workflows to the server.**
   Done when each migrated workflow has shared authoritative records and realtime updates, with authorized, transactional, retry-safe and audited changes; prototype data authority/reset paths are retired and deferred operational browser coverage is restored.

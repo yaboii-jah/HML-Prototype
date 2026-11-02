@@ -14,6 +14,7 @@ import { checkAccountRaces } from './check-account-races.mjs';
 import { checkProjectRaces } from './check-project-races.mjs';
 import { checkRealtimeFoundation } from './check-realtime-foundation.mjs';
 import { checkRealtimeRaces } from './check-realtime-races.mjs';
+import { verificationSource } from './helpers/verification-evidence.mjs';
 
 if (process.env.GITHUB_ACTIONS !== 'true' || !/^\d+$/.test(process.env.GITHUB_RUN_ID ?? '') || process.platform !== 'linux') {
   throw new Error('verify:db runs on disposable GitHub Linux runners. Use db:staging:check for scoped hosted checks.');
@@ -51,6 +52,10 @@ const verifiedMigrationHash = migrationHash(files);
 let networkCreated = false;
 let passed = false;
 let typeMatch = false;
+const source = await verificationSource();
+const checks = [];
+await mkdir('.verification', { recursive: true });
+await writeFile('.verification/database-ci.json', JSON.stringify({ ...source, passed: false, complete: false, checks }));
 await mkdir(`${workdir}/supabase`, { recursive: true });
 await writeFile(`${workdir}/supabase/config.toml`, (await readFile('supabase/config.toml', 'utf8'))
   .replace('project_id = "constructsync-ci"', `project_id = "${project}"`)
@@ -78,6 +83,7 @@ try {
   await sql(await readFile('supabase/checks/accounts.sql', 'utf8'));
   await sql(await readFile('supabase/checks/projects.sql', 'utf8'));
   await sql(await readFile('supabase/checks/realtime.sql', 'utf8'));
+  checks.push('rollback-sql');
 
   // Hold the parent lock in one connection; the second must observe committed allocation.
   const projectId = randomUUID();
@@ -218,6 +224,7 @@ try {
     await sql(`delete from public.projects where id='${testProject}';`);
   }
   console.log('SQL, concurrent allocation and real Auth/Data API checks passed.');
+  checks.push('constraints-auth-data-api');
   const generated = await generateDatabaseTypes(async query => {
     const statement = query.trim().replace(/;$/, '');
     const result = await sql(`select coalesce(json_agg(row_to_json(typegen_rows)), '[]'::json) from (${statement}) typegen_rows;`);
@@ -228,20 +235,27 @@ try {
   let expected = '';
   try { expected = await readFile('src/server/database/database.types.ts', 'utf8'); } catch (error) { if (error.code !== 'ENOENT') throw error; }
   typeMatch = generated === normalizeDatabaseTypes(expected);
+  if (typeMatch) checks.push('types');
   await checkAuthFoundation({ api, anon, secret,
     mailpit: requireLoopback(status.INBUCKET_URL ?? status.MAILPIT_URL ?? status.inbucket_url).origin,
     sql, environment });
+  checks.push('auth-browser-email');
   await checkProjectRaces({ sql, database, environment });
+  checks.push('project-races');
   await checkAccountRaces({ sql, database, environment });
+  checks.push('account-races');
   await checkRealtimeFoundation({ api, anon, secret, sql });
+  checks.push('realtime-protocol');
   await checkRealtimeRaces({ sql, database, environment });
+  checks.push('realtime-races');
   passed = typeMatch;
 } finally {
   try { await cli(['stop', '--project-id', project, '--no-backup'], { capture: true }); }
   finally {
     if (networkCreated) assert.equal((await command('docker', ['network', 'rm', network])).code, 0, 'Remove only run-owned Docker network');
   }
-  await writeFile('.verification/database-ci.json', JSON.stringify({ passed, typeMatch, migrationHash: verifiedMigrationHash,
+  await writeFile('.verification/database-ci.json', JSON.stringify({ ...source, at: new Date().toISOString(),
+    passed, complete: passed, cleaned: true, checks, typeMatch, migrationHash: verifiedMigrationHash,
     runUrl: `https://github.com/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}` }, null, 2));
 }
 assert.ok(typeMatch, 'Commit the generated database.types.ts artifact, then rerun CI to verify type consistency.');

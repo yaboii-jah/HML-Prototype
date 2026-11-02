@@ -22,7 +22,8 @@ export function requireStaging(environment) {
 export function requireLoopback(value) {
   const url = new URL(value);
   if (!['127.0.0.1', 'localhost', '[::1]'].includes(url.hostname) ||
-      !['http:', 'https:', 'postgres:', 'postgresql:'].includes(url.protocol) || url.search || url.hash) {
+      !['http:', 'https:', 'postgres:', 'postgresql:'].includes(url.protocol) || url.search || url.hash
+      || (['http:', 'https:'].includes(url.protocol) && (url.username || url.password))) {
     throw new Error('Disposable database checks require loopback URLs.');
   }
   return url;

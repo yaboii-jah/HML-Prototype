@@ -6,12 +6,12 @@ import { tmpdir } from 'node:os';
 import { basename, join, resolve, sep } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { browserCallTimeout, configureBrowserChecks, navigateDocument } from './browser-environment.mjs';
-import { requireLoopback } from './supabase-target.mjs';
+import { disposableHttpOrigin, browserRequestAllowed, realtimeSocketAllowed } from './disposable-endpoints.mjs';
 
 export async function authBrowser(base, { startupTimeoutMs = 30000, onLaunch, supabaseOrigin } = {}) {
   if (!Number.isInteger(startupTimeoutMs) || startupTimeoutMs < 1000 || startupTimeoutMs > 30000) throw Error('Invalid bounded browser startup deadline');
-  const appOrigin = requireLoopback(base).origin;
-  const apiOrigin = supabaseOrigin ? requireLoopback(supabaseOrigin).origin : null;
+  const appOrigin = disposableHttpOrigin(base);
+  const apiOrigin = supabaseOrigin ? disposableHttpOrigin(supabaseOrigin) : null;
   const realtimeUrl = apiOrigin ? new URL("/realtime/v1/websocket", apiOrigin.replace(/^http/, "ws")) : null;
   const binaries = process.platform === 'win32'
     ? ['C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', 'C:/Program Files/Microsoft/Edge/Application/msedge.exe']
@@ -90,8 +90,7 @@ export async function authBrowser(base, { startupTimeoutMs = 30000, onLaunch, su
           recentRequests.push({ path: url.pathname, origin: message.params.request.headers.Origin ?? message.params.request.headers.origin ?? 'absent' });
           if (recentRequests.length > 6) recentRequests.shift();
         }
-        const allowed = url.origin === appOrigin || (url.origin === apiOrigin && url.pathname.startsWith('/realtime/v1/'))
-          || ['data:', 'about:'].includes(url.protocol);
+        const allowed = browserRequestAllowed(url.href, appOrigin, apiOrigin);
         if (!allowed) violations.push(url.origin);
         void call(allowed ? 'Fetch.continueRequest' : 'Fetch.failRequest', {
           requestId: message.params.requestId, ...(!allowed ? { errorReason: 'BlockedByClient' } : {}),
@@ -99,8 +98,7 @@ export async function authBrowser(base, { startupTimeoutMs = 30000, onLaunch, su
       }
       if (message.method === 'Network.webSocketCreated') {
         const url = new URL(message.params.url);
-        if (!realtimeUrl || url.origin !== realtimeUrl.origin || url.pathname !== realtimeUrl.pathname
-          || url.username || url.password) violations.push(url.origin);
+        if (!realtimeSocketAllowed(url.href, realtimeUrl?.href)) violations.push(url.origin);
       }
     };
     await configureBrowserChecks(call);
@@ -111,8 +109,8 @@ export async function authBrowser(base, { startupTimeoutMs = 30000, onLaunch, su
       const expected=${JSON.stringify(realtimeUrl?.href ?? null)};
       window.WebSocket=class extends NativeWebSocket {
         constructor(address,...protocols) {
-          const target=new URL(address,location.href), allowed=expected&&new URL(expected);
-          if(!allowed||target.origin!==allowed.origin||target.pathname!==allowed.pathname||target.username||target.password)
+          const target=new URL(address,location.href);
+          if(!(${realtimeSocketAllowed.toString()})(target.href,expected))
             throw Error('Unexpected Realtime WebSocket destination');
           super(address,...protocols);
         }

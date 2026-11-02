@@ -156,11 +156,11 @@ Verify exact money, missing/zero values, permissions, finance confidentiality, c
 
 Completed 2026-11-02: code `4f4c83d` passed [all four standard jobs](https://github.com/yaboii-jah/HML-Prototype/actions/runs/41435998413) and [disposable database/Auth/project-browser/email/type/concurrency checks](https://github.com/yaboii-jah/HML-Prototype/actions/runs/41435998376). Local standard verification passed with 377 tests/build and the public browser suite. Migration `20261102104539` is applied to staging; all four rollback suites, Auth-only HTTP denial/recovery checks, matching generated types and retained-record hash comparisons passed. The final preview reports up to date. The [tracker](progress-tracker.md#session-notes) records exact scope, corrected fixtures, the initial pooler timeout/retry and existing advisor limits. Production is unchanged; realtime remains 3.5.
 
-**Local review:** use the existing staging account and `npm run dev`. Administrator or Project Manager can add a project, open its detail, edit settings and maintain scope allocations. Administrator assignments in Users now include newly saved shared projects. Read-only non-Site roles see financial setup/history; Site Personnel see assigned metadata/scopes only. A second tab/browser needs a refresh until 3.5. Preserve test identities/history and deactivate test accounts after review; do not reset staging. The maintained project/account CI coverage replaces the relevant prototype assertions, while site stock/operations and Drive assertions remain with their later milestones.
+**Local review:** use the existing staging account and `npm run dev`. Administrator or Project Manager can add a project, open its detail, edit settings and maintain scope allocations. Administrator assignments in Users now include newly saved shared projects. Read-only non-Site roles see financial setup/history; Site Personnel see assigned metadata/scopes only. Unit 3.5 now refreshes supported views in a second tab/browser automatically. Preserve test identities/history and deactivate test accounts after review; do not reset staging. The maintained project/account CI coverage replaces the relevant prototype assertions, while site stock/operations and Drive assertions remain with their later milestones.
 
 ### 3.5 Add Protected Realtime Updates
 
-- [ ] Authorized realtime updates and recovery verified.
+- [x] Authorized realtime updates and recovery verified.
 
 **Agreed implementation (2026-11-02):** use `feat/step-3-realtime`. Topics include user, access revision and exact session. Give the browser only its existing access token in memory; retain HttpOnly refresh credentials and server renewal. Users, Projects and project details refetch authorized data on events and every 30 seconds while visible, including when the socket appears healthy. Preserve ordinary drafts and filters; proactively require review of newer versions. Deleted targets retain an unsavable draft view. Confirmed access loss clears protected content and drafts. Show degraded connection/read status and manual retry; server-confirmed saves remain available. Serialize publishing with application access changes and native session deletion, retaining existing commands/audits. Verify races, subscription isolation, recovery and confidentiality before staging rollout. Step 3 remains open for 3.6.
 
@@ -173,7 +173,7 @@ Completed 2026-11-02: code `4f4c83d` passed [all four standard jobs](https://git
 
 **Done when:** two isolated browser sessions receive permitted changes automatically; record edits do not erase a draft; subscription gaps recover through fresh reads; revoked users receive no subsequent protected record notifications or data. Access remains enforced when events are delayed, missed or forged.
 
-Implementation checkpoint 2026-11-02: `e2ab489` passes the standard four-job matrix and disposable SQL/Auth/browser/Realtime/type/race checks. Migration `20261102130037` is applied to staging; five rollback suites, Auth-only checks, generated types and retained-state comparison pass. **Still open:** the maintenance token lacks Realtime configuration permissions, and a data-free probe confirms public channels remain accepted. Disable **Allow public access** in staging Realtime settings (or grant the maintenance token Realtime configuration read/write), then verify private-only settings and safe subscription parity. See the tracker for evidence. Production is unchanged; do not check 3.5 complete yet.
+Completed 2026-11-02: `e2ab489` passes the standard four-job matrix and disposable SQL/Auth/browser/Realtime/type/race checks. Migration `20261102130037` is applied to staging; five rollback suites, Auth-only checks, generated types and retained-state comparison pass. The user disabled **Allow public access** and reported that all supplied manual tests passed overall. Read-only probes independently confirm public-channel rejection with `PrivateOnly: This project only allows private channels` and anonymous private-channel rejection. This resolves the earlier configuration blocker; the token's management-API permission limit remains a tooling constraint. Detailed evidence is in the [tracker](progress-tracker.md#session-notes). Unit 3.6 is next; production is unchanged and step 3 stays open.
 
 ### 3.6 Verify the Foundation and Complete the Milestone
 
@@ -181,6 +181,8 @@ Implementation checkpoint 2026-11-02: `e2ab489` passes the standard four-job mat
 
 **Depends on:** 3.5.
 
+- **Agreed 2026-11-02:** implement missing checks and scoped foundation defect fixes on `feat/step-3-acceptance`. Carry forward 3.5 manual acceptance; review changed behavior only. Publish a draft milestone PR into `staging`, including the accumulated runtime/documentation and foundation work, excluding unrelated skill/configuration cleanup. Do not merge or deploy.
+- Revision-bound `.verification/foundation-acceptance.json` reports distinguish standard, disposable-foundation and whole-milestone profiles. `npm run verify:foundation -- local|standard|database|milestone` rejects missing, failed, partial or stale required evidence. The milestone profile also requires all four imported CI reports, staging parity and user-confirmed targeted manual review.
 - Retain standard Linux/Windows and Node 24/26 checks. Extend the disposable Supabase/Mailpit and real-account browser coverage introduced in 3.2 to complete foundation acceptance. Keep its shared Linux Chrome/Windows Edge launcher, bounded CDP waits and isolated profiles.
 - Configure local-only Auth/Data/Realtime endpoints before building test bundles. Validate endpoints explicitly: the existing Node-fetch network guard does not isolate browser requests or Realtime WebSockets. Automated tests must never reset or depend on the hosted development project.
 - Map the acceptance scenarios below to maintained tests. Preserve existing domain tests and record each deferred browser workflow, its reason and restoration milestone; deferred cases are never counted as passed.
@@ -191,18 +193,19 @@ Implementation checkpoint 2026-11-02: `e2ab489` passes the standard four-job mat
 
 ## Required Acceptance Scenarios
 
-| Scenario | Required result |
-| --- | --- |
-| Invitation and recovery | Captured links establish only the intended account flow; invalid/expired/replayed links and delivery failures have safe recovery paths. |
-| Identity and roles | Switching a person's granted roles preserves their permanent identity; Site Personnel cannot hold another role; remembered roles are revalidated. |
-| Unauthorized requests | Anonymous users, forged metadata, direct URLs and direct Data API/RPC requests cannot bypass current access checks. |
-| Access changes | Deactivation, role removal and assignment changes reject old application sessions immediately, including after token refresh and with missed notifications. |
-| Administrator safeguards | Concurrent account/grant changes retain an active Administrator and cannot self-deactivate or rewrite past attribution. |
-| Shared records and confidentiality | Separate accounts see the same allowed projects; Site Personnel see assigned records and never receive budget fields through any exposed path. |
-| Concurrent allocations and edits | Competing writes preserve budget limits; stale writes fail visibly while keeping the ordinary draft available for review. |
-| Retry and audit integrity | Repeated creation submissions do not duplicate records or audit effects; actors and times are generated from verified server context. |
-| Realtime lifecycle | Permitted changes refresh automatically; reconnect/focus catch up; obsolete topics stay silent; drafts survive ordinary refreshes. |
-| Temporary gaps | Unsupported screens and endpoints are explicitly unavailable and cannot execute provider work or fall back to local business authority. |
-| Environment isolation | CI resources/URLs are loopback and disposable; hosted checks explicitly target staging and clean only run-owned resources. Production and retained development data remain protected. |
+| Scenario | Required result | Maintained verification |
+| --- | --- | --- |
+| Invitation and recovery | Captured links establish only the intended account flow; invalid/expired/replayed links and delivery failures have safe recovery paths. | `check-auth-foundation.mjs`, `check-account-administration.mjs`; disposable Auth/Mailpit. |
+| Identity and roles | Switching a person's granted roles preserves their permanent identity; Site Personnel cannot hold another role; remembered roles are revalidated. | Auth/account browser checks, `accounts.sql`, `check-foundation-http.mjs`. |
+| Unauthorized requests | Anonymous users, forged metadata, direct URLs and direct Data API/RPC requests cannot bypass current access checks. | `foundation-public`, Auth/Data API checks, `check-foundation-http.mjs`, `migration-endpoints.test.mjs`, `foundation-endpoints.test.mjs`. |
+| Access changes | Deactivation, role removal and assignment changes reject old application sessions immediately, including after token refresh and with missed notifications. | Auth/account/realtime browser checks, HTTP role checks, `check-realtime-foundation.mjs`, `check-realtime-races.mjs`. |
+| Administrator safeguards | Concurrent account/grant changes retain an active Administrator and cannot self-deactivate or rewrite past attribution. | Account UI/SQL checks, `check-account-races.mjs` at both isolation levels. |
+| Shared records and confidentiality | Separate accounts see the same allowed projects; Site Personnel see assigned records and never receive budget fields through any exposed path. | `check-project-foundation.mjs`, HTTP seven-role matrix, real Data API/embedded-relation checks, rollback SQL. |
+| Concurrent allocations and edits | Competing writes preserve budget limits; stale writes fail visibly while keeping the ordinary draft available for review. | Project/realtime browser checks, `check-project-races.mjs`, allocation races in `verify-database.mjs`. |
+| Retry and audit integrity | Repeated creation submissions do not duplicate records or audit effects; actors and times are generated from verified server context. | Account/project SQL/browser checks, account/project race checks. |
+| Realtime lifecycle | Permitted changes refresh automatically; reconnect/focus catch up; obsolete topics stay silent; drafts survive ordinary refreshes. | Realtime protocol/browser/race checks; real renewal in `check-foundation-http.mjs`. |
+| Temporary gaps | Unsupported screens and endpoints are explicitly unavailable and cannot execute provider work or fall back to local business authority. | `foundation-public`, Auth shell navigation, exhaustive disabled-handler tests. Operational/Drive suites remain deferred to steps 4/5. |
+| Environment isolation | CI resources/URLs are loopback and disposable; hosted checks explicitly target staging and clean only run-owned resources. Production and retained development data remain protected. | `acceptance-isolation.test.mjs`, shared browser/Node guards, database cleanup, `check-staging-acceptance.mjs`. |
+| Shell and loading recovery | Supported navigation, responsive controls, keyboard dialogs, preferences and blocked storage work; loading/error/missing states recover. | `check-foundation-shell.mjs` using real sessions and temporary disposable RPC delay/failure, with normal/reduced motion. |
 
 Run the [standard completion checks](ai-workflow-rules.md#before-moving-to-the-next-unit) for each applicable code unit, not only at the end. Record exact scope and results in the tracker. Real email delivery with a verified sender, company-owned production services, deployment, backup/restore and staff acceptance remain release requirements for the later protected rehearsal.

@@ -8,10 +8,17 @@ export async function checkRealtimeBrowser({ browser, second, client, login, log
   // browser profile. No production test bypass or special endpoint is added.
   const preload = await browser.call('Page.addScriptToEvaluateOnNewDocument', { source: `
     window.__foundationTicks=[];window.__dropBroadcasts=false;
+    window.__foundationHidden=false;window.__foundationReads=[];window.__foundationSockets=[];
+    Object.defineProperty(document,'visibilityState',{configurable:true,get:()=>window.__foundationHidden?'hidden':'visible'});
+    const nativeFetch=window.fetch;
+    window.fetch=function(input,...args){const path=typeof input==='string'?input:input.url;
+      if(path?.startsWith('/api/foundation/')||path==='/api/realtime/session')window.__foundationReads.push(path);
+      return nativeFetch.call(this,input,...args)};
     const interval=window.setInterval;
     window.setInterval=function(fn,ms,...args){if(ms===30000)window.__foundationTicks.push(()=>fn(...args));return interval.call(this,fn,ms,...args)};
     const Native=window.WebSocket;
     window.WebSocket=class extends Native{
+      constructor(...args){super(...args);window.__foundationSockets.push(this)}
       set onmessage(listener){super.onmessage=event=>{
         let data;try{data=JSON.parse(event.data)}catch{}
         if(window.__dropBroadcasts&&(data?.event==='broadcast'||data?.[3]==='broadcast'))return;
@@ -41,14 +48,28 @@ export async function checkRealtimeBrowser({ browser, second, client, login, log
     await browser.click('.page-header .secondary');
     await browser.wait("return !!document.querySelector('.project-editor')");
     await browser.fill('input[name=projectName]', 'Draft survives missed events');
-    await browser.run('window.__dropBroadcasts=true');
+    await browser.run('window.__dropBroadcasts=true;window.__foundationHidden=true');
+    await delay(700);
+    const hiddenReads = await browser.run('return window.__foundationReads.length');
     let current = ok(await client.rpc('projects_read', { actor, target_project: saved.projectId }), 'Read for missed event').project;
     ok(await client.rpc('project_command', { actor, command: { ...base, type: 'saveProject', requestId: randomUUID(), projectId: saved.projectId, projectVersion: current.version, location: 'Missed event update' } }), 'Commit missed signal');
     await delay(500);
-    await browser.run('for(const tick of window.__foundationTicks)tick()');
+    await browser.run("for(const tick of window.__foundationTicks)tick();window.dispatchEvent(new Event('focus'));window.dispatchEvent(new PageTransitionEvent('pageshow',{persisted:true}))");
+    await delay(700);
+    assert.equal(await browser.run('return window.__foundationReads.length'), hiddenReads, 'Hidden tabs pause ordinary reads, polling and foreground handlers');
+    await browser.run("window.__foundationHidden=false;document.dispatchEvent(new Event('visibilitychange'))");
     await browser.wait("return !![...document.querySelectorAll('.project-editor button')].find(b=>b.textContent.includes('I reviewed'))");
     assert.equal(await browser.run("return document.querySelector('input[name=projectName]').value"), 'Draft survives missed events');
     await browser.run("[...document.querySelectorAll('.project-editor button')].find(b=>b.textContent.includes('I reviewed')).click()");
+    for (const event of ['focus', 'pageshow']) {
+      current = ok(await client.rpc('projects_read', { actor, target_project: saved.projectId }), 'Read for foreground recovery').project;
+      const location = 'Recovered on ' + event;
+      ok(await client.rpc('project_command', { actor, command: { ...base, type: 'saveProject', requestId: randomUUID(), projectId: saved.projectId, projectVersion: current.version, location } }), 'Commit without delivered notification');
+      await browser.run(`window.dispatchEvent(new ${event === 'pageshow' ? 'PageTransitionEvent' : 'Event'}('${event}'${event === 'pageshow' ? ',{persisted:true}' : ''}))`);
+      await browser.wait(`return !![...document.querySelectorAll('.project-editor button')].find(b=>b.textContent.includes('I reviewed'))&&document.querySelector('.project-editor').textContent.includes(${JSON.stringify(location)})`);
+      assert.equal(await browser.run("return document.querySelector('input[name=projectName]').value"), 'Draft survives missed events');
+      await browser.run("[...document.querySelectorAll('.project-editor button')].find(b=>b.textContent.includes('I reviewed')).click()");
+    }
     await browser.run('window.__dropBroadcasts=false');
     current = ok(await client.rpc('projects_read', { actor, target_project: saved.projectId }), 'Read for repeated conflict').project;
     ok(await client.rpc('project_command', { actor, command: { ...base, type: 'saveProject', requestId: randomUUID(), projectId: saved.projectId, projectVersion: current.version, location: 'Another newer update' } }), 'Commit repeated signal');
@@ -65,7 +86,13 @@ export async function checkRealtimeBrowser({ browser, second, client, login, log
     await browser.wait("return document.querySelector('h1')?.textContent==='Project removed'");
     assert.equal(await browser.run("return document.querySelector('input[name=projectName]').value"), 'Draft survives missed events');
     assert.equal(await browser.run("return document.querySelector('.project-editor .form-actions .primary').disabled"), true);
-    await browser.navigate('/projects');
+    await browser.click('a.side-link[href="/projects"]');
+    await browser.wait("return location.pathname==='/projects'&&!!document.querySelector('.page-header')&&!document.querySelector('.foundation-status')");
+    await browser.wait('return window.__foundationSockets.filter(socket=>socket.readyState<2).length===1&&window.__foundationSockets.filter(socket=>socket.readyState===3).length>=1');
+    const beforeOldTicks = await browser.run('return window.__foundationReads.length');
+    await browser.run('for(const tick of window.__foundationTicks)tick()');
+    await browser.wait(`return window.__foundationReads.length>=${beforeOldTicks + 2}`);
+    assert.equal(await browser.run("return window.__foundationReads.slice(-2).some(path=>path.includes('view=project&'))"), false, 'Obsolete route readers do not run after cleanup');
     const email = randomUUID() + '@example.invalid', password = randomUUID();
     const staffId = ok(await client.auth.admin.createUser({ email, password, email_confirm: true }), 'Revocation browser fixture').user.id;
     ok(await client.from('profiles').insert({ user_id: staffId, display_name: 'Revocation browser staff', is_active: true }), 'Revocation profile');
