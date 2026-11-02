@@ -58,7 +58,7 @@ export async function checkRealtimeRaces({ sql, database, environment }) {
       await Promise.allSettled([first, second]);
     }
   }
-  const count = async topic => Number((await sql(`select count(*) from realtime.messages where topic='${topic}' and event='foundation_changed';`)).output.trim());
+  const count = async topic => Number((await sql(`select count(*) from realtime.messages where topic='${topic}' and event='foundation_changed';`, { user: 'supabase_admin' })).output.trim());
   for (const isolation of ['read committed', 'repeatable read']) {
     for (const native of [false, true]) {
       for (const publisherFirst of [false, true]) {

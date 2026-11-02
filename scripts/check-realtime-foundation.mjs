@@ -59,6 +59,13 @@ export async function checkRealtimeFoundation({ api, anon, secret, sql }) {
     const actor = { userId: manager.id, sessionId: manager.sessionId, revision: manager.context.revision, activeRole: 'Project Manager' };
     const requestId = randomUUID(), command = { type: 'createProject', requestId, name: 'Realtime ' + requestId, location: 'Disposable',
       code: 'RT-' + requestId.replaceAll('-', '').slice(0, 12).toUpperCase(), budget: '100.00' };
+    const rolledBack = { ...command, requestId: randomUUID(), name: command.name + ' rollback', code: command.code + 'R' };
+    const quote = value => "'" + JSON.stringify(value).replaceAll("'", "''") + "'::jsonb";
+    const rollbackCount = receiverSocket.events.length;
+    await sql(`begin; select public.project_command(${quote(actor)},${quote(rolledBack)}); rollback;`);
+    await delay(400);
+    assert.equal(receiverSocket.events.length, rollbackCount, 'Rolled-back changes never broadcast');
+    assert.equal((await sql(`select count(*) from private.project_operations where id='${rolledBack.requestId}';`)).output.trim(), '0', 'Rolled-back retry result was not persisted');
     const baseline = receiverSocket.events.length, siteBaseline = siteSocket.events.length;
     const result = ok(await admin.rpc('project_command', { actor, command }), 'Publish project change');
     await until(() => receiverSocket.events.length > baseline);
