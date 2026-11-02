@@ -47,6 +47,7 @@ export async function checkAccountAdministration({ browser, second, client, logi
   await browser.run("[...document.querySelectorAll('.record-dialog button')].find(b=>b.textContent.includes('I reviewed')).click()");
   await browser.click('.record-dialog .form-actions .primary'); await confirm();
   await browser.wait("return !document.querySelector('.record-dialog[open]')");
+  await browser.wait(`return document.querySelector(${JSON.stringify(row)})?.textContent.includes('Preserved draft')`);
   assert.match(await browser.run(`return document.querySelector(${JSON.stringify(row)}).textContent`), /Preserved draft/);
   let latest = ok(await client.rpc('accounts_directory', { actor }), 'Version before deactivation').users.find(user => user.id === staff.id);
   latest = ok(await client.rpc('account_save', { actor, operation: randomUUID(), target: staff.id, expected_version: latest.version,

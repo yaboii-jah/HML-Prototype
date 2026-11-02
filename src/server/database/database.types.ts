@@ -122,6 +122,15 @@ export type Database = {
 "current_user_authorized":
 { Args: Record<PropertyKey, never>; Returns: boolean
                            },
+"foundation_topic":
+{ Args: { "revision": number,"target_session": string,"target_user": string }; Returns: string
+                           },
+"foundation_topic_allowed":
+{ Args: Record<PropertyKey, never>; Returns: boolean
+                           },
+"foundation_write":
+{ Args: { "args": Json,"kind": string }; Returns: Json
+                           },
 "has_role":
 { Args: { "required_role": string }; Returns: boolean
                            },
