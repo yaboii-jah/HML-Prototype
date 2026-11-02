@@ -3,6 +3,7 @@ import test from 'node:test';
 import { disposableHttpOrigin, browserRequestAllowed, realtimeSocketAllowed } from '../scripts/helpers/disposable-endpoints.mjs';
 import { controlledFetch } from '../scripts/helpers/no-external-network.mjs';
 import { requireCurrentEvidence } from '../scripts/helpers/verification-evidence.mjs';
+import { navigateDocument } from '../scripts/helpers/browser-environment.mjs';
 
 test('disposable service origins reject hosted, ambiguous and malformed targets before launch', () => {
   assert.equal(disposableHttpOrigin('http://127.0.0.1:54321'), 'http://127.0.0.1:54321');
@@ -47,4 +48,20 @@ test('acceptance rejects stale, partial and failing evidence', () => {
     assert.throws(() => requireCurrentEvidence({ ...passed, ...patch }, source, 'invalid'));
   }
   assert.throws(() => requireCurrentEvidence(null, source, 'missing'));
+});
+
+test('navigation preserves its result when a renderer already discarded its marker', async () => {
+  const calls = [];
+  const control = (navigationError, cleanupError = 'Script not found') => async method => {
+    calls.push(method);
+    if (method === 'Page.addScriptToEvaluateOnNewDocument') return { identifier: 'owned-marker' };
+    if (method === 'Page.navigate') return navigationError ? { errorText: navigationError } : {};
+    if (method === 'Runtime.evaluate') return { result: { value: true } };
+    if (method === 'Page.removeScriptToEvaluateOnNewDocument') throw Error(cleanupError);
+    throw Error('Unexpected method');
+  };
+  await navigateDocument(control(), 'http://127.0.0.1:3198/projects');
+  assert.equal(calls.at(-1), 'Page.removeScriptToEvaluateOnNewDocument');
+  await assert.rejects(navigateDocument(control('net::ERR_FAILED'), 'http://127.0.0.1:3198/projects'), /Navigation failed: net::ERR_FAILED/);
+  await assert.rejects(navigateDocument(control(null, 'Connection lost'), 'http://127.0.0.1:3198/projects'), /Connection lost/);
 });

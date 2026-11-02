@@ -77,13 +77,13 @@ export async function authBrowser(base, { startupTimeoutMs = 30000, onLaunch, su
     const call = (method, params = {}) => new Promise((done, reject) => {
       const id = ++nextId;
       const timer = setTimeout(() => { pending.delete(id); reject(Error('Browser timeout: ' + method)); }, browserCallTimeout(method, 15000));
-      pending.set(id, { resolve: value => { clearTimeout(timer); done(value); }, reject: error => { clearTimeout(timer); reject(error); } });
+      pending.set(id, { method, resolve: value => { clearTimeout(timer); done(value); }, reject: error => { clearTimeout(timer); reject(error); } });
       socket.send(JSON.stringify({ id, method, params }));
     });
     socket.onmessage = event => {
       const message = JSON.parse(event.data);
       const item = pending.get(message.id);
-      if (item) { pending.delete(message.id); if (message.error) item.reject(Error(message.error.message)); else item.resolve(message.result); }
+      if (item) { pending.delete(message.id); if (message.error) item.reject(Error('Browser protocol ' + item.method + ': ' + message.error.message)); else item.resolve(message.result); }
       if (message.method === 'Fetch.requestPaused') {
         const url = new URL(message.params.request.url);
         if (message.params.request.method === 'POST' && url.origin === appOrigin) {
