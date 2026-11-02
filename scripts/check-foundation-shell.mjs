@@ -25,7 +25,15 @@ export async function checkFoundationShell({ browser, client, login, logout, adm
     await browser.wait("return !!document.querySelector('.account-modal[open]')");
     for (let index = 0; index < 5; index++) {
       await key('Tab');
-      assert.equal(await browser.run("return document.querySelector('.account-modal').contains(document.activeElement)"), true, 'Native account dialog traps keyboard focus');
+      const focus = await browser.run("return {inside:document.querySelector('.account-modal').contains(document.activeElement),browserChrome:document.activeElement===document.body,open:document.querySelector('.account-modal').open}");
+      assert.equal(focus.open, true);
+      assert.ok(focus.inside || focus.browserChrome, 'Modal prevents Tab from reaching background application controls');
+      if (focus.browserChrome) {
+        // Native Chrome/Edge dialogs allow the browser toolbar in the tab cycle.
+        // The next Tab must return to the dialog, never to background controls.
+        await key('Tab');
+        assert.equal(await browser.run("return document.querySelector('.account-modal').contains(document.activeElement)"), true);
+      }
     }
     await key('Escape');
     await browser.wait("return !document.querySelector('.account-modal[open]')&&document.activeElement===document.querySelector('.masthead-account')");
