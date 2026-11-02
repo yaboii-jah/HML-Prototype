@@ -20,6 +20,7 @@ export async function checkFoundationShell({ browser, client, login, logout, adm
       await browser.wait("return document.querySelector('.mobile-menu').getAttribute('aria-expanded')==='false'");
       await browser.click('.mobile-menu'); await browser.click('.mobile-scrim');
       await browser.wait("return !document.querySelector('.mobile-scrim')");
+      await browser.wait("return getComputedStyle(document.querySelector('.side-nav')).visibility==='hidden'&&document.querySelector('.side-nav').getBoundingClientRect().right<=0");
     }
     await browser.run("document.querySelector('.masthead-account').focus()"); await key('Enter');
     await browser.wait("return !!document.querySelector('.account-modal[open]')");
