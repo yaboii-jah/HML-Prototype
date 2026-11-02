@@ -177,7 +177,7 @@ Completed 2026-11-02: `e2ab489` passes the standard four-job matrix and disposab
 
 ### 3.6 Verify the Foundation and Complete the Milestone
 
-- [ ] Foundation acceptance, CI and development-backend parity verified.
+- [x] Foundation acceptance, CI and development-backend parity verified.
 
 **Depends on:** 3.5.
 
@@ -190,6 +190,8 @@ Completed 2026-11-02: `e2ab489` passes the standard four-job matrix and disposab
 - Review documentation, remaining release blockers and actual hosted/local evidence before checking step 3 complete.
 
 **Done when:** required local and hosted CI foundation checks pass, dedicated development-backend parity is recorded, deferred coverage is visible, and the tracker/checklist describe the supported foundation accurately. Captured-email verification does not satisfy real email delivery or production readiness.
+
+Completed 2026-11-03: implementation `4a940cc` passes local lint/types/390 tests/build/public-browser checks, [all four standard CI jobs](https://github.com/yaboii-jah/HML-Prototype/actions/runs/41483194133), [disposable foundation acceptance](https://github.com/yaboii-jah/HML-Prototype/actions/runs/41483193967) and staging parity with retained state preserved and no email sent. The user confirmed the targeted retry test passes. Revision-bound milestone evidence passes; detailed scope and prior fixture failures are in the [tracker](progress-tracker.md#session-notes). Checklist step 3 is complete. Operational migration is the next planning milestone; production is unchanged.
 
 ## Required Acceptance Scenarios
 
