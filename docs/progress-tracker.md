@@ -10,7 +10,7 @@ Update this file after every meaningful implementation or documentation change a
 
 ## Current Goal
 
-- Unit 3.3 is complete on `feat/step-3-accounts`. The next unit to plan is [3.4 shared projects and scopes](step-3-implementation.md#34-implement-shared-projects-and-scopes); no 3.4 implementation has started.
+- Implement [unit 3.4 shared projects and scopes](step-3-implementation.md#34-implement-shared-projects-and-scopes) on `feat/step-3-projects`, from accounts checkpoint `f3287b3`. Keep the unit unchecked until disposable CI and scoped staging parity pass.
 
 ## Completed
 
@@ -40,7 +40,8 @@ Update this file after every meaningful implementation or documentation change a
 
 ## In Progress
 
-- No implementation unit is active. Units 3.1-3.3 are complete; 3.4-3.6 remain planned. The accounts branch starts at documentation checkpoint `6e275f8`; implementation/checks through `f908fba` are published. Consult Git for the final local completion-documentation checkpoint. No merge or app deployment was performed.
+- Unit 3.4 is active. Units 3.1-3.3 are complete; 3.5-3.6 remain planned. The projects branch starts at accounts documentation checkpoint `f3287b3`; no 3.4 application deployment or production change is requested.
+- The user reported that the overall 3.3 manual review works on 2026-11-02; this is overall confirmation, not a new itemized acceptance run.
 - The first permanent staging Administrator has been provisioned and signed in. Preserve this identity and its version/access revision during verification; do not rerun bootstrap. The configured project secret and maintenance PAT remain private and separate.
 - Unit 3.3 implementation is grouped under account domain/server/feature modules. The first hosted rollback run exposed a fixture assumption that staging was empty; the corrected check preserves retained Administrators and tests the global last-Administrator removal case in disposable CI. Final rollback checks and CI passed. Earlier SQL qualification failures (`ea9532f`, `f5133f9`) and the hydration failure (`dcba54b`) remain recorded failures; `d4909a8`, `ae84fd6` and `f908fba` passed full CI. The final implementation includes durable provisioning recovery after reload and fresh-credential proof rejection even after a valid new Auth session is refreshed.
 
@@ -48,7 +49,7 @@ Update this file after every meaningful implementation or documentation change a
 
 Use the [production checklist](checklist.md#steps) for the ordered milestones and their completion conditions.
 
-- **Exact next action:** plan unit 3.4 from the verified accounts checkpoint. Inspect shared project metadata/budget/scope storage, retained project setup UI and assignment queries; define role-safe reads, authorized versioned writes and competing allocation checks within the guide's boundary. Keep Drive/provider work disabled until step 5 and keep step 3 open until all foundation units pass.
+- **Exact next action:** implement the agreed role-safe project queries, transactional setup/scope commands, exact-money contracts and screens; verify races and real-session browser behavior in disposable CI before staging rollout. Preserve staging accounts/audits. Keep Drive/provider work disabled until step 5 and step 3 open until all foundation units pass.
 - Follow the guide's dependencies and completion criteria. The prototype's role switch currently selects another account, and its approval commands do not enforce the target permanent-user self-approval restriction. Preserve the documented target rules; verify approval enforcement with the migrated workflows in step 4.
 - Retain local Node 26.12.1, the Vercel Node 24.x target, CI baseline 24.22.1 and npm 11.20.0 across environments. Hosted deployment verification belongs to the later protected rehearsal.
 - Work foundations first: individual identity, shared records and server authorization before business-workflow migration. Tailwind remains a separate track.

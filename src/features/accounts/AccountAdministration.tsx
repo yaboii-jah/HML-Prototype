@@ -514,8 +514,7 @@ export function AccountAdministration({ directory }: { directory: Directory }) {
               <fieldset disabled={busy}>
                 <legend>Project assignments</legend>
                 <p>
-                  Zero or more projects. Project setup is available in a later
-                  update.
+                  Zero or more projects. Manage project setup in Projects.
                 </p>
                 <div className="account-choices">
                   {directory.projects.map((project) => (
