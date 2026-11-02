@@ -24,4 +24,6 @@ Before completing a task, review its documentation impact and update affected do
 
 For foundation or migration milestone work, also read the companion [production checklist](docs/checklist.md) before planning or completing the unit. Update it as milestone progress changes; check a step only after verification, with its completion date and a brief evidence note. Keep active work, blockers and detailed evidence in the progress tracker.
 
-When planning, implementing, reviewing or resuming checklist step 3, also read the [step 3 implementation guide](docs/step-3-implementation.md). It owns the agreed unit sequence and completion criteria. Before continuing, check the tracker for the active unit, blockers and next action; update unit checkboxes only after verification and keep detailed evidence in the tracker.
+For the current milestone, use the tracker for the active unit, blockers and next action. Read any milestone-specific companion only when its scope has been agreed and it is still active.
+
+When planning, implementing, reviewing or resuming checklist step 4, also read the active [step 4 implementation guide](docs/step-4-implementation.md). It owns the unit sequence and completion criteria; the tracker owns current authorization, blockers, next action and evidence. Check the latest user instruction before starting a unit, and check completion only after verification.

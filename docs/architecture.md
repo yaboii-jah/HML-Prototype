@@ -43,7 +43,7 @@ public/                Public assets such as company branding
 tests/                 Automated tests, helpers and isolated fixtures
 scripts/               Verification, browser checks and document tooling
 .github/workflows/     GitHub Actions continuous integration
-docs/                  Five core documents, checklist and step 3 companion
+docs/                  Five core documents, checklist and active milestone guide
 ```
 
 | Current area | Responsibility during migration |
@@ -63,11 +63,11 @@ The intended request flow is: an authenticated user acts in a Next.js screen; a 
 
 Workflow jobs retain the initiating audit identity and are bound to the intended record, source version and permitted acknowledgements. Current authorization and business conditions still need server-side checks at the relevant steps; a captured identity is not unrestricted authority after an account or access change. Manual retries record the retrying actor without rewriting earlier responsibility.
 
-### Step 3 Boundary
+### Account and Project Foundation
 
-Checklist step 3 delivers the account/project foundation: individual identities, current role/project permissions, shared projects/scopes, protected foundation audits and realtime updates. See the [implementation guide](step-3-implementation.md) for ordered units and acceptance criteria; these are planned capabilities.
+The account/project foundation is implemented and verified: individual identities, current role/project permissions, shared projects/scopes, protected foundation audits and realtime updates. Completion evidence is recorded in the [tracker](progress-tracker.md#session-notes).
 
-Keep operational records and their authoritative reads/writes together during step 4. Step 3 may explicitly disable unfinished screens and server handlers on an isolated migration branch. The supported shell uses projects as its initial landing screen and operates without a global demo workspace. Operational counters, commitments/spending, stock and workflow panels stay unavailable until their sources migrate; absence of migrated data is not a zero balance.
+Keep operational records and their authoritative reads/writes together during step 4. Unmigrated screens and server handlers remain explicitly unavailable on the migration branch. The supported shell uses projects as its initial landing screen and operates without a global demo workspace. Operational counters, commitments/spending, stock and workflow panels stay unavailable until their sources migrate; absence of migrated data is not a zero balance.
 
 Project setup retains names, locations, document codes, PHP budgets and scope allocations. Enforce allocation caps atomically even before purchasing exists. Site Personnel receive permitted project/scope information without financial values through any exposed interface. Existing purchasing/tax policy questions remain unresolved by this foundation.
 
@@ -75,7 +75,15 @@ Project/scope commands keep metadata, financial rows, immutable audit events and
 
 Unused setup may be deleted with history retained. Project Managers cannot clear Administrator-managed assignments through deletion. Administrators may confirm deletion plus clearing the exact reviewed assignment set; changed assignments require another review. Clear only the deleted project's assignments, preserve identities/other assignments and invalidate affected application bindings. Pending provisioning references and document-use locks block deletion. Deletion acquires the account guard before project locks to serialize against account reservation/assignment commands. Operational migrations must add reference restrictions before enabling their writes. All non-Site roles can read project change history; Site Personnel receive no financial/history payloads.
 
-Project Drive folder creation, validation and browsing wait for step 5, including the currently automatic folder creation during project setup. Disable those provider operations in the migration runtime until their protected replacement is verified. MRF/PO self-approval enforcement and transactional document numbering are verified with the relevant workflows in step 4. Preserve the committed prototype in Git rather than treating old browser records or simulated identities as production authority.
+Required protected upload/archive capabilities move forward with the step 4 workflows that need them, including necessary project Drive folder creation/validation and retryable processing. Broader folder browsing, optional AI and other document capabilities remain in step 5. Provider operations stay disabled until their protected replacement is verified; no workflow may fabricate archive completion or bypass its document gate. MRF/PO self-approval enforcement and transactional document numbering are verified with the relevant workflows in step 4. Preserve the committed prototype in Git rather than treating old browser records or simulated identities as production authority.
+
+### Operational Migration Contracts
+
+The [active step 4 guide](step-4-implementation.md) owns the agreed roadmap and unit completion criteria. The plan is recorded before implementation; request screens remain unavailable until their corresponding unit is verified. Required document handling is part of the workflow it enables rather than an exception to archive integrity.
+
+MRF drafts are project-shared and writable only by currently assigned Site Personnel. They may omit submission-required fields, materials, documents or a funded scope. A supplied scope must belong to the project. First successful save allocates the permanent project/series number and locks the project code and MRF project ownership. Number allocation, record/items, verified actor attribution, immutable audit and durable retry outcome commit atomically; failed transactions and retries do not consume another committed number. Referenced projects/scopes cannot be deleted, and operational records are not cascade-deleted. Printed signatories, creator and latest editor are distinct from the permanent submitter identity used for later self-approval prevention. These are planned contracts, not implemented MRF behavior.
+
+Purchases, suitability holds and transfer allocations share one authoritative demand limit. Transfers and usage share stock availability/reservation rules. Establish those consistency contracts before enabling competing writes; preserve the existing independent payment, delivery, receiving and stock-posting milestones. Unconfirmed company financial policy gates dependent calculations and approvals rather than being inferred from prototype formulas.
 
 Module organization follows Option A in [code standards](code-standards.md#file-organization): group business areas within the existing layers and replace broad snapshot/command dependencies as each area migrates. Styling remains a separate track.
 
@@ -88,7 +96,7 @@ Module organization follows Option A in [code standards](code-standards.md#file-
 
 ### Development Environments
 
-Step 3 is reviewed through a local Next.js app connected to hosted staging when session integration arrives in unit 3.2. Local Docker is optional and is not required by the supported development workflow. GitHub Actions uses a disposable Docker-backed Supabase stack for clean migration/security checks, adding Mailpit/account-flow coverage as those flows migrate. Automated tests use explicitly validated loopback endpoints and never reset or depend on staging. See [Supabase's email testing](https://supabase.com/docs/guides/auth/testing-auth-flows).
+Local development and foundation review use a Next.js app connected to hosted staging. Local Docker is optional and is not required by the supported development workflow. GitHub Actions uses a disposable Docker-backed Supabase stack for clean migration/security checks, including Mailpit/account-flow coverage. Automated tests use explicitly validated loopback endpoints and never reset or depend on staging. See [Supabase's email testing](https://supabase.com/docs/guides/auth/testing-auth-flows).
 
 The user has provisioned both projects in organization `szmmzavejsnmqgvnyqbn`: **ConstructSync Staging** (`gxphubtycnvhpgstruqb`) and **ConstructSync Production** (`caiasmpfhueuouxqhalo`). Both were verified healthy in `eu-west-1` on the Free plan on 2026-10-30. Retain those projects and regions. Development, migration tooling and scoped synthetic checks target staging explicitly; production configuration and promotion belong to step 7. Prefer available free resources; any required purchase or upgrade needs a concrete cost decision. Keep a hosted application preview for the later protected rehearsal.
 
@@ -138,6 +146,8 @@ Unit 3.2 implements this model on the migration branch; verified local/CI/stagin
 - Capture the application revision and an opaque server-only credential fingerprint before the password challenge. Session binding locks the Auth user FOR SHARE before the profile and compares both proofs. A mismatch requires a new password sign-in; never repair the already-issued session. Native successful password reset deletes other managed Auth sessions and cascades their bindings, including if later app bookkeeping fails. Merely sending recovery preserves sessions. A consumed invitation with failed password saving requires recovery because Auth has already confirmed the email.
 - A user cannot approve their own submitted MRF or their own prepared purchase order, even after switching roles or reassignment. Enforce this using the permanent user ID on the server.
 - Audit events capture the permanent actor identity, the active role used for the action, the affected record and the action time. Role switches or later account changes must not rewrite past attribution.
+
+Disabled provider endpoints preserve their JSON error contracts: invalid application sessions receive `401`, while authenticated unavailable operations receive `503`. They perform no request-body or provider work before returning.
 
 ## Realtime Updates
 

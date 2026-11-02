@@ -13,14 +13,15 @@ Use this companion to track the steps toward production. See the [progress track
   Completed 2026-10-28: local verification and [all four CI jobs](https://github.com/yaboii-jah/HML-Prototype/actions/runs/40544882334) passed at `cc87c65`, with 365 tests per job and all 28 browser suites on both Windows runtimes. Hosted deployment remains part of step 7.
 
 - [x] **3. Add secure accounts, permissions and shared project data.**
-  Done when individual accounts, current role/project permissions, shared projects/scopes and protected realtime updates pass the [implementation guide's](step-3-implementation.md) foundation checks, including rejection of unauthorized or revoked access. CI captures invitation/recovery email; hosted synthetic checks use restricted generated links. Operational records move in step 4.
+  Done when individual accounts, current role/project permissions, shared projects/scopes and protected realtime updates pass maintained foundation acceptance checks, including rejection of unauthorized or revoked access. CI captures invitation/recovery email; hosted synthetic checks use restricted generated links. Operational records move in step 4.
   Completed 2026-11-03: units 3.1-3.6 pass local checks, all four standard CI jobs, disposable foundation acceptance, staging parity and the user's targeted retry review at implementation `4a940cc`. See the [tracker](progress-tracker.md#session-notes) for evidence. Operational workflows and production release remain later milestones.
 
 - [ ] **4. Move operational records and business workflows to the server.**
   Done when each migrated workflow has shared authoritative records and realtime updates, with authorized, transactional, retry-safe and audited changes; prototype data authority/reset paths are retired and deferred operational browser coverage is restored.
+  Agreed sequence and unit criteria are in the active [step 4 guide](step-4-implementation.md). Documentation unit 4.0 was verified on 2026-11-03: the roadmap, first-unit specification, reading pointers and local links/anchors are recorded and checked. Unit 4.1 is planned and explicitly deferred by the user; no operational implementation is claimed. Required document upload/archive capabilities accompany the workflows that need them.
 
 - [ ] **5. Complete reliable document and AI integrations.**
-  Done when protected project-folder creation, validation and browsing work, and protected document jobs archive the correct files, recover from failures and keep AI results subject to human review.
+  Done when the remaining broader document/project-folder features and optional AI integrations work, building on the protected uploads, required folder operations and archive jobs verified with step 4 workflows. Verify correct files, recovery from failures, protected browsing and human review of AI results.
 
 - [ ] **6. Convert the UI to Tailwind.**
   Done when the agreed screens use Tailwind/shared tokens and pass responsive, accessibility and workflow checks.
@@ -31,7 +32,7 @@ Use this companion to track the steps toward production. See the [progress track
 ## Keeping This Updated
 
 - Read this checklist before planning or completing foundation and migration milestones.
-- For step 3, use the implementation guide for ordered units and completion criteria. Keep current work, blockers, next actions and detailed evidence in the tracker; a documentation checkpoint does not complete the foundation milestone.
+- Use agreed milestone completion conditions and maintained verification tooling. Keep active units, blockers, next actions and detailed evidence in the tracker.
 - Check an item only after its completion condition is verified. Add the completion date and a short evidence note under it; link to the tracker's detailed result when useful.
 - Keep active work, blockers, open questions and detailed verification in the [progress tracker](progress-tracker.md). An unchecked item may be planned, active or blocked; the tracker explains which.
 - Add future steps when their scope is agreed. Tailwind is a separate track after the foundations, not a prerequisite for authentication or shared data.
