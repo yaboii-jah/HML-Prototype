@@ -134,7 +134,7 @@ Completed 2026-10-30: code `f908fba` passed [all four standard jobs](https://git
 
 ### 3.4 Implement Shared Projects and Scopes
 
-- [ ] Shared project/scope behavior and concurrency verified.
+- [x] Shared project/scope behavior and concurrency verified.
 
 **Depends on:** 3.3.
 
@@ -153,6 +153,10 @@ Verify exact money, missing/zero values, permissions, finance confidentiality, c
 - Disable Drive setup actions, request/PO counters, commitment/spending summaries, stock panels and operational links until their authoritative sources migrate. Display unavailable states instead of invented zero balances.
 
 **Done when:** independent authenticated sessions share permitted project/scope changes, unauthorized and unassigned access is rejected, allocations remain valid under concurrency, retries do not duplicate records/audits, and stale saves cannot silently replace newer data.
+
+Completed 2026-11-02: code `4f4c83d` passed [all four standard jobs](https://github.com/yaboii-jah/HML-Prototype/actions/runs/41435998413) and [disposable database/Auth/project-browser/email/type/concurrency checks](https://github.com/yaboii-jah/HML-Prototype/actions/runs/41435998376). Local standard verification passed with 377 tests/build and the public browser suite. Migration `20261102104539` is applied to staging; all four rollback suites, Auth-only HTTP denial/recovery checks, matching generated types and retained-record hash comparisons passed. The final preview reports up to date. The [tracker](progress-tracker.md#session-notes) records exact scope, corrected fixtures, the initial pooler timeout/retry and existing advisor limits. Production is unchanged; realtime remains 3.5.
+
+**Local review:** use the existing staging account and `npm run dev`. Administrator or Project Manager can add a project, open its detail, edit settings and maintain scope allocations. Administrator assignments in Users now include newly saved shared projects. Read-only non-Site roles see financial setup/history; Site Personnel see assigned metadata/scopes only. A second tab/browser needs a refresh until 3.5. Preserve test identities/history and deactivate test accounts after review; do not reset staging. The maintained project/account CI coverage replaces the relevant prototype assertions, while site stock/operations and Drive assertions remain with their later milestones.
 
 ### 3.5 Add Protected Realtime Updates
 
