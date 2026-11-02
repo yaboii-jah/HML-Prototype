@@ -12,7 +12,9 @@ Check the [progress tracker](docs/progress-tracker.md) for completed work, migra
 
 Use the companion [production checklist](docs/checklist.md) to follow foundational and future steps and mark them complete after verification.
 
-For checklist step 3, read the [implementation guide](docs/step-3-implementation.md) for the agreed account/project foundation, ordered units, local setup and acceptance criteria. The tracker distinguishes verified behavior from remaining migration work.
+The account/project foundation is complete. Consult the [architecture](docs/architecture.md) for its maintained contracts and the [tracker](docs/progress-tracker.md#current-goal) for completion evidence and the next milestone.
+
+For checklist step 4, read the active [implementation guide](docs/step-4-implementation.md) for the operational roadmap and planned first unit. The current checkpoint records the plan only; MRF draft implementation has not started. Use the tracker for current authorization and evidence.
 
 ## Run locally
 
@@ -43,7 +45,7 @@ MRF lifecycle details show outstanding actions by department, their blockers and
 
 Supabase owns identity, profiles, grants, application session bindings and project/scope setup. Protected foundation realtime is verified in unit 3.5. Prototype rules and isolated test fixtures remain while operational records move with their server workflows; their browser snapshots do not establish authority in the supported runtime.
 
-Document generation, Drive and AI endpoints are disabled before provider work until step 5. CI captures invitation/recovery messages in Mailpit; hosted synthetic checks generate restricted links without sending email. Free projects using Supabase's default provider cannot modify email templates. Real delivery requires the verified custom SMTP setup. Keep secrets out of Git; see [architecture context](docs/architecture.md) for boundaries and remaining release requirements.
+Provider endpoints remain disabled before provider work until their protected replacements are verified. Required upload/archive capabilities, including the necessary project-folder operations, are planned with the step 4 workflows that need them. Optional AI and broader document features remain in step 5. CI captures invitation/recovery messages in Mailpit; hosted synthetic checks generate restricted links without sending email. Free projects using Supabase's default provider cannot modify email templates. Real delivery requires the verified custom SMTP setup. Keep secrets out of Git; see [architecture context](docs/architecture.md) for boundaries and remaining release requirements.
 
 ## Verification
 
@@ -62,7 +64,7 @@ Vercel remains a Node 24 deployment target. The repository's `vercel.json` invok
 
 Development, verification and deployment builds use Next.js's `--webpack` option. It also supports Next.js's WebAssembly compiler fallback when Windows Application Control blocks the native compiler; Turbopack requires native bindings.
 
-Guarded `db:staging:preview`, `db:staging:check` and `auth:staging:check` commands target the existing staging project. `npm run db:staging:acceptance` combines migration/Auth/type parity, rollback checks, owned Auth-only checks and channel rejection probes, preserving retained state without sending email. Its read-only type comparison writes only to `.verification/`. Migration application requires CI evidence for the exact migrations. Live provider verification is deferred to step 5; its retained tooling is outside the supported foundation checks. See [verification profiles](docs/ai-workflow-rules.md#verification-profiles).
+Guarded `db:staging:preview`, `db:staging:check` and `auth:staging:check` commands target the existing staging project. `npm run db:staging:acceptance` combines migration/Auth/type parity, rollback checks, owned Auth-only checks and channel rejection probes, preserving retained state without sending email. Its read-only type comparison writes only to `.verification/`. Migration application requires CI evidence for the exact migrations. Live provider verification belongs to explicitly scoped integration work: required document capabilities accompany their step 4 workflows, and optional AI/broader document features remain in step 5. Retained provider tooling is outside the supported foundation checks. See [verification profiles](docs/ai-workflow-rules.md#verification-profiles).
 
 ## Repository layout
 
@@ -74,4 +76,4 @@ See [architecture context](docs/architecture.md) for the current structure and a
 - `src/server/`: authorized Auth/database operations and provider modules; `src/mock/` and legacy `src/app-state/` retain prototype coverage outside the supported data/authentication path.
 - `src/documents/`: shared browser document storage, hashes and resumable uploads.
 - `tests/` and `scripts/`: domain/API tests and browser checks.
-- `docs/`: five core context documents, the production checklist and the step 3 implementation companion; product workflows and release acceptance criteria are in the [project overview](docs/project-overview.md).
+- `docs/`: five core context documents, the production checklist and the active step 4 guide; product workflows and release acceptance criteria are in the [project overview](docs/project-overview.md).

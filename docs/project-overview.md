@@ -58,6 +58,7 @@ Roles describe responsibilities; the server must still authorize each record and
 ### Material Requests
 
 - Draft, submit, review, return, correct and track MRFs with material quantities, requirements and supporting documents.
+- Drafts are shared within the project: currently assigned Site Personnel may collaborate on editing them. Drafts may remain incomplete, without a funded scope or supporting PDF; submission requirements apply when submitting. Printed signatory names do not establish the verified actor's identity or authority.
 - Optional AI-assisted document extraction with human review before submission.
 - Linked request history and clear prerequisites for subsequent departmental actions.
 - Submission requires valid material requirements and one combined supporting PDF containing the source MRF, key plan and work scope, currently limited to 50 MB. Return/correction and reapproval retain linked history; dependent work waits for the required review and archive states.
