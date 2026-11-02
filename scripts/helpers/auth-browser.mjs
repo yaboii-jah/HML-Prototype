@@ -42,6 +42,7 @@ export async function authBrowser(base, { startupTimeoutMs = 30000, onLaunch, su
   const pending = new Map();
   let nextId = 0;
   const violations = [];
+  const recentRequests = [];
   async function close() {
     socket?.close();
     for (const item of pending.values()) item.reject(Error('Browser closed'));
@@ -85,6 +86,10 @@ export async function authBrowser(base, { startupTimeoutMs = 30000, onLaunch, su
       if (item) { pending.delete(message.id); if (message.error) item.reject(Error(message.error.message)); else item.resolve(message.result); }
       if (message.method === 'Fetch.requestPaused') {
         const url = new URL(message.params.request.url);
+        if (message.params.request.method === 'POST' && url.origin === appOrigin) {
+          recentRequests.push({ path: url.pathname, origin: message.params.request.headers.Origin ?? message.params.request.headers.origin ?? 'absent' });
+          if (recentRequests.length > 6) recentRequests.shift();
+        }
         const allowed = url.origin === appOrigin || (url.origin === apiOrigin && url.pathname.startsWith('/realtime/v1/'))
           || ['data:', 'about:'].includes(url.protocol);
         if (!allowed) violations.push(url.origin);
@@ -113,7 +118,7 @@ export async function authBrowser(base, { startupTimeoutMs = 30000, onLaunch, su
         try { if (await run(code)) return; } catch (error) { if (!/context|navigat/i.test(error.message)) throw error; }
         await delay(75);
       }
-      throw Error('Expected browser state did not appear: ' + await run('return document.body.innerText.slice(-500)'));
+      throw Error('Expected browser state did not appear: ' + await run('return document.body.innerText.slice(-500)') + '; recent action origins: ' + JSON.stringify(recentRequests));
     };
     const navigate = async route => { await navigateDocument(call, base + route); await wait("return !!document.querySelector('h1,h2')"); };
     const fill = async (selector, value) => run(`const el=document.querySelector(${JSON.stringify(selector)});if(!el)throw Error('Input missing');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(el,${JSON.stringify(value)});el.dispatchEvent(new Event('input',{bubbles:true}));`);

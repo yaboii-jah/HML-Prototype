@@ -192,6 +192,7 @@ function ProjectEditor({
                 {latest?.name ?? "Removed"}; location: {latest?.location}; code:{" "}
                 {latest?.code}; budget:{" "}
                 {formatPhp(latest?.financial?.budget ?? null)}.
+                {source && !latest && " This project was removed. Your draft cannot be saved."}
               </p>
               {latest && (
                 <button

@@ -141,6 +141,12 @@ Unit 3.2 implements this model on the migration branch; verified local/CI/stagin
 
 ## Realtime Updates
 
+Unit 3.5 implements the foundation transport on `feat/step-3-realtime`; verification and hosted rollout are tracked separately. Private topics identify the user, access revision and exact Auth session. The uncached credential endpoint returns only the verified user's existing access token in memory; refresh credentials remain HttpOnly and renewal stays server-side. The browser uses a token callback so Realtime heartbeat/rejoin cannot replace that credential with an empty browser Auth store.
+
+Guarded adapters preserve the existing account/project commands, audits and retry outcomes. They acquire the shared foundation guard before actor/record locks, then lock candidate Auth sessions in stable order before final recipient selection and publication. This orders supported access changes and native session deletion with record notifications. A pre-revocation signal may arrive late; fresh authorization still governs every read. Account signals target Administrators/the affected user, with assignment-count changes also refreshing Project Managers. Project signals follow current project access.
+
+Supported views are the Projects directory, project detail and Administrator directory. Their uncached view endpoint reuses the authorized query modules, including Site financial-field omission and explicit deleted-target results. Events, focus, reconnect and visible-tab checks every 30 seconds refresh saved data without replacing editor input. Newer relevant versions require explicit review; deletion leaves an unsavable draft view. Confirmed access loss clears the entire protected subtree; temporary failures retain drafts and show retry status. Other protected pages receive session checks without operational data subscriptions.
+
 Use private Supabase Broadcast notifications to refresh permitted views after committed changes. Supabase recommends Broadcast for database-driven updates; see [subscribing to database changes](https://supabase.com/docs/guides/realtime/subscribing-to-database-changes). Step 3 covers accounts, access and projects/scopes; operational updates follow their step 4 migration.
 
 Keep business records authoritative in Postgres. Broadcast minimal invalidation signals, then fetch current role-safe data through authorized server modules. Browser clients cannot publish authoritative record changes. Fresh reads must remain isolated between users and omit Site Personnel financial data.

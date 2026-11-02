@@ -566,7 +566,9 @@ export function AccountAdministration({ directory: initialDirectory }: { directo
                     <>
                       <p>
                         Current: {latest.name}; {latest.roles.join(", ")};{" "}
-                        {latest.projectIds.length} projects;{" "}
+                        {latest.projectIds.length
+                          ? latest.projectIds.map(id => directory.projects.find(project => project.id === id)?.name ?? id).join(", ")
+                          : "No project assignments"};{" "}
                         {latest.active ? "active" : "inactive"}.
                       </p>
                       <button
