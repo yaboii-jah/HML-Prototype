@@ -21,11 +21,13 @@ import { RecordModal } from "@/src/components/ui/RecordModal";
 import { Field, InlineError, PageHeader } from "@/src/components/ui/Primitives";
 import { BudgetInput } from "@/src/components/ui/BudgetInput";
 import { useConfirmation } from "@/src/components/ui/ConfirmDialog";
+import { useFoundationRealtime } from "@/src/app-state/FoundationRealtime";
 
 const subscribe = () => () => {};
 const canManage = (role: AuthRole) =>
   role === "Administrator" || role === "Project Manager";
 function useProjectOperation() {
+  const { refresh } = useFoundationRealtime();
   const [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
     [notice, setNotice] = useState(""),
@@ -62,6 +64,7 @@ function useProjectOperation() {
       setError(message);
       return { ok: false, message };
     } finally {
+      refresh();
       pending.current = false;
       setBusy(false);
     }
@@ -92,9 +95,10 @@ function ProjectEditor({
   const [expected, setExpected] = useState(source?.version ?? "");
   const operation = useProjectOperation(),
     { confirm, confirmation } = useConfirmation();
+  const stale = !!source && (!latest || expected !== latest.version);
   const save = async (event: FormEvent) => {
     event.preventDefault();
-    if (operation.busy || operation.conflict) return;
+    if (operation.busy || operation.conflict || stale) return;
     if (
       !(await confirm(
         source ? "Save project changes?" : "Create project?",
@@ -181,7 +185,7 @@ function ProjectEditor({
             </div>
           </fieldset>
           <InlineError message={operation.error} />
-          {operation.conflict && (
+          {(operation.conflict || stale) && (
             <div role="status">
               <p>
                 Your draft is preserved. Latest saved project:{" "}
@@ -214,7 +218,7 @@ function ProjectEditor({
             </button>
             <button
               className="button primary"
-              disabled={operation.busy || operation.conflict}
+              disabled={operation.busy || operation.conflict || stale}
             >
               {operation.busy
                 ? "Saving…"
@@ -234,10 +238,12 @@ function ScopeEditor({
   project,
   source,
   onClose,
+  removed = false,
 }: {
   project: ProjectDetail;
   source: ProjectScope | null;
   onClose: () => void;
+  removed?: boolean;
 }) {
   const [draft, setDraft] = useState({
     name: source?.name ?? "",
@@ -252,9 +258,11 @@ function ScopeEditor({
   const latest = source
     ? project.scopes.find((scope) => scope.id === source.id)
     : null;
+  const stale = removed || project.version !== expected.project ||
+    (!!source && (!latest || latest.version !== expected.scope));
   const save = async (event: FormEvent) => {
     event.preventDefault();
-    if (operation.busy || operation.conflict) return;
+    if (operation.busy || operation.conflict || stale) return;
     if (
       !(await confirm(
         source ? "Save scope changes?" : "Add scope of work?",
@@ -320,7 +328,7 @@ function ScopeEditor({
             </p>
           </fieldset>
           <InlineError message={operation.error} />
-          {operation.conflict && (
+          {(operation.conflict || stale) && (
             <div role="status">
               <p>
                 Your draft is preserved. Current project budget:{" "}
@@ -329,7 +337,9 @@ function ScopeEditor({
                 {latest &&
                   ` Current scope: ${latest.name}, ${formatPhp(latest.budget ?? null)}.`}
               </p>
-              {(!source || latest) && (
+              {removed && <p>This project was removed. Your draft cannot be saved.</p>}
+              {source && !latest && <p>This scope was removed. Your draft cannot be saved.</p>}
+              {!removed && (!source || latest) && (
                 <button
                   type="button"
                   className="button secondary"
@@ -357,7 +367,7 @@ function ScopeEditor({
             </button>
             <button
               className="button primary"
-              disabled={operation.busy || operation.conflict}
+              disabled={operation.busy || operation.conflict || stale}
             >
               {operation.busy ? "Saving…" : "Save scope allocation"}
             </button>
@@ -430,14 +440,17 @@ function ChangeHistory({ history }: { history: ProjectHistory[] }) {
 }
 
 export function ProjectDirectoryScreen({
-  projects,
-  history,
+  projects: initialProjects,
+  history: initialHistory,
   role,
 }: {
   projects: ProjectSummary[];
   history: ProjectHistory[];
   role: AuthRole;
 }) {
+  const { view } = useFoundationRealtime();
+  const projects = view?.kind === "projects" ? view.data.projects : initialProjects;
+  const history = view?.kind === "projects" ? view.data.history : initialHistory;
   const [search, setSearch] = useState(""),
     [editor, setEditor] = useState<ProjectSummary | null | undefined>();
   const hydrated = useSyncExternalStore(
@@ -559,14 +572,19 @@ export function ProjectDirectoryScreen({
 }
 
 export function ProjectDetailScreen({
-  project,
-  history,
+  project: initialProject,
+  history: initialHistory,
   role,
 }: {
   project: ProjectDetail;
   history: ProjectHistory[];
   role: AuthRole;
 }) {
+  const { view } = useFoundationRealtime();
+  const current = view?.kind === "project" ? view.data : null;
+  const removed = current?.project === null;
+  const project = current?.project ?? initialProject;
+  const history = current?.history ?? initialHistory;
   const [editing, setEditing] = useState(false),
     [scopeEditor, setScopeEditor] = useState<ProjectScope | null | undefined>();
   const hydrated = useSyncExternalStore(
@@ -622,6 +640,10 @@ export function ProjectDetailScreen({
     (role === "Project Manager" && (project.assignmentCount ?? 0) > 0);
   return (
     <>
+      {removed && <section className="panel" role="status"><h1>Project removed</h1>
+        <p>Your open draft is preserved, but this project can no longer be saved.</p>
+        <Link href="/projects">Back to projects</Link></section>}
+      <div hidden={removed}>
       <Link className="back-link" href="/projects">
         Back to projects
       </Link>
@@ -768,10 +790,11 @@ export function ProjectDetailScreen({
         </p>
       </section>
       {financial && <ChangeHistory history={history} />}
+      </div>
       {editing && (
         <ProjectEditor
           source={project}
-          latest={project}
+          latest={removed ? undefined : project}
           onClose={() => setEditing(false)}
         />
       )}
@@ -779,6 +802,7 @@ export function ProjectDetailScreen({
         <ScopeEditor
           project={project}
           source={scopeEditor}
+          removed={removed}
           onClose={() => setScopeEditor(undefined)}
         />
       )}

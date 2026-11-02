@@ -41,8 +41,8 @@ export async function checkAccountAdministration({ browser, second, client, logi
   await browser.fill('.record-dialog input[name=name]', 'Preserved draft');
   ok(await client.rpc('account_save', { actor, operation: randomUUID(), target: staff.id, expected_version: staff.version,
     draft: { name: 'Newer record', roles: staff.roles, projectIds: [], active: true, clearAssignments: false } }), 'Concurrent account edit');
-  await browser.click('.record-dialog .form-actions .primary'); await confirm();
-  await browser.wait("return document.querySelector('.record-dialog [role=alert]')?.textContent.includes('draft is preserved')");
+  await browser.wait("return !![...document.querySelectorAll('.record-dialog button')].find(b=>b.textContent.includes('I reviewed'))");
+  assert.equal(await browser.run("return document.querySelector('.record-dialog .form-actions .primary').disabled"), true, 'Live account update blocks stale save');
   assert.equal(await browser.run("return document.querySelector('.record-dialog input[name=name]').value"), 'Preserved draft');
   await browser.run("[...document.querySelectorAll('.record-dialog button')].find(b=>b.textContent.includes('I reviewed')).click()");
   await browser.click('.record-dialog .form-actions .primary'); await confirm();

@@ -101,8 +101,8 @@ export async function checkAuthFoundation({ api, anon, secret, mailpit, sql, env
       if (!ready) await delay(100);
     }
     assert.ok(ready, 'Isolated production app ready');
-    const browser = await authBrowser(base); browsers.push(browser);
-    const second = await authBrowser(base); browsers.push(second);
+    const browser = await authBrowser(base, { supabaseOrigin: api }); browsers.push(browser);
+    const second = await authBrowser(base, { supabaseOrigin: api }); browsers.push(second);
     const login = async (browser, account) => {
       await browser.navigate('/sign-in');
       await browser.wait("return !!document.querySelector('#signin-email')&&!document.querySelector('.signin-submit').disabled");

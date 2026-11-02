@@ -9,6 +9,7 @@ import { SignOutForm } from "@/src/features/auth/SignOutForm";
 import type { WorkspaceSession } from "@/src/domain/auth/session";
 import { SidebarToggle } from "./SidebarToggle";
 import { CloseButton } from "@/src/components/ui/CloseButton";
+import { useFoundationRealtime } from "@/src/app-state/FoundationRealtime";
 
 const subscribeTheme = (notify: () => void) => {
   const observer = new MutationObserver(notify);
@@ -18,7 +19,8 @@ const subscribeTheme = (notify: () => void) => {
 const getTheme = () => document.documentElement.dataset.theme === "dark" ? "dark" : "light";
 const serverTheme = () => "light";
 
-export function WorkspaceShell({ session, children }: { session: WorkspaceSession; children: ReactNode }) {
+export function WorkspaceShell({ session: initialSession, children }: { session: WorkspaceSession; children: ReactNode }) {
+  const session = useFoundationRealtime().session ?? initialSession;
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const theme = useSyncExternalStore(subscribeTheme, getTheme, serverTheme);

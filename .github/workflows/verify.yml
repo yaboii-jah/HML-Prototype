@@ -2,7 +2,7 @@ name: Verify
 on:
   pull_request:
   push:
-    branches: [main, staging, 'feat/step-3-sessions', 'feat/step-3-accounts', 'feat/step-3-projects']
+    branches: [main, staging, 'feat/step-3-sessions', 'feat/step-3-accounts', 'feat/step-3-projects', 'feat/step-3-realtime']
   workflow_dispatch:
 permissions:
   contents: read

@@ -8,9 +8,11 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { browserCallTimeout, configureBrowserChecks, navigateDocument } from './browser-environment.mjs';
 import { requireLoopback } from './supabase-target.mjs';
 
-export async function authBrowser(base, { startupTimeoutMs = 30000, onLaunch } = {}) {
+export async function authBrowser(base, { startupTimeoutMs = 30000, onLaunch, supabaseOrigin } = {}) {
   if (!Number.isInteger(startupTimeoutMs) || startupTimeoutMs < 1000 || startupTimeoutMs > 30000) throw Error('Invalid bounded browser startup deadline');
   const appOrigin = requireLoopback(base).origin;
+  const apiOrigin = supabaseOrigin ? requireLoopback(supabaseOrigin).origin : null;
+  const realtimeUrl = apiOrigin ? new URL("/realtime/v1/websocket", apiOrigin.replace(/^http/, "ws")) : null;
   const binaries = process.platform === 'win32'
     ? ['C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', 'C:/Program Files/Microsoft/Edge/Application/msedge.exe']
     : ['/usr/bin/google-chrome', '/usr/bin/google-chrome-stable', '/usr/bin/chromium', '/usr/bin/chromium-browser'];
@@ -83,7 +85,8 @@ export async function authBrowser(base, { startupTimeoutMs = 30000, onLaunch } =
       if (item) { pending.delete(message.id); if (message.error) item.reject(Error(message.error.message)); else item.resolve(message.result); }
       if (message.method === 'Fetch.requestPaused') {
         const url = new URL(message.params.request.url);
-        const allowed = url.origin === appOrigin || ['data:', 'about:'].includes(url.protocol);
+        const allowed = url.origin === appOrigin || (url.origin === apiOrigin && url.pathname.startsWith('/realtime/v1/'))
+          || ['data:', 'about:'].includes(url.protocol);
         if (!allowed) violations.push(url.origin);
         void call(allowed ? 'Fetch.continueRequest' : 'Fetch.failRequest', {
           requestId: message.params.requestId, ...(!allowed ? { errorReason: 'BlockedByClient' } : {}),
@@ -91,7 +94,8 @@ export async function authBrowser(base, { startupTimeoutMs = 30000, onLaunch } =
       }
       if (message.method === 'Network.webSocketCreated') {
         const url = new URL(message.params.url);
-        if (!['127.0.0.1', 'localhost', '[::1]'].includes(url.hostname)) violations.push(url.origin);
+        if (!realtimeUrl || url.origin !== realtimeUrl.origin || url.pathname !== realtimeUrl.pathname
+          || url.username || url.password) violations.push(url.origin);
       }
     };
     await configureBrowserChecks(call);

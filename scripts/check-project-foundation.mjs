@@ -57,8 +57,8 @@ export async function checkProjectFoundation({ browser, second, client, login, l
   const managerActor = { userId: manager.id, sessionId: managerClaims.session_id, revision: managerContext.revision, activeRole: 'Project Manager' };
   let current = ok(await client.rpc('projects_read', { actor, target_project: id }), 'Read current project').project;
   ok(await client.rpc('project_command', { actor: managerActor, command: { type: 'saveProject', requestId: randomUUID(), projectId: id, projectVersion: current.version, name, location: 'Newer location', code, budget: '100.00' } }), 'Manager edit');
-  await browser.click('.project-editor .form-actions .primary'); await confirm();
-  await browser.wait("return document.querySelector('.project-editor [role=alert]')?.textContent.includes('draft is preserved')");
+  await browser.wait("return !![...document.querySelectorAll('.project-editor button')].find(b=>b.textContent.includes('I reviewed'))");
+  assert.equal(await browser.run("return document.querySelector('.project-editor .form-actions .primary').disabled"), true, 'Live conflict blocks stale save before submission');
   assert.equal(await browser.run("return document.querySelector('input[name=projectName]').value"), 'Preserved project draft');
   await browser.run("[...document.querySelectorAll('.project-editor button')].find(b=>b.textContent.includes('I reviewed')).click()");
   await browser.click('.project-editor .form-actions .primary'); await confirm();

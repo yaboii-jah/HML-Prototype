@@ -11,6 +11,7 @@ import { configureDisposableAuth } from './helpers/disposable-auth-config.mjs';
 import { checkAuthFoundation } from './check-auth-foundation.mjs';
 import { checkAccountRaces } from './check-account-races.mjs';
 import { checkProjectRaces } from './check-project-races.mjs';
+import { checkRealtimeFoundation } from './check-realtime-foundation.mjs';
 
 if (process.env.GITHUB_ACTIONS !== 'true' || !/^\d+$/.test(process.env.GITHUB_RUN_ID ?? '') || process.platform !== 'linux') {
   throw new Error('verify:db runs on disposable GitHub Linux runners. Use db:staging:check for scoped hosted checks.');
@@ -64,6 +65,10 @@ try {
   console.log('Starting disposable Supabase and replaying foundation migrations.');
   await cli(['start', '--network-id', network, '--exclude', 'storage-api,imgproxy,postgres-meta,studio,edge-runtime,logflare,vector,supavisor'], { capture: true });
   await configureDisposableAuth(project, network);
+  // Only the named disposable tenant is changed. Reload its connection cache.
+  await sql("update _realtime.tenants set private_only=true;");
+  assert.equal((await sql("select bool_and(private_only) from _realtime.tenants;")).output.trim(), 't');
+  assert.equal((await command('docker', ['restart', `supabase_realtime_${project}`])).code, 0);
   console.log('Checking SQL constraints, permissions and session revocation.');
   await sql(await readFile('supabase/checks/staging.sql', 'utf8'));
   await sql(await readFile('supabase/checks/sessions.sql', 'utf8'));
@@ -224,6 +229,7 @@ try {
     sql, environment });
   await checkProjectRaces({ sql, database, environment });
   await checkAccountRaces({ sql, database, environment });
+  await checkRealtimeFoundation({ api, anon, secret, sql });
   passed = typeMatch;
 } finally {
   try { await cli(['stop', '--project-id', project, '--no-backup'], { capture: true }); }

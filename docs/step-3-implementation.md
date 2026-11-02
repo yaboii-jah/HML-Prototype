@@ -162,6 +162,8 @@ Completed 2026-11-02: code `4f4c83d` passed [all four standard jobs](https://git
 
 - [ ] Authorized realtime updates and recovery verified.
 
+**Agreed implementation (2026-11-02):** use `feat/step-3-realtime`. Topics include user, access revision and exact session. Give the browser only its existing access token in memory; retain HttpOnly refresh credentials and server renewal. Users, Projects and project details refetch authorized data on events and every 30 seconds while visible, including when the socket appears healthy. Preserve ordinary drafts and filters; proactively require review of newer versions. Deleted targets retain an unsavable draft view. Confirmed access loss clears protected content and drafts. Show degraded connection/read status and manual retry; server-confirmed saves remain available. Serialize publishing with application access changes and native session deletion, retaining existing commands/audits. Verify races, subscription isolation, recovery and confidentiality before staging rollout. Step 3 remains open for 3.6.
+
 **Depends on:** 3.4. Plan event hooks with earlier writes so this unit can connect them without replacing persistence.
 
 - Send database-backed private Broadcast notifications after committed foundation changes. Use current authorized recipients and user/access-revision topics; include minimal invalidation signals, not business-record or financial payloads. Ordinary browser clients cannot publish authoritative changes.
