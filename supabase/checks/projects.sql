@@ -67,7 +67,7 @@ begin
   insert into public.project_assignments values(site_id,target),(site_id,extra);
   site:=site||jsonb_build_object('revision',(select access_revision::text from public.profiles where user_id=site_id));
   proof:=private.login_preflight(site_id::text||'@example.invalid');
-  delete from private.session_bindings where session_id=site_session;
+  delete from private.session_bindings b where b.session_id=site_session;
   if not private.bind_session(site_id,site_session,proof->>'revision',proof->>'credential') then raise exception 'Refresh Site fixture binding failed'; end if;
   detail:=private.projects_read(site,target);
   if detail->'project' ? 'financial' or detail->'project'->'scopes'->0 ? 'budget' or jsonb_array_length(detail->'history')<>0 then raise exception 'Site finance/history leak'; end if;
