@@ -8,6 +8,7 @@ import { requireLoopback } from './helpers/supabase-target.mjs';
 import { migrationHash } from './helpers/database-migrations.mjs';
 import { generateDatabaseTypes, normalizeDatabaseTypes } from './helpers/database-types.mjs';
 import { configureDisposableAuth } from './helpers/disposable-auth-config.mjs';
+import { configureDisposableRealtime } from './helpers/disposable-realtime-config.mjs';
 import { checkAuthFoundation } from './check-auth-foundation.mjs';
 import { checkAccountRaces } from './check-account-races.mjs';
 import { checkProjectRaces } from './check-project-races.mjs';
@@ -66,10 +67,11 @@ try {
   console.log('Starting disposable Supabase and replaying foundation migrations.');
   await cli(['start', '--network-id', network, '--exclude', 'storage-api,imgproxy,postgres-meta,studio,edge-runtime,logflare,vector,supavisor'], { capture: true });
   await configureDisposableAuth(project, network);
-  // Only the named disposable tenant is changed. Reload its connection cache.
-  await sql("do $$ begin if (select count(*) from _realtime.tenants)<>1 then raise exception 'Expected one owned disposable tenant'; end if; end $$; update _realtime.tenants set private_only=true;", { user: 'supabase_admin' });
+  // Only the named disposable tenant is changed, through its cache-aware API.
+  const tenants = (await sql("select external_id from _realtime.tenants;", { user: 'supabase_admin' })).output.trim().split('\n');
+  assert.equal(tenants.length, 1, 'One owned disposable Realtime tenant');
+  await configureDisposableRealtime(project, network, tenants[0]);
   assert.equal((await sql("select bool_and(private_only) from _realtime.tenants;", { user: 'supabase_admin' })).output.trim(), 't');
-  assert.equal((await command('docker', ['restart', `supabase_realtime_${project}`])).code, 0);
   console.log('Checking SQL constraints, permissions and session revocation.');
   await sql(await readFile('supabase/checks/staging.sql', 'utf8'));
   await sql(await readFile('supabase/checks/sessions.sql', 'utf8'));
