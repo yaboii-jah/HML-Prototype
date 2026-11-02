@@ -6,11 +6,13 @@ import { tmpdir } from 'node:os';
 import { basename, join, resolve, sep } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { browserCallTimeout, configureBrowserChecks, navigateDocument } from './browser-environment.mjs';
-import { requireLoopback } from './supabase-target.mjs';
+import { disposableHttpOrigin, browserRequestAllowed, realtimeSocketAllowed } from './disposable-endpoints.mjs';
 
-export async function authBrowser(base, { startupTimeoutMs = 30000, onLaunch } = {}) {
+export async function authBrowser(base, { startupTimeoutMs = 30000, onLaunch, supabaseOrigin } = {}) {
   if (!Number.isInteger(startupTimeoutMs) || startupTimeoutMs < 1000 || startupTimeoutMs > 30000) throw Error('Invalid bounded browser startup deadline');
-  const appOrigin = requireLoopback(base).origin;
+  const appOrigin = disposableHttpOrigin(base);
+  const apiOrigin = supabaseOrigin ? disposableHttpOrigin(supabaseOrigin) : null;
+  const realtimeUrl = apiOrigin ? new URL("/realtime/v1/websocket", apiOrigin.replace(/^http/, "ws")) : null;
   const binaries = process.platform === 'win32'
     ? ['C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', 'C:/Program Files/Microsoft/Edge/Application/msedge.exe']
     : ['/usr/bin/google-chrome', '/usr/bin/google-chrome-stable', '/usr/bin/chromium', '/usr/bin/chromium-browser'];
@@ -40,6 +42,7 @@ export async function authBrowser(base, { startupTimeoutMs = 30000, onLaunch } =
   const pending = new Map();
   let nextId = 0;
   const violations = [];
+  const recentRequests = [];
   async function close() {
     socket?.close();
     for (const item of pending.values()) item.reject(Error('Browser closed'));
@@ -74,16 +77,20 @@ export async function authBrowser(base, { startupTimeoutMs = 30000, onLaunch } =
     const call = (method, params = {}) => new Promise((done, reject) => {
       const id = ++nextId;
       const timer = setTimeout(() => { pending.delete(id); reject(Error('Browser timeout: ' + method)); }, browserCallTimeout(method, 15000));
-      pending.set(id, { resolve: value => { clearTimeout(timer); done(value); }, reject: error => { clearTimeout(timer); reject(error); } });
+      pending.set(id, { method, resolve: value => { clearTimeout(timer); done(value); }, reject: error => { clearTimeout(timer); reject(error); } });
       socket.send(JSON.stringify({ id, method, params }));
     });
     socket.onmessage = event => {
       const message = JSON.parse(event.data);
       const item = pending.get(message.id);
-      if (item) { pending.delete(message.id); if (message.error) item.reject(Error(message.error.message)); else item.resolve(message.result); }
+      if (item) { pending.delete(message.id); if (message.error) item.reject(Error('Browser protocol ' + item.method + ': ' + message.error.message)); else item.resolve(message.result); }
       if (message.method === 'Fetch.requestPaused') {
         const url = new URL(message.params.request.url);
-        const allowed = url.origin === appOrigin || ['data:', 'about:'].includes(url.protocol);
+        if (message.params.request.method === 'POST' && url.origin === appOrigin) {
+          recentRequests.push({ path: url.pathname, origin: message.params.request.headers.Origin ?? message.params.request.headers.origin ?? 'absent' });
+          if (recentRequests.length > 6) recentRequests.shift();
+        }
+        const allowed = browserRequestAllowed(url.href, appOrigin, apiOrigin);
         if (!allowed) violations.push(url.origin);
         void call(allowed ? 'Fetch.continueRequest' : 'Fetch.failRequest', {
           requestId: message.params.requestId, ...(!allowed ? { errorReason: 'BlockedByClient' } : {}),
@@ -91,10 +98,24 @@ export async function authBrowser(base, { startupTimeoutMs = 30000, onLaunch } =
       }
       if (message.method === 'Network.webSocketCreated') {
         const url = new URL(message.params.url);
-        if (!['127.0.0.1', 'localhost', '[::1]'].includes(url.hostname)) violations.push(url.origin);
+        if (!realtimeSocketAllowed(url.href, realtimeUrl?.href)) violations.push(url.origin);
       }
     };
     await configureBrowserChecks(call);
+    // Guard the constructor before application code can open a WebSocket.
+    // CDP observation alone would detect an unexpected socket after its attempt.
+    await call('Page.addScriptToEvaluateOnNewDocument', { source: `
+      const NativeWebSocket=window.WebSocket;
+      const expected=${JSON.stringify(realtimeUrl?.href ?? null)};
+      window.WebSocket=class extends NativeWebSocket {
+        constructor(address,...protocols) {
+          const target=new URL(address,location.href);
+          if(!(${realtimeSocketAllowed.toString()})(target.href,expected))
+            throw Error('Unexpected Realtime WebSocket destination');
+          super(address,...protocols);
+        }
+      };
+    ` });
     await call('Runtime.enable');
     await call('Network.enable');
     await call('Fetch.enable', { patterns: [{ urlPattern: '*', requestStage: 'Request' }] });
@@ -109,7 +130,7 @@ export async function authBrowser(base, { startupTimeoutMs = 30000, onLaunch } =
         try { if (await run(code)) return; } catch (error) { if (!/context|navigat/i.test(error.message)) throw error; }
         await delay(75);
       }
-      throw Error('Expected browser state did not appear: ' + await run('return document.body.innerText.slice(-500)'));
+      throw Error('Expected browser state did not appear: ' + await run('return document.body.innerText.slice(-500)') + '; recent action origins: ' + JSON.stringify(recentRequests));
     };
     const navigate = async route => { await navigateDocument(call, base + route); await wait("return !!document.querySelector('h1,h2')"); };
     const fill = async (selector, value) => run(`const el=document.querySelector(${JSON.stringify(selector)});if(!el)throw Error('Input missing');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(el,${JSON.stringify(value)});el.dispatchEvent(new Event('input',{bubbles:true}));`);

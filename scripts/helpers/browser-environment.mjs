@@ -39,6 +39,13 @@ export async function navigateDocument(call, url) {
     }
     throw new Error(`A new document did not finish loading: ${url}`);
   } finally {
-    await call('Page.removeScriptToEvaluateOnNewDocument', { identifier });
+    try {
+      await call('Page.removeScriptToEvaluateOnNewDocument', { identifier });
+    } catch (error) {
+      // A renderer handoff can already discard this navigation marker. Its
+      // absence satisfies cleanup; preserve every other error and the original
+      // navigation/content failure instead of masking it with cleanup noise.
+      if (!/Script not found$/.test(error.message)) throw error;
+    }
   }
 }

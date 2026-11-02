@@ -23,3 +23,13 @@
 @import "../src/styles/shell-controls.css";
 @import "../src/styles/accounts.css";
 @import "../src/styles/projects.css";
+/* Foundation connection feedback uses the existing application controls. */
+.foundation-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid currentColor;
+}

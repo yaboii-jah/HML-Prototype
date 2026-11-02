@@ -2,6 +2,7 @@ import { spawn } from 'node:child_process';
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { browserSuites } from './browser-suites.mjs';
+import { verificationSource } from './helpers/verification-evidence.mjs';
 
 const base = process.argv[2] || 'http://127.0.0.1:3000';
 const names = process.argv.length > 3 ? process.argv.slice(3) : browserSuites;
@@ -11,9 +12,12 @@ const results = [];
 const queue = [...names];
 const workerCount = process.env.CI === 'true' ? 1 : 2;
 const startedAt = new Date().toISOString();
+const source = await verificationSource();
 let summaryWrites = Promise.resolve();
 function writeSummary(complete = false) {
-  const summary = JSON.stringify({ base, startedAt, at: new Date().toISOString(), complete, workerCount, selected: names, results: [...results] }, null, 2);
+  const summary = JSON.stringify({ ...source, base, startedAt, at: new Date().toISOString(), complete,
+    passed: complete && results.length === names.length && results.every(result => result.code === 0 && !result.timedOut),
+    workerCount, selected: names, results: [...results] }, null, 2);
   summaryWrites = summaryWrites.then(() => writeFile(path.join(output, 'verification.json'), summary));
   return summaryWrites;
 }

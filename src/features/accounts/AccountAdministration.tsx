@@ -14,6 +14,7 @@ import { Register } from "@/src/components/ui/Register";
 import { RecordModal } from "@/src/components/ui/RecordModal";
 import { Field, InlineError, PageHeader } from "@/src/components/ui/Primitives";
 import { useConfirmation } from "@/src/components/ui/ConfirmDialog";
+import { useFoundationRealtime } from "@/src/app-state/FoundationRealtime";
 
 type Directory = AccountDirectory & { actorId: string; emailEnabled: boolean };
 type Editor = {
@@ -32,7 +33,9 @@ const messageLabel = (status: Account["messageStatus"]) =>
   })[status];
 const subscribeHydration = () => () => {};
 
-export function AccountAdministration({ directory }: { directory: Directory }) {
+export function AccountAdministration({ directory: initialDirectory }: { directory: Directory }) {
+  const { view, refresh } = useFoundationRealtime();
+  const directory = view?.kind === "accounts" ? view.data : initialDirectory;
   const hydrated = useSyncExternalStore(
     subscribeHydration,
     () => true,
@@ -45,6 +48,8 @@ export function AccountAdministration({ directory }: { directory: Directory }) {
     [busy, setBusy] = useState(false);
   const [error, setError] = useState(""),
     [notice, setNotice] = useState("");
+  const latestAccount = editor?.id ? directory.users.find(user => user.id === editor.id) : null;
+  const stale = !!editor?.id && (!latestAccount || latestAccount.version !== editor.version);
   const submitting = useRef(false),
     retry = useRef<{ key: string; requestId: string } | null>(null);
   const { confirm, confirmation } = useConfirmation();
@@ -105,11 +110,13 @@ export function AccountAdministration({ directory }: { directory: Directory }) {
         message:
           "The response was interrupted. Retry this request to check its saved outcome.",
       };
+    } finally {
+      refresh();
     }
   };
   const save = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!editor || submitting.current || editor.conflict) return;
+    if (!editor || submitting.current || editor.conflict || stale) return;
     submitting.current = true;
     setBusy(true);
     setError("");
@@ -544,7 +551,7 @@ export function AccountAdministration({ directory }: { directory: Directory }) {
               </fieldset>
             )}
             <InlineError message={error} />
-            {editor.conflict && (
+            {(editor.conflict || stale) && (
               <div role="status">
                 <p>
                   The latest account must be reviewed before saving your draft.
@@ -559,7 +566,9 @@ export function AccountAdministration({ directory }: { directory: Directory }) {
                     <>
                       <p>
                         Current: {latest.name}; {latest.roles.join(", ")};{" "}
-                        {latest.projectIds.length} projects;{" "}
+                        {latest.projectIds.length
+                          ? latest.projectIds.map(id => directory.projects.find(project => project.id === id)?.name ?? id).join(", ")
+                          : "No project assignments"};{" "}
                         {latest.active ? "active" : "inactive"}.
                       </p>
                       <button
@@ -595,7 +604,7 @@ export function AccountAdministration({ directory }: { directory: Directory }) {
               </button>
               <button
                 className="button primary"
-                disabled={busy || editor.conflict || !editor.draft.roles.length}
+                disabled={busy || editor.conflict || stale || !editor.draft.roles.length}
               >
                 {busy
                   ? "Saving…"

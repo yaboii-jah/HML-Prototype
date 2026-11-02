@@ -3,15 +3,28 @@ import { resolve } from 'node:path';
 import { requireStaging, STAGING_REF } from './helpers/supabase-target.mjs';
 import { supabase } from './helpers/supabase-cli.mjs';
 import { migrationHash } from './helpers/database-migrations.mjs';
-import { generateDatabaseTypes } from './helpers/database-types.mjs';
+import { generateDatabaseTypes, normalizeDatabaseTypes } from './helpers/database-types.mjs';
 import assert from 'node:assert/strict';
 import { stagingSnapshot } from './helpers/staging-snapshot.mjs';
 
 const action = process.argv[2];
-if (!['preview', 'apply', 'types', 'check', 'auth-check', 'auth-apply'].includes(action) || process.argv.length > 3) {
-  throw new Error('Use preview, apply, types, check, auth-check or auth-apply without extra arguments.');
+if (!['preview', 'apply', 'types', 'types-check', 'check', 'auth-check', 'auth-apply', 'realtime-check', 'realtime-apply'].includes(action) || process.argv.length > 3) {
+  throw new Error('Use preview, apply, types, types-check, check, auth-check, auth-apply, realtime-check or realtime-apply without extra arguments.');
 }
 requireStaging(process.env);
+
+async function requireVerifiedMigrations() {
+  const evidence = JSON.parse(await readFile('.verification/database-ci.json', 'utf8'));
+  const { readdir } = await import('node:fs/promises');
+  const files = [];
+  for (const name of (await readdir('supabase/migrations')).filter(name => name.endsWith('.sql')).sort()) {
+    files.push({ name, sql: await readFile('supabase/migrations/' + name, 'utf8') });
+  }
+  if (evidence.migrationHash !== migrationHash(files) || evidence.passed !== true || evidence.typeMatch !== true
+    || !evidence.runUrl?.startsWith('https://github.com/')) {
+    throw Error('Download passing database CI evidence for these exact migrations before applying to staging.');
+  }
+}
 
 const authSettings = {
   disable_signup: true,
@@ -23,7 +36,19 @@ const authSettings = {
   security_update_password_require_current_password: true,
 };
 
-if (action.startsWith('auth-')) {
+if (action.startsWith('realtime-')) {
+  const endpoint = `https://api.supabase.com/v1/projects/${STAGING_REF}/config/realtime`;
+  const headers = { Authorization: `Bearer ${process.env.SUPABASE_ACCESS_TOKEN}`, 'Content-Type': 'application/json' };
+  if (action === 'realtime-apply') {
+    await requireVerifiedMigrations();
+    const updated = await fetch(endpoint, { method: 'PATCH', headers, body: JSON.stringify({ private_only: true }), signal: AbortSignal.timeout(30000) });
+    if (!updated.ok) throw Error(`Staging Realtime configuration failed (${updated.status}).`);
+  }
+  const response = await fetch(endpoint, { headers, signal: AbortSignal.timeout(30000) });
+  if (!response.ok) throw Error(`Staging Realtime inspection failed (${response.status}).`);
+  if ((await response.json()).private_only !== true) throw Error('Staging private-only channels are not enabled.');
+  console.log('Staging Realtime accepts private channels only.');
+} else if (action.startsWith('auth-')) {
   const endpoint = `https://api.supabase.com/v1/projects/${STAGING_REF}/config/auth`;
   const headers = { Authorization: `Bearer ${process.env.SUPABASE_ACCESS_TOKEN}`, 'Content-Type': 'application/json' };
   if (action === 'auth-apply') {
@@ -36,7 +61,7 @@ if (action.startsWith('auth-')) {
   const differences = Object.keys(authSettings).filter(key => actual[key] !== authSettings[key]);
   if (differences.length) throw new Error(`Staging Auth settings differ: ${differences.join(', ')}. Review before db:staging:auth:apply.`);
   console.log('Staging Auth settings match the invitation-only development configuration.');
-} else if (action === 'types') {
+} else if (action === 'types' || action === 'types-check') {
   const output = await generateDatabaseTypes(async query => {
     const response = await fetch(`https://api.supabase.com/v1/projects/${STAGING_REF}/database/query`, {
       method: 'POST',
@@ -47,15 +72,23 @@ if (action.startsWith('auth-')) {
     if (!response.ok) throw new Error(`Staging type introspection failed (${response.status}).`);
     return response.json();
   });
-  await mkdir('src/server/database', { recursive: true });
-  await writeFile('src/server/database/database.types.ts', output);
-  console.log('Generated staging database types.');
+  if (action === 'types-check') {
+    await mkdir('.verification', { recursive: true });
+    await writeFile('.verification/staging.types.ts', output);
+    assert.equal(output, normalizeDatabaseTypes(await readFile('src/server/database/database.types.ts', 'utf8')), 'Staging types match committed types');
+    console.log('Read-only staging types match committed types.');
+  } else {
+    await mkdir('src/server/database', { recursive: true });
+    await writeFile('src/server/database/database.types.ts', output);
+    console.log('Generated staging database types.');
+  }
 } else if (action === 'check') {
   const before = await stagingSnapshot();
   await supabase(['db', 'query', '--linked', '--project-ref', STAGING_REF, '--file', resolve('supabase/checks/staging.sql')]);
   await supabase(['db', 'query', '--linked', '--project-ref', STAGING_REF, '--file', resolve('supabase/checks/sessions.sql')]);
   await supabase(['db', 'query', '--linked', '--project-ref', STAGING_REF, '--file', resolve('supabase/checks/accounts.sql')]);
   await supabase(['db', 'query', '--linked', '--project-ref', STAGING_REF, '--file', resolve('supabase/checks/projects.sql')]);
+  await supabase(['db', 'query', '--linked', '--project-ref', STAGING_REF, '--file', resolve('supabase/checks/realtime.sql')]);
   const after = await stagingSnapshot();
   assert.deepEqual(after, before, 'Rollback checks preserve retained staging state');
   await mkdir('.verification', { recursive: true });

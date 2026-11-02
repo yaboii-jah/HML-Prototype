@@ -2,7 +2,7 @@
 
 This document describes the agreed **target architecture** for HML ConstructSync, an internal construction operations system for HML Technologies and Services Inc. It is a guide for the production migration, not a claim that the migration is complete. HML will start with fresh operational records; importing the prototype's browser data is not part of this plan.
 
-The committed prototype remains recoverable in Git. The migration branch implements Supabase sessions, a small protected shell, Administrator account management and shared project/scope setup; consult the tracker for verification. Operational screens and document/provider endpoints remain disabled until their designated migrations. Prototype rules and isolated fixtures remain for regression coverage, but demonstration accounts, identity switching and reset/initialization are disconnected from the supported runtime. Production readiness requires the remaining milestones.
+The committed prototype remains recoverable in Git. The migration branch implements Supabase sessions, a small protected shell, Administrator account management, shared project/scope setup and protected foundation realtime; consult the tracker for verification. Operational screens and document/provider endpoints remain disabled until their designated migrations. Prototype rules and isolated fixtures remain for regression coverage, but demonstration accounts, identity switching and reset/initialization are disconnected from the supported runtime. Production readiness requires the remaining milestones.
 
 ## Stack
 
@@ -140,6 +140,14 @@ Unit 3.2 implements this model on the migration branch; verified local/CI/stagin
 - Audit events capture the permanent actor identity, the active role used for the action, the affected record and the action time. Role switches or later account changes must not rewrite past attribution.
 
 ## Realtime Updates
+
+Unit 3.5 is verified at code checkpoint `e2ab489`, with the matching migration applied to staging. The user disabled public access and reported that the supplied manual checklist passed overall on 2026-11-02. Read-only WebSocket probes independently confirmed explicit `PrivateOnly` rejection of public channels and rejection of anonymous private access. The earlier configuration blocker is resolved; whole-foundation acceptance is verified in 3.6. This completes the account/project foundation, while operational migration and release readiness remain later work. The maintenance token still lacks Realtime configuration permissions, so its management-API check is not the evidence for this setting.
+
+Unit 3.5 implements the foundation transport on `feat/step-3-realtime`; verification and hosted rollout are tracked separately. Private topics identify the user, access revision and exact Auth session. The uncached credential endpoint returns only the verified user's existing access token in memory; refresh credentials remain HttpOnly and renewal stays server-side. The browser uses a token callback so Realtime heartbeat/rejoin cannot replace that credential with an empty browser Auth store.
+
+Guarded adapters preserve the existing account/project commands, audits and retry outcomes. They acquire the shared foundation guard before actor/record locks, then lock candidate Auth sessions in stable order before final recipient selection and publication. This orders supported access changes and native session deletion with record notifications. A pre-revocation signal may arrive late; fresh authorization still governs every read. Account signals target Administrators/the affected user, with assignment-count changes also refreshing Project Managers. Project signals follow current project access.
+
+Supported views are the Projects directory, project detail and Administrator directory. Their uncached view endpoint reuses the authorized query modules, including Site financial-field omission and explicit deleted-target results. Events, focus, reconnect and visible-tab checks every 30 seconds refresh saved data without replacing editor input. Newer relevant versions require explicit review; deletion leaves an unsavable draft view. Confirmed access loss clears the entire protected subtree; temporary failures retain drafts and show retry status. Other protected pages receive session checks without operational data subscriptions.
 
 Use private Supabase Broadcast notifications to refresh permitted views after committed changes. Supabase recommends Broadcast for database-driven updates; see [subscribing to database changes](https://supabase.com/docs/guides/realtime/subscribing-to-database-changes). Step 3 covers accounts, access and projects/scopes; operational updates follow their step 4 migration.
 
