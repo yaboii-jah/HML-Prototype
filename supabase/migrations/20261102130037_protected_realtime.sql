@@ -27,7 +27,10 @@ begin
   perform set_config('lock_timeout','5s',true);
   -- A real write also rejects stale REPEATABLE READ snapshots.
   update private.account_guard set revision=revision+1 where id;
-  select coalesce(jsonb_agg(to_jsonb(b)),'[]'::jsonb) into old_bindings from private.session_bindings b;
+  select coalesce(jsonb_agg(to_jsonb(b)),'[]'::jsonb) into old_bindings
+    from private.session_bindings b join public.profiles p on p.user_id=b.user_id
+    join auth.sessions s on s.id=b.session_id and s.user_id=b.user_id
+    where p.is_active and p.access_revision=b.access_revision and (s.not_after is null or s.not_after>now());
   if kind='project' then
     operation:=(args->'command'->>'requestId')::uuid;
     select to_jsonb(o) into before_value from private.project_operations o where o.id=operation;

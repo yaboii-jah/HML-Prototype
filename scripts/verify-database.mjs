@@ -12,6 +12,7 @@ import { checkAuthFoundation } from './check-auth-foundation.mjs';
 import { checkAccountRaces } from './check-account-races.mjs';
 import { checkProjectRaces } from './check-project-races.mjs';
 import { checkRealtimeFoundation } from './check-realtime-foundation.mjs';
+import { checkRealtimeRaces } from './check-realtime-races.mjs';
 
 if (process.env.GITHUB_ACTIONS !== 'true' || !/^\d+$/.test(process.env.GITHUB_RUN_ID ?? '') || process.platform !== 'linux') {
   throw new Error('verify:db runs on disposable GitHub Linux runners. Use db:staging:check for scoped hosted checks.');
@@ -230,6 +231,7 @@ try {
   await checkProjectRaces({ sql, database, environment });
   await checkAccountRaces({ sql, database, environment });
   await checkRealtimeFoundation({ api, anon, secret, sql });
+  await checkRealtimeRaces({ sql, database, environment });
   passed = typeMatch;
 } finally {
   try { await cli(['stop', '--project-id', project, '--no-backup'], { capture: true }); }
