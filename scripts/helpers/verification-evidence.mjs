@@ -12,6 +12,9 @@ export function canonicalSourceBytes(path, contents) {
 // Excludes private configuration, generated outputs and unrelated agent tooling.
 // Normalize checkout line endings so Linux and Windows produce the same digest.
 export async function verificationSource() {
+  if (execFileSync('git', ['rev-parse', '--is-shallow-repository'], { encoding: 'utf8', windowsHide: true }).trim() === 'true') {
+    throw Error('Acceptance provenance requires full Git history; configure checkout with fetch-depth: 0.');
+  }
   const sourcePaths = [
     'app', 'src', 'scripts', 'tests', 'supabase', 'public', '.github/workflows', 'package.json', 'package-lock.json',
     'proxy.ts', 'middleware.ts', 'vercel.json', '.node-version', '.npmrc', '.env.example',
