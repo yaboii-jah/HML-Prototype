@@ -3,6 +3,12 @@ import { createHash } from 'node:crypto';
 import { readFile, readdir } from 'node:fs/promises';
 import { migrationHash } from './database-migrations.mjs';
 
+export function canonicalSourceBytes(path, contents) {
+  const textFile = /\.(?:[cm]?[jt]sx?|json|sql|toml|css|html|xml|ya?ml|md|svg|txt|ps1|sh|py)$/.test(path)
+    || ['.npmrc', '.node-version', '.env.example', 'supabase/.gitignore'].includes(path);
+  return textFile ? contents.toString('utf8').replaceAll('\r\n', '\n') : contents;
+}
+
 // Excludes private configuration, generated outputs and unrelated agent tooling.
 // Normalize checkout line endings so Linux and Windows produce the same digest.
 export async function verificationSource() {
@@ -17,9 +23,7 @@ export async function verificationSource() {
     hash.update(path + '\0');
     try {
       const contents = await readFile(path);
-      const textFile = /\.(?:[cm]?[jt]sx?|json|sql|toml|css|html|xml|ya?ml|md|svg|txt)$/.test(path)
-        || ['.npmrc', '.node-version', '.env.example', 'supabase/.gitignore'].includes(path);
-      hash.update(textFile ? contents.toString('utf8').replaceAll('\r\n', '\n') : contents);
+      hash.update(canonicalSourceBytes(path, contents));
     }
     catch (error) { if (error.code !== 'ENOENT') throw error; hash.update('<deleted>'); }
     hash.update('\0');
