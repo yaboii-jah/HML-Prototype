@@ -68,7 +68,7 @@ export async function checkRealtimeBrowser({ browser, second, client, login, log
     await browser.navigate('/projects');
     const email = randomUUID() + '@example.invalid', password = randomUUID();
     const staffId = ok(await client.auth.admin.createUser({ email, password, email_confirm: true }), 'Revocation browser fixture').user.id;
-    ok(await client.from('profiles').insert({ user_id: staffId, display_name: 'Revocation browser staff' }), 'Revocation profile');
+    ok(await client.from('profiles').insert({ user_id: staffId, display_name: 'Revocation browser staff', is_active: true }), 'Revocation profile');
     ok(await client.from('role_grants').insert({ user_id: staffId, role: 'Project Manager' }), 'Revocation role');
     await login(second, { email, password });
     await second.wait("return location.pathname==='/projects'&&!!document.querySelector('.masthead-account')");

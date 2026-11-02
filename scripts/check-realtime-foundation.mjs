@@ -20,7 +20,7 @@ export async function checkRealtimeFoundation({ api, anon, secret, sql }) {
     const email = existing?.email ?? randomUUID() + '@example.invalid', password = existing?.password ?? randomUUID();
     const id = existing?.id ?? ok(await admin.auth.admin.createUser({ email, password, email_confirm: true }), 'Create realtime fixture').user.id;
     if (!existing) {
-      ok(await admin.from('profiles').insert({ user_id: id, display_name: 'Realtime fixture' }), 'Realtime profile');
+      ok(await admin.from('profiles').insert({ user_id: id, display_name: 'Realtime fixture', is_active: true }), 'Realtime profile');
       ok(await admin.from('role_grants').insert({ user_id: id, role }), 'Realtime grant');
     }
     const proof = ok(await admin.rpc('auth_login_preflight', { login_email: email }), 'Realtime preflight');

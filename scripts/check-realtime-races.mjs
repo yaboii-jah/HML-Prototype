@@ -8,7 +8,7 @@ export async function checkRealtimeRaces({ sql, database, environment }) {
   const json = value => "'" + JSON.stringify(value).replaceAll("'", "''") + "'::jsonb";
   const actorId = randomUUID(), actorSession = randomUUID();
   await sql(`insert into auth.users(id,email,is_anonymous,email_confirmed_at,encrypted_password) values('${actorId}','${actorId}@example.invalid',false,now(),'fixture');
-    insert into public.profiles(user_id,display_name) values('${actorId}','Realtime race Administrator');
+    insert into public.profiles(user_id,display_name,is_active) values('${actorId}','Realtime race Administrator',true);
     insert into public.role_grants values('${actorId}','Administrator');
     insert into auth.sessions(id,user_id,created_at,updated_at) values('${actorSession}','${actorId}',now(),now());
     select public.auth_bind_session('${actorId}','${actorSession}',private.login_preflight('${actorId}@example.invalid')->>'revision',private.login_preflight('${actorId}@example.invalid')->>'credential');`);
@@ -21,7 +21,7 @@ export async function checkRealtimeRaces({ sql, database, environment }) {
   async function fixture() {
     const id = randomUUID(), session = randomUUID();
     await sql(`insert into auth.users(id,email,is_anonymous,email_confirmed_at,encrypted_password) values('${id}','${id}@example.invalid',false,now(),'fixture');
-      insert into public.profiles(user_id,display_name) values('${id}','Realtime receiver');
+      insert into public.profiles(user_id,display_name,is_active) values('${id}','Realtime receiver',true);
       insert into public.role_grants values('${id}','Accounting');
       insert into auth.sessions(id,user_id,created_at,updated_at) values('${session}','${id}',now(),now());
       select public.auth_bind_session('${id}','${session}',private.login_preflight('${id}@example.invalid')->>'revision',private.login_preflight('${id}@example.invalid')->>'credential');`);
