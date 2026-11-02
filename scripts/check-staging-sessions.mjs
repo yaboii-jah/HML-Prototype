@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { createClient } from '@supabase/supabase-js';
-import { requireStaging, STAGING_URL, STAGING_REF } from './helpers/supabase-target.mjs';
+import { stagingSnapshot } from './helpers/staging-snapshot.mjs';
+import { requireStaging, STAGING_URL } from './helpers/supabase-target.mjs';
 
 requireStaging(process.env);
 if (process.argv.length !== 2 || !process.env.SUPABASE_SECRET_KEY?.startsWith('sb_secret_') || !process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY) {
@@ -16,24 +17,7 @@ const runId = randomUUID(), userId = randomUUID(), email = `foundation-${runId}@
 const password = randomUUID();
 let passed = false, cleaned = false;
 const ok = (result, label) => { if (result.error) throw Error(label); return result.data; };
-async function snapshot() {
-  const response = await fetch(`https://api.supabase.com/v1/projects/${STAGING_REF}/database/query`, {
-    method: 'POST', headers: { Authorization: `Bearer ${process.env.SUPABASE_ACCESS_TOKEN}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ read_only: true, query: `select jsonb_build_object(
-      'profiles',(select coalesce(jsonb_agg(jsonb_build_array(user_id,version::text,access_revision::text,is_active,first_signed_in_at) order by user_id),'[]'::jsonb) from public.profiles),
-      'counts',jsonb_build_array((select count(*) from auth.users),(select count(*) from auth.sessions),
-        (select count(*) from public.role_grants),(select count(*) from public.project_assignments),
-        (select count(*) from public.projects),(select count(*) from public.scopes),
-        (select count(*) from public.project_budgets),(select count(*) from public.scope_budgets),
-        (select count(*) from private.session_bindings),(select count(*) from private.audit_events),
-        (select count(*) from private.account_operations)),
-      'guard',(select revision::text from private.account_guard where id)) as snapshot;` }), signal: AbortSignal.timeout(15000),
-  });
-  if (!response.ok) throw Error('Staging retained-state inspection failed.');
-  const data = await response.json();
-  if (!data[0]?.snapshot) throw Error('Invalid staging snapshot.');
-  return data[0].snapshot;
-}
+const snapshot = stagingSnapshot;
 await mkdir('.verification', { recursive: true });
 const before = await snapshot();
 await writeFile('.verification/staging-sessions.json', JSON.stringify({ passed: false, cleaned: false, runId, userId, authOnly: true }, null, 2));
@@ -45,6 +29,7 @@ try {
   assert.equal(verified.claims.sub, userId);
   assert.equal(ok(await admin.rpc('auth_login_preflight', { login_email: email }), 'Unmanaged preflight'), null);
   assert.equal(ok(await user.rpc('auth_session_context'), 'Unmanaged context'), null, 'Forged metadata provides no application access');
+  assert.ok((await user.rpc('projects_read', { actor: { userId, sessionId: verified.claims.session_id, revision: '1', activeRole: 'Administrator' } })).error, 'Browser cannot invoke service project queries');
   assert.ok((await user.rpc('accounts_directory', { actor: { userId, sessionId: verified.claims.session_id, revision: '1', activeRole: 'Administrator' } })).error, 'Browser cannot invoke service account RPC');
   assert.ok((await user.rpc('auth_bind_session', { target_user: userId, target_session: verified.claims.session_id, expected_revision: '1', expected_credential: '0'.repeat(64) })).error);
   assert.equal((await user.auth.updateUser({ password: randomUUID() })).error?.code, 'current_password_required');

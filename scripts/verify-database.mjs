@@ -10,6 +10,7 @@ import { generateDatabaseTypes, normalizeDatabaseTypes } from './helpers/databas
 import { configureDisposableAuth } from './helpers/disposable-auth-config.mjs';
 import { checkAuthFoundation } from './check-auth-foundation.mjs';
 import { checkAccountRaces } from './check-account-races.mjs';
+import { checkProjectRaces } from './check-project-races.mjs';
 
 if (process.env.GITHUB_ACTIONS !== 'true' || !/^\d+$/.test(process.env.GITHUB_RUN_ID ?? '') || process.platform !== 'linux') {
   throw new Error('verify:db runs on disposable GitHub Linux runners. Use db:staging:check for scoped hosted checks.');
@@ -221,6 +222,7 @@ try {
   await checkAuthFoundation({ api, anon, secret,
     mailpit: requireLoopback(status.INBUCKET_URL ?? status.MAILPIT_URL ?? status.inbucket_url).origin,
     sql, environment });
+  await checkProjectRaces({ sql, database, environment });
   await checkAccountRaces({ sql, database, environment });
   passed = typeMatch;
 } finally {

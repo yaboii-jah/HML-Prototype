@@ -4,6 +4,8 @@ import { requireStaging, STAGING_REF } from './helpers/supabase-target.mjs';
 import { supabase } from './helpers/supabase-cli.mjs';
 import { migrationHash } from './helpers/database-migrations.mjs';
 import { generateDatabaseTypes } from './helpers/database-types.mjs';
+import assert from 'node:assert/strict';
+import { stagingSnapshot } from './helpers/staging-snapshot.mjs';
 
 const action = process.argv[2];
 if (!['preview', 'apply', 'types', 'check', 'auth-check', 'auth-apply'].includes(action) || process.argv.length > 3) {
@@ -49,10 +51,15 @@ if (action.startsWith('auth-')) {
   await writeFile('src/server/database/database.types.ts', output);
   console.log('Generated staging database types.');
 } else if (action === 'check') {
+  const before = await stagingSnapshot();
   await supabase(['db', 'query', '--linked', '--project-ref', STAGING_REF, '--file', resolve('supabase/checks/staging.sql')]);
   await supabase(['db', 'query', '--linked', '--project-ref', STAGING_REF, '--file', resolve('supabase/checks/sessions.sql')]);
   await supabase(['db', 'query', '--linked', '--project-ref', STAGING_REF, '--file', resolve('supabase/checks/accounts.sql')]);
   await supabase(['db', 'query', '--linked', '--project-ref', STAGING_REF, '--file', resolve('supabase/checks/projects.sql')]);
+  const after = await stagingSnapshot();
+  assert.deepEqual(after, before, 'Rollback checks preserve retained staging state');
+  await mkdir('.verification', { recursive: true });
+  await writeFile('.verification/staging-database-checks.json', JSON.stringify({ passed: true, retainedStateMatches: true, before, after }, null, 2));
 } else {
   if (action === 'apply') {
     const evidence = JSON.parse(await readFile('.verification/database-ci.json', 'utf8'));

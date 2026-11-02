@@ -28,7 +28,7 @@ begin
   manager:=jsonb_build_object('userId',manager_id,'sessionId',manager_session,'revision','2','activeRole','Project Manager');
   reader:=jsonb_build_object('userId',reader_id,'sessionId',reader_session,'revision','2','activeRole','Accounting');
   site:=jsonb_build_object('userId',site_id,'sessionId',site_session,'revision','2','activeRole','Site Personnel');
-  command:=jsonb_build_object('type','createProject','requestId',request_id,'name','Shared fixture '||request_id::text,'location','Test site','code','QA-'||substr(replace(request_id::text,'-',''),1,12),'budget','100.00');
+  command:=jsonb_build_object('type','createProject','requestId',request_id,'name','Shared fixture '||request_id::text,'location','Test site','code','QA-'||upper(substr(replace(request_id::text,'-',''),1,12)),'budget','100.00');
   created:=private.project_command(actor,command); target:=(created->>'projectId')::uuid;
   if private.project_command(actor,command)<>created then raise exception 'Creation retry changed result'; end if;
   if (select count(*) from private.audit_events a where a.request_id=project_checks.request_id and a.entity_id=target)<>1 then raise exception 'Creation audit duplicated'; end if;
@@ -49,7 +49,7 @@ begin
   begin perform private.project_command(actor,command||jsonb_build_object('type','saveProject','requestId',gen_random_uuid(),'projectId',target,'projectVersion',detail->>'version','budget','99.99')); raise exception 'Budget reduction below allocations accepted'; exception when sqlstate 'P3401' then null; end;
   begin perform private.project_command(actor,command||jsonb_build_object('type','saveProject','requestId',gen_random_uuid(),'projectId',target,'projectVersion',previous_version)); raise exception 'Stale project version accepted'; exception when serialization_failure then null; end;
   begin perform private.project_command(actor,jsonb_build_object('type','createScope','requestId',gen_random_uuid(),'projectId',target,'projectVersion',detail->>'version','name','Custom scope','budget','0')); raise exception 'Custom scope accepted'; exception when check_violation then null; end;
-  begin perform private.project_command(actor,command||jsonb_build_object('requestId',gen_random_uuid(),'name','Missing budget','code','MB-'||substr(replace(gen_random_uuid()::text,'-',''),1,12),'budget',null)); raise exception 'Missing budget became zero'; exception when check_violation then null; end;
+  begin perform private.project_command(actor,command||jsonb_build_object('requestId',gen_random_uuid(),'name','Missing budget','code','MB-'||upper(substr(replace(gen_random_uuid()::text,'-',''),1,12)),'budget',null)); raise exception 'Missing budget became zero'; exception when check_violation then null; end;
   -- Metadata-only scope edits and explicit removals both advance the parent.
   previous_version:=detail->>'version';
   perform private.project_command(actor,jsonb_build_object('type','saveScope','requestId',gen_random_uuid(),'projectId',target,'projectVersion',previous_version,'scopeId',scope_b,
@@ -60,7 +60,7 @@ begin
   detail:=private.projects_read(actor,target)->'project';
   if detail->>'version'=previous_version or detail->'financial'->>'budget'<>'100.00' or (detail->'financial'->>'allocated')::numeric<>70 then raise exception 'Scope removal did not release allocation safely'; end if;
   -- Exact amount is returned as text, never JSON number.
-  created:=private.project_command(actor,command||jsonb_build_object('requestId',gen_random_uuid(),'name','Large exact '||request_id::text,'code','LG-'||substr(replace(request_id::text,'-',''),1,12),'budget','9999999999999999.99'));
+  created:=private.project_command(actor,command||jsonb_build_object('requestId',gen_random_uuid(),'name','Large exact '||request_id::text,'code','LG-'||upper(substr(replace(request_id::text,'-',''),1,12)),'budget','9999999999999999.99'));
   extra:=(created->>'projectId')::uuid;
   if private.projects_read(reader,extra)->'project'->'financial'->>'budget'<>'9999999999999999.99'
     or jsonb_typeof(private.projects_read(reader,extra)->'project'->'financial'->'budget')<>'string' then raise exception 'Large budget lost precision'; end if;
