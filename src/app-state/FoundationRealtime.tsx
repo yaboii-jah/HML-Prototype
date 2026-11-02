@@ -70,13 +70,16 @@ export function FoundationRealtime({ session, children }: { session: WorkspaceSe
         if (stopped) return;
         const credentials = parseRealtimeSession(bootstrap);
         if (!credentials || !checkIdentity(credentials.session)) throw Error("Invalid live session");
+        const tokenChanged = token !== credentials.accessToken;
+        token = credentials.accessToken;
         const url = process.env.NEXT_PUBLIC_SUPABASE_URL, key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
         if (url && key && !client) {
-          client = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } });
+          // Realtime invokes this callback again on heartbeat/rejoin. An empty
+          // browser Auth store must never replace the server-issued credential.
+          client = createClient(url, key, { accessToken: async () => token || null });
         }
         if (client) {
-          if (token !== credentials.accessToken) {
-            token = credentials.accessToken;
+          if (tokenChanged) {
             await client.realtime.setAuth(token);
           }
           if (topic !== credentials.topic) {

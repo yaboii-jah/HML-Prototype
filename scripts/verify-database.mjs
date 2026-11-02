@@ -37,8 +37,8 @@ function command(binary, args, input) {
     child.stdin.end(input);
   });
 }
-async function sql(query, { allowFailure = false } = {}) {
-  const result = await command('docker', ['exec', '-i', database, 'psql', '-U', 'postgres', '-d', 'postgres', '-At', '-v', 'ON_ERROR_STOP=1'], query);
+async function sql(query, { allowFailure = false, user = 'postgres' } = {}) {
+  const result = await command('docker', ['exec', '-i', database, 'psql', '-U', user, '-d', 'postgres', '-At', '-v', 'ON_ERROR_STOP=1'], query);
   if (!allowFailure && result.code !== 0) throw new Error(`Database verification failed: ${result.diagnostics}`);
   return result;
 }
@@ -67,8 +67,8 @@ try {
   await cli(['start', '--network-id', network, '--exclude', 'storage-api,imgproxy,postgres-meta,studio,edge-runtime,logflare,vector,supavisor'], { capture: true });
   await configureDisposableAuth(project, network);
   // Only the named disposable tenant is changed. Reload its connection cache.
-  await sql("update _realtime.tenants set private_only=true;");
-  assert.equal((await sql("select bool_and(private_only) from _realtime.tenants;")).output.trim(), 't');
+  await sql("do $$ begin if (select count(*) from _realtime.tenants)<>1 then raise exception 'Expected one owned disposable tenant'; end if; end $$; update _realtime.tenants set private_only=true;", { user: 'supabase_admin' });
+  assert.equal((await sql("select bool_and(private_only) from _realtime.tenants;", { user: 'supabase_admin' })).output.trim(), 't');
   assert.equal((await command('docker', ['restart', `supabase_realtime_${project}`])).code, 0);
   console.log('Checking SQL constraints, permissions and session revocation.');
   await sql(await readFile('supabase/checks/staging.sql', 'utf8'));
