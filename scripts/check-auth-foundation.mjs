@@ -104,6 +104,10 @@ export async function checkAuthFoundation({ api, anon, secret, mailpit, sql, env
     assert.ok(ready, 'Isolated production app ready');
     const browser = await authBrowser(base, { supabaseOrigin: api }); browsers.push(browser);
     const second = await authBrowser(base, { supabaseOrigin: api }); browsers.push(second);
+    await browser.call('Network.setBlockedURLs', { urls: [base + '/_next/static/*'] });
+    await browser.navigate('/sign-in');
+    assert.equal(await browser.run("return document.querySelector('.signin-submit').disabled"), true, 'Configured sign-in waits for client action hydration');
+    await browser.call('Network.setBlockedURLs', { urls: [] });
     const login = async (browser, account) => {
       await browser.navigate('/sign-in');
       await browser.wait("return !!document.querySelector('#signin-email')&&!document.querySelector('.signin-submit').disabled");
