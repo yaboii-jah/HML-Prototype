@@ -2,7 +2,7 @@ import { requireStaging, STAGING_REF } from './supabase-target.mjs';
 
 /** Read-only retained-state evidence. No Auth passwords, tokens or raw business
  * rows are returned. Application rows are compared using deterministic hashes. */
-export async function stagingSnapshot() {
+export async function stagingSnapshot({ includeProjectOperations = true } = {}) {
   requireStaging(process.env);
   const tables = [
     ['profiles', 'public.profiles', 'user_id'], ['grants', 'public.role_grants', 'user_id,role'],
@@ -10,8 +10,8 @@ export async function stagingSnapshot() {
     ['scopes', 'public.scopes', 'id'], ['projectBudgets', 'public.project_budgets', 'project_id'],
     ['scopeBudgets', 'public.scope_budgets', 'scope_id'], ['bindings', 'private.session_bindings', 'session_id'],
     ['audits', 'private.audit_events', 'id'], ['accountOperations', 'private.account_operations', 'id'],
-    ['projectOperations', 'private.project_operations', 'id'],
   ];
+  if (includeProjectOperations) tables.push(['projectOperations', 'private.project_operations', 'id']);
   const hashes = tables.map(([name, table, order]) => `'${name}',(select jsonb_build_object('count',count(*),'digest',md5(coalesce(jsonb_agg(to_jsonb(t) order by ${order})::text,'[]'))) from ${table} t)`).join(',');
   const query = `select jsonb_build_object('records',jsonb_build_object(${hashes}),
     'authCounts',jsonb_build_array((select count(*) from auth.users),(select count(*) from auth.sessions)),

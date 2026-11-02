@@ -1,6 +1,6 @@
 # HML ConstructSync
 
-An internal construction operations application undergoing production migration. The foundation uses Supabase sign-in, current access grants and a protected workspace. Unit 3.3 adds Administrator user management; consult the tracker for verification. Projects is the landing page; project editing and operational screens remain temporarily unavailable until their migration units are complete.
+An internal construction operations application undergoing production migration. The foundation uses Supabase sign-in, current access grants, Administrator user management and shared project/scope setup; consult the tracker for verification. Projects is the landing page. Operational screens remain temporarily unavailable until their migration units are complete.
 
 See the [project overview](docs/project-overview.md) for the agreed production purpose, workflows, scope and success criteria.
 
@@ -29,6 +29,10 @@ With the Administrator role active, open **Users** to save staff invitations, ed
 
 Use `127.0.0.1:3000` consistently. Role switching selects only the signed-in person's grants. Prototype account switching, automatic browser initialization and workspace reset are disconnected from the supported runtime. Existing browser data is neither imported nor automatically cleared. Use `npm run dev` for staging review: standard verification deliberately builds without live credentials, so create a fresh configured build before reviewing staging with `npm run start`.
 
+In **Projects**, Administrator and Project Manager can add/edit a project with a name, location, unique document code and explicit PHP budget, then maintain its scopes from the standard list. Zero budgets are valid. Scope allocations share the project cap; unallocated budget is the difference between that cap and scope allocations. Financial values use exact decimal strings throughout the new contracts. Site Personnel see assigned project/scope metadata without financial values; non-Site roles can also view change history.
+
+Project deletion retains history and user identities. A Project Manager must wait for assignments to be cleared; an Administrator can confirm deletion plus clearing the reviewed personnel assignments, requiring fresh sign-in for those users. Pending account provisioning and document-use locks block deletion. After a conflicting edit, the draft stays available for explicit review and reapplication. Another browser needs a refresh until realtime arrives in unit 3.5. Drive setup and operational balances/counters remain unavailable.
+
 ## Target workflow (later migration)
 
 Site Personnel submits an MRF, then the Project Manager reviews it. Procurement checks site stock and quotations and prepares POs for Accounting review and approval, then confirms supplier issuance. Upfront payment verification precedes delivery clearance; credit payment and delivery can progress independently. Logistics dispatches; receiving teams confirm quantities; Site Personnel posts accepted stock and records usage. Legacy records keep their original approval/payment path.
@@ -37,7 +41,7 @@ MRF lifecycle details show outstanding actions by department, their blockers and
 
 ## Storage and integrations
 
-Supabase owns identity, profiles, grants and application session bindings. Shared project/scope screens and realtime follow in later foundation units. Prototype rules and isolated test fixtures remain while operational records move with their server workflows; their browser snapshots do not establish authority in the supported runtime.
+Supabase owns identity, profiles, grants, application session bindings and project/scope setup. Realtime follows in unit 3.5. Prototype rules and isolated test fixtures remain while operational records move with their server workflows; their browser snapshots do not establish authority in the supported runtime.
 
 Document generation, Drive and AI endpoints are disabled before provider work until step 5. CI captures invitation/recovery messages in Mailpit; hosted synthetic checks generate restricted links without sending email. Free projects using Supabase's default provider cannot modify email templates. Real delivery requires the verified custom SMTP setup. Keep secrets out of Git; see [architecture context](docs/architecture.md) for boundaries and remaining release requirements.
 
@@ -52,7 +56,7 @@ npm run verify:browser
 
 The first command checks the toolchain, then runs lint, route types, TypeScript, maintained unit/isolated-handler tests and a production build. The browser command runs `foundation-public` against an isolated server using Windows Edge or Linux Chrome, with external requests blocked. `npm run test:browser` is an alias. Logs and results live under ignored `.verification/`. The tracker names deferred prototype suites and their restoration milestones; they are not foundation passes.
 
-GitHub Actions retains clean installation, the high-severity audit and standard checks on Linux/Windows with Node 24/26. Both Windows jobs run the public browser suite. Separate Ubuntu database CI replays migrations, tests security/concurrency and real-account browser/email flows, compares generated types, and destroys only its own stack with its immutable audits. Hosted SQL checks roll back their account fixtures; `npm run auth:staging:check` uses Auth-only identities, sends no mail and verifies retained profiles, revisions and audits stay unchanged. Successful audited account/UI workflows run in disposable CI. Local Docker is not required. CI also verifies the active accounts branch; consult the tracker for actual hosted results.
+GitHub Actions retains clean installation, the high-severity audit and standard checks on Linux/Windows with Node 24/26. Both Windows jobs run the public browser suite. Separate Ubuntu database CI replays migrations, tests security/concurrency and real-account browser/email flows, compares generated types, and destroys only its own stack with its immutable audits. Hosted SQL checks roll back synthetic account/project commands; `npm run auth:staging:check` uses Auth-only identities and sends no mail. Deterministic retained-record hashes, counts and profile revisions protect staging data. Successful audited UI workflows run in disposable CI. Local Docker is not required. CI also verifies the active projects branch; consult the tracker for actual hosted results.
 
 Vercel remains a Node 24 deployment target. The repository's `vercel.json` invokes an installation bootstrap that rejects other Node majors before installing the declared npm version and running `npm ci`. Its `build:deployment` command checks Node 24 and npm again before building; it intentionally fails on local Node 26. Select Node 24 in Vercel project settings and check the build logs during the later protected deployment rehearsal. Package engine ranges admit local Node 26, so a hosting default must not silently change the intended production runtime. This configuration does not deploy the app or establish production readiness.
 

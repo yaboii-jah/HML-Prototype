@@ -104,6 +104,14 @@ export async function checkProjectFoundation({ browser, second, client, login, l
   await second.wait("return location.pathname==='/projects'&&!!document.querySelector('.masthead-account')");
   await second.navigate(`/projects/${id}`);
   assert.equal(await second.run("return document.querySelector('.project-removal button').disabled"), true, 'PM cannot remove Administrator-managed assignments');
+  // Keep a distinct live Site session: the browser's earlier Site session was
+  // deliberately signed out while switching to the read-only/manager checks.
+  const preflight = ok(await client.rpc('auth_login_preflight', { login_email: site.email }), 'Capture independent Site login proof');
+  const independent = ok(await siteClient.auth.signInWithPassword({ email: site.email, password: site.password }), 'Independent Site sign-in');
+  const independentClaims = ok(await siteClient.auth.getClaims(independent.session.access_token), 'Verify independent Site session').claims;
+  assert.equal(ok(await client.rpc('auth_bind_session', { target_user: site.id, target_session: independentClaims.session_id,
+    expected_revision: preflight.revision, expected_credential: preflight.credential }), 'Bind independent Site session'), true);
+  assert.ok(ok(await siteClient.rpc('auth_session_context'), 'Site access before deletion'));
   await browser.navigate(`/projects/${id}`);
   await browser.wait("return !!document.querySelector('.project-removal button')&&!document.querySelector('.project-removal button').disabled");
   await browser.click('.project-removal button'); await confirm(true);
@@ -112,6 +120,25 @@ export async function checkProjectFoundation({ browser, second, client, login, l
   ok(await siteClient.auth.refreshSession(), 'Refresh Site after deletion');
   assert.equal(ok(await siteClient.rpc('auth_session_context'), 'Site context after deletion'), null, 'Assignment cascade rejects refreshed Site session');
   assert.ok(ok(await client.rpc('projects_read', { actor }), 'Deletion history').history.some(h => h.action === 'project.deleted' && h.projectId === id));
+  // Verify the existing input control and rendered DTO retain the largest
+  // supported PHP value, then inspect the authenticated mobile layout.
+  await browser.wait("return !!document.querySelector('.page-header .primary')&&!document.querySelector('.page-header .primary').disabled");
+  await browser.click('.page-header .primary'); await browser.wait("return !!document.querySelector('.project-editor')");
+  const largeName = `Exact browser ${randomUUID()}`;
+  await browser.fill('input[name=projectName]', largeName); await browser.fill('input[name=location]', 'Exact site');
+  await browser.fill('input[name=documentCode]', 'LG-' + randomUUID().replaceAll('-', '').slice(0, 12).toUpperCase());
+  await browser.fill('input[name=projectBudget]', '9999999999999999.99');
+  await browser.click('.project-editor .form-actions .primary'); await confirm();
+  await browser.wait(`return [...document.querySelectorAll('[data-project-id]')].some(row=>row.textContent.includes(${JSON.stringify(largeName)})&&row.textContent.includes('9,999,999,999,999,999.99'))`);
+  const large = ok(await client.rpc('projects_read', { actor }), 'Exact UI project result').projects.find(p => p.name === largeName);
+  await browser.navigate(`/projects/${large.id}`);
+  await browser.wait("return !!document.querySelector('.project-scope-panel .primary')&&!document.querySelector('.project-scope-panel .primary').disabled");
+  await addScope('General Requirement', '9999999999999999.99');
+  await browser.wait("return !document.querySelector('.record-dialog[open]')&&document.querySelector('[data-scope-id]')?.textContent.includes('9,999,999,999,999,999.99')");
+  await browser.call('Emulation.setDeviceMetricsOverride', { width: 375, height: 812, deviceScaleFactor: 1, mobile: true });
+  await browser.wait('return innerWidth===375');
+  assert.equal(await browser.run('return document.documentElement.scrollWidth<=innerWidth+1'), true, 'Authenticated project page fits the mobile viewport');
+  await browser.call('Emulation.clearDeviceMetricsOverride');
   await logout(browser); await logout(second);
   console.log('Shared project/scope UI, role-safe reads, conflicts, assignments and deletion revocation passed.');
 }

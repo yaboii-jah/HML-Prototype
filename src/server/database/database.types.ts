@@ -46,6 +46,20 @@ export type Database = {
                   Relationships: [
 
                   ]
+                },"project_operations": {
+                  Row: {
+                    "actor_id": string,"created_at": string,"id": string,"payload": NonNullable<Json>,"project_id": string,"result": Json | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "actor_id": string,"created_at"?: string,"id": string,"payload": NonNullable<Json>,"project_id": string,"result"?: Json | null
+                  }
+                  Update: {
+                    "actor_id"?: string,"created_at"?: string,"id"?: string,"payload"?: NonNullable<Json>,"project_id"?: string,"result"?: Json | null
+                  }
+                  Relationships: [
+
+                  ]
                 },"session_bindings": {
                   Row: {
                     "access_revision": number,"bound_at": string,"session_id": string,"user_id": string
@@ -113,6 +127,30 @@ export type Database = {
                            },
 "login_preflight":
 { Args: { "login_email": string }; Returns: Json
+                           },
+"project_actor":
+{ Args: { "actor": Json,"writing"?: boolean }; Returns: string
+                           },
+"project_command":
+{ Args: { "actor": Json,"command": Json }; Returns: Json
+                           },
+"project_history":
+{ Args: { "target"?: string }; Returns: Json
+                           },
+"project_money":
+{ Args: { "value": Json }; Returns: number
+                           },
+"project_snapshot":
+{ Args: { "target": string }; Returns: Json
+                           },
+"project_summary":
+{ Args: { "financial": boolean,"target": string }; Returns: Json
+                           },
+"projects_read":
+{ Args: { "actor": Json,"target_project"?: string }; Returns: Json
+                           },
+"scope_snapshot":
+{ Args: { "target": string }; Returns: Json
                            },
 "session_context":
 { Args: Record<PropertyKey, never>; Returns: Json
@@ -298,6 +336,12 @@ isOneToOne: false
                            },
 "auth_unbind_session":
 { Args: { "target_session": string,"target_user": string }; Returns: undefined
+                           },
+"project_command":
+{ Args: { "actor": Json,"command": Json }; Returns: Json
+                           },
+"projects_read":
+{ Args: { "actor": Json,"target_project"?: string }; Returns: Json
                            }
           }
           Enums: {
