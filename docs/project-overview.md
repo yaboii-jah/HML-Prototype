@@ -4,7 +4,7 @@
 
 HML ConstructSync is an internal construction materials operations system for HML Technologies and Services Inc. It gives Site Personnel, Project Managers, Procurement, Accounting, Finance, Logistics and Administrators a shared way to follow each material request through sourcing, purchasing, payment verification, delivery and stock posting, alongside project inventory and material usage. Its main purpose is traceability across departments: staff can see the related records, responsible people, supporting documents, completed actions and outstanding work for a request.
 
-> **Current status:** Production migration is in progress. The migration branch implements Supabase sessions, Administrator account management and shared project/scope setup; each unit's verification state is recorded in the tracker. Operational workflows and realtime remain later units. Unsupported screens and provider operations are temporarily unavailable. This overview defines the intended complete system, not production readiness.
+> **Current status:** Production migration is in progress. The migration branch implements Supabase sessions, Administrator account management, shared project/scope setup and foundation realtime. Realtime code/CI and the staging migration pass; hosted private-only configuration remains blocked as recorded in the tracker. Operational workflows remain later units. Unsupported screens and provider operations are temporarily unavailable. This overview defines the intended complete system, not production readiness.
 
 See [architecture context](architecture.md) for the technical boundaries and production migration responsibilities.
 

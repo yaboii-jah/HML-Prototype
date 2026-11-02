@@ -173,6 +173,8 @@ Completed 2026-11-02: code `4f4c83d` passed [all four standard jobs](https://git
 
 **Done when:** two isolated browser sessions receive permitted changes automatically; record edits do not erase a draft; subscription gaps recover through fresh reads; revoked users receive no subsequent protected record notifications or data. Access remains enforced when events are delayed, missed or forged.
 
+Implementation checkpoint 2026-11-02: `e2ab489` passes the standard four-job matrix and disposable SQL/Auth/browser/Realtime/type/race checks. Migration `20261102130037` is applied to staging; five rollback suites, Auth-only checks, generated types and retained-state comparison pass. **Still open:** the maintenance token lacks Realtime configuration permissions, and a data-free probe confirms public channels remain accepted. Disable **Allow public access** in staging Realtime settings (or grant the maintenance token Realtime configuration read/write), then verify private-only settings and safe subscription parity. See the tracker for evidence. Production is unchanged; do not check 3.5 complete yet.
+
 ### 3.6 Verify the Foundation and Complete the Milestone
 
 - [ ] Foundation acceptance, CI and development-backend parity verified.

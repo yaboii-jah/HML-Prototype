@@ -141,6 +141,8 @@ Unit 3.2 implements this model on the migration branch; verified local/CI/stagin
 
 ## Realtime Updates
 
+Code and disposable CI are verified at `e2ab489`, and the matching migration is applied to staging. Hosted private-only configuration remains unverified: the maintenance token lacks Realtime configuration permissions, and a data-free public-channel probe still subscribes. Unit 3.5 remains open until that setting and hosted subscription parity pass. Retained staging records are unchanged.
+
 Unit 3.5 implements the foundation transport on `feat/step-3-realtime`; verification and hosted rollout are tracked separately. Private topics identify the user, access revision and exact Auth session. The uncached credential endpoint returns only the verified user's existing access token in memory; refresh credentials remain HttpOnly and renewal stays server-side. The browser uses a token callback so Realtime heartbeat/rejoin cannot replace that credential with an empty browser Auth store.
 
 Guarded adapters preserve the existing account/project commands, audits and retry outcomes. They acquire the shared foundation guard before actor/record locks, then lock candidate Auth sessions in stable order before final recipient selection and publication. This orders supported access changes and native session deletion with record notifications. A pre-revocation signal may arrive late; fresh authorization still governs every read. Account signals target Administrators/the affected user, with assignment-count changes also refreshing Project Managers. Project signals follow current project access.
