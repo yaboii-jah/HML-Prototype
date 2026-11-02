@@ -4,7 +4,8 @@
 .project-history pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; }
 .project-history details { margin-top: 6px; }
 .project-editor fieldset,.scope-editor fieldset { padding: 0; margin: 0; border: 0; }
-.project-financials { margin-bottom: 24px; }
+.project-financials { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); margin-bottom: 24px; }
 .project-financials strong { display: block; overflow-wrap: anywhere; }
 .project-scope-panel .panel-heading { gap: 14px; flex-wrap: wrap; }
 .project-notice { padding: 12px; border: 1px solid var(--line); border-radius: 10px; }
+@media(max-width:650px) { .project-financials { grid-template-columns: 1fr; } }

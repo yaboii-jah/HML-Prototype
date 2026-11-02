@@ -131,6 +131,7 @@ declare
 begin
   -- Account commands take this guard before profiles/projects. Taking it first
   -- here prevents an assignment/reservation appearing after deletion checks.
+  perform set_config('lock_timeout','5s',true);
   if kind='deleteProject' then update private.account_guard set revision=revision+1 where id; end if;
   caller:=private.project_actor(actor,true);
   if operation is null or kind is null or kind not in('createProject','saveProject','createScope','saveScope','deleteScope','deleteProject') then
