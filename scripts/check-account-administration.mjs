@@ -80,7 +80,7 @@ export async function checkAccountAdministration({ browser, second, client, logi
 
   // A new recovery attempt preserves sessions until the native password save.
   await browser.navigate('/admin');
-  const clickMessage = async () => { await browser.click(row + ' .account-row-actions button:nth-child(2)'); await confirm(); await browser.wait("return !!document.querySelector('.account-notice')"); };
+  const clickMessage = async () => { await browser.wait(`return !!document.querySelector(${JSON.stringify(row + ' .account-row-actions button:nth-child(2)')})`); await browser.click(row + ' .account-row-actions button:nth-child(2)'); await confirm(); await browser.wait("return !!document.querySelector('.account-notice')"); };
   await clickMessage();
   const recovery = await mailLink(email, 'recovery');
   assert.ok(ok(await staffClient.rpc('auth_session_context'), 'Session remains before reset'), 'Sending recovery does not revoke');

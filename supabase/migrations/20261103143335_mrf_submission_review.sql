@@ -15,7 +15,9 @@ create table private.mrf_submissions (
 );
 create index mrf_submissions_request on private.mrf_submissions(request_id);
 create index mrf_submissions_actor on private.mrf_submissions(actor_id);
+create index mrf_submissions_source on private.mrf_submissions(source_document);
 alter table public.material_requests add foreign key(submission_id) references private.mrf_submissions(id);
+create index material_requests_submission on public.material_requests(submission_id);
 create table private.mrf_review_events (
   id uuid primary key default gen_random_uuid(), request_id uuid not null references public.material_requests(id),
   submission_id uuid references private.mrf_submissions(id),

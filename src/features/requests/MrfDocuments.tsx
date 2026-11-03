@@ -43,13 +43,14 @@ export async function sendDocumentAction(command: Record<string, unknown>) {
 }
 const sizeLabel = (size: number) => size < 1024 ? `${size} bytes` : size < 1024 * 1024 ? `${(size / 1024).toLocaleString("en-PH", { maximumFractionDigits: 1 })} KiB` : `${(size / (1024 * 1024)).toLocaleString("en-PH", { maximumFractionDigits: 2 })} MiB`;
 
-export function MrfDocuments({ mrfId, editable: permitted, archiveManager = false }: { mrfId: string; editable: boolean; archiveManager?: boolean }) {
+export function MrfDocuments({ mrfId, editable: permitted, archiveManager = false, onPendingFile }: { mrfId: string; editable: boolean; archiveManager?: boolean; onPendingFile?: (pending: boolean) => void }) {
   const { data, error: readError, load, refresh } = useDocuments(`mrfId=${encodeURIComponent(mrfId)}`);
   const editable = permitted && data?.editable === true;
   const [file, setFile] = useState<File | null>(null), [resumeId, setResumeId] = useState(""), [busy, setBusy] = useState(false), [error, setError] = useState(""), [progress, setProgress] = useState<number | null>(null), [preview, setPreview] = useState(false);
   const command = useRef<Record<string, unknown> | null>(null), locked = useRef(false), fileInput = useRef<HTMLInputElement>(null);
   const [uncertain, setUncertain] = useState(false);
   const [selectionRevision, setSelectionRevision] = useState<string | null>(null);
+  useEffect(() => { onPendingFile?.(!!file || !!resumeId || busy || uncertain); }, [file, resumeId, busy, uncertain, onPendingFile]);
   const selectionStale = !!file && !!data && selectionRevision !== null && selectionRevision !== data.revision;
   const run = async (input: Record<string, unknown>) => {
     command.current ??= { ...input, operationId: crypto.randomUUID(), mrfId };
@@ -115,6 +116,7 @@ export function MrfDocuments({ mrfId, editable: permitted, archiveManager = fals
         <label className="field"><span>{resumeId ? "Reselect the same PDF to resume" : data.current ? "Choose replacement PDF" : "Choose supporting PDF"}</span><input key={resumeId} ref={fileInput} type="file" accept="application/pdf,.pdf" onChange={event => { setFile(event.target.files?.[0] ?? null); setSelectionRevision(data.revision); command.current = null; }} /></label>
         {file && <p>{file.name} · {sizeLabel(file.size)}</p>}
       </fieldset>
+      {file && <div role="status"><p>Upload or clear this selected PDF before submitting the MRF.</p><button type="button" className="button secondary" disabled={busy || uncertain} onClick={() => { setFile(null); setResumeId(""); setSelectionRevision(null); if (fileInput.current) fileInput.current.value = ""; }}>Clear selected PDF</button></div>}
       <div className="form-actions"><button type="button" className="button primary" disabled={busy || uncertain || selectionStale || !file || !data.folder} onClick={() => void upload()}>{busy ? "Uploading…" : resumeId ? "Resume upload" : data.current ? "Upload replacement" : "Upload PDF"}</button>{resumeId && <button type="button" className="button secondary" disabled={busy || uncertain} onClick={() => { setResumeId(""); setFile(null); setSelectionRevision(null); }}>Choose a new upload</button>}</div>
       {selectionStale && !busy && <div role="status"><p>The shared attachment changed after you selected this PDF. Review the current file above before replacing it.</p><button type="button" className="button secondary" disabled={uncertain} onClick={() => { setSelectionRevision(data.revision); command.current = null; }}>I reviewed the current attachment; keep my selected PDF</button></div>}
       {progress !== null && <label className="field"><span>PDF uploaded: {Math.floor(progress)}%</span><progress max={100} value={progress} /></label>}

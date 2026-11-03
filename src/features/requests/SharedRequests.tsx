@@ -58,11 +58,12 @@ function DraftSummary({ draft, projectId, data }: { draft: MrfDraft; projectId: 
   </>;
 }
 function RequestDetail({ saved, data }: { saved: SavedMrf; data: RequestView }) {
+  const [filePending, setFilePending] = useState(false);
   return <><Link className="back-link" href="/requests">Back to material requests</Link><PageHeader title={saved.ref} description={mrfStatusLabel(saved)} actions={data.role === "Site Personnel" && mrfEditable(saved) && <Link className="button primary" href={`/requests/${saved.id}/edit`}>Edit draft</Link>} />
     <section className="panel"><h2>Request details</h2><DraftSummary draft={saved.draft} projectId={saved.projectId} data={saved.submitted ? { ...data, projects: data.projects.map(project => project.id === saved.projectId ? { ...project, name: saved.submitted!.projectName } : project) } : data} /></section>
     <section className="panel"><h2>Recorded responsibility</h2><p>Created by {saved.creatorName} · <time dateTime={saved.createdAt}>{new Date(saved.createdAt).toLocaleString("en-PH", { timeZone: "Asia/Manila" })}</time></p><p>Latest editor: {saved.updaterName} · <time dateTime={saved.updatedAt}>{new Date(saved.updatedAt).toLocaleString("en-PH", { timeZone: "Asia/Manila" })}</time></p><p className="muted">Printed signatory names do not establish approval or submission.</p></section>
-    <MrfDocuments mrfId={saved.id} editable={data.role === "Site Personnel" && mrfEditable(saved)} archiveManager={data.role === "Project Manager"} />
-    <MrfReview saved={saved} role={data.role} />
+    <MrfDocuments mrfId={saved.id} editable={data.role === "Site Personnel" && mrfEditable(saved)} archiveManager={data.role === "Project Manager"} onPendingFile={setFilePending} />
+    <MrfReview saved={saved} role={data.role} disabled={filePending} />
     <p className="muted">{availability}</p></>;
 }
 
@@ -87,6 +88,7 @@ function DraftEditor({ latest, data, today }: { latest?: SavedMrf; data: Request
   const [step, setStep] = useState(0), [selected, setSelected] = useState<string | null>(null), [copySource, setCopySource] = useState("");
   const [busy, setBusy] = useState(false), [error, setError] = useState(""), [conflict, setConflict] = useState(false), [uncertain, setUncertain] = useState(false);
   const [workflowLocked, setWorkflowLocked] = useState(false);
+  const [filePending, setFilePending] = useState(false);
   const operation = useRef<DraftCommand | null>(null), pending = useRef(false), dirtyRef = useRef(false), heading = useRef<HTMLHeadingElement>(null);
   const draft = !local.dirty && latest ? latest.draft : local.draft;
   const expected = !local.dirty && latest ? latest.version : local.version;
@@ -157,8 +159,8 @@ function DraftEditor({ latest, data, today }: { latest?: SavedMrf; data: Request
       {!project?.code && <p role="status">Choose an assigned project with a configured document code before saving.</p>}
       <div className="form-actions request-wizard-actions"><div><Link className="button secondary" href={latest ? `/requests/${latest.id}` : "/requests"}>Cancel</Link><button className="button primary" disabled={!formEditable || busy || !project?.code || (!uncertain && (stale || conflict))}>{busy ? "Saving…" : uncertain ? "Retry same save" : "Save draft"}</button></div><div>{step > 0 && <button type="button" className="button secondary" onClick={() => changeStep(step - 1)}>Back</button>}{step < 2 && <button type="button" className="button secondary" onClick={() => changeStep(step + 1)}>Next</button>}</div></div>
     </form>
-    {latest && <MrfReview saved={latest} role={data.role} draft={draft} expectedVersion={expected} disabled={busy || uncertain || stale || conflict || !editable} onPendingChange={setWorkflowLocked} onSubmitted={() => { dirtyRef.current = false; router.push(`/requests/${latest.id}`); router.refresh(); }} />}
-    {latest ? <MrfDocuments mrfId={latest.id} editable={editable} /> : <section className="panel"><h2>Supporting PDF</h2><p>Save this draft first to assign its permanent MRF number, then attach the PDF.</p></section>}
+    {latest && <MrfReview saved={latest} role={data.role} draft={draft} expectedVersion={expected} disabled={busy || uncertain || stale || conflict || !editable || filePending} onPendingChange={setWorkflowLocked} onSubmitted={() => { dirtyRef.current = false; router.push(`/requests/${latest.id}`); router.refresh(); }} />}
+    {latest ? <MrfDocuments mrfId={latest.id} editable={editable} onPendingFile={setFilePending} /> : <section className="panel"><h2>Supporting PDF</h2><p>Save this draft first to assign its permanent MRF number, then attach the PDF.</p></section>}
     <RecordModal open={!!material} title="Material details" onClose={() => setSelected(null)}>{material && <fieldset className="mrf-material-fields" disabled={!formEditable || busy || uncertain}><div className="form-grid">{materialFields.map(key => <Field label={labels[key]} key={key}><input name={`material-${key}`} maxLength={4000} value={material[key]} onChange={event => change({ ...draft, items: draft.items.map(item => item.id === material.id ? { ...item, [key]: event.target.value } : item) })} /></Field>)}<Field label="Quantity"><input inputMode="decimal" value={material.quantity ?? ""} onChange={event => change({ ...draft, items: draft.items.map(item => item.id === material.id ? { ...item, quantity: event.target.value || null } : item) })} /></Field><Field label="Date needed"><input type="date" value={material.neededDate} onChange={event => change({ ...draft, items: draft.items.map(item => item.id === material.id ? { ...item, neededDate: event.target.value } : item) })} /></Field></div></fieldset>}</RecordModal>
   </>;
 }

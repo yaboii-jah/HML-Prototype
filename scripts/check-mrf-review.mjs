@@ -15,7 +15,14 @@ export async function checkMrfReview({ browser, second, client, login, logout, s
     while (Date.now() < deadline) { if (await check()) return; await delay(150); }
     throw Error('MRF review timed out: ' + label);
   };
-  const click = (b, label) => b.run(`const button=[...document.querySelectorAll('button')].find(b=>b.textContent.trim()===${JSON.stringify(label)});if(!button||button.disabled)throw Error('Unavailable action: '+${JSON.stringify(label)});button.click();`);
+  const click = async (b, label) => {
+    await b.wait(`return [...document.querySelectorAll('button')].some(b=>b.textContent.trim()===${JSON.stringify(label)}&&!b.disabled)`);
+    return b.run(`const button=[...document.querySelectorAll('button')].find(b=>b.textContent.trim()===${JSON.stringify(label)});if(!button||button.disabled)throw Error('Unavailable action: '+${JSON.stringify(label)});button.click();`);
+  };
+  const fill = async (b, selector, value) => {
+    await b.wait(`return !!document.querySelector(${JSON.stringify(selector)})&&!document.querySelector(${JSON.stringify(selector)}).matches(':disabled')`);
+    await b.fill(selector,value);
+  };
   const current = id => sql(`select private.request_snapshot('${id}');`).then(result => JSON.parse(result.output.trim()));
   const managerActor = await actor(second), operation = randomUUID();
   const project = ok(await client.rpc('project_command', { actor: managerActor, command: { type: 'createProject', requestId: operation, name: 'Review runtime ' + operation, location: 'Frozen review location', code: 'R-' + operation.slice(0,8).toUpperCase(), budget: '100' } })).projectId;
@@ -35,13 +42,13 @@ export async function checkMrfReview({ browser, second, client, login, logout, s
   await browser.run(`const dt=new DataTransfer();dt.items.add(new File([Uint8Array.from(atob('${bytes.toString('base64')}'),c=>c.charCodeAt(0))],'review.pdf',{type:'application/pdf'}));const input=document.querySelector('.mrf-documents input[type=file]');input.files=dt.files;input.dispatchEvent(new Event('change',{bubbles:true}));`);
   await click(browser, 'Upload PDF');
   await second.wait("return document.querySelector('.document-current')?.textContent.includes('review.pdf')");
-  await browser.fill('input[name=sourceRef]', 'Preserved across submission');
+  await fill(browser, 'input[name=sourceRef]', 'Preserved across submission');
   await second.wait("return [...document.querySelectorAll('button')].some(b=>b.textContent==='Save and submit'&&!b.disabled)");
   await click(second, 'Save and submit');
   await browser.wait("return document.querySelector('input[name=sourceRef]')?.closest('fieldset').disabled&&document.body.innerText.includes('This request is locked')");
   assert.equal(await browser.run("return document.querySelector('input[name=sourceRef]').value"), 'Preserved across submission');
   await logout(second); await login(second, manager); await second.navigate(`/requests/${mrf}`);
-  await second.fill('#mrf-review-heading ~ .field textarea', 'Clarify the request');
+  await fill(second, '#mrf-review-heading ~ .field textarea', 'Clarify the request');
   await click(second, 'Return for changes');
   await browser.wait("return document.body.innerText.includes('Returned')&&!document.querySelector('input[name=sourceRef]').closest('fieldset').disabled");
   await click(browser, 'I reviewed the latest MRF; keep my draft');
@@ -75,12 +82,12 @@ export async function checkMrfReview({ browser, second, client, login, logout, s
   ok(await client.from('profiles').insert({ user_id: procurement.id, display_name: 'Review Procurement', is_active: true }));
   ok(await client.from('role_grants').insert({ user_id: procurement.id, role: 'Procurement' }));
   await logout(second); await login(second, procurement); await second.navigate(`/requests/${mrf}`);
-  await second.fill('#mrf-review-heading ~ .field textarea', 'Correct the requirement');
+  await fill(second, '#mrf-review-heading ~ .field textarea', 'Correct the requirement');
   await click(second, 'Open correction');
   await browser.wait("return document.body.innerText.includes('Full correction')");
   assert.equal((await current(mrf)).procurementReady, false);
   await browser.navigate(`/requests/${mrf}/edit`);
-  await browser.fill('input[name=sourceRef]', 'Corrected requirement');
+  await fill(browser, 'input[name=sourceRef]', 'Corrected requirement');
   await click(browser, 'Save and submit');
   await browser.wait(`return location.pathname==='/requests/${mrf}'`);
   await logout(second); await login(second, manager); await second.navigate(`/requests/${mrf}`);
