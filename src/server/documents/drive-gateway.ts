@@ -90,8 +90,9 @@ export function createDriveGateway(origin: string, accessToken: () => Promise<st
     return { expired: false, offset: next, complete: response.status !== 308 };
   }
   async function stream(id: string, range?: { start: number; end: number }, signal?: AbortSignal) {
-    const response = await request(`${api}/${encodeURIComponent(id)}?alt=media&supportsAllDrives=true`, { headers: range ? { Range: `bytes=${range.start}-${range.end}` } : {}, signal });
+    const response = await request(`${api}/${encodeURIComponent(id)}?alt=media&supportsAllDrives=true`, { headers: { "Accept-Encoding": "identity", ...(range ? { Range: `bytes=${range.start}-${range.end}` } : {}) }, signal });
     if (range && response.status !== 206) { await response.body?.cancel(); throw Error("Provider did not honor range"); }
+    if (range && !response.headers.get("content-range")?.startsWith(`bytes ${range.start}-${range.end}/`)) { await response.body?.cancel(); throw Error("Provider returned a different range"); }
     return response;
   }
   async function bytes(id: string, max: number) {

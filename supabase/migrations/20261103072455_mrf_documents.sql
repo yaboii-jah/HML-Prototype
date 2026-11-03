@@ -155,6 +155,9 @@ language sql security definer set search_path='' as $$
   select p.user_id,p.display_name,actor->>'activeRole',action,'document',target,operation,details
   from public.profiles p where p.user_id=(actor->>'userId')::uuid;
 $$;
+create function private.document_actor_snapshot(actor jsonb) returns jsonb language sql stable security definer set search_path='' as $$
+  select actor||jsonb_build_object('name',p.display_name) from public.profiles p where p.user_id=(actor->>'userId')::uuid;
+$$;
 create function private.document_job_allowed(actor jsonb,target uuid,kind text) returns boolean language sql stable security definer set search_path='' as $$
   select exists(select 1 from public.profiles p join auth.users u on u.id=p.user_id
     join public.role_grants g on g.user_id=p.user_id and g.role=actor->>'activeRole'
@@ -226,11 +229,11 @@ begin
     if not found then raise exception 'Set up the project document folder first' using errcode='P4201'; end if;
     resource:=gen_random_uuid();
     insert into private.document_uploads(id,request_id,folder_mapping_id,base_revision,name,size,sha256,actor,original_actor,uploader_id,uploader_name)
-      select resource,target,mapping.id,state.revision,command->>'name',(command->>'size')::bigint,command->>'sha256',actor,actor,caller,p.display_name from public.profiles p where p.user_id=caller;
+      select resource,target,mapping.id,state.revision,command->>'name',(command->>'size')::bigint,command->>'sha256',actor,private.document_actor_snapshot(actor),caller,p.display_name from public.profiles p where p.user_id=caller;
     result:=jsonb_build_object('uploadId',resource);
   elsif kind='remove' then
     if state.current_document is not null then
-      insert into private.document_jobs(kind,project_id,request_id,resource_id,actor,original_actor) values('cleanup',project_id,target,state.current_document,actor,actor) on conflict do nothing;
+      insert into private.document_jobs(kind,project_id,request_id,resource_id,actor,original_actor) values('cleanup',project_id,target,state.current_document,actor,private.document_actor_snapshot(actor)) on conflict do nothing;
       update private.request_document_state set current_document=null,revision=revision+1 where request_id=target;
     end if;
     result:=jsonb_build_object('removed',true);
@@ -239,7 +242,7 @@ begin
     if not found then raise exception 'Upload unavailable' using errcode='42501'; end if;
     if kind='cancelUpload' then
       if upload.state='complete' then raise exception 'Remove the saved attachment instead' using errcode='23514'; end if;
-      update private.document_uploads set state='cancelled' where id=upload.id;
+      update private.document_uploads set state='cancelled',encrypted_session=null where id=upload.id;
       insert into private.document_jobs(kind,project_id,request_id,resource_id,actor,original_actor,payload)
         values('cleanup',project_id,target,upload.id,actor,upload.original_actor,jsonb_build_object('upload',true)) on conflict do nothing;
     else
@@ -256,7 +259,7 @@ begin
       raise exception 'Folder setup is already pending' using errcode='55P03'; end if;
     resource:=gen_random_uuid();
     insert into private.document_jobs(id,kind,project_id,actor,original_actor,payload)
-      values(resource,'folder',project_id,actor,actor,jsonb_build_object('linkedFolder',command->>'folderId','expectedMapping',command->>'expectedMapping'));
+      values(resource,'folder',project_id,actor,private.document_actor_snapshot(actor),jsonb_build_object('linkedFolder',command->>'folderId','expectedMapping',command->>'expectedMapping'));
     result:=jsonb_build_object('jobId',resource);
   else
     select * into job from private.document_jobs j where j.id=(command->>'jobId')::uuid and j.project_id=cmd.project_id for update;
@@ -284,7 +287,7 @@ begin
   prior:=exists(select 1 from private.project_operations where id=(command->>'requestId')::uuid);
   result:=private.project_command_before_documents(actor,command);
   if not prior and command->>'type'='createProject' then
-    insert into private.document_jobs(kind,project_id,actor,original_actor) values('folder',(result->>'projectId')::uuid,actor,actor);
+    insert into private.document_jobs(kind,project_id,actor,original_actor) values('folder',(result->>'projectId')::uuid,actor,private.document_actor_snapshot(actor));
   end if;
   return result;
 end $$;

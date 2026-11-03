@@ -23,6 +23,22 @@ export function privateDocumentRead(request: Request) {
   const origin = request.headers.get("origin"), site = request.headers.get("sec-fetch-site");
   if (origin && origin !== new URL(request.url).origin || site && !["same-origin", "none"].includes(site)) throw new DocumentHttpError(403, "Open documents from this application.");
 }
+export async function readDocumentBytes(request: Request, limit: number) {
+  const reader = request.body?.getReader();
+  if (!reader) throw new DocumentHttpError(400, "Request body missing.");
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  try {
+    for (;;) {
+      const next = await reader.read();
+      if (next.done) break;
+      size += next.value.length;
+      if (size > limit) throw new DocumentHttpError(413, "Document request is too large.");
+      chunks.push(next.value);
+    }
+  } finally { await reader.cancel(); }
+  return Buffer.concat(chunks, size);
+}
 export async function documentsView(mrfId?: string, projectId?: string) {
   const actor = await documentActor();
   if ((!mrfId || !uuid(mrfId)) && (!projectId || !uuid(projectId))) throw new DocumentHttpError(400, "Choose a saved MRF or project.");

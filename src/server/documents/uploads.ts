@@ -2,7 +2,7 @@ import "server-only";
 import { serviceRpc } from "@/src/server/auth/service-rpc";
 import { documentActor, DocumentHttpError } from "./access";
 import { documentDrive } from "./config";
-import { rowValue, textValue, uploadTags } from "./processing";
+import { rowValue, textValue, uploadTags } from "./state";
 import { sealUploadTicket, openUploadTicket } from "@/src/server/upload-ticket-codec";
 import { DOCUMENT_CHUNK_SIZE } from "@/src/domain/requests/documents";
 import { dispatchDocumentJobs } from "./dispatch";

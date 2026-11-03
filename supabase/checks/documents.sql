@@ -28,6 +28,8 @@ begin
   if folder_job is null then raise exception 'New project did not atomically enqueue folder setup'; end if;
   receipt:=public.document_worker(folder_job,'claim'); lease:=(receipt->>'lease')::uuid;
   if public.document_worker(folder_job,'claim') is not null then raise exception 'Duplicate worker claimed active lease'; end if;
+  delete from auth.sessions where id=admin_session;
+  if (select original_actor->>'name' from private.document_jobs where id=folder_job)<>'Documents Admin' then raise exception 'Original job actor name not frozen'; end if;
   perform public.document_worker(folder_job,'checkpoint',lease,jsonb_build_object('folderId','sql-folder-'||project,'rootId','sql-test-root','name','SQL destination','verified',true));
   perform public.document_worker(folder_job,'complete',lease);
   perform public.document_worker(folder_job,'complete',lease);
@@ -73,7 +75,8 @@ begin
   -- Revocation pauses admitted background work and invalidates the original session.
   select j.id into job from private.document_jobs j where resource_id=upload_b and kind='cleanup';
   delete from public.project_assignments where user_id=site_id and project_id=project;
-  if public.document_worker(job,'claim') is not null or (select state from private.document_jobs where id=job)<>'paused' then raise exception 'Revoked worker continued'; end if;
+  receipt:=public.document_worker(job,'claim');
+  if receipt is not null or (select state from private.document_jobs where id=job)<>'paused' then raise exception 'Revoked worker continued'; end if;
   begin perform public.document_file(site,upload_a); raise exception 'Revoked file read accepted'; exception when insufficient_privilege then null; end;
 end $$;
 rollback;

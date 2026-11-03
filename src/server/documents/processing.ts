@@ -6,19 +6,7 @@ import { uuid } from "@/src/domain/requests/drafts";
 import { documentDrive, documentRoot } from "./config";
 import { validateSupportingPdf, InvalidSupportingPdf } from "./pdf-validation";
 import { archiveApprovedMrf } from "./archive";
-
-export const textValue = (value: unknown): string => {
-  if (typeof value !== "string" || !value) throw Error("Invalid document state");
-  return value;
-};
-export const rowValue = (value: unknown): Record<string, unknown> => {
-  const row = record(value);
-  if (!row) throw Error("Invalid document state");
-  return row;
-};
-export function uploadTags(uploadId: string, requestId: string) {
-  return { hmlUploadId: uploadId, hmlRequestId: requestId, hmlKind: "draft-supporting-pdf" };
-}
+import { rowValue, textValue, uploadTags } from "./state";
 
 /** Workflow steps return only small outcomes; bytes, metadata and credentials stay here. */
 export async function processDocumentJob(id: string): Promise<void> {
