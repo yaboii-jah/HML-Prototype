@@ -130,6 +130,7 @@ end;
 $$;
 
 create function private.request_command(actor jsonb,command jsonb) returns jsonb language plpgsql security definer set search_path='' as $$
+<<request_write>>
 declare caller uuid; operation uuid:=(command->>'requestId')::uuid; kind text:=command->>'type'; target uuid; project_id uuid; project public.projects;
   receipt private.request_operations; previous public.material_requests; draft jsonb; before_value jsonb; saved jsonb; result jsonb; number bigint; actor_name text; item jsonb; position integer:=0;
 begin
@@ -150,7 +151,7 @@ begin
   if receipt.result is not null then return receipt.result; end if;
   if project.document_code is null then raise exception 'Configure the project document code first' using errcode='23514'; end if;
   if draft->>'scopeId' is not null then
-    perform 1 from public.scopes s where s.id=(draft->>'scopeId')::uuid and s.project_id=request_command.project_id for update;
+    perform 1 from public.scopes s where s.id=(draft->>'scopeId')::uuid and s.project_id=request_write.project_id for update;
     if not found then raise exception 'Scope must belong to the project' using errcode='23514'; end if;
   end if;
   select p.display_name into actor_name from public.profiles p where p.user_id=caller;
@@ -160,7 +161,7 @@ begin
     before_value:=private.request_snapshot(target);
     if before_value->'draft'=draft then
       result:=jsonb_build_object('record',before_value,'projectId',project_id,'changed',false);
-      update private.request_operations set result=request_command.result where id=operation;
+      update private.request_operations set result=request_write.result where id=operation;
       return result;
     end if;
     update public.material_requests set scope_id=(draft->>'scopeId')::uuid,data=draft-'scopeId'-'items',updater_id=caller,updater_name=actor_name where id=target;
@@ -183,7 +184,7 @@ begin
     values(caller,actor_name,'Site Personnel',case when kind='createDraft' then 'mrf.created' else 'mrf.draft_saved' end,'mrf',target,operation,
       jsonb_build_object('projectId',project_id,'before',before_value,'after',saved));
   result:=jsonb_build_object('record',saved,'projectId',project_id,'changed',true);
-  update private.request_operations set result=request_command.result where id=operation;
+  update private.request_operations set result=request_write.result where id=operation;
   return result;
 end;
 $$;
