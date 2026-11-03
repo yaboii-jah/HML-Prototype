@@ -48,6 +48,8 @@ export async function checkMrfDocuments({ browser, second, client, login, logout
   await browser.run("[...document.querySelectorAll('.mrf-documents button')].find(b=>b.textContent==='Upload PDF').click()");
   await browser.wait("return document.querySelector('.document-current')?.textContent.includes('shared.pdf')");
   await second.wait("return document.querySelector('.document-current')?.textContent.includes('shared.pdf')");
+  await browser.wait("return document.querySelector('.mrf-documents input[type=file]')?.files.length===0");
+  assert.equal(await browser.run("return document.querySelector('.mrf-documents input[type=file]').files.length"), 0, 'Successful upload clears native file selection');
   assert.equal(await browser.run("return document.querySelector('input[name=sourceRef]').value"), 'Unsaved details survive file actions');
   assert.equal((await sql(`select version from public.material_requests where id='${mrf}';`)).output.trim(), '1', 'File save left draft version alone');
   const current = (await docState(mrf)).current, cookies = await cookie(browser);
@@ -104,6 +106,7 @@ export async function checkMrfDocuments({ browser, second, client, login, logout
   for (const width of [1440, 375]) {
     await browser.call('Emulation.setDeviceMetricsOverride', { width, height: 1000, deviceScaleFactor: 1, mobile: width === 375 });
     await browser.run("document.querySelector('.mobile-scrim')?.click();document.querySelector('.mrf-documents').scrollIntoView()");
+    if (width === 375) await browser.wait("return !document.querySelector('.mobile-scrim')&&document.querySelector('.side-nav').getBoundingClientRect().right<=1");
     assert.equal(await browser.run('return document.documentElement.scrollWidth<=innerWidth'), true, 'Attachment controls fit viewport');
     const screenshot = await browser.call('Page.captureScreenshot', { format: 'png' }); await writeFile(`.verification/request-documents-${width}.png`, Buffer.from(screenshot.data, 'base64'));
   }

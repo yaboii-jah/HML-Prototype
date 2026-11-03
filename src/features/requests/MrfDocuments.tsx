@@ -46,7 +46,7 @@ const sizeLabel = (size: number) => size < 1024 ? `${size} bytes` : size < 1024 
 export function MrfDocuments({ mrfId, editable }: { mrfId: string; editable: boolean }) {
   const { data, error: readError, load, refresh } = useDocuments(`mrfId=${encodeURIComponent(mrfId)}`);
   const [file, setFile] = useState<File | null>(null), [resumeId, setResumeId] = useState(""), [busy, setBusy] = useState(false), [error, setError] = useState(""), [progress, setProgress] = useState<number | null>(null), [preview, setPreview] = useState(false);
-  const command = useRef<Record<string, unknown> | null>(null), locked = useRef(false);
+  const command = useRef<Record<string, unknown> | null>(null), locked = useRef(false), fileInput = useRef<HTMLInputElement>(null);
   const [uncertain, setUncertain] = useState(false);
   const [selectionRevision, setSelectionRevision] = useState<string | null>(null);
   const selectionStale = !!file && !!data && selectionRevision !== null && selectionRevision !== data.revision;
@@ -80,6 +80,7 @@ export function MrfDocuments({ mrfId, editable }: { mrfId: string; editable: boo
         setProgress(offset / file.size * 100);
       }
       setFile(null); setResumeId(""); setSelectionRevision(null);
+      if (fileInput.current) fileInput.current.value = "";
     } catch (error) { setError(error instanceof Error ? error.message : "The upload was interrupted. Check its status and resume."); }
     finally { locked.current = false; setBusy(false); setProgress(null); await load(); refresh(); }
   };
@@ -89,6 +90,10 @@ export function MrfDocuments({ mrfId, editable }: { mrfId: string; editable: boo
     try {
       const result = record(await run(input));
       if (["startUpload", "resumeUpload"].includes(String(input.type)) && typeof result?.uploadId === "string") setResumeId(result.uploadId);
+      if (input.type === "cancelUpload" && input.uploadId === resumeId) {
+        setResumeId(""); setFile(null); setSelectionRevision(null);
+        if (fileInput.current) fileInput.current.value = "";
+      }
     }
     catch (error) { setError(error instanceof Error ? error.message : "The action was interrupted."); }
     finally { locked.current = false; setBusy(false); await load(); refresh(); }
@@ -106,7 +111,7 @@ export function MrfDocuments({ mrfId, editable }: { mrfId: string; editable: boo
     {editable && data && <>
       {!data.folder && <p role="status">An Administrator or Project Manager must set up this project’s document folder before uploading.</p>}
       <fieldset disabled={busy || !data.folder || uncertain}>
-        <label className="field"><span>{resumeId ? "Reselect the same PDF to resume" : data.current ? "Choose replacement PDF" : "Choose supporting PDF"}</span><input key={resumeId} type="file" accept="application/pdf,.pdf" onChange={event => { setFile(event.target.files?.[0] ?? null); setSelectionRevision(data.revision); command.current = null; }} /></label>
+        <label className="field"><span>{resumeId ? "Reselect the same PDF to resume" : data.current ? "Choose replacement PDF" : "Choose supporting PDF"}</span><input key={resumeId} ref={fileInput} type="file" accept="application/pdf,.pdf" onChange={event => { setFile(event.target.files?.[0] ?? null); setSelectionRevision(data.revision); command.current = null; }} /></label>
         {file && <p>{file.name} · {sizeLabel(file.size)}</p>}
       </fieldset>
       <div className="form-actions"><button type="button" className="button primary" disabled={busy || uncertain || selectionStale || !file || !data.folder} onClick={() => void upload()}>{busy ? "Uploading…" : resumeId ? "Resume upload" : data.current ? "Upload replacement" : "Upload PDF"}</button>{resumeId && <button type="button" className="button secondary" disabled={busy || uncertain} onClick={() => { setResumeId(""); setFile(null); setSelectionRevision(null); }}>Choose a new upload</button>}</div>
