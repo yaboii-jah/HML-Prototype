@@ -16,7 +16,10 @@ test('only migrated routes request foundation view data', () => {
   assert.equal(foundationViewQuery('/projects'), 'view=projects');
   assert.equal(foundationViewQuery('/admin'), 'view=accounts');
   assert.equal(foundationViewQuery('/projects/' + projectId), 'view=project&projectId=' + projectId);
-  for (const route of ['/dashboard', '/requests', '/sign-in', '/projects/invalid', '//projects', '/projects/' + projectId + '/edit']) assert.equal(foundationViewQuery(route), null);
+  assert.equal(foundationViewQuery('/requests'), 'view=requests');
+  assert.equal(foundationViewQuery('/requests/new'), 'view=requests');
+  assert.equal(foundationViewQuery('/requests/' + projectId + '/edit'), 'view=requests&requestId=' + projectId);
+  for (const route of ['/dashboard', '/requests/invalid', '/sign-in', '/projects/invalid', '//projects', '/projects/' + projectId + '/edit']) assert.equal(foundationViewQuery(route), null);
 });
 test('refreshed Site views reject financial payloads and support a deleted target', () => {
   const project = { id: projectId, name: 'Site', location: 'Location', code: 'SITE', codeLocked: false, version: '2', scopeCount: 0, scopes: [] };

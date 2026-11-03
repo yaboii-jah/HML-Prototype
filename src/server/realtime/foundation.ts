@@ -4,6 +4,7 @@ import { cookieAuthClient } from "@/src/server/auth/clients";
 import { projectDirectory, projectDetail } from "@/src/server/projects/projects";
 import { accountDirectory } from "@/src/server/accounts/accounts";
 import { UUID_PATTERN } from "@/src/domain/auth/session";
+import { requestView } from "@/src/server/requests/drafts";
 
 const headers = { "Cache-Control": "private, no-store, max-age=0", Vary: "Cookie", "Referrer-Policy": "no-referrer" };
 const json = (value: unknown, status = 200) => Response.json(value, { status, headers });
@@ -38,6 +39,11 @@ export async function foundationResponse(request: Request, credentials = false) 
         accessToken: token.access_token, expiresAt: token.expires_at });
     }
     const query = new URL(request.url).searchParams, view = query.get("view");
+    if (view === "requests") {
+      const id = query.get("requestId");
+      if (id && !UUID_PATTERN.test(id)) return json({ error: "Valid request required." }, 400);
+      return json({ session, view: { kind: "requests", data: await requestView(id ?? undefined) } });
+    }
     if (view === "projects") return json({ session, view: { kind: "projects", data: await projectDirectory() } });
     if (view === "project") {
       const id = query.get("projectId");

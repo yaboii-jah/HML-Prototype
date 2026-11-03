@@ -1,11 +1,13 @@
 import { parseSessionContext, isAuthRole, UUID_PATTERN, type WorkspaceSession } from "../auth/session.ts";
 import { parseDirectory, object, type AccountDirectory } from "../accounts/accounts.ts";
 import { parseProject, parseProjectHistory, type ProjectSummary, type ProjectDetail, type ProjectHistory } from "../projects/projects.ts";
+import { parseRequestView, type RequestView } from "../requests/drafts.ts";
 
 export type DirectoryView = { role: WorkspaceSession["activeRole"]; projects: ProjectSummary[]; history: ProjectHistory[] };
 export type DetailView = { role: WorkspaceSession["activeRole"]; project: ProjectDetail | null; history: ProjectHistory[] };
 export type AccountsView = AccountDirectory & { actorId: string; emailEnabled: boolean };
 export type FoundationView =
+  | { kind: "requests"; data: RequestView }
   | { kind: "projects"; data: DirectoryView }
   | { kind: "project"; data: DetailView }
   | { kind: "accounts"; data: AccountsView };
@@ -27,6 +29,10 @@ export function parseRealtimeSession(value: unknown): RealtimeSession | null {
 export function parseFoundationView(value: unknown): FoundationView | null {
   const raw = object(value), data = object(raw?.data);
   if (!raw || !data) return null;
+  if (raw.kind === "requests") {
+    const parsed = parseRequestView(data);
+    return parsed ? { kind: "requests", data: parsed } : null;
+  }
   if (raw.kind === "accounts") {
     const directory = parseDirectory(data);
     return directory && typeof data.actorId === "string" && UUID_PATTERN.test(data.actorId) && typeof data.emailEnabled === "boolean"
@@ -49,6 +55,9 @@ export function parseFoundationView(value: unknown): FoundationView | null {
   return null;
 }
 export function foundationViewQuery(pathname: string): string | null {
+  if (pathname === "/requests" || pathname === "/requests/new") return "view=requests";
+  const request = /^\/requests\/([^/]+)(?:\/edit)?$/.exec(pathname);
+  if (request && UUID_PATTERN.test(request[1])) return `view=requests&requestId=${request[1]}`;
   if (pathname === "/projects") return "view=projects";
   if (pathname === "/admin") return "view=accounts";
   const match = /^\/projects\/([^/]+)$/.exec(pathname);

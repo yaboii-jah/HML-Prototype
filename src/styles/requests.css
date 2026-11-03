@@ -1,0 +1,30 @@
+.shared-mrf-editor > fieldset,
+.mrf-material-fields {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.mrf-draft-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  gap: 16px;
+  margin: 16px 0 24px;
+}
+
+.mrf-draft-summary dt {
+  margin-bottom: 4px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.mrf-draft-summary dd {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.mrf-material-list.register.is-embedded {
+  min-height: 280px;
+}

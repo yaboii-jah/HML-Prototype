@@ -2,9 +2,10 @@ import { requireCurrentEvidence } from './verification-evidence.mjs';
 
 export const standardChecks = ['toolchain', 'lint', 'typegen', 'typecheck', 'unit', 'build'];
 export const databaseChecks = ['rollback-sql', 'constraints-auth-data-api', 'types', 'auth-browser-email',
-  'project-races', 'account-races', 'realtime-protocol', 'realtime-races'];
-export const authChecks = ['sessions', 'captured-email', 'accounts', 'projects', 'realtime-browser', 'shell-loading', 'http-roles-renewal', 'isolation'];
+  'request-sql', 'request-races', 'project-races', 'account-races', 'realtime-protocol', 'realtime-races'];
+export const authChecks = ['sessions', 'captured-email', 'accounts', 'projects', 'realtime-browser', 'shell-loading', 'http-roles-renewal', 'request-browser', 'isolation'];
 export const acceptanceRequirements = {
+  'shared-mrf-drafts': ['request-sql', 'request-browser', 'request-races'],
   'invitation-recovery': ['captured-email', 'accounts'],
   'identity-roles': ['sessions', 'accounts', 'http-roles-renewal'],
   'unauthorized-requests': ['sessions', 'constraints-auth-data-api', 'http-roles-renewal'],
@@ -12,7 +13,7 @@ export const acceptanceRequirements = {
   'administrator-safeguards': ['accounts', 'account-races'],
   'shared-records-confidentiality': ['projects', 'http-roles-renewal', 'constraints-auth-data-api'],
   'concurrent-allocations-edits': ['projects', 'project-races'],
-  'retry-audit-integrity': ['rollback-sql', 'accounts', 'project-races', 'account-races'],
+  'retry-audit-integrity': ['rollback-sql', 'accounts', 'request-sql', 'request-races', 'project-races', 'account-races'],
   'realtime-lifecycle': ['realtime-browser', 'realtime-protocol', 'realtime-races'],
   'temporary-gaps': ['sessions'],
   'environment-isolation': ['isolation'],

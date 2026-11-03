@@ -7,7 +7,7 @@ Agreed 2026-11-03. This active companion owns the operational migration sequence
 Read the five core documents required by [AGENTS.md](../AGENTS.md), the checklist and this guide before planning, implementing, reviewing or resuming step 4.
 
 1. Reconcile Git status, the tracker and the actual implementation. Preserve unrelated pending work and the completed foundation planning retirement.
-2. Check the user's latest instruction before starting a unit. **Current authorization is 4.0 documentation only. The user explicitly deferred 4.1; no operational implementation has started.**
+2. Check the user's latest instruction before starting a unit. **Current authorization includes 4.1 implementation under the approved 2026-11-03 plan. The earlier deferral is superseded. Later units remain unauthorized.**
 3. Use the sequence below as the roadmap. Only 4.1 has a detailed implementation scope; later units require their own scoped planning and acceptance criteria before implementation.
 4. Verify a unit within its boundary, record actual results in the tracker, then check its completion box. A documentation checkpoint does not complete an operational workflow or checklist step 4.
 5. Retire this companion after the milestone is complete, preserving durable contracts in the core documents and completion evidence in the tracker.
@@ -30,7 +30,7 @@ The listed order is the default. Record any agreed scope/order revision here and
 | Unit | Verified | Outcome and key prerequisite |
 | --- | --- | --- |
 | **4.0 Record the plan** | [x] | Record this roadmap, the 4.1 specification, ownership/reading pointers and the current stop before implementation. |
-| **4.1 Shared MRF drafts** | [ ] | Restore register, draft editor and detail views with authoritative storage and transactional numbering; depends on the completed foundation and 4.0. |
+| **4.1 Shared MRF drafts** | [x] | Restore register, draft editor and detail views with authoritative storage and transactional numbering; depends on the completed foundation and 4.0. |
 | **4.2 Required MRF documents** | [ ] | Protected supporting-PDF handling, required project-folder operations and retryable archive processing for migrated MRFs. |
 | **4.3 MRF submission and review** | [ ] | Submission, PM approval/return/rejection, corrections and permanent-identity self-approval prevention; requires verified document gates from 4.2. |
 | **4.4 Supplier directory** | [ ] | Shared supplier records and authorized maintenance. |
@@ -56,11 +56,11 @@ The listed order is the default. Record any agreed scope/order revision here and
 
 **Done when:** documentation links/anchors, formatting, scope consistency and whitespace pass; the managed Next.js block remains unchanged; step 3 stays checked; step 4 and every operational unit remain unchecked. Record verification in the tracker before checking 4.0.
 
-Completed 2026-11-03: documentation verification passed and evidence is recorded in the tracker. Unit 4.1 remains explicitly deferred; no operational implementation started.
+Completed 2026-11-03: documentation verification passed and evidence is recorded in the tracker. At that checkpoint 4.1 was deferred; the subsequent implementation authorization supersedes that stop.
 
-## 4.1 Shared MRF Drafts — Planned, Not Started
+## 4.1 Shared MRF Drafts — Complete
 
-**User outcome:** assigned Site Personnel can create, save, reopen and collaboratively edit shared MRF drafts across sessions and devices. Starting this unit requires a new user instruction; the current task stops at 4.0.
+**User outcome:** assigned Site Personnel can create, save, reopen and collaboratively edit shared MRF drafts across sessions and devices. Implementation was authorized on 2026-11-03 after the grilling interview. Verified complete on 2026-11-03 after all required automated and user-confirmed manual acceptance passed.
 
 ### Screens and Access
 
@@ -93,6 +93,22 @@ Completed 2026-11-03: documentation verification passed and evidence is recorded
 **Done when:** independent authorized sessions share saved drafts; retries allocate no duplicate record, number or audit effect; conflicts preserve input; revocation immediately denies access; project/scope deletion races preserve integrity; required local/CI/staging/manual evidence passes.
 
 Completing 4.1 does not make MRF submission, approval or procurement available. Detail 4.2 and subsequent units through their own scoped planning before implementation.
+
+### 4.1 Interview Decisions (2026-11-03)
+
+Retain the flexible Details / Materials / Review draft wizard and explicit Save draft, opening detail after success. Allow zero and partial material rows; supplied quantities are positive decimals, dates valid. New rows start blank; request date defaults to the Philippine date. Unsaved input remains only in the open editor, with leave-page warnings. Conflicts preserve input and require explicit review of saved differences before whole-draft replacement; another intervening save requires another review. Show creator/latest-editor attribution, not a history browser. Before first save show Assigned on save. Manual acceptance uses a retained staging QA project and two assigned Site test accounts; automated audited workflows remain disposable.
+
+### Targeted Manual Review
+
+Automated local, four-job standard CI, disposable SQL/Auth/browser/Realtime/type/concurrency checks and staging parity pass at `43f7f80`. The staging migration is applied and retained-state preservation is verified. The user explicitly confirmed that all three manual checks below passed. Source-bound combined acceptance passed on 2026-11-03; 4.1 is complete. Step 4 remains open.
+
+Use a clearly named retained staging QA project (for example, `4.1 Manual QA`, code `QA-41`) and two separately provisioned Site Personnel accounts assigned to it. Configure these through the Administrator screens; do not repurpose the retained Administrator, impersonate its session or reset staging. Manually saved QA drafts and their audits remain retained because MRF deletion is unavailable.
+
+1. As Site A, save an incomplete draft, including a partially filled material row. Reopen it in a separate session as Site B; verify the number, saved fields and creator/latest-editor attribution.
+2. Open the same draft for editing in both sessions. Save in A while B has unsaved input. Verify B keeps its input, sees the saved differences and must review before saving. Repeat an intervening save to confirm review is required again.
+3. As Administrator, remove B's assignment while its editor is open. Verify its protected state clears, saving is denied and a fresh sign-in cannot read that project's MRFs.
+
+Completed 2026-11-03: explicit confirmation for `mrf-shared-drafts`, `mrf-conflict-review` and `mrf-revocation` is recorded in the source-bound manual evidence. The original foundation recovery attestation is preserved with its original date and provenance; its reviewed file hash remains byte-identical. The combined acceptance report passes. Detailed evidence is in the tracker.
 
 ## Milestone Completion and Documentation Ownership
 
