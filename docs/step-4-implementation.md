@@ -149,7 +149,7 @@ Gate saves and every attachment-changing/background acknowledgement path by life
 
 ### 4.3 Targeted Manual Review
 
-These checks remain pending until explicitly confirmed. Use the retained QA project, assigned Site accounts and separate PM/Procurement sessions. Preserve saved MRFs and all their files. Local review uses `http://127.0.0.1:3000` with the full absolute `APP_ORIGIN=http://127.0.0.1:3000`; restart development after environment changes.
+The user explicitly answered **Not tested yet** on 2026-11-03. These checks remain pending until explicitly confirmed. Use the retained QA project, assigned Site accounts and separate PM/Procurement sessions. Preserve saved MRFs and all their files. Local review uses `http://127.0.0.1:3000` with the full absolute `APP_ORIGIN=http://127.0.0.1:3000`; restart development after environment changes.
 
 1. **Submission/review (`mrf-submission-review`):** save a complete MRF with a funded scope and verified PDF. Confirm incomplete requirements or unfinished uploads prevent submission. Keep unsaved text in a second Site editor, submit from the first, and confirm the second retains its text but cannot save. As PM return with a reason; reconcile and resubmit as assigned Site staff. Saving returned work must retain Returned. Reject a separate submitted QA MRF and confirm it cannot be edited or reopened.
 2. **Approved archives (`mrf-approved-archives`):** as a different PM, approve a submitted MRF. Confirm approval is visible while archiving remains pending; after completion, preview/download both the approved company form and supporting PDF. Verify visible failure/retry if encountered, and confirm Site cannot perform PM archive retries. The generated form must match the submitted project labels.
