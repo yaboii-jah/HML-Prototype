@@ -38,6 +38,8 @@ test('Node network guard blocks before calling fetch and forbids redirect escape
   assert.equal(calls, 0);
   assert.equal(await controlledFetch(transport, 'http://127.0.0.1:3198', { redirect: 'follow' }), 'local');
   assert.equal(calls, 1);
+  assert.equal(await controlledFetch(async (_input, init) => { assert.equal(init.redirect, 'manual'); return 'acknowledgement'; },
+    'http://127.0.0.1:3198/upload/drive/v3/files', { redirect: 'manual' }), 'acknowledgement');
 });
 
 test('acceptance rejects stale, partial and failing evidence', () => {

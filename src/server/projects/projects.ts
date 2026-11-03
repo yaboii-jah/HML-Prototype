@@ -1,6 +1,7 @@
 import "server-only";
 import { readSession } from "@/src/server/auth/session";
 import { serviceRpc, ServiceCommandError } from "@/src/server/auth/service-rpc";
+import { dispatchDocumentJobs } from "@/src/server/documents/dispatch";
 import {
   parseProject,
   parseProjectCommand,
@@ -86,6 +87,7 @@ export async function runProjectCommand(
       typeof result.changed !== "boolean"
     )
       throw Error("Invalid project result");
+    await dispatchDocumentJobs(result.projectId).catch(() => {});
     return {
       ok: true,
       projectId: result.projectId,

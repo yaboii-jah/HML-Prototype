@@ -7,8 +7,8 @@ Agreed 2026-11-03. This active companion owns the operational migration sequence
 Read the five core documents required by [AGENTS.md](../AGENTS.md), the checklist and this guide before planning, implementing, reviewing or resuming step 4.
 
 1. Reconcile Git status, the tracker and the actual implementation. Preserve unrelated pending work and the completed foundation planning retirement.
-2. Check the user's latest instruction before starting a unit. **Current authorization includes 4.1 implementation under the approved 2026-11-03 plan. The earlier deferral is superseded. Later units remain unauthorized.**
-3. Use the sequence below as the roadmap. Only 4.1 has a detailed implementation scope; later units require their own scoped planning and acceptance criteria before implementation.
+2. Check the user's latest instruction before starting a unit. **Current authorization includes 4.2 implementation under the approved 2026-11-03 interview plan. Later units, merging and production remain separate.**
+3. Use the sequence below as the roadmap. Units 4.1 and 4.2 have detailed scopes; later units require scoped planning and acceptance criteria before implementation.
 4. Verify a unit within its boundary, record actual results in the tracker, then check its completion box. A documentation checkpoint does not complete an operational workflow or checklist step 4.
 5. Retire this companion after the milestone is complete, preserving durable contracts in the core documents and completion evidence in the tracker.
 
@@ -109,6 +109,21 @@ Use a clearly named retained staging QA project (for example, `4.1 Manual QA`, c
 3. As Administrator, remove B's assignment while its editor is open. Verify its protected state clears, saving is denied and a fresh sign-in cannot read that project's MRFs.
 
 Completed 2026-11-03: explicit confirmation for `mrf-shared-drafts`, `mrf-conflict-review` and `mrf-revocation` is recorded in the source-bound manual evidence. The original foundation recovery attestation is preserved with its original date and provenance; its reviewed file hash remains byte-identical. The combined acceptance report passes. Detailed evidence is in the tracker.
+
+## 4.2 Required MRF Documents
+
+**User outcome:** authorized staff share a private supporting PDF on a saved numbered MRF, with visible upload/recovery state and protected preview/download. Build and verify the retryable archive foundation now; submission/approval and its official archive trigger remain unavailable until 4.3.
+
+- Save the MRF first. File Upload/Replace/Remove actions save independently of Details/Materials. Keep a separate attachment revision; provider progress does not conflict with text edits. Keep the old current file until a replacement validates and commits. A late stale upload cannot overwrite a newer selection.
+- Accept one structurally readable, unencrypted PDF up to **50 MiB**. Verify exact bytes/hash/size and provider identity before making it current; staff remain responsible for reviewing its contents. Preview the supporting PDF only through authorized private no-store streaming/Range routes. Never expose provider session URLs or use raw Drive IDs as authorization.
+- Persist metadata history, upload sessions, operation receipts, folder mapping history and durable jobs in Postgres. Google Drive owns file bytes. Use raw approximately 3 MiB chunks, current record/session authorization on every operation, confirmed provider offsets and matching local-file reselection after reload; retain no browser file bytes.
+- Automatically enqueue folder setup after a new project's first successful save; existing projects get explicit setup. Admin/PM can create/link/retry folders. Each project has its own writable descendant of the configured root, never the root itself or a folder already assigned to another project. Mapping changes affect future operations only; existing locations/running destinations stay frozen. Explicit failed-job retries may select the corrected mapping.
+- Assigned Site Personnel retry draft file work; Admin/PM retry folder work. Preserve original actor identity and separately record retries. Pause when required current authority is revoked; ordinary logout does not cancel admitted background work.
+- Retain all approved archive versions. Obsolete unapproved file bytes may be asynchronously trashed after reference checks; retain metadata. Cleanup failures are visible and cannot invalidate the current file. Never delete a broad folder or a file still referenced by a retained MRF/archive.
+- Integrate a compatible pinned Workflow SDK with durable database intent before dispatch and reconciliation for uncertain starts. Keep payloads small and provider calls outside transactions. Stable IDs, claims and acknowledgement checks prevent duplicate files, jobs and effects across process restarts/lost responses.
+- Archive from an immutable approved snapshot containing exact quantity strings, frozen project/request fields, source document hash/revision and verified approval attribution. Generate the company MRF and preserve the verified supporting PDF as a pair; mark complete only after both provider confirmations and atomic database acknowledgement. No public operation may manufacture an approval snapshot in 4.2.
+
+**Verification:** cover file/header concurrency, cross-record access, revoked sessions/assignments, matching-file resume, corrupt/encrypted rejection, replacements/removal, expiry/restarts/lost acknowledgements, folder validation/remapping, role-specific retries, cleanup safety and archive pair integrity. Exercise the real Workflow runtime with disposable Supabase and loopback fake Drive; preserve browser HTTP/WebSocket/server isolation. Run standard local checks, the four-job CI matrix and disposable SQL/Auth/browser/type/race checks. Apply only reviewed CI-verified migrations to staging, preserving retained state. Run isolated owned real-Drive gateway smoke with verified cleanup; retain manual QA MRFs and their files together. Obtain targeted manual acceptance before checking 4.2. Company-owned service promotion and hosted release rehearsal remain later work.
 
 ## Milestone Completion and Documentation Ownership
 

@@ -1,4 +1,5 @@
 "use client";
+import { ProjectDocuments } from "./ProjectDocuments";
 
 import Link from "next/link";
 import { useRef, useState, useSyncExternalStore, type FormEvent } from "react";
@@ -783,11 +784,11 @@ export function ProjectDetailScreen({
           </button>
         </section>
       )}
+      {editable && <ProjectDocuments projectId={project.id} />}
       <section className="panel project-unavailable">
-        <h2>Documents and operations</h2>
+        <h2>Operations</h2>
         <p>
-          Drive documents, material requests, purchasing, stock and operational
-          balances are unavailable while their workflows are migrated.
+          Purchasing, stock and operational balances are unavailable while their workflows are migrated.
         </p>
       </section>
       {financial && <ChangeHistory history={history} />}

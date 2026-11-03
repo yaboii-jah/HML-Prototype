@@ -40,6 +40,8 @@ async function token() {
   return access.token;
 }
 
+export { token as driveAccessToken };
+
 async function drive(url: string, init: RequestInit = {}) {
   const authorization = await token();
   const response = await fetch(url, { ...init, headers: { Authorization: `Bearer ${authorization}`, ...init.headers }, cache: "no-store" });

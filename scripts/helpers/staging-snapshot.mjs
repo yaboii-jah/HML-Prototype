@@ -11,6 +11,10 @@ export async function stagingSnapshot({ includeProjectOperations = true } = {}) 
     ['scopeBudgets', 'public.scope_budgets', 'scope_id'], ['bindings', 'private.session_bindings', 'session_id'],
     ['requests', 'public.material_requests', 'id'], ['requestItems', 'public.material_request_items', 'id'], ['requestOperations', 'private.request_operations', 'id'], ['counters', 'private.document_counters', 'project_id,series'],
     ['audits', 'private.audit_events', 'id'], ['accountOperations', 'private.account_operations', 'id'],
+    ['documentFolders', 'private.project_document_folders', 'id'], ['folderOwners', 'private.document_folder_owners', 'folder_id'],
+    ['documentState', 'private.request_document_state', 'request_id'], ['documents', 'private.request_documents', 'id'],
+    ['uploads', 'private.document_uploads', 'id'], ['documentJobs', 'private.document_jobs', 'id'], ['documentOperations', 'private.document_operations', 'id'],
+    ['archiveSnapshots', 'private.mrf_archive_snapshots', 'id'], ['archives', 'private.mrf_archives', 'snapshot_id'],
   ];
   if (includeProjectOperations) tables.push(['projectOperations', 'private.project_operations', 'id']);
   const hashes = tables.map(([name, table, order]) => `'${name}',(select jsonb_build_object('count',count(*),'digest',md5(coalesce(jsonb_agg(to_jsonb(t) order by ${order})::text,'[]'))) from ${table} t)`).join(',');

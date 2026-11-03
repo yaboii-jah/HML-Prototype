@@ -10,7 +10,7 @@ Update this file after every meaningful implementation or documentation change a
 
 ## Current Goal
 
-- Unit **4.1 shared MRF drafts is complete** at implementation `43f7f80`. Local, four-job CI, disposable integration, staging parity and all three user-confirmed manual checks pass; source-bound combined acceptance passes. No implementation unit is active. Await a separate instruction to scope/plan 4.2. Step 4 remains open; merging and production promotion remain separate actions.
+- Unit **4.2 required MRF documents is active**, authorized by the user's “proceed with the implementation” after the twelve-question interview. Implement on `feat/step-4-mrf-documents` from accepted 4.1 lineage. The [guide](step-4-implementation.md#42-required-mrf-documents) records the agreed scope. Step 4 remains open; merging and production promotion remain separate actions.
 
 ## Completed
 
@@ -50,7 +50,7 @@ Update this file after every meaningful implementation or documentation change a
 
 ## In Progress
 
-- No implementation unit is active. Unit 4.1 is verified complete; draft PR #29 remains open into staging. Preserve the retained QA project/accounts and manual records. Later units and merge/promotion require their own authorization.
+- **4.2:** implement authoritative attachment versions/upload sessions, project folder mappings, durable Workflow jobs, protected chunk/stream endpoints and independent file controls. Preserve the retained QA project/accounts and manual records. Draft PR #29 remains unmerged. Approval triggers remain 4.3.
 
 
 
@@ -65,7 +65,7 @@ Update this file after every meaningful implementation or documentation change a
 
 Use the [production checklist](checklist.md#steps) for the ordered milestones and their completion conditions.
 
-- **Exact next action:** await a separate instruction to scope/plan 4.2 required MRF documents. Unit 4.1 is complete; do not infer authorization to implement 4.2, merge the draft PR or promote to production.
+- **Exact next action:** build and verify 4.2, including isolated provider/runtime/SQL/browser checks, then matching CI, staging and targeted manual review. Do not check 4.2 before its evidence passes or infer merge/production authorization.
 - Follow the guide's dependencies and completion criteria. The prototype's role switch currently selects another account, and its approval commands do not enforce the target permanent-user self-approval restriction. Preserve the documented target rules; verify approval enforcement with the migrated workflows in step 4.
 - Retain local Node 26.12.1, the Vercel Node 24.x target, CI baseline 24.22.1 and npm 11.20.0 across environments. Hosted deployment verification belongs to the later protected rehearsal.
 - Work foundations first: individual identity, shared records and server authorization before business-workflow migration. Tailwind remains a separate track.
@@ -118,6 +118,8 @@ The [architecture document](architecture.md) is the detailed source of truth. Ke
 | Private realtime signals and current authorized reads | Open permitted views update automatically; access-revision topics and session checks keep notifications independent from authority. |
 
 ## Session Notes
+
+- **4.2 authorization, 2026-11-03:** all twelve interview decisions are settled and implementation is explicitly authorized. Saved MRF first; separate file saves/revision; one readable unencrypted PDF up to 50 MiB; obsolete unapproved bytes may be cleaned up with metadata retained; all approved versions retained. New projects enqueue folder setup, existing projects require explicit setup; distinct writable descendant folders, remapping affects future operations. Assigned Site retries files, Admin/PM retries folders; background work pauses on revoked authority. Resume requires matching file reselection. CI uses fake Drive; real smoke resources are disposable and manual QA records/files stay together. Build/test the archive engine now, activate real approval only in 4.3. Pre-implementation read-only Drive root probe confirmed folder/read/add-child capability; no provider write verification is claimed yet.
 
 - **4.1 closeout, 2026-11-03:** after reporting that 4.1 works overall, the user explicitly answered **All three passed** for shared drafts, conflict review and assignment revocation. Recorded those results against `43f7f80` without inventing other manual tests. Preserved the original 3.6 recovery attestation and date separately, verified the `app/error.tsx` SHA-256 is unchanged, and attached that provenance to the new manual report. `npm run verify:foundation -- milestone` passes with matching local/four-job CI/disposable/staging/manual evidence. Updated overview, architecture, checklist, tracker and guide; only 4.1 is checked. Validated 65 local documentation links/anchors across ten maintained files, checklist boundaries, whitespace and unchanged managed Next.js instructions. Application tests/builds were not repeated for this documentation-only closeout. No application/schema/provider changes, merge, production promotion or 4.2 implementation belong to this closeout.
 

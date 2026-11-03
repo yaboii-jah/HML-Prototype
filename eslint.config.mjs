@@ -13,6 +13,7 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
     ".verification/**",
+    "app/.well-known/workflow/**", // Workflow SDK generated handlers and bundles.
   ]),
 ]);
 

@@ -2,9 +2,10 @@ import { requireCurrentEvidence } from './verification-evidence.mjs';
 
 export const standardChecks = ['toolchain', 'lint', 'typegen', 'typecheck', 'unit', 'build'];
 export const databaseChecks = ['rollback-sql', 'constraints-auth-data-api', 'types', 'auth-browser-email',
-  'request-sql', 'request-races', 'project-races', 'account-races', 'realtime-protocol', 'realtime-races'];
-export const authChecks = ['sessions', 'captured-email', 'accounts', 'projects', 'realtime-browser', 'shell-loading', 'http-roles-renewal', 'request-browser', 'isolation'];
+  'request-sql', 'request-races', 'document-sql', 'project-races', 'account-races', 'realtime-protocol', 'realtime-races'];
+export const authChecks = ['sessions', 'captured-email', 'accounts', 'projects', 'realtime-browser', 'shell-loading', 'http-roles-renewal', 'request-browser', 'document-browser-workflow', 'isolation'];
 export const acceptanceRequirements = {
+  'required-mrf-documents': ['document-sql', 'document-browser-workflow'],
   'shared-mrf-drafts': ['request-sql', 'request-browser', 'request-races'],
   'invitation-recovery': ['captured-email', 'accounts'],
   'identity-roles': ['sessions', 'accounts', 'http-roles-renewal'],
