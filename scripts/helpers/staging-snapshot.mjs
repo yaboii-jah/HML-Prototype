@@ -19,6 +19,8 @@ export async function stagingSnapshot({ includeProjectOperations = true, include
     ['documentState', 'private.request_document_state', 'request_id'], ['documents', 'private.request_documents', 'id'],
     ['uploads', 'private.document_uploads', 'id'], ['documentJobs', 'private.document_jobs', 'id'], ['documentOperations', 'private.document_operations', 'id'],
     ['archiveSnapshots', 'private.mrf_archive_snapshots', 'id'], ['archives', 'private.mrf_archives', 'snapshot_id'],
+    ['mrfSubmissions', 'private.mrf_submissions', 'id'], ['mrfReviews', 'private.mrf_review_events', 'id'],
+    ['mrfReferences', 'private.mrf_downstream_references', 'request_id,kind,record_id'], ['mrfArchiveFiles', 'private.mrf_archive_files', 'id'],
   );
   if (includeProjectOperations) tables.push(['projectOperations', 'private.project_operations', 'id']);
   const hashes = tables.map(([name, table, order]) => `'${name}',(select jsonb_build_object('count',count(*),'digest',md5(coalesce(jsonb_agg(to_jsonb(t) order by ${order})::text,'[]'))) from ${table} t)`).join(',');

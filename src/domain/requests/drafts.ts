@@ -1,11 +1,12 @@
 import { UUID_PATTERN, isAuthRole, type AuthRole } from "../auth/session.ts";
 import { record } from "../projects/projects.ts";
+import { parseMrfWorkflow, type MrfWorkflow } from "./workflow.ts";
 
 export const detailFields = ["sourceRef", "requestedBy", "approvedBy", "purchaser", "financeOfficer", "specialInstructions"] as const;
 export const materialFields = ["name", "unit", "purpose", "location", "remarks"] as const;
 export type DraftMaterial = { id: string; quantity: string | null; neededDate: string } & Record<typeof materialFields[number], string>;
 export type MrfDraft = { scopeId: string | null; requestDate: string; items: DraftMaterial[] } & Record<typeof detailFields[number], string>;
-export type SavedMrf = { id: string; projectId: string; ref: string; version: string; draft: MrfDraft; creatorId: string; creatorName: string; updaterId: string; updaterName: string; createdAt: string; updatedAt: string };
+export type SavedMrf = MrfWorkflow & { id: string; projectId: string; ref: string; version: string; draft: MrfDraft; creatorId: string; creatorName: string; updaterId: string; updaterName: string; createdAt: string; updatedAt: string };
 export type RequestProject = { id: string; name: string; code: string | null; scopes: { id: string; name: string }[] };
 export type RequestView = { role: AuthRole; requests: SavedMrf[]; projects: RequestProject[] };
 export type DraftCommand = { type: "createDraft"; requestId: string; projectId: string; draft: MrfDraft } | { type: "saveDraft"; requestId: string; mrfId: string; expectedVersion: string; draft: MrfDraft };
@@ -63,13 +64,15 @@ export function parseDraftCommand(value: unknown): DraftCommand | null {
 }
 export function parseSavedMrf(value: unknown): SavedMrf | null {
   const raw = record(value), draft = parseMrfDraft(raw?.draft);
+  const workflow = parseMrfWorkflow(value);
   if (!raw || !draft || !uuid(raw.id) || !uuid(raw.projectId) || !uuid(raw.creatorId) || !uuid(raw.updaterId)
     || typeof raw.ref !== "string" || !/^[A-Z0-9-]+-MRF-\d{4,}$/.test(raw.ref)
     || typeof raw.version !== "string" || !/^[1-9]\d{0,18}$/.test(raw.version)
     || typeof raw.creatorName !== "string" || typeof raw.updaterName !== "string"
     || typeof raw.createdAt !== "string" || !Number.isFinite(Date.parse(raw.createdAt))
     || typeof raw.updatedAt !== "string" || !Number.isFinite(Date.parse(raw.updatedAt))) return null;
-  return { id: raw.id, projectId: raw.projectId, ref: raw.ref, version: raw.version, draft, creatorId: raw.creatorId, creatorName: raw.creatorName, updaterId: raw.updaterId, updaterName: raw.updaterName, createdAt: raw.createdAt, updatedAt: raw.updatedAt };
+  if (!workflow) return null;
+  return { ...workflow, id: raw.id, projectId: raw.projectId, ref: raw.ref, version: raw.version, draft, creatorId: raw.creatorId, creatorName: raw.creatorName, updaterId: raw.updaterId, updaterName: raw.updaterName, createdAt: raw.createdAt, updatedAt: raw.updatedAt };
 }
 export function parseRequestView(value: unknown): RequestView | null {
   const raw = record(value);

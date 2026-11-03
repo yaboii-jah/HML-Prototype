@@ -7,7 +7,7 @@ Agreed 2026-11-03. This active companion owns the operational migration sequence
 Read the five core documents required by [AGENTS.md](../AGENTS.md), the checklist and this guide before planning, implementing, reviewing or resuming step 4.
 
 1. Reconcile Git status, the tracker and the actual implementation. Preserve unrelated pending work and the completed foundation planning retirement.
-2. Check the user's latest instruction before starting a unit. **Current authorization includes 4.2 implementation under the approved 2026-11-03 interview plan. Later units, merging and production remain separate.**
+2. Check the user's latest instruction before starting a unit. **The user finalized the 4.3 interview plan and authorized implementation. Later units, merging and production remain separate.**
 3. Use the sequence below as the roadmap. Units 4.1 and 4.2 have detailed scopes; later units require scoped planning and acceptance criteria before implementation.
 4. Verify a unit within its boundary, record actual results in the tracker, then check its completion box. A documentation checkpoint does not complete an operational workflow or checklist step 4.
 5. Retire this companion after the milestone is complete, preserving durable contracts in the core documents and completion evidence in the tracker.
@@ -31,7 +31,7 @@ The listed order is the default. Record any agreed scope/order revision here and
 | --- | --- | --- |
 | **4.0 Record the plan** | [x] | Record this roadmap, the 4.1 specification, ownership/reading pointers and the current stop before implementation. |
 | **4.1 Shared MRF drafts** | [x] | Restore register, draft editor and detail views with authoritative storage and transactional numbering; depends on the completed foundation and 4.0. |
-| **4.2 Required MRF documents** | [ ] | Protected supporting-PDF handling, required project-folder operations and retryable archive processing for migrated MRFs. |
+| **4.2 Required MRF documents** | [x] | Protected supporting-PDF handling, required project-folder operations and retryable archive processing for migrated MRFs. |
 | **4.3 MRF submission and review** | [ ] | Submission, PM approval/return/rejection, corrections and permanent-identity self-approval prevention; requires verified document gates from 4.2. |
 | **4.4 Supplier directory** | [ ] | Shared supplier records and authorized maintenance. |
 | **4.5 Manual quotations** | [ ] | Capture, review, version and archive supplier quotations; financial finalization requires applicable policy confirmation and supplier-original archives. |
@@ -127,7 +127,7 @@ Completed 2026-11-03: explicit confirmation for `mrf-shared-drafts`, `mrf-confli
 
 ### 4.2 Targeted Manual Review
 
-Automated local/CI/disposable/real-Drive/staging checks pass at implementation `664053a`; detailed evidence is in the tracker. The staging migration is applied and retained rows are preserved. The user explicitly answered **Not tested yet** on 2026-11-03. These manual checks remain **pending**; do not check 4.2 or reuse older confirmation as new evidence.
+Automated local/CI/disposable/real-Drive/staging checks pass at implementation `664053a`; detailed evidence is in the tracker. The staging migration is applied and retained rows are preserved. After resolving local APP_ORIGIN configuration, the user explicitly confirmed **All three passed**. The original pending response remains historical in the tracker. Source-bound combined acceptance passed on 2026-11-03; 4.2 is complete.
 
 Use the retained QA project and two currently assigned Site accounts, restoring an assignment through Administrator screens if the earlier revocation check removed it. Save manual QA MRFs and keep their Drive files with their records; smoke-test cleanup never touches them. Use `http://127.0.0.1:3000` for the local app. Existing projects require explicit folder setup under **Projects → project detail → Document folder**.
 
@@ -136,6 +136,16 @@ Use the retained QA project and two currently assigned Site accounts, restoring 
 3. **Recovery and access (`mrf-document-recovery`):** use a PDF larger than 3 MiB, interrupt/reload during upload, then reselect the matching file and resume. A different file must be rejected. A corrupt/encrypted replacement must leave the previous current file intact. Check the applicable file/folder retry controls; assignment/session revocation must deny further protected file reads/actions. Preserve the retained QA records and files afterward.
 
 Record actual results after the user confirms them. Generated approved MRFs/archive pairs are tested internally; official approval and its archive trigger remain unavailable until 4.3.
+
+## 4.3 MRF Submission and Review — Authorized
+
+The finalized interview plan is authorized for implementation. Keep the editor layout redesign in step 6. Add atomic Save and submit on saved numbered MRFs, checking header and attachment versions; require complete requirements, funded scope and a validated PDF, with unfinished uploads completed or explicitly cancelled. Freeze project/form labels and source identity at submission. Submitted fields/files lock; no withdrawal. Preserve dirty collaborator input but require conflict review after a return. Saving returned edits retains Returned.
+
+Any assigned Site user may resubmit. Record each permanent submitter and block every historical submitter from approval after any role change; authorized PM return/rejection remains allowed. PM reviews exact submissions; reasons require five trimmed characters. Initial rejection is terminal. Add register filters and compact detail timeline.
+
+Approval atomically records decision, immutable snapshot and archive intent. Expose pending/failed/completed archive status, PM retry and protected access to every approved PDF pair. Current approved archive completion gates procurement readiness. Procurement alone reopens archived approved MRFs with a reason. Full corrections are permitted before authoritative downstream references; afterward only supporting-PDF corrections. Later quotation/PO/transfer writers must register references transactionally. Corrections allow PM approval/return, without rejection/cancellation; preserve prior versions and pause procurement. Document-only corrections preserve approved form/scope and retain the funded-scope exception.
+
+Gate saves and every attachment-changing/background acknowledgement path by lifecycle; obsolete cleanup cannot block submission. Preserve current authorization, lock ordering, expected versions, retry receipts, atomic audit and private realtime. Verify actual approval-to-archive execution, all submitter identities, competing decisions, funding/upload/revocation races, corrections and private historical retrieval. Complete local, four-job CI, disposable SQL/Auth/browser/Realtime/Workflow/race/type, isolated real-Drive and staging-preservation checks, then targeted human acceptance before checking 4.3. No later workflow, merge or production authorization is inferred.
 
 ## Milestone Completion and Documentation Ownership
 

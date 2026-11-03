@@ -34,7 +34,7 @@ try {
     const manual = await read('foundation-manual.json');
     requireCurrentEvidence(manual, source, 'targeted manual review');
     if (!manual.confirmedByUser || !manual.reviewedBehavior?.includes('error-retry')) throw Error('Targeted recovery review pending');
-    for (const behavior of ['mrf-shared-drafts', 'mrf-conflict-review', 'mrf-revocation', 'mrf-document-sharing', 'mrf-document-recovery', 'project-document-folders']) {
+    for (const behavior of ['mrf-shared-drafts', 'mrf-conflict-review', 'mrf-revocation', 'mrf-document-sharing', 'mrf-document-recovery', 'project-document-folders', 'mrf-submission-review', 'mrf-approved-archives', 'mrf-corrections-history']) {
       if (!manual.reviewedBehavior?.includes(behavior)) throw Error(`Targeted MRF review pending: ${behavior}`);
     }
     result = { ...source, complete: true, passed: true, scope: 'milestone', scenarios: database.scenarios,

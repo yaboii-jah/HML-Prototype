@@ -54,5 +54,5 @@ export async function archiveApprovedMrf(job: Record<string, unknown>, drive: Dr
   };
   await upload(formFileId, formFolderId, `${ref}-v${snapshot.version}.pdf`, formBytes, formSha256, "approved-mrf");
   await upload(supportingFileId, supportFolderId, `${ref}-support-v${snapshot.version}.pdf`, sourceBytes, required(source.sha256), "approved-support");
-  await checkpoint({ formFileId, supportingFileId, formSha256, supportingSha256: source.sha256, verified: true });
+  await checkpoint({ formFileId, supportingFileId, formSha256, supportingSha256: source.sha256, formSize: formBytes.length, supportingSize: sourceBytes.length, verified: true });
 }

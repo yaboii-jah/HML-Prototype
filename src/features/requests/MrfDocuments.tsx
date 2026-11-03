@@ -43,8 +43,9 @@ export async function sendDocumentAction(command: Record<string, unknown>) {
 }
 const sizeLabel = (size: number) => size < 1024 ? `${size} bytes` : size < 1024 * 1024 ? `${(size / 1024).toLocaleString("en-PH", { maximumFractionDigits: 1 })} KiB` : `${(size / (1024 * 1024)).toLocaleString("en-PH", { maximumFractionDigits: 2 })} MiB`;
 
-export function MrfDocuments({ mrfId, editable }: { mrfId: string; editable: boolean }) {
+export function MrfDocuments({ mrfId, editable: permitted, archiveManager = false }: { mrfId: string; editable: boolean; archiveManager?: boolean }) {
   const { data, error: readError, load, refresh } = useDocuments(`mrfId=${encodeURIComponent(mrfId)}`);
+  const editable = permitted && data?.editable === true;
   const [file, setFile] = useState<File | null>(null), [resumeId, setResumeId] = useState(""), [busy, setBusy] = useState(false), [error, setError] = useState(""), [progress, setProgress] = useState<number | null>(null), [preview, setPreview] = useState(false);
   const command = useRef<Record<string, unknown> | null>(null), locked = useRef(false), fileInput = useRef<HTMLInputElement>(null);
   const [uncertain, setUncertain] = useState(false);
@@ -124,7 +125,10 @@ export function MrfDocuments({ mrfId, editable }: { mrfId: string; editable: boo
         <button type="button" className="button secondary" disabled={busy || uncertain} onClick={() => void action({ type: "cancelUpload", uploadId: upload.id })}>Cancel upload</button></div>}
     </div>)}
     {data?.jobs.map(job => <div key={job.id} role="status"><p>{job.kind === "folder" ? "Project folder" : job.kind === "cleanup" ? "Old file cleanup" : job.kind === "archive" ? "Approved archive" : "PDF verification"}: {job.state}. {job.message}</p>
-      {editable && ["validate", "cleanup"].includes(job.kind) && ["failed", "paused"].includes(job.state) && !job.message?.includes("corrupt") && <button type="button" className="button secondary" disabled={busy || uncertain} onClick={() => void action({ type: "retryFile", jobId: job.id })}>Retry {job.kind === "cleanup" ? "cleanup" : "verification"}</button>}</div>)}
+      {editable && ["validate", "cleanup"].includes(job.kind) && ["failed", "paused"].includes(job.state) && !job.message?.includes("corrupt") && <button type="button" className="button secondary" disabled={busy || uncertain} onClick={() => void action({ type: "retryFile", jobId: job.id })}>Retry {job.kind === "cleanup" ? "cleanup" : "verification"}</button>}
+      {archiveManager && job.kind === "archive" && ["failed", "paused"].includes(job.state) && <div className="form-actions"><button type="button" className="button secondary" disabled={busy || uncertain} onClick={() => void action({ type: "retryArchive", jobId: job.id })}>Retry approved archive</button><button type="button" className="button secondary" disabled={busy || uncertain || !data.folder} onClick={() => { if (window.confirm("Retry against the current project folder? The previous attempt’s destination and file identities remain recorded.")) void action({ type: "retryArchive", jobId: job.id, useCurrentMapping: true }); }}>Retry using current project folder</button></div>}
+    </div>)}
+    {!!data?.archives.length && <><h3>Approved document versions</h3>{data.archives.map(archive => <div key={archive.id}><p><strong>Version {archive.version}</strong> · Approved by {archive.approvedBy} · <time dateTime={archive.approvedAt}>{new Date(archive.approvedAt).toLocaleString("en-PH", { timeZone: "Asia/Manila" })}</time> · {archive.complete ? "Archive complete" : "Archive pending"}</p><div className="form-actions">{archive.files.map(file => <span key={file.id}><a className="button secondary" target="_blank" rel="noreferrer" href={`/api/mrf-documents/files/${file.id}`}>Preview {file.kind === "form" ? "approved MRF" : "approved supporting PDF"}</a> <a download href={`/api/mrf-documents/files/${file.id}?download=1`}>Download</a></span>)}</div></div>)}</>}
     <InlineError message={error || readError} />
     {uncertain && <button type="button" className="button secondary" disabled={busy} onClick={() => void action(command.current ?? {})}>Retry same file action</button>}
     {(error || readError) && <button type="button" className="button secondary" disabled={busy} onClick={() => { command.current = null; setUncertain(false); void load(); }}>Review current file status</button>}
