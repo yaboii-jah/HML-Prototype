@@ -99,6 +99,7 @@ export async function runProjectCommand(
   } catch (error) {
     if (error instanceof ServiceCommandError) {
       const messages: Record<string, string> = {
+        "23503": "This project or scope is referenced by an MRF and cannot be deleted.",
         "40001":
           "The project changed. Your draft is preserved. Review the latest version and reapply your changes.",
         "42501":

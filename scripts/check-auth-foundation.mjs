@@ -1,3 +1,4 @@
+import { checkRequestDrafts } from './check-request-drafts.mjs';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { spawn } from 'node:child_process';
@@ -155,7 +156,9 @@ export async function checkAuthFoundation({ api, anon, secret, mailpit, sql, env
     assert.match(await browser.run("return (await fetch('/projects')).headers.get('cache-control')"), /no-store/, 'Protected responses cannot be shared from cache');
     await second.navigate('/projects');
     assert.equal(await second.run('return location.pathname'), '/sign-in', 'Another browser does not inherit the session');
-    for (const route of ['/requests/new', '/admin/maintenance', '/demo-files/forged']) {
+    await browser.navigate('/requests/new');
+    assert.match(await browser.run('return document.body.innerText'), /Read-only access/);
+    for (const route of ['/admin/maintenance', '/demo-files/forged']) {
       await browser.navigate(route);
       assert.match(await browser.run('return document.body.innerText'), /temporarily unavailable/);
     }
@@ -268,6 +271,8 @@ export async function checkAuthFoundation({ api, anon, secret, mailpit, sql, env
     await checkFoundationHttp({ browser, second, client, login, logout, sessionCookie,
       administrator: bootstrapInputs[winner], base, passwordClient });
     checks.push('http-roles-renewal');
+    await checkRequestDrafts({ browser, second, client, login, logout, sql });
+    checks.push('request-browser');
     for (const browser of browsers) browser.assertIsolated();
     checks.push('isolation');
     console.log('Real-account browser, session revocation, role, bootstrap and captured-email checks passed.');

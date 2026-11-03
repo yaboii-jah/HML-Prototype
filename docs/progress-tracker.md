@@ -4,11 +4,13 @@ Update this file after every meaningful implementation or documentation change a
 
 ## Current Phase
 
-- Runtime/CI milestone 2 and foundation units 3.1-3.6 are verified. The account/project foundation includes sessions, accounts, shared projects/scopes and protected realtime, with complete local/CI/staging acceptance. The operational roadmap is recorded and documentation unit 4.0 is verified; operational implementation has not started.
+- Runtime/CI milestone 2 and foundation units 3.1-3.6 are verified. The account/project foundation includes sessions, accounts, shared projects/scopes and protected realtime, with complete local/CI/staging acceptance. The operational roadmap and 4.0 are verified; 4.1 draft implementation is in progress with acceptance pending.
 - The supported runtime no longer starts the global demo workspace or trusts browser-selected accounts. Projects has protected shared directory/detail/editor screens; provider endpoints remain disabled before body/provider work. The committed prototype and isolated regression fixtures remain recoverable.
 - Production configuration/deployment, verified real email, company-owned services, backup/restore and operational acceptance remain release work. Checklist step 3 is complete; operational and release milestones remain open.
 
 ## Current Goal
+
+- **4.1 implementation authorized 2026-11-03:** the user approved the grilled plan and instructed implementation. Work is on eat/step-4-mrf-drafts. Shared drafts are in progress; local/CI/staging/manual acceptance remains required. This supersedes the earlier deferral below. No production promotion is authorized.
 
 - Documentation unit [4.0](step-4-implementation.md#40-record-the-plan) is complete. No implementation unit is active: the user explicitly instructed **do not start 4.1 for now**. Unit 4.1 remains planned, with no operational implementation, schema change or provider activation started. Wait for a new user instruction before starting it. The completed foundation remains verified at `4a940cc`; step 4 remains unchecked.
 
@@ -48,6 +50,9 @@ Update this file after every meaningful implementation or documentation change a
 
 ## In Progress
 
+- **4.1 shared drafts:** implementation is on `feat/step-4-mrf-drafts`. Added request domain/server/UI modules, transactional numbering and retry receipts, project/scope references, immutable responsibility, request realtime views, rollback SQL and disposable two-account/race checks. Local verification passed 394 tests, lint (existing skill-script warnings), route types, TypeScript and build. The isolated foundation-public browser suite passed. SQL/Auth/Realtime request checks, generated database types, expanded race/role/visual coverage, four-job CI, staging parity and human review are not yet verified. Docker is not running locally; do not apply this migration to staging without matching passing CI evidence. Nothing is complete solely because the code or check scripts exist.
+
+
 - No operational implementation unit is active. Documentation unit 4.0 is verified on `docs/step-4-implementation-plan`; the user authorized its documentation-only commit and push and deferred 4.1. Consult Git for the checkpoint's commit/upstream state. Preserve that instruction when resuming. Step 3 acceptance and its manual/automated evidence remain complete.
 
 - Accepted implementation `4a940cc` is published on `feat/step-3-acceptance` in [draft PR #27](https://github.com/yaboii-jah/HML-Prototype/pull/27). Preserve the separate pending skill/configuration cleanup. No merge or production deployment was performed.
@@ -61,7 +66,7 @@ Update this file after every meaningful implementation or documentation change a
 
 Use the [production checklist](checklist.md#steps) for the ordered milestones and their completion conditions.
 
-- **Exact next action:** wait for a new user instruction before starting [4.1 shared MRF drafts](step-4-implementation.md#41-shared-mrf-drafts--planned-not-started). On resuming, read the required context and reconcile the scoped plan with Git before changing code. Later units need their own scoped planning before implementation. Required protected document capabilities accompany step 4 workflows; optional AI/broader document features, Tailwind and release rehearsal remain steps 5-7.
+- **Exact next action:** finish request-specific integration/race/visual coverage, publish for disposable CI when authorized, generate matching database types, and verify [4.1 shared MRF drafts](step-4-implementation.md#41-shared-mrf-drafts--planned-not-started). On resuming, read the required context and reconcile the scoped plan with Git before changing code. Later units need their own scoped planning before implementation. Required protected document capabilities accompany step 4 workflows; optional AI/broader document features, Tailwind and release rehearsal remain steps 5-7.
 - Follow the guide's dependencies and completion criteria. The prototype's role switch currently selects another account, and its approval commands do not enforce the target permanent-user self-approval restriction. Preserve the documented target rules; verify approval enforcement with the migrated workflows in step 4.
 - Retain local Node 26.12.1, the Vercel Node 24.x target, CI baseline 24.22.1 and npm 11.20.0 across environments. Hosted deployment verification belongs to the later protected rehearsal.
 - Work foundations first: individual identity, shared records and server authorization before business-workflow migration. Tailwind remains a separate track.

@@ -7,7 +7,7 @@ Agreed 2026-11-03. This active companion owns the operational migration sequence
 Read the five core documents required by [AGENTS.md](../AGENTS.md), the checklist and this guide before planning, implementing, reviewing or resuming step 4.
 
 1. Reconcile Git status, the tracker and the actual implementation. Preserve unrelated pending work and the completed foundation planning retirement.
-2. Check the user's latest instruction before starting a unit. **Current authorization is 4.0 documentation only. The user explicitly deferred 4.1; no operational implementation has started.**
+2. Check the user's latest instruction before starting a unit. **Current authorization includes 4.1 implementation under the approved 2026-11-03 plan. The earlier deferral is superseded. Later units remain unauthorized.**
 3. Use the sequence below as the roadmap. Only 4.1 has a detailed implementation scope; later units require their own scoped planning and acceptance criteria before implementation.
 4. Verify a unit within its boundary, record actual results in the tracker, then check its completion box. A documentation checkpoint does not complete an operational workflow or checklist step 4.
 5. Retire this companion after the milestone is complete, preserving durable contracts in the core documents and completion evidence in the tracker.
@@ -60,7 +60,7 @@ Completed 2026-11-03: documentation verification passed and evidence is recorded
 
 ## 4.1 Shared MRF Drafts — Planned, Not Started
 
-**User outcome:** assigned Site Personnel can create, save, reopen and collaboratively edit shared MRF drafts across sessions and devices. Starting this unit requires a new user instruction; the current task stops at 4.0.
+**User outcome:** assigned Site Personnel can create, save, reopen and collaboratively edit shared MRF drafts across sessions and devices. Implementation was authorized on 2026-11-03 after the grilling interview. It remains unchecked until required acceptance passes.
 
 ### Screens and Access
 
@@ -99,3 +99,7 @@ Completing 4.1 does not make MRF submission, approval or procurement available. 
 Keep permanent product responsibilities in the [overview](project-overview.md), system contracts in [architecture](architecture.md), conventions in [code standards](code-standards.md) and execution/verification policy in [workflow rules](ai-workflow-rules.md). Keep current work, dependencies, dated evidence and deferred-suite restoration in the tracker rather than duplicating logs here.
 
 Check checklist step 4 only after all required operational units and whole-operational acceptance pass. Captured email, foundation acceptance or a documentation checkpoint does not establish production readiness. Optional AI/broader document work, styling conversion, company-owned services, verified real email and release rehearsal retain their agreed later boundaries.
+
+### 4.1 Interview Decisions (2026-11-03)
+
+Retain the flexible Details / Materials / Review draft wizard and explicit Save draft, opening detail after success. Allow zero and partial material rows; supplied quantities are positive decimals, dates valid. New rows start blank; request date defaults to the Philippine date. Unsaved input remains only in the open editor, with leave-page warnings. Conflicts preserve input and require explicit review of saved differences before whole-draft replacement; another intervening save requires another review. Show creator/latest-editor attribution, not a history browser. Before first save show Assigned on save. Manual acceptance uses a retained staging QA project and two assigned Site test accounts; automated audited workflows remain disposable.

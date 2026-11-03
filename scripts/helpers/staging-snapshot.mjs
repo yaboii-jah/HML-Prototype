@@ -9,6 +9,7 @@ export async function stagingSnapshot({ includeProjectOperations = true } = {}) 
     ['assignments', 'public.project_assignments', 'user_id,project_id'], ['projects', 'public.projects', 'id'],
     ['scopes', 'public.scopes', 'id'], ['projectBudgets', 'public.project_budgets', 'project_id'],
     ['scopeBudgets', 'public.scope_budgets', 'scope_id'], ['bindings', 'private.session_bindings', 'session_id'],
+    ['requests', 'public.material_requests', 'id'], ['requestItems', 'public.material_request_items', 'id'], ['requestOperations', 'private.request_operations', 'id'], ['counters', 'private.document_counters', 'project_id,series'],
     ['audits', 'private.audit_events', 'id'], ['accountOperations', 'private.account_operations', 'id'],
   ];
   if (includeProjectOperations) tables.push(['projectOperations', 'private.project_operations', 'id']);

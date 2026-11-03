@@ -18,7 +18,7 @@ Use this companion to track the steps toward production. See the [progress track
 
 - [ ] **4. Move operational records and business workflows to the server.**
   Done when each migrated workflow has shared authoritative records and realtime updates, with authorized, transactional, retry-safe and audited changes; prototype data authority/reset paths are retired and deferred operational browser coverage is restored.
-  Agreed sequence and unit criteria are in the active [step 4 guide](step-4-implementation.md). Documentation unit 4.0 was verified on 2026-11-03: the roadmap, first-unit specification, reading pointers and local links/anchors are recorded and checked. Unit 4.1 is planned and explicitly deferred by the user; no operational implementation is claimed. Required document upload/archive capabilities accompany the workflows that need them.
+  Agreed sequence and unit criteria are in the active [step 4 guide](step-4-implementation.md). Documentation unit 4.0 was verified on 2026-11-03: the roadmap, first-unit specification, reading pointers and local links/anchors are recorded and checked. Unit 4.1 implementation was authorized on 2026-11-03 after the planning interview and is in progress; required CI/staging/manual acceptance remains pending. Required document upload/archive capabilities accompany the workflows that need them.
 
 - [ ] **5. Complete reliable document and AI integrations.**
   Done when the remaining broader document/project-folder features and optional AI integrations work, building on the protected uploads, required folder operations and archive jobs verified with step 4 workflows. Verify correct files, recovery from failures, protected browsing and human review of AI results.
