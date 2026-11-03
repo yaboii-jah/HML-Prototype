@@ -5,13 +5,12 @@ import { projectDirectory, projectDetail } from "@/src/server/projects/projects"
 import { accountDirectory } from "@/src/server/accounts/accounts";
 import { UUID_PATTERN } from "@/src/domain/auth/session";
 import { requestView } from "@/src/server/requests/drafts";
+import { sameApplicationOrigin } from "../request-origin.ts";
 
 const headers = { "Cache-Control": "private, no-store, max-age=0", Vary: "Cookie", "Referrer-Policy": "no-referrer" };
 const json = (value: unknown, status = 200) => Response.json(value, { status, headers });
 function sameOrigin(request: Request) {
-  const origin = request.headers.get("origin");
-  return (!origin || origin === new URL(request.url).origin)
-    && !["cross-site", "same-site"].includes(request.headers.get("sec-fetch-site") ?? "");
+  return sameApplicationOrigin(request);
 }
 export async function foundationResponse(request: Request, credentials = false) {
   if (!sameOrigin(request)) return json({ error: "Same-origin access required." }, 403);

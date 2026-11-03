@@ -90,6 +90,7 @@ if (action.startsWith('realtime-')) {
   await supabase(['db', 'query', '--linked', '--project-ref', STAGING_REF, '--file', resolve('supabase/checks/projects.sql')]);
   await supabase(['db', 'query', '--linked', '--project-ref', STAGING_REF, '--file', resolve('supabase/checks/realtime.sql')]);
   await supabase(['db', 'query', '--linked', '--project-ref', STAGING_REF, '--file', resolve('supabase/checks/requests.sql')]);
+  await supabase(['db', 'query', '--linked', '--project-ref', STAGING_REF, '--file', resolve('supabase/checks/documents.sql')]);
   const after = await stagingSnapshot();
   assert.deepEqual(after, before, 'Rollback checks preserve retained staging state');
   await mkdir('.verification', { recursive: true });

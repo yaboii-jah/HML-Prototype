@@ -4,7 +4,7 @@
 
 HML ConstructSync is an internal construction materials operations system for HML Technologies and Services Inc. It gives Site Personnel, Project Managers, Procurement, Accounting, Finance, Logistics and Administrators a shared way to follow each material request through sourcing, purchasing, payment verification, delivery and stock posting, alongside project inventory and material usage. Its main purpose is traceability across departments: staff can see the related records, responsible people, supporting documents, completed actions and outstanding work for a request.
 
-> **Current status:** Production migration is in progress. The migration branch implements Supabase sessions, Administrator account management, shared project/scope setup, protected realtime and shared MRF drafts. Foundation units 3.1-3.6 are verified. Unit 4.1 is verified complete, including local/CI/staging checks and user-confirmed manual acceptance; submission, documents and later operational workflows remain unavailable. This overview defines the intended complete system, not production readiness.
+> **Current status:** Production migration is in progress. The migration branch implements Supabase sessions, Administrator account management, shared projects/scopes, protected realtime, MRF drafts and supporting PDFs. Foundation units 3.1-3.6 and MRF unit 4.1 are verified complete. Unit 4.2 passes automated, real-Drive and staging checks and awaits targeted manual acceptance. Submission, approval and later operational workflows remain unavailable. This overview defines the intended complete system, not production readiness.
 
 See [architecture context](architecture.md) for the technical boundaries and production migration responsibilities.
 
@@ -61,7 +61,8 @@ Roles describe responsibilities; the server must still authorize each record and
 - Drafts are shared within the project: currently assigned Site Personnel may collaborate on editing them. Drafts may remain incomplete, without a funded scope or supporting PDF; submission requirements apply when submitting. Printed signatory names do not establish the verified actor's identity or authority.
 - Optional AI-assisted document extraction with human review before submission.
 - Linked request history and clear prerequisites for subsequent departmental actions.
-- Submission requires valid material requirements and one combined supporting PDF containing the source MRF, key plan and work scope, currently limited to 50 MB. Return/correction and reapproval retain linked history; dependent work waits for the required review and archive states.
+- Save a numbered MRF before attaching its supporting PDF. File Upload/Replace/Remove actions save separately from unsaved Details/Materials. Accept one readable, unencrypted PDF up to 50 MiB; staff review that it contains the source MRF, key plan and work scope. Authorized colleagues share the current validated file. Interrupted uploads resume after reselecting the matching local PDF.
+- Submission requires valid material requirements and the combined supporting PDF. Return/correction and reapproval retain linked history; dependent work waits for the required review and archive states. Preserve approved archive versions and document metadata history; obsolete unapproved bytes may be cleaned up safely.
 
 ### Sourcing and Procurement
 

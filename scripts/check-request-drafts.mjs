@@ -33,7 +33,7 @@ export async function checkRequestDrafts({ browser, second, client, login, logou
   await browser.fill('input[name=material-unit]', 'bag');
   await browser.click('.record-dialog[open] .record-modal-close');
   await browser.click('.request-wizard-actions .primary');
-  await browser.wait(`return location.pathname==='/requests/${id}'`);
+  await browser.wait(`return location.pathname==='/requests/${id}'&&document.querySelector('h1')?.textContent==='${code}-MRF-0001'`);
   assert.match(await browser.run('return document.body.innerText'), /Cement/);
   await login(second, staff[1]);
   await second.navigate(`/requests/${id}/edit`);
@@ -41,13 +41,13 @@ export async function checkRequestDrafts({ browser, second, client, login, logou
   await browser.navigate(`/requests/${id}/edit`);
   await browser.fill('input[name=sourceRef]', 'Other saved input');
   await browser.click('.request-wizard-actions .primary');
-  await browser.wait(`return location.pathname==='/requests/${id}'`);
+  await browser.wait(`return location.pathname==='/requests/${id}'&&document.querySelector('h1')?.textContent==='${code}-MRF-0001'`);
   await second.wait("return document.body.innerText.includes('Review saved changes')");
   assert.equal(await second.run("return document.querySelector('input[name=sourceRef]').value"), 'My preserved input');
   assert.match(await second.run('return document.body.innerText'), /Other saved input/);
   await second.run("[...document.querySelectorAll('button')].find(el=>el.textContent.includes('I reviewed the latest MRF')).click()");
   await second.click('.request-wizard-actions .primary');
-  await second.wait(`return location.pathname==='/requests/${id}'`);
+  await second.wait(`return location.pathname==='/requests/${id}'&&document.querySelector('h1')?.textContent==='${code}-MRF-0001'`);
   assert.match(await second.run('return document.body.innerText'), /My preserved input/);
   await browser.navigate(`/requests/${id}`);
   assert.match(await browser.run('return document.body.innerText'), /My preserved input/);

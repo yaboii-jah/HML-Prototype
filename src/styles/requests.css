@@ -28,3 +28,16 @@
 .mrf-material-list.register.is-embedded {
   min-height: 280px;
 }
+.mrf-documents .document-current,
+.mrf-documents .document-upload {
+  padding-block: var(--space-4, 1rem);
+  overflow-wrap: anywhere;
+}
+.mrf-documents fieldset {
+  border: 0;
+  padding: 0;
+  margin-block: var(--space-4, 1rem);
+  min-width: 0;
+}
+.mrf-documents progress { width: 100%; }
+.document-preview-frame { width: 100%; height: 65vh; border: 0; }

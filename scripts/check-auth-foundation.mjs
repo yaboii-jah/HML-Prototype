@@ -1,6 +1,8 @@
 import { checkRequestDrafts } from './check-request-drafts.mjs';
+import { checkMrfDocuments } from './check-mrf-documents.mjs';
+import { fakeDrive } from './helpers/fake-drive.mjs';
 import assert from 'node:assert/strict';
-import { randomUUID } from 'node:crypto';
+import { randomUUID, randomBytes } from 'node:crypto';
 import { spawn } from 'node:child_process';
 import { writeFile } from 'node:fs/promises';
 import { createServer } from 'node:net';
@@ -86,10 +88,13 @@ export async function checkAuthFoundation({ api, anon, secret, mailpit, sql, env
   const directPassword = await user.auth.updateUser({ password: randomUUID() });
   assert.equal(directPassword.error?.code, 'current_password_required', 'Ordinary JWT cannot reset a password without current-password proof');
 
+  const drive = await fakeDrive();
   const appEnvironment = {
     ...environment, NEXT_PUBLIC_SUPABASE_URL: api, NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: anon,
     SUPABASE_SECRET_KEY: secret, SUPABASE_ACCESS_TOKEN: '', SUPABASE_DB_PASSWORD: '', APP_ORIGIN: base,
-    GOOGLE_DRIVE_ENABLED: 'false', GEMINI_API_KEY: '', ACCOUNT_EMAIL_ENABLED: 'true',
+    GOOGLE_DRIVE_ENABLED: 'true', DOCUMENT_DRIVE_TEST_ORIGIN: drive.origin, GOOGLE_DRIVE_ROOT_FOLDER_ID: drive.root,
+    GOOGLE_DRIVE_UPLOAD_TOKEN_KEY: randomBytes(32).toString('base64'), CI: 'true', GEMINI_API_KEY: '', ACCOUNT_EMAIL_ENABLED: 'true',
+    WORKFLOW_TARGET_WORLD: 'local', WORKFLOW_LOCAL_BASE_URL: base, WORKFLOW_LOCAL_DATA_DIR: '.verification/workflow-auth',
   };
   requireLoopback(appEnvironment.NEXT_PUBLIC_SUPABASE_URL);
   const build = spawn(process.execPath, ['node_modules/next/dist/bin/next', 'build', '--webpack'], { env: appEnvironment, stdio: ['ignore', 'pipe', 'pipe'] });
@@ -273,12 +278,15 @@ export async function checkAuthFoundation({ api, anon, secret, mailpit, sql, env
     checks.push('http-roles-renewal');
     await checkRequestDrafts({ browser, second, client, login, logout, sql });
     checks.push('request-browser');
+    await checkMrfDocuments({ browser, second, client, login, logout, sql, administrator: bootstrapInputs[winner], base, drive });
+    checks.push('document-browser-workflow');
     for (const browser of browsers) browser.assertIsolated();
     checks.push('isolation');
     console.log('Real-account browser, session revocation, role, bootstrap and captured-email checks passed.');
   } finally {
     const cleanup = await Promise.allSettled(browsers.map(browser => browser.close()));
     server.kill(); await Promise.race([stopped, delay(5000)]);
+    await drive.close();
     await writeFile('.verification/auth-server.log', serverLog);
     if (cleanup.some(result => result.status === 'rejected')) throw Error('Run-owned browser profile cleanup failed');
   }

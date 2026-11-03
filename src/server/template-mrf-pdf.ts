@@ -2,8 +2,14 @@ import type { MRF } from "../domain/types.ts";
 import { rgb } from "pdf-lib";
 import { documentDate, documentTemplate, wrapText } from "./document-template.ts";
 
-export async function generateMrfPdf(request: MRF, projectName: string, projectLocation = "", supportingUrl?: string) {
+export type MrfPdfInput = Pick<MRF, "ref" | "requestDate" | "specialInstructions" | "requestedBy" | "approvedBy" | "purchaser" | "financeOfficer"> & {
+  items: { quantity: string | number; unit: string; name: string; neededDate: string; purpose: string; location: string; remarks: string }[];
+  documents: { type: string; name: string }[];
+  archive?: { versions: { supportUrl?: string }[] };
+};
+export async function generateMrfPdf(request: MrfPdfInput, projectName: string, projectLocation = "", supportingUrl?: string, frozenAt?: string) {
   const template = await documentTemplate("mrf"); const { pdf, page, text, regular, geometry } = template;
+  if (frozenAt) { const instant = new Date(frozenAt); pdf.setCreationDate(instant); pdf.setModificationDate(instant); }
   const positions = [0, 101, 202, 303, 705, 831, 1123, 1257], widths = [101, 101, 101, 402, 126, 292, 134, 158];
   const rows = request.items.flatMap((item, index) => {
     const values = [String(index + 1), String(item.quantity), item.unit, item.name, documentDate(item.neededDate), item.purpose, item.location, item.remarks].map(value => value.toUpperCase());

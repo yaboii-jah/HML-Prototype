@@ -9,10 +9,11 @@ import { Register } from "@/src/components/ui/Register";
 import { Field, InlineError, PageHeader } from "@/src/components/ui/Primitives";
 import { MaterialDetailsRow, MaterialDetailsTrigger } from "@/src/components/ui/MaterialDetails";
 import { RecordModal } from "@/src/components/ui/RecordModal";
+import { MrfDocuments } from "./MrfDocuments";
 import { detailFields, emptyMrfDraft, materialFields, type DraftCommand, type DraftMaterial, type MrfDraft, type RequestView, type SavedMrf } from "@/src/domain/requests/drafts";
 
 const labels = { sourceRef: "Source MRF number", requestDate: "Request date", requestedBy: "Requested by", approvedBy: "Approved by", purchaser: "Purchaser / Procurement Officer", financeOfficer: "Finance Officer", specialInstructions: "Special instructions", name: "Material name", unit: "Unit", purpose: "Purpose", location: "Delivery location", remarks: "Remarks", neededDate: "Date needed", quantity: "Quantity", scopeId: "Scope of work" };
-const availability = "Submission, approvals, supporting files and AI will become available in later units.";
+const availability = "Submission, approvals and AI will become available in later units.";
 const shown = (value: string | null | undefined) => value || "Not recorded";
 
 export function SharedRequests({ initial, mode, id, today }: { initial: RequestView; mode: "register" | "new" | "detail" | "edit"; id?: string; today: string }) {
@@ -57,6 +58,7 @@ function RequestDetail({ saved, data }: { saved: SavedMrf; data: RequestView }) 
   return <><Link className="back-link" href="/requests">Back to material requests</Link><PageHeader title={saved.ref} description="Draft" actions={data.role === "Site Personnel" && <Link className="button primary" href={`/requests/${saved.id}/edit`}>Edit draft</Link>} />
     <section className="panel"><h2>Request details</h2><DraftSummary draft={saved.draft} projectId={saved.projectId} data={data} /></section>
     <section className="panel"><h2>Recorded responsibility</h2><p>Created by {saved.creatorName} · <time dateTime={saved.createdAt}>{new Date(saved.createdAt).toLocaleString("en-PH", { timeZone: "Asia/Manila" })}</time></p><p>Latest editor: {saved.updaterName} · <time dateTime={saved.updatedAt}>{new Date(saved.updatedAt).toLocaleString("en-PH", { timeZone: "Asia/Manila" })}</time></p><p className="muted">Printed signatory names do not establish approval or submission.</p></section>
+    <MrfDocuments mrfId={saved.id} editable={data.role === "Site Personnel"} />
     <p className="muted">{availability}</p></>;
 }
 
@@ -91,7 +93,7 @@ function DraftEditor({ latest, data, today }: { latest?: SavedMrf; data: Request
     const unload = (event: BeforeUnloadEvent) => { if (dirtyRef.current) event.preventDefault(); };
     const leave = (event: MouseEvent) => {
       const anchor = event.target instanceof Element ? event.target.closest("a[href]") : null;
-      if (dirtyRef.current && anchor && anchor.getAttribute("href") !== window.location.pathname && !window.confirm("Leave this page? Unsaved MRF input will be lost.")) { event.preventDefault(); event.stopPropagation(); }
+      if (dirtyRef.current && anchor && !anchor.hasAttribute("download") && anchor.getAttribute("target") !== "_blank" && anchor.getAttribute("href") !== window.location.pathname && !window.confirm("Leave this page? Unsaved MRF input will be lost.")) { event.preventDefault(); event.stopPropagation(); }
     };
     window.addEventListener("beforeunload", unload);
     document.addEventListener("click", leave, true);
@@ -146,6 +148,7 @@ function DraftEditor({ latest, data, today }: { latest?: SavedMrf; data: Request
       {!project?.code && <p role="status">Choose an assigned project with a configured document code before saving.</p>}
       <div className="form-actions request-wizard-actions"><div><Link className="button secondary" href={latest ? `/requests/${latest.id}` : "/requests"}>Cancel</Link><button className="button primary" disabled={busy || !project?.code || (!uncertain && (stale || conflict))}>{busy ? "Saving…" : uncertain ? "Retry same save" : "Save draft"}</button></div><div>{step > 0 && <button type="button" className="button secondary" onClick={() => changeStep(step - 1)}>Back</button>}{step < 2 && <button type="button" className="button secondary" onClick={() => changeStep(step + 1)}>Next</button>}</div></div>
     </form>
+    {latest ? <MrfDocuments mrfId={latest.id} editable /> : <section className="panel"><h2>Supporting PDF</h2><p>Save this draft first to assign its permanent MRF number, then attach the PDF.</p></section>}
     <RecordModal open={!!material} title="Material details" onClose={() => setSelected(null)}>{material && <fieldset className="mrf-material-fields" disabled={busy || uncertain}><div className="form-grid">{materialFields.map(key => <Field label={labels[key]} key={key}><input name={`material-${key}`} maxLength={4000} value={material[key]} onChange={event => change({ ...draft, items: draft.items.map(item => item.id === material.id ? { ...item, [key]: event.target.value } : item) })} /></Field>)}<Field label="Quantity"><input inputMode="decimal" value={material.quantity ?? ""} onChange={event => change({ ...draft, items: draft.items.map(item => item.id === material.id ? { ...item, quantity: event.target.value || null } : item) })} /></Field><Field label="Date needed"><input type="date" value={material.neededDate} onChange={event => change({ ...draft, items: draft.items.map(item => item.id === material.id ? { ...item, neededDate: event.target.value } : item) })} /></Field></div></fieldset>}</RecordModal>
   </>;
 }

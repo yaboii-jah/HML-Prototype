@@ -7,6 +7,8 @@ export function controlledFetch(fetchImplementation, input, init) {
     throw new Error('Unexpected external request in controlled verification: ' + url.origin);
   }
   // A permitted local response cannot redirect the process to a hosted service.
-  return fetchImplementation(input, { ...init, redirect: 'error' });
+  // Manual responses (including Drive's 308 offset acknowledgement) never follow
+  // a Location. Keep automatic redirects forbidden, including caller 'follow'.
+  return fetchImplementation(input, { ...init, redirect: init?.redirect === 'manual' ? 'manual' : 'error' });
 }
 globalThis.fetch = (input, init) => controlledFetch(originalFetch, input, init);
