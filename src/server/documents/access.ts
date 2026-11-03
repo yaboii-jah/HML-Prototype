@@ -5,6 +5,7 @@ import { parseDocumentsView } from "@/src/domain/requests/documents";
 import { record } from "@/src/domain/projects/projects";
 import { uuid } from "@/src/domain/requests/drafts";
 import { dispatchDocumentJobs } from "./dispatch";
+import { sameApplicationOrigin } from "@/src/server/request-origin";
 
 export class DocumentHttpError extends Error {
   readonly status: number;
@@ -16,12 +17,10 @@ export async function documentActor() {
   return { userId: session.context.userId, sessionId: session.sessionId, revision: session.context.revision, activeRole: session.activeRole };
 }
 export function sameOrigin(request: Request) {
-  const origin = request.headers.get("origin");
-  if (!origin || origin !== new URL(request.url).origin) throw new DocumentHttpError(403, "Open this action from the application.");
+  if (!sameApplicationOrigin(request, true)) throw new DocumentHttpError(403, "Open this action from the application.");
 }
 export function privateDocumentRead(request: Request) {
-  const origin = request.headers.get("origin"), site = request.headers.get("sec-fetch-site");
-  if (origin && origin !== new URL(request.url).origin || site && !["same-origin", "none"].includes(site)) throw new DocumentHttpError(403, "Open documents from this application.");
+  if (!sameApplicationOrigin(request)) throw new DocumentHttpError(403, "Open documents from this application.");
 }
 export async function readDocumentBytes(request: Request, limit: number) {
   const reader = request.body?.getReader();
@@ -63,7 +62,7 @@ export function documentError(error: unknown) {
   if (error instanceof ServiceCommandError) {
     const errors: Record<string, [number, string]> = {
       "42501": [403, "Your document access changed. Refresh and sign in again if needed."],
-      "40001": [409, "The attachment or folder changed. Review its current state before trying again."],
+      "40001": [409, "The attachment or folder changed. Review its current state. Cancel an older unfinished upload and start a new one if its attachment revision changed."],
       "55P03": [409, "This operation is still processing. Wait briefly, then refresh its status."],
       "23505": [409, "That Drive folder already belongs to another project."],
       "23514": [400, "Check the PDF, saved record and selected operation. Reselect the same PDF when resuming."],

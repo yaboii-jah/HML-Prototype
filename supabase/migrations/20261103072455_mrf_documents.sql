@@ -205,6 +205,8 @@ begin
   perform 1 from public.projects p where p.id=project_id for update;
   if kind in('setupFolder','retryFolder') then
     if actor->>'activeRole' not in('Administrator','Project Manager') then raise exception 'Folder management role required' using errcode='42501'; end if;
+  elsif kind='retryArchive' then
+    if target is null or actor->>'activeRole'<>'Project Manager' then raise exception 'Project Manager archive authority required' using errcode='42501'; end if;
   elsif kind in('startUpload','resumeUpload','cancelUpload','remove','retryFile') then
     if target is null or actor->>'activeRole'<>'Site Personnel' then raise exception 'Assigned Site Personnel required' using errcode='42501'; end if;
   else raise exception 'Unknown document command' using errcode='23514'; end if;
@@ -263,12 +265,20 @@ begin
     result:=jsonb_build_object('jobId',resource);
   else
     select * into job from private.document_jobs j where j.id=(command->>'jobId')::uuid and j.project_id=cmd.project_id for update;
-    if not found or (kind='retryFolder' and job.kind<>'folder') or (kind='retryFile' and (job.kind not in('validate','cleanup') or job.request_id<>target)) then raise exception 'Job unavailable' using errcode='42501'; end if;
+    if not found or (kind='retryFolder' and job.kind<>'folder') or (kind='retryFile' and (job.kind not in('validate','cleanup') or job.request_id<>target))
+      or (kind='retryArchive' and (job.kind<>'archive' or job.request_id<>target or not exists(select 1 from private.mrf_archive_snapshots where id=job.resource_id))) then raise exception 'Job unavailable' using errcode='42501'; end if;
     if job.state not in('failed','paused') then raise exception 'Job is not retryable' using errcode='23514'; end if;
     if command->>'useCurrentMapping'='true' then
-      if job.kind<>'validate' then raise exception 'Destination retry unavailable' using errcode='23514'; end if;
-      -- Validation uses the upload's frozen location; replacing the upload is the explicit relocation path.
-      raise exception 'Start a new upload to use the current destination' using errcode='23514';
+      if job.kind<>'archive' then raise exception 'Start a new upload to use the current destination' using errcode='23514'; end if;
+      select * into mapping from private.project_document_folders f where f.project_id=cmd.project_id and f.current;
+      if not found then raise exception 'Set up the project document folder first' using errcode='P4201'; end if;
+      if mapping.id::text is distinct from job.payload->>'folderMappingId' then
+        -- Retain the failed attempt's location/provider identities; the explicit
+        -- retry is a new attempt against the corrected mapping, not a move.
+        update private.document_jobs set payload=payload||jsonb_build_object('folderMappingId',mapping.id,'priorAttempts',
+          coalesce(payload->'priorAttempts','[]'::jsonb)||jsonb_build_array(jsonb_build_object('folderMappingId',payload->'folderMappingId','checkpoint',checkpoint,'actor',job.actor,'at',clock_timestamp()))),
+          checkpoint='{}' where id=job.id;
+      end if;
     end if;
     update private.document_jobs set state='pending',actor=document_command.actor,lease=null,lease_until=null,message=null,dispatch_after=clock_timestamp(),updated_at=clock_timestamp() where id=job.id;
     result:=jsonb_build_object('jobId',job.id);

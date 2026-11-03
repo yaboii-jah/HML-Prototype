@@ -93,7 +93,7 @@ function DraftEditor({ latest, data, today }: { latest?: SavedMrf; data: Request
     const unload = (event: BeforeUnloadEvent) => { if (dirtyRef.current) event.preventDefault(); };
     const leave = (event: MouseEvent) => {
       const anchor = event.target instanceof Element ? event.target.closest("a[href]") : null;
-      if (dirtyRef.current && anchor && anchor.getAttribute("href") !== window.location.pathname && !window.confirm("Leave this page? Unsaved MRF input will be lost.")) { event.preventDefault(); event.stopPropagation(); }
+      if (dirtyRef.current && anchor && !anchor.hasAttribute("download") && anchor.getAttribute("target") !== "_blank" && anchor.getAttribute("href") !== window.location.pathname && !window.confirm("Leave this page? Unsaved MRF input will be lost.")) { event.preventDefault(); event.stopPropagation(); }
     };
     window.addEventListener("beforeunload", unload);
     document.addEventListener("click", leave, true);
