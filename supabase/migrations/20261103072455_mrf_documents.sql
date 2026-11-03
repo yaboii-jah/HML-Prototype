@@ -167,6 +167,7 @@ create function private.document_job_allowed(actor jsonb,target uuid,kind text) 
 $$;
 create function private.documents_read(actor jsonb,target_request uuid default null,target_project uuid default null) returns jsonb
 language plpgsql security definer set search_path='' as $$
+<<read_docs>>
 declare project_id uuid; result jsonb; rev text;
 begin
   perform private.project_actor(actor,false);
@@ -180,9 +181,9 @@ begin
     'uploads',coalesce((select jsonb_agg(jsonb_build_object('id',u.id,'name',u.name,'size',u.size,'sha256',u.sha256,'offset',u.offset_bytes,'state',
       case when u.state='uploading' and u.expires_at<clock_timestamp() then 'expired' else u.state end,'expiresAt',u.expires_at,'uploaderName',u.uploader_name) order by u.created_at desc)
       from private.document_uploads u where u.request_id=target_request and u.state not in('complete','cancelled')),'[]'::jsonb),
-    'folder',(select jsonb_build_object('id',f.id,'name',f.name) from private.project_document_folders f where f.project_id=documents_read.project_id and f.current),
+    'folder',(select jsonb_build_object('id',f.id,'name',f.name) from private.project_document_folders f where f.project_id=read_docs.project_id and f.current),
     'jobs',coalesce((select jsonb_agg(jsonb_build_object('id',j.id,'kind',j.kind,'state',j.state,'message',j.message,'attempts',j.attempts) order by j.created_at desc)
-      from private.document_jobs j where j.project_id=documents_read.project_id and (j.kind='folder' or j.request_id=target_request) and j.state<>'complete'),'[]'::jsonb));
+      from private.document_jobs j where j.project_id=read_docs.project_id and (j.kind='folder' or j.request_id=target_request) and j.state<>'complete'),'[]'::jsonb));
   return result;
 end $$;
 

@@ -21,6 +21,7 @@
     "verify": "node scripts/verify.mjs",
     "verify:browser": "node scripts/verify-browser.mjs",
     "test:live": "node --experimental-strip-types scripts/live-integrations.mjs",
+    "test:drive": "node --env-file-if-exists=.env.local --experimental-strip-types scripts/check-document-drive-live.mjs",
     "db:staging:preview": "node --env-file-if-exists=.env.local scripts/staging-database.mjs preview",
     "db:staging:apply": "node --env-file-if-exists=.env.local scripts/staging-database.mjs apply",
     "db:staging:types": "node --env-file-if-exists=.env.local scripts/staging-database.mjs types",

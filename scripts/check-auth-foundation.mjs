@@ -94,6 +94,7 @@ export async function checkAuthFoundation({ api, anon, secret, mailpit, sql, env
     SUPABASE_SECRET_KEY: secret, SUPABASE_ACCESS_TOKEN: '', SUPABASE_DB_PASSWORD: '', APP_ORIGIN: base,
     GOOGLE_DRIVE_ENABLED: 'true', DOCUMENT_DRIVE_TEST_ORIGIN: drive.origin, GOOGLE_DRIVE_ROOT_FOLDER_ID: drive.root,
     GOOGLE_DRIVE_UPLOAD_TOKEN_KEY: randomBytes(32).toString('base64'), CI: 'true', GEMINI_API_KEY: '', ACCOUNT_EMAIL_ENABLED: 'true',
+    WORKFLOW_TARGET_WORLD: 'local', WORKFLOW_LOCAL_BASE_URL: base, WORKFLOW_LOCAL_DATA_DIR: '.verification/workflow-auth',
   };
   requireLoopback(appEnvironment.NEXT_PUBLIC_SUPABASE_URL);
   const build = spawn(process.execPath, ['node_modules/next/dist/bin/next', 'build', '--webpack'], { env: appEnvironment, stdio: ['ignore', 'pipe', 'pipe'] });

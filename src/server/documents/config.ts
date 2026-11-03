@@ -1,6 +1,6 @@
 
 import "server-only";
-import { driveAccessToken } from "@/src/server/drive";
+import { driveAccessToken } from "./drive-auth";
 import { createDriveGateway } from "./drive-gateway";
 
 export function documentDrive() {

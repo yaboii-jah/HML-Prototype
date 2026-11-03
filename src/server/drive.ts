@@ -4,7 +4,7 @@ import type { DeliveryReceiptVersion } from "../domain/types.ts";
 import type { AccountingDocument, Batch, MRF, PO, PaymentProof } from "../domain/types.ts";
 import { ACCOUNTING_MIMES, MAX_ACCOUNTING_FILE } from "../domain/accounting-documents.ts";
 import "server-only";
-import { GoogleAuth, OAuth2Client } from "google-auth-library";
+import { driveAccessToken as token } from "./documents/drive-auth.ts";
 import { XLSX_MIME } from "../domain/bid-reports.ts";
 import { archiveFileName } from "../domain/document-numbering.ts";
 
@@ -21,26 +21,6 @@ export function folderIdFromInput(input: string) {
   if (!id || id.length < 10) throw new Error("Enter a valid Google Drive folder URL or ID.");
   return id;
 }
-
-async function token() {
-  if (process.env.GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON) {
-    const credentials = JSON.parse(process.env.GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON) as Record<string, string>;
-    if (credentials.private_key) credentials.private_key = credentials.private_key.replace(/\\n/g, "\n");
-    const client = await new GoogleAuth({ credentials, scopes: ["https://www.googleapis.com/auth/drive"] }).getClient();
-    const access = await client.getAccessToken();
-    if (!access.token) throw new Error("Google Drive service-account authentication failed.");
-    return access.token;
-  }
-  const { GOOGLE_DRIVE_OAUTH_CLIENT_ID: clientId, GOOGLE_DRIVE_OAUTH_CLIENT_SECRET: clientSecret, GOOGLE_DRIVE_OAUTH_REFRESH_TOKEN: refreshToken } = process.env;
-  if (!clientId || !clientSecret || !refreshToken) throw new Error("Configure Google Drive credentials on the server.");
-  const client = new OAuth2Client(clientId, clientSecret);
-  client.setCredentials({ refresh_token: refreshToken });
-  const access = await client.getAccessToken();
-  if (!access.token) throw new Error("Google Drive OAuth authentication failed.");
-  return access.token;
-}
-
-export { token as driveAccessToken };
 
 async function drive(url: string, init: RequestInit = {}) {
   const authorization = await token();
