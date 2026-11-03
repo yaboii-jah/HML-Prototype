@@ -1,4 +1,5 @@
 import { checkRequestRaces } from './check-request-races.mjs';
+import { checkDocumentRaces } from './check-document-races.mjs';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { spawn } from 'node:child_process';
@@ -247,6 +248,8 @@ try {
   checks.push('project-races');
   await checkRequestRaces({ sql, database, environment });
   checks.push('request-races');
+  await checkDocumentRaces({ sql, database, environment });
+  checks.push('document-races');
   await checkAccountRaces({ sql, database, environment });
   checks.push('account-races');
   await checkRealtimeFoundation({ api, anon, secret, sql });
