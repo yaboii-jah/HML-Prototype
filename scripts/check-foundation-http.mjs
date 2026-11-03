@@ -51,6 +51,10 @@ export async function checkFoundationHttp({ browser, second, client, login, logo
     const cookies = await cookie(second);
     const directory = await read(paths[0], cookies), detail = await read('/api/foundation/view?view=project&projectId=' + ids[0], cookies);
     assert.equal(directory.status, 200, role + ' directory'); assert.equal(detail.status, 200, role + ' detail');
+    const requests = await read('/api/foundation/view?view=requests', cookies);
+    assert.equal(requests.status, 200, role + ' request reads');
+    assert.equal(requests.body.view.data.role, role);
+    assert.deepEqual(financialKeys(requests.body), [], 'Request projections contain no financial data');
     assert.equal((await read('/api/foundation/view?view=accounts', cookies)).status, role === 'Administrator' ? 200 : 403);
     assert.equal((await read('/api/foundation/view?view=session', cookies)).body.session.userId, id);
     const credential = await read(paths[1], cookies);

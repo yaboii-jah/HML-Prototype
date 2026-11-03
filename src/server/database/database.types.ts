@@ -46,6 +46,20 @@ export type Database = {
                   Relationships: [
 
                   ]
+                },"document_counters": {
+                  Row: {
+                    "last_value": number,"project_id": string,"series": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "last_value": number,"project_id": string,"series": string
+                  }
+                  Update: {
+                    "last_value"?: number,"project_id"?: string,"series"?: string
+                  }
+                  Relationships: [
+
+                  ]
                 },"project_operations": {
                   Row: {
                     "actor_id": string,"created_at": string,"id": string,"payload": NonNullable<Json>,"project_id": string,"result": Json | null
@@ -56,6 +70,20 @@ export type Database = {
                   }
                   Update: {
                     "actor_id"?: string,"created_at"?: string,"id"?: string,"payload"?: NonNullable<Json>,"project_id"?: string,"result"?: Json | null
+                  }
+                  Relationships: [
+
+                  ]
+                },"request_operations": {
+                  Row: {
+                    "actor_id": string,"created_at": string,"id": string,"payload": NonNullable<Json>,"request_id": string,"result": Json | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "actor_id": string,"created_at"?: string,"id": string,"payload": NonNullable<Json>,"request_id": string,"result"?: Json | null
+                  }
+                  Update: {
+                    "actor_id"?: string,"created_at"?: string,"id"?: string,"payload"?: NonNullable<Json>,"request_id"?: string,"result"?: Json | null
                   }
                   Relationships: [
 
@@ -158,6 +186,24 @@ export type Database = {
 "projects_read":
 { Args: { "actor": Json,"target_project"?: string }; Returns: Json
                            },
+"request_command":
+{ Args: { "actor": Json,"command": Json }; Returns: Json
+                           },
+"request_date":
+{ Args: { "value": Json }; Returns: string
+                           },
+"request_draft":
+{ Args: { "value": Json }; Returns: Json
+                           },
+"request_project_allowed":
+{ Args: { "actor": Json,"target": string }; Returns: boolean
+                           },
+"request_snapshot":
+{ Args: { "target": string }; Returns: Json
+                           },
+"requests_read":
+{ Args: { "actor": Json,"target_request"?: string }; Returns: Json
+                           },
 "scope_snapshot":
 { Args: { "target": string }; Returns: Json
                            },
@@ -176,7 +222,65 @@ export type Database = {
           }
         },"public": {
           Tables: {
-            "profiles": {
+            "material_request_items": {
+                  Row: {
+                    "data": NonNullable<Json>,"id": string,"position": number,"request_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "data": NonNullable<Json>,"id": string,"position": number,"request_id": string
+                  }
+                  Update: {
+                    "data"?: NonNullable<Json>,"id"?: string,"position"?: number,"request_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "material_request_items_request_id_fkey"
+      columns: ["request_id"]
+isOneToOne: false
+      referencedRelation: "material_requests"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"material_requests": {
+                  Row: {
+                    "created_at": string,"creator_id": string,"creator_name": string,"data": NonNullable<Json>,"id": string,"project_id": string,"ref": string,"scope_id": string | null,"sequence": number,"updated_at": string,"updater_id": string,"updater_name": string,"version": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"creator_id": string,"creator_name": string,"data": NonNullable<Json>,"id"?: string,"project_id": string,"ref": string,"scope_id"?: string | null,"sequence": number,"updated_at"?: string,"updater_id": string,"updater_name": string,"version"?: number
+                  }
+                  Update: {
+                    "created_at"?: string,"creator_id"?: string,"creator_name"?: string,"data"?: NonNullable<Json>,"id"?: string,"project_id"?: string,"ref"?: string,"scope_id"?: string | null,"sequence"?: number,"updated_at"?: string,"updater_id"?: string,"updater_name"?: string,"version"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "material_requests_creator_id_fkey"
+      columns: ["creator_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["user_id"]
+    },{
+      foreignKeyName: "material_requests_project_id_fkey"
+      columns: ["project_id"]
+isOneToOne: false
+      referencedRelation: "projects"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "material_requests_scope_id_project_id_fkey"
+      columns: ["scope_id","project_id"]
+isOneToOne: false
+      referencedRelation: "scopes"
+      referencedColumns: ["id","project_id"]
+    },{
+      foreignKeyName: "material_requests_updater_id_fkey"
+      columns: ["updater_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["user_id"]
+    }
+                  ]
+                },"profiles": {
                   Row: {
                     "access_revision": number,"created_at": string,"display_name": string,"first_signed_in_at": string | null,"is_active": boolean,"updated_at": string,"user_id": string,"version": number
                   }
@@ -351,6 +455,12 @@ isOneToOne: false
                            },
 "projects_read":
 { Args: { "actor": Json,"target_project"?: string }; Returns: Json
+                           },
+"request_command":
+{ Args: { "actor": Json,"command": Json }; Returns: Json
+                           },
+"requests_read":
+{ Args: { "actor": Json,"target_request"?: string }; Returns: Json
                            }
           }
           Enums: {

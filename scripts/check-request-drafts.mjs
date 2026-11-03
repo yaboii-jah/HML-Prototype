@@ -25,6 +25,16 @@ export async function checkRequestDrafts({ browser, second, client, login, logou
   await browser.click('.request-wizard-actions .primary');
   await browser.wait(`return document.querySelector('h1')?.textContent==='${code}-MRF-0001'`);
   const id = await browser.run("return location.pathname.split('/').at(-1)");
+  await browser.navigate(`/requests/${id}/edit`);
+  await browser.run("[...document.querySelectorAll('.request-steps button')].find(el=>el.textContent.includes('Materials')).click()");
+  await browser.run("[...document.querySelectorAll('button')].find(el=>el.textContent==='Add material').click()");
+  await browser.wait("return !!document.querySelector('.record-dialog[open] input[name=material-name]')");
+  await browser.fill('input[name=material-name]', 'Cement');
+  await browser.fill('input[name=material-unit]', 'bag');
+  await browser.click('.record-dialog[open] .record-modal-close');
+  await browser.click('.request-wizard-actions .primary');
+  await browser.wait(`return location.pathname==='/requests/${id}'`);
+  assert.match(await browser.run('return document.body.innerText'), /Cement/);
   await login(second, staff[1]);
   await second.navigate(`/requests/${id}/edit`);
   await second.fill('input[name=sourceRef]', 'My preserved input');
@@ -43,6 +53,8 @@ export async function checkRequestDrafts({ browser, second, client, login, logou
   assert.match(await browser.run('return document.body.innerText'), /My preserved input/);
   for (const width of [1440, 375]) {
     await browser.call('Emulation.setDeviceMetricsOverride', { width, height: 900, deviceScaleFactor: 1, mobile: width === 375 });
+    await browser.run("document.querySelector('.mobile-scrim')?.click()");
+    if (width === 375) await browser.wait("return !document.querySelector('.mobile-scrim') && document.querySelector('.side-nav').getBoundingClientRect().right<=1");
     const screenshot = await browser.call('Page.captureScreenshot', { format: 'png' });
     await writeFile(`.verification/request-detail-${width}.png`, Buffer.from(screenshot.data, 'base64'));
   }

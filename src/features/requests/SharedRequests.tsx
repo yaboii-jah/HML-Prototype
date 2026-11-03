@@ -48,7 +48,7 @@ function RequestRegister({ data }: { data: RequestView }) {
 
 function DraftSummary({ draft, projectId, data }: { draft: MrfDraft; projectId: string; data: RequestView }) {
   const project = data.projects.find(project => project.id === projectId);
-  return <><dl className="detail-grid"><div><dt>Project</dt><dd>{shown(project?.name)}</dd></div><div><dt>Scope of work</dt><dd>{draft.scopeId ? shown(project?.scopes.find(scope => scope.id === draft.scopeId)?.name) : "Unassigned"}</dd></div>
+  return <><dl className="mrf-draft-summary"><div><dt>Project</dt><dd>{shown(project?.name)}</dd></div><div><dt>Scope of work</dt><dd>{draft.scopeId ? shown(project?.scopes.find(scope => scope.id === draft.scopeId)?.name) : "Unassigned"}</dd></div>
     <div><dt>Request date</dt><dd>{shown(draft.requestDate)}</dd></div>{detailFields.map(key => <div key={key}><dt>{labels[key]}</dt><dd>{shown(draft[key])}</dd></div>)}</dl>
     <MaterialList items={draft.items} />
   </>;
@@ -62,11 +62,15 @@ function RequestDetail({ saved, data }: { saved: SavedMrf; data: RequestView }) 
 
 function MaterialList({ items, edit, remove, move }: { items: DraftMaterial[]; edit?: (id: string) => void; remove?: (id: string) => void; move?: (id: string, offset: number) => void }) {
   const [selected, setSelected] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
   const item = items.find(item => item.id === selected);
-  return <><Register embedded rows={items} unit="materials" empty="No materials added. A draft can be saved without materials."
+  const visible = items.filter(item => `${item.name} ${item.unit} ${item.purpose} ${item.location} ${item.remarks}`.toLowerCase().includes(search.toLowerCase()));
+  if (!items.length) return <p className="muted">No materials added. A draft can be saved without materials.</p>;
+  return <><Register className="mrf-material-list" embedded rows={visible} unit="materials" resetKey={search} empty={search ? "No materials match this search." : "No materials added. A draft can be saved without materials."}
+    filters={<Field label="Search materials"><input type="search" value={search} onChange={event => setSearch(event.target.value)} /></Field>}
     headers={<><th scope="col">Material</th><th scope="col">Quantity</th><th scope="col">Unit</th><th scope="col">Date needed</th>{edit && <th scope="col">Actions</th>}</>}
     renderRow={(item) => <MaterialDetailsRow key={item.id} onOpen={() => edit ? edit(item.id) : setSelected(item.id)}><td><MaterialDetailsTrigger onClick={() => edit ? edit(item.id) : setSelected(item.id)}>{shown(item.name)}</MaterialDetailsTrigger></td><td>{shown(item.quantity)}</td><td>{shown(item.unit)}</td><td>{shown(item.neededDate)}</td>{edit && <td><button type="button" className="button secondary" onClick={() => edit(item.id)}>Edit</button><button type="button" className="button secondary" onClick={() => remove?.(item.id)}>Remove</button><button type="button" className="button secondary" aria-label={`Move ${shown(item.name)} up`} disabled={items[0]?.id === item.id} onClick={() => move?.(item.id, -1)}>Up</button><button type="button" className="button secondary" aria-label={`Move ${shown(item.name)} down`} disabled={items.at(-1)?.id === item.id} onClick={() => move?.(item.id, 1)}>Down</button></td>}</MaterialDetailsRow>} />
-    <RecordModal open={!!item} title={shown(item?.name)} onClose={() => setSelected(null)}>{item && <dl className="detail-grid">{materialFields.map(key => <div key={key}><dt>{labels[key]}</dt><dd>{shown(item[key])}</dd></div>)}</dl>}</RecordModal>
+    <RecordModal open={!!item} title={shown(item?.name)} onClose={() => setSelected(null)}>{item && <dl className="mrf-draft-summary">{materialFields.map(key => <div key={key}><dt>{labels[key]}</dt><dd>{shown(item[key])}</dd></div>)}</dl>}</RecordModal>
   </>;
 }
 
@@ -118,7 +122,7 @@ function DraftEditor({ latest, data, today }: { latest?: SavedMrf; data: Request
   };
   return <><Link className="back-link" href={latest ? `/requests/${latest.id}` : "/requests"}>Back to material requests</Link>
     <PageHeader title={latest ? `Edit ${latest.ref}` : "New material request"} description={latest ? "Shared project draft" : "MRF number: Assigned on save"} />
-    <form className="form-stack request-wizard" noValidate onSubmit={event => { event.preventDefault(); void save(); }}>
+    <form className="form-stack request-wizard shared-mrf-editor" noValidate onSubmit={event => { event.preventDefault(); void save(); }}>
       <nav aria-label="Request steps"><ol className="request-steps">{["Details", "Materials", "Review draft"].map((label, index) => <li key={label}><button type="button" aria-current={step === index ? "step" : undefined} onClick={() => changeStep(index)}><span className="request-step-number" aria-hidden="true">{index + 1}</span><span>{label}</span></button></li>)}</ol></nav>
       <div className="request-step-heading"><h2 ref={heading} tabIndex={-1}>{["Details", "Materials", "Review draft"][step]}</h2><p>Incomplete fields may be saved. Printed names do not establish authority.</p></div>
       <fieldset disabled={busy || uncertain || !project && !!latest}>
@@ -142,7 +146,7 @@ function DraftEditor({ latest, data, today }: { latest?: SavedMrf; data: Request
       {!project?.code && <p role="status">Choose an assigned project with a configured document code before saving.</p>}
       <div className="form-actions request-wizard-actions"><div><Link className="button secondary" href={latest ? `/requests/${latest.id}` : "/requests"}>Cancel</Link><button className="button primary" disabled={busy || !project?.code || (!uncertain && (stale || conflict))}>{busy ? "Saving…" : uncertain ? "Retry same save" : "Save draft"}</button></div><div>{step > 0 && <button type="button" className="button secondary" onClick={() => changeStep(step - 1)}>Back</button>}{step < 2 && <button type="button" className="button secondary" onClick={() => changeStep(step + 1)}>Next</button>}</div></div>
     </form>
-    <RecordModal open={!!material} title="Material details" onClose={() => setSelected(null)}>{material && <fieldset disabled={busy || uncertain}><div className="form-grid">{materialFields.map(key => <Field label={labels[key]} key={key}><input maxLength={4000} value={material[key]} onChange={event => change({ ...draft, items: draft.items.map(item => item.id === material.id ? { ...item, [key]: event.target.value } : item) })} /></Field>)}<Field label="Quantity"><input inputMode="decimal" value={material.quantity ?? ""} onChange={event => change({ ...draft, items: draft.items.map(item => item.id === material.id ? { ...item, quantity: event.target.value || null } : item) })} /></Field><Field label="Date needed"><input type="date" value={material.neededDate} onChange={event => change({ ...draft, items: draft.items.map(item => item.id === material.id ? { ...item, neededDate: event.target.value } : item) })} /></Field></div></fieldset>}</RecordModal>
+    <RecordModal open={!!material} title="Material details" onClose={() => setSelected(null)}>{material && <fieldset className="mrf-material-fields" disabled={busy || uncertain}><div className="form-grid">{materialFields.map(key => <Field label={labels[key]} key={key}><input name={`material-${key}`} maxLength={4000} value={material[key]} onChange={event => change({ ...draft, items: draft.items.map(item => item.id === material.id ? { ...item, [key]: event.target.value } : item) })} /></Field>)}<Field label="Quantity"><input inputMode="decimal" value={material.quantity ?? ""} onChange={event => change({ ...draft, items: draft.items.map(item => item.id === material.id ? { ...item, quantity: event.target.value || null } : item) })} /></Field><Field label="Date needed"><input type="date" value={material.neededDate} onChange={event => change({ ...draft, items: draft.items.map(item => item.id === material.id ? { ...item, neededDate: event.target.value } : item) })} /></Field></div></fieldset>}</RecordModal>
   </>;
 }
 

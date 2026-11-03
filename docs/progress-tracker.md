@@ -10,9 +10,7 @@ Update this file after every meaningful implementation or documentation change a
 
 ## Current Goal
 
-- **4.1 implementation authorized 2026-11-03:** the user approved the grilled plan and instructed implementation. Work is on eat/step-4-mrf-drafts. Shared drafts are in progress; local/CI/staging/manual acceptance remains required. This supersedes the earlier deferral below. No production promotion is authorized.
-
-- Documentation unit [4.0](step-4-implementation.md#40-record-the-plan) is complete. No implementation unit is active: the user explicitly instructed **do not start 4.1 for now**. Unit 4.1 remains planned, with no operational implementation, schema change or provider activation started. Wait for a new user instruction before starting it. The completed foundation remains verified at `4a940cc`; step 4 remains unchecked.
+- Implement and verify **4.1 shared MRF drafts**, authorized by the user's 2026-11-03 instruction following the grilling interview. This supersedes the earlier deferral. Work is on `feat/step-4-mrf-drafts`; 4.1 and step 4 remain unchecked pending CI, staging parity and targeted manual acceptance. No production promotion is authorized.
 
 ## Completed
 
@@ -53,9 +51,8 @@ Update this file after every meaningful implementation or documentation change a
 - **4.1 shared drafts:** implementation is on `feat/step-4-mrf-drafts`. Added request domain/server/UI modules, transactional numbering and retry receipts, project/scope references, immutable responsibility, request realtime views, rollback SQL and disposable two-account/race checks. Local verification passed 394 tests, lint (existing skill-script warnings), route types, TypeScript and build. The isolated foundation-public browser suite passed. SQL/Auth/Realtime request checks, generated database types, expanded race/role/visual coverage, four-job CI, staging parity and human review are not yet verified. Docker is not running locally; do not apply this migration to staging without matching passing CI evidence. Nothing is complete solely because the code or check scripts exist.
 
 
-- No operational implementation unit is active. Documentation unit 4.0 is verified on `docs/step-4-implementation-plan`; the user authorized its documentation-only commit and push and deferred 4.1. Consult Git for the checkpoint's commit/upstream state. Preserve that instruction when resuming. Step 3 acceptance and its manual/automated evidence remain complete.
 
-- Accepted implementation `4a940cc` is published on `feat/step-3-acceptance` in [draft PR #27](https://github.com/yaboii-jah/HML-Prototype/pull/27). Preserve the separate pending skill/configuration cleanup. No merge or production deployment was performed.
+- Accepted implementation `4a940cc` is published on `feat/step-3-acceptance` in [draft PR #27](https://github.com/yaboii-jah/HML-Prototype/pull/27). The separate skill/configuration cleanup is already committed in the inherited lineage. No merge or production deployment was performed.
 - The user reported that the overall 3.4 Administrator manual review works on 2026-11-02; this is overall confirmation, not a new itemized acceptance run. Additional staging test accounts and other-role manual checks are deferred at the user's request. Existing automated role, financial-confidentiality and access-revocation evidence remains recorded separately in [Session Notes](#session-notes).
 - The initial SQL fixture used a lowercase code outside the canonical command contract; the next run caught an ambiguous fixture session column. A later browser assertion incorrectly refreshed a session already signed out during role testing; the final check retains an independent live Site session. These historical runs remain failures. Final disposable and staging verification passed; two retained profiles and nine audits are preserved.
 - The user reported that the overall 3.3 manual review works on 2026-11-02; this is overall confirmation, not a new itemized acceptance run.

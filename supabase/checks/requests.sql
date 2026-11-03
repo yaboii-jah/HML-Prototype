@@ -83,6 +83,8 @@ begin
   update private.document_counters set last_value=9999 where project_id=target;
   created:=public.request_command(site,jsonb_build_object('type','createDraft','requestId',gen_random_uuid(),'projectId',target,'draft',detail||'{"items":[]}'::jsonb));
   if created->'record'->>'ref' not like '%-MRF-10000' then raise exception 'Large sequence truncated'; end if;
+  created:=public.request_command(site,jsonb_build_object('type','createDraft','requestId',gen_random_uuid(),'projectId',target,'draft',detail||'{"items":[],"requestDate":"2035-01-01"}'::jsonb));
+  if created->'record'->>'ref' not like '%-MRF-10001' then raise exception 'Sequence reset for another year'; end if;
   foreach signature in array array['public.requests_read(jsonb,uuid)','public.request_command(jsonb,jsonb)'] loop
     if has_function_privilege('anon',signature,'execute') or has_function_privilege('authenticated',signature,'execute') then raise exception 'Request RPC privilege leak'; end if;
   end loop;
