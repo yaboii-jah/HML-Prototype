@@ -56,9 +56,9 @@ The listed order is the default. Record any agreed scope/order revision here and
 
 **Done when:** documentation links/anchors, formatting, scope consistency and whitespace pass; the managed Next.js block remains unchanged; step 3 stays checked; step 4 and every operational unit remain unchecked. Record verification in the tracker before checking 4.0.
 
-Completed 2026-11-03: documentation verification passed and evidence is recorded in the tracker. Unit 4.1 remains explicitly deferred; no operational implementation started.
+Completed 2026-11-03: documentation verification passed and evidence is recorded in the tracker. At that checkpoint 4.1 was deferred; the subsequent implementation authorization supersedes that stop.
 
-## 4.1 Shared MRF Drafts — Planned, Not Started
+## 4.1 Shared MRF Drafts — Manual Acceptance Pending
 
 **User outcome:** assigned Site Personnel can create, save, reopen and collaboratively edit shared MRF drafts across sessions and devices. Implementation was authorized on 2026-11-03 after the grilling interview. It remains unchecked until required acceptance passes.
 
@@ -94,12 +94,24 @@ Completed 2026-11-03: documentation verification passed and evidence is recorded
 
 Completing 4.1 does not make MRF submission, approval or procurement available. Detail 4.2 and subsequent units through their own scoped planning before implementation.
 
+### 4.1 Interview Decisions (2026-11-03)
+
+Retain the flexible Details / Materials / Review draft wizard and explicit Save draft, opening detail after success. Allow zero and partial material rows; supplied quantities are positive decimals, dates valid. New rows start blank; request date defaults to the Philippine date. Unsaved input remains only in the open editor, with leave-page warnings. Conflicts preserve input and require explicit review of saved differences before whole-draft replacement; another intervening save requires another review. Show creator/latest-editor attribution, not a history browser. Before first save show Assigned on save. Manual acceptance uses a retained staging QA project and two assigned Site test accounts; automated audited workflows remain disposable.
+
+### Targeted Manual Review
+
+Automated local, four-job standard CI, disposable SQL/Auth/browser/Realtime/type/concurrency checks and staging parity pass at `43f7f80`. The staging migration is applied and retained-state preservation is verified. Human review must be confirmed by the user; automated success does not check this unit.
+
+Use a clearly named retained staging QA project (for example, `4.1 Manual QA`, code `QA-41`) and two separately provisioned Site Personnel accounts assigned to it. Configure these through the Administrator screens; do not repurpose the retained Administrator, impersonate its session or reset staging. Manually saved QA drafts and their audits remain retained because MRF deletion is unavailable.
+
+1. As Site A, save an incomplete draft, including a partially filled material row. Reopen it in a separate session as Site B; verify the number, saved fields and creator/latest-editor attribution.
+2. Open the same draft for editing in both sessions. Save in A while B has unsaved input. Verify B keeps its input, sees the saved differences and must review before saving. Repeat an intervening save to confirm review is required again.
+3. As Administrator, remove B's assignment while its editor is open. Verify its protected state clears, saving is denied and a fresh sign-in cannot read that project's MRFs.
+
+Record explicit user confirmation for `mrf-shared-drafts`, `mrf-conflict-review` and `mrf-revocation` in the source-bound manual evidence before completing 4.1. The existing foundation recovery review remains separately required by the maintained milestone aggregator. No manual confirmation has yet been recorded for this implementation.
+
 ## Milestone Completion and Documentation Ownership
 
 Keep permanent product responsibilities in the [overview](project-overview.md), system contracts in [architecture](architecture.md), conventions in [code standards](code-standards.md) and execution/verification policy in [workflow rules](ai-workflow-rules.md). Keep current work, dependencies, dated evidence and deferred-suite restoration in the tracker rather than duplicating logs here.
 
 Check checklist step 4 only after all required operational units and whole-operational acceptance pass. Captured email, foundation acceptance or a documentation checkpoint does not establish production readiness. Optional AI/broader document work, styling conversion, company-owned services, verified real email and release rehearsal retain their agreed later boundaries.
-
-### 4.1 Interview Decisions (2026-11-03)
-
-Retain the flexible Details / Materials / Review draft wizard and explicit Save draft, opening detail after success. Allow zero and partial material rows; supplied quantities are positive decimals, dates valid. New rows start blank; request date defaults to the Philippine date. Unsaved input remains only in the open editor, with leave-page warnings. Conflicts preserve input and require explicit review of saved differences before whole-draft replacement; another intervening save requires another review. Show creator/latest-editor attribution, not a history browser. Before first save show Assigned on save. Manual acceptance uses a retained staging QA project and two assigned Site test accounts; automated audited workflows remain disposable.
