@@ -61,7 +61,8 @@ Roles describe responsibilities; the server must still authorize each record and
 - Drafts are shared within the project: currently assigned Site Personnel may collaborate on editing them. Drafts may remain incomplete, without a funded scope or supporting PDF; submission requirements apply when submitting. Printed signatory names do not establish the verified actor's identity or authority.
 - Optional AI-assisted document extraction with human review before submission.
 - Linked request history and clear prerequisites for subsequent departmental actions.
-- Submission requires valid material requirements and one combined supporting PDF containing the source MRF, key plan and work scope, currently limited to 50 MB. Return/correction and reapproval retain linked history; dependent work waits for the required review and archive states.
+- Save a numbered MRF before attaching its supporting PDF. File Upload/Replace/Remove actions save separately from unsaved Details/Materials. Accept one readable, unencrypted PDF up to 50 MiB; staff review that it contains the source MRF, key plan and work scope. Authorized colleagues share the current validated file. Interrupted uploads resume after reselecting the matching local PDF.
+- Submission requires valid material requirements and the combined supporting PDF. Return/correction and reapproval retain linked history; dependent work waits for the required review and archive states. Preserve approved archive versions and document metadata history; obsolete unapproved bytes may be cleaned up safely.
 
 ### Sourcing and Procurement
 

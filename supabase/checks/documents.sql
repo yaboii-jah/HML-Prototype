@@ -6,6 +6,7 @@ declare
   admin_id uuid:=gen_random_uuid(); site_id uuid:=gen_random_uuid(); admin_session uuid:=gen_random_uuid(); site_session uuid:=gen_random_uuid();
   caller uuid; sid uuid; proof jsonb; admin jsonb; site jsonb; project uuid; mrf uuid; draft jsonb; command jsonb; result jsonb;
   folder_job uuid; job uuid; lease uuid; upload_a uuid; upload_b uuid; receipt jsonb; mapping uuid; before_version text; signature text; upload_target uuid;
+  other_project uuid; other_job uuid;
 begin
   foreach signature in array array['public.documents_read(jsonb,uuid,uuid)','public.document_command(jsonb,jsonb)',
     'public.document_transfer(jsonb,uuid,text,uuid,jsonb)','public.document_worker(uuid,text,uuid,jsonb)','public.document_dispatch(uuid)','public.document_file(jsonb,uuid)'] loop
@@ -65,6 +66,27 @@ begin
   if private.documents_read(site,mrf,null)->>'revision'<>'2' then raise exception 'Attachment revision not advanced'; end if;
   begin perform public.document_command(site,jsonb_build_object('type','remove','mrfId',mrf,'operationId',gen_random_uuid(),'expectedRevision','1')); raise exception 'Stale remove accepted'; exception when serialization_failure then null; end;
   if public.document_file(site,upload_a)->>'name'<>'support.pdf' then raise exception 'Current document read failed'; end if;
+  -- Rebind the logged-out Admin for new explicit folder actions.
+  admin_session:=gen_random_uuid(); insert into auth.sessions(id,user_id,created_at,updated_at) values(admin_session,admin_id,now(),now());
+  proof:=private.login_preflight(admin_id::text||'@example.invalid'); perform private.bind_session(admin_id,admin_session,proof->>'revision',proof->>'credential');
+  admin:=admin||jsonb_build_object('sessionId',admin_session,'revision',proof->>'revision');
+  begin perform public.document_command(site,jsonb_build_object('type','setupFolder','projectId',project,'operationId',gen_random_uuid())); raise exception 'Site managed folder'; exception when insufficient_privilege then null; end;
+  job:=(public.document_command(admin,jsonb_build_object('type','setupFolder','projectId',project,'operationId',gen_random_uuid(),'expectedMapping',mapping))->>'jobId')::uuid;
+  receipt:=public.document_worker(job,'claim'); lease:=(receipt->>'lease')::uuid;
+  perform public.document_worker(job,'checkpoint',lease,jsonb_build_object('folderId','sql-new-'||project,'rootId','sql-test-root','name','New SQL destination','verified',true));
+  perform public.document_worker(job,'complete',lease);
+  if (select folder_mapping_id from private.request_documents where id=upload_a)<>mapping or (select folder_mapping_id from private.document_uploads where id=upload_b)<>mapping then raise exception 'Remapping moved existing destinations'; end if;
+  other_project:=(public.project_command(admin,jsonb_build_object('type','createProject','requestId',gen_random_uuid(),'name','Other documents '||gen_random_uuid(),'location','CI','code','D-'||upper(substr(replace(gen_random_uuid()::text,'-',''),1,10)),'budget','0'))->>'projectId')::uuid;
+  select j.id into other_job from private.document_jobs j where j.project_id=other_project and j.kind='folder';
+  receipt:=public.document_worker(other_job,'claim'); lease:=(receipt->>'lease')::uuid;
+  perform public.document_worker(other_job,'checkpoint',lease,jsonb_build_object('folderId','sql-folder-'||project,'rootId','sql-test-root','name','Wrong shared folder','verified',true));
+  begin perform public.document_worker(other_job,'complete',lease); raise exception 'Historical folder reused by another project'; exception when unique_violation then null; end;
+  -- Expired uploads never become current and require an explicit new selection.
+  receipt:=public.document_command(site,command||jsonb_build_object('operationId',gen_random_uuid(),'expectedRevision','2'));
+  upload_target:=(receipt->>'uploadId')::uuid;
+  update private.document_uploads set expires_at=clock_timestamp()-interval '1 second' where id=upload_target;
+  begin perform public.document_transfer(site,upload_target,'claim'); raise exception 'Expired transfer resumed'; exception when sqlstate 'P4202' then null; end;
+  begin perform public.document_command(site,jsonb_build_object('type','resumeUpload','operationId',gen_random_uuid(),'mrfId',mrf,'uploadId',upload_target,'size','10','sha256',repeat('a',64))); raise exception 'Expired upload resumed'; exception when sqlstate 'P4202' then null; end;
   -- A future approved snapshot prevents cleanup forever, even after replacement/removal.
   insert into private.mrf_archive_snapshots(id,request_id,version,source_document,request_version,attachment_revision,snapshot,approved_by,approved_name,approved_at)
     values(gen_random_uuid(),mrf,1,upload_a,1,2,'{}',admin_id,'Documents Admin',now());

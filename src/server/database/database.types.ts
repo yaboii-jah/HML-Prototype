@@ -60,6 +60,128 @@ export type Database = {
                   Relationships: [
 
                   ]
+                },"document_folder_owners": {
+                  Row: {
+                    "folder_id": string,"project_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "folder_id": string,"project_id": string
+                  }
+                  Update: {
+                    "folder_id"?: string,"project_id"?: string
+                  }
+                  Relationships: [
+
+                  ]
+                },"document_jobs": {
+                  Row: {
+                    "actor": NonNullable<Json>,"attempts": number,"checkpoint": NonNullable<Json>,"created_at": string,"dispatch_after": string,"id": string,"kind": string,"lease": string | null,"lease_until": string | null,"message": string | null,"original_actor": NonNullable<Json>,"payload": NonNullable<Json>,"project_id": string,"request_id": string | null,"resource_id": string | null,"state": string,"updated_at": string,"workflow_run_id": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "actor": NonNullable<Json>,"attempts"?: number,"checkpoint"?: NonNullable<Json>,"created_at"?: string,"dispatch_after"?: string,"id"?: string,"kind": string,"lease"?: string | null,"lease_until"?: string | null,"message"?: string | null,"original_actor": NonNullable<Json>,"payload"?: NonNullable<Json>,"project_id": string,"request_id"?: string | null,"resource_id"?: string | null,"state"?: string,"updated_at"?: string,"workflow_run_id"?: string | null
+                  }
+                  Update: {
+                    "actor"?: NonNullable<Json>,"attempts"?: number,"checkpoint"?: NonNullable<Json>,"created_at"?: string,"dispatch_after"?: string,"id"?: string,"kind"?: string,"lease"?: string | null,"lease_until"?: string | null,"message"?: string | null,"original_actor"?: NonNullable<Json>,"payload"?: NonNullable<Json>,"project_id"?: string,"request_id"?: string | null,"resource_id"?: string | null,"state"?: string,"updated_at"?: string,"workflow_run_id"?: string | null
+                  }
+                  Relationships: [
+
+                  ]
+                },"document_operations": {
+                  Row: {
+                    "actor_id": string,"created_at": string,"id": string,"payload": NonNullable<Json>,"result": NonNullable<Json>
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "actor_id": string,"created_at"?: string,"id": string,"payload": NonNullable<Json>,"result": NonNullable<Json>
+                  }
+                  Update: {
+                    "actor_id"?: string,"created_at"?: string,"id"?: string,"payload"?: NonNullable<Json>,"result"?: NonNullable<Json>
+                  }
+                  Relationships: [
+
+                  ]
+                },"document_uploads": {
+                  Row: {
+                    "actor": NonNullable<Json>,"base_revision": number,"created_at": string,"drive_file_id": string | null,"encrypted_session": string | null,"expires_at": string,"folder_mapping_id": string,"id": string,"lease": string | null,"lease_until": string | null,"name": string,"offset_bytes": number,"original_actor": NonNullable<Json>,"request_id": string,"sha256": string,"size": number,"state": string,"uploader_id": string,"uploader_name": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "actor": NonNullable<Json>,"base_revision": number,"created_at"?: string,"drive_file_id"?: string | null,"encrypted_session"?: string | null,"expires_at"?: string,"folder_mapping_id": string,"id": string,"lease"?: string | null,"lease_until"?: string | null,"name": string,"offset_bytes"?: number,"original_actor": NonNullable<Json>,"request_id": string,"sha256": string,"size": number,"state"?: string,"uploader_id": string,"uploader_name": string
+                  }
+                  Update: {
+                    "actor"?: NonNullable<Json>,"base_revision"?: number,"created_at"?: string,"drive_file_id"?: string | null,"encrypted_session"?: string | null,"expires_at"?: string,"folder_mapping_id"?: string,"id"?: string,"lease"?: string | null,"lease_until"?: string | null,"name"?: string,"offset_bytes"?: number,"original_actor"?: NonNullable<Json>,"request_id"?: string,"sha256"?: string,"size"?: number,"state"?: string,"uploader_id"?: string,"uploader_name"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "document_uploads_folder_mapping_id_fkey"
+      columns: ["folder_mapping_id"]
+isOneToOne: false
+      referencedRelation: "project_document_folders"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"mrf_archive_snapshots": {
+                  Row: {
+                    "approved_at": string,"approved_by": string,"approved_name": string,"attachment_revision": number,"created_at": string,"id": string,"request_id": string,"request_version": number,"snapshot": NonNullable<Json>,"source_document": string,"version": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "approved_at": string,"approved_by": string,"approved_name": string,"attachment_revision": number,"created_at"?: string,"id": string,"request_id": string,"request_version": number,"snapshot": NonNullable<Json>,"source_document": string,"version": number
+                  }
+                  Update: {
+                    "approved_at"?: string,"approved_by"?: string,"approved_name"?: string,"attachment_revision"?: number,"created_at"?: string,"id"?: string,"request_id"?: string,"request_version"?: number,"snapshot"?: NonNullable<Json>,"source_document"?: string,"version"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "mrf_archive_snapshots_source_document_fkey"
+      columns: ["source_document"]
+isOneToOne: false
+      referencedRelation: "request_documents"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"mrf_archives": {
+                  Row: {
+                    "completed_at": string,"folder_mapping_id": string,"form_file_id": string,"form_sha256": string,"snapshot_id": string,"supporting_file_id": string,"supporting_sha256": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "completed_at"?: string,"folder_mapping_id": string,"form_file_id": string,"form_sha256": string,"snapshot_id": string,"supporting_file_id": string,"supporting_sha256": string
+                  }
+                  Update: {
+                    "completed_at"?: string,"folder_mapping_id"?: string,"form_file_id"?: string,"form_sha256"?: string,"snapshot_id"?: string,"supporting_file_id"?: string,"supporting_sha256"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "mrf_archives_folder_mapping_id_fkey"
+      columns: ["folder_mapping_id"]
+isOneToOne: false
+      referencedRelation: "project_document_folders"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "mrf_archives_snapshot_id_fkey"
+      columns: ["snapshot_id"]
+isOneToOne: true
+      referencedRelation: "mrf_archive_snapshots"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"project_document_folders": {
+                  Row: {
+                    "created_at": string,"current": boolean,"folder_id": string,"id": string,"name": string,"project_id": string,"root_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"current"?: boolean,"folder_id": string,"id"?: string,"name": string,"project_id": string,"root_id": string
+                  }
+                  Update: {
+                    "created_at"?: string,"current"?: boolean,"folder_id"?: string,"id"?: string,"name"?: string,"project_id"?: string,"root_id"?: string
+                  }
+                  Relationships: [
+
+                  ]
                 },"project_operations": {
                   Row: {
                     "actor_id": string,"created_at": string,"id": string,"payload": NonNullable<Json>,"project_id": string,"result": Json | null
@@ -73,6 +195,46 @@ export type Database = {
                   }
                   Relationships: [
 
+                  ]
+                },"request_document_state": {
+                  Row: {
+                    "current_document": string | null,"request_id": string,"revision": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "current_document"?: string | null,"request_id": string,"revision"?: number
+                  }
+                  Update: {
+                    "current_document"?: string | null,"request_id"?: string,"revision"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "request_document_state_current_document_fkey"
+      columns: ["current_document"]
+isOneToOne: false
+      referencedRelation: "request_documents"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"request_documents": {
+                  Row: {
+                    "created_at": string,"drive_file_id": string,"folder_mapping_id": string,"id": string,"name": string,"request_id": string,"sha256": string,"size": number,"trashed_at": string | null,"uploader_id": string,"uploader_name": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"drive_file_id": string,"folder_mapping_id": string,"id": string,"name": string,"request_id": string,"sha256": string,"size": number,"trashed_at"?: string | null,"uploader_id": string,"uploader_name": string
+                  }
+                  Update: {
+                    "created_at"?: string,"drive_file_id"?: string,"folder_mapping_id"?: string,"id"?: string,"name"?: string,"request_id"?: string,"sha256"?: string,"size"?: number,"trashed_at"?: string | null,"uploader_id"?: string,"uploader_name"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "request_documents_folder_mapping_id_fkey"
+      columns: ["folder_mapping_id"]
+isOneToOne: false
+      referencedRelation: "project_document_folders"
+      referencedColumns: ["id"]
+    }
                   ]
                 },"request_operations": {
                   Row: {
@@ -150,6 +312,30 @@ export type Database = {
 "current_user_authorized":
 { Args: Record<PropertyKey, never>; Returns: boolean
                            },
+"document_actor_snapshot":
+{ Args: { "actor": Json }; Returns: Json
+                           },
+"document_audit":
+{ Args: { "action": string,"actor": Json,"details"?: Json,"operation": string,"target": string }; Returns: undefined
+                           },
+"document_command":
+{ Args: { "actor": Json,"command": Json }; Returns: Json
+                           },
+"document_job_allowed":
+{ Args: { "actor": Json,"kind": string,"target": string }; Returns: boolean
+                           },
+"document_notify":
+{ Args: { "target": string }; Returns: undefined
+                           },
+"document_transfer":
+{ Args: { "action": string,"actor": Json,"lease_id"?: string,"patch"?: Json,"upload_id": string }; Returns: Json
+                           },
+"document_worker":
+{ Args: { "action": string,"job_id": string,"lease_id"?: string,"patch"?: Json }; Returns: Json
+                           },
+"documents_read":
+{ Args: { "actor": Json,"target_project"?: string,"target_request"?: string }; Returns: Json
+                           },
 "foundation_topic":
 { Args: { "revision": number,"target_session": string,"target_user": string }; Returns: string
                            },
@@ -169,6 +355,9 @@ export type Database = {
 { Args: { "actor": Json,"writing"?: boolean }; Returns: string
                            },
 "project_command":
+{ Args: { "actor": Json,"command": Json }; Returns: Json
+                           },
+"project_command_before_documents":
 { Args: { "actor": Json,"command": Json }; Returns: Json
                            },
 "project_history":
@@ -449,6 +638,24 @@ isOneToOne: false
                            },
 "auth_unbind_session":
 { Args: { "target_session": string,"target_user": string }; Returns: undefined
+                           },
+"document_command":
+{ Args: { "actor": Json,"command": Json }; Returns: Json
+                           },
+"document_dispatch":
+{ Args: { "target_project"?: string }; Returns: Json
+                           },
+"document_file":
+{ Args: { "actor": Json,"document_id": string }; Returns: Json
+                           },
+"document_transfer":
+{ Args: { "action": string,"actor": Json,"lease_id"?: string,"patch"?: Json,"upload_id": string }; Returns: Json
+                           },
+"document_worker":
+{ Args: { "action": string,"job_id": string,"lease_id"?: string,"patch"?: Json }; Returns: Json
+                           },
+"documents_read":
+{ Args: { "actor": Json,"target_project"?: string,"target_request"?: string }; Returns: Json
                            },
 "project_command":
 { Args: { "actor": Json,"command": Json }; Returns: Json
