@@ -2,7 +2,7 @@
 
 This document describes the agreed **target architecture** for HML ConstructSync, an internal construction operations system for HML Technologies and Services Inc. It is a guide for the production migration, not a claim that the migration is complete. HML will start with fresh operational records; importing the prototype's browser data is not part of this plan.
 
-The committed prototype remains recoverable in Git. The migration branch implements Supabase sessions, a small protected shell, Administrator account management, shared project/scope setup, protected realtime and shared MRF drafts; consult the tracker for verification. Request register/detail/editor routes now use authoritative draft records. Submission, document/provider endpoints and other operational workflows remain disabled until their designated migrations. Prototype rules and isolated fixtures remain for regression coverage, but demonstration accounts, identity switching and reset/initialization are disconnected from the supported runtime. Production readiness requires the remaining milestones.
+The committed prototype remains recoverable in Git. The migration branch implements Supabase sessions, a small protected shell, Administrator account management, shared projects/scopes, protected realtime, MRF drafts and required supporting files; consult the tracker for verification and the remaining manual gate. Request register/detail/editor and protected MRF document routes use authoritative records. Submission, approval, unmigrated provider endpoints and later operational workflows remain disabled. Prototype rules and isolated fixtures remain for regression coverage, but demonstration accounts, identity switching and reset/initialization are disconnected from the supported runtime. Production readiness requires the remaining milestones.
 
 ## Stack
 
@@ -130,6 +130,7 @@ For local integration testing, copy the repository's [environment template](../.
 | `GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON` | Service-account credentials for the intended Shared Drive configuration. |
 | `GOOGLE_DRIVE_OAUTH_CLIENT_ID`, `GOOGLE_DRIVE_OAUTH_CLIENT_SECRET`, `GOOGLE_DRIVE_OAUTH_REFRESH_TOKEN` | Alternative OAuth configuration for authorized My Drive testing. |
 | `GEMINI_API_KEY`, `GEMINI_MODEL` | Server-side extraction credentials and model configuration. |
+| `WORKFLOW_LOCAL_BASE_URL` | Local callback origin matching the running Next app (normally `http://127.0.0.1:3000`); deployed Vercel execution uses its managed World/deployment identity. |
 
 Use the Drive credential mode appropriate to the environment rather than configuring conflicting identities. Keep credential contents and `.env.local` out of Git and documentation. Restart the local server after changing environment values. These are the current integration settings, not a complete future production environment specification.
 

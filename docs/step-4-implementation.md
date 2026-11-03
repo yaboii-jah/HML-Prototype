@@ -125,6 +125,18 @@ Completed 2026-11-03: explicit confirmation for `mrf-shared-drafts`, `mrf-confli
 
 **Verification:** cover file/header concurrency, cross-record access, revoked sessions/assignments, matching-file resume, corrupt/encrypted rejection, replacements/removal, expiry/restarts/lost acknowledgements, folder validation/remapping, role-specific retries, cleanup safety and archive pair integrity. Exercise the real Workflow runtime with disposable Supabase and loopback fake Drive; preserve browser HTTP/WebSocket/server isolation. Run standard local checks, the four-job CI matrix and disposable SQL/Auth/browser/type/race checks. Apply only reviewed CI-verified migrations to staging, preserving retained state. Run isolated owned real-Drive gateway smoke with verified cleanup; retain manual QA MRFs and their files together. Obtain targeted manual acceptance before checking 4.2. Company-owned service promotion and hosted release rehearsal remain later work.
 
+### 4.2 Targeted Manual Review
+
+Automated local/CI/disposable/real-Drive/staging checks pass at implementation `664053a`; detailed evidence is in the tracker. The staging migration is applied and retained rows are preserved. The user explicitly answered **Not tested yet** on 2026-11-03. These manual checks remain **pending**; do not check 4.2 or reuse older confirmation as new evidence.
+
+Use the retained QA project and two currently assigned Site accounts, restoring an assignment through Administrator screens if the earlier revocation check removed it. Save manual QA MRFs and keep their Drive files with their records; smoke-test cleanup never touches them. Use `http://127.0.0.1:3000` for the local app. Existing projects require explicit folder setup under **Projects → project detail → Document folder**.
+
+1. **Project document folders (`project-document-folders`):** as Administrator/PM, set up the existing QA project's folder; also verify a new QA project creates its folder automatically. Confirm visible status/retry and valid existing-folder linking. Root/outside-root/another-project destinations must be rejected. If changing a mapping after files exist, old files must remain available while new file operations use the new destination.
+2. **Shared files (`mrf-document-sharing`):** as Site A, save an MRF and upload one valid supporting PDF. As Site B in another session, preview/download that same file. Keep unsaved Details/Materials open while uploading, replacing or removing files and verify the text is retained. Select a replacement in B, then change the attachment in A; B must review the current attachment before replacing it.
+3. **Recovery and access (`mrf-document-recovery`):** use a PDF larger than 3 MiB, interrupt/reload during upload, then reselect the matching file and resume. A different file must be rejected. A corrupt/encrypted replacement must leave the previous current file intact. Check the applicable file/folder retry controls; assignment/session revocation must deny further protected file reads/actions. Preserve the retained QA records and files afterward.
+
+Record actual results after the user confirms them. Generated approved MRFs/archive pairs are tested internally; official approval and its archive trigger remain unavailable until 4.3.
+
 ## Milestone Completion and Documentation Ownership
 
 Keep permanent product responsibilities in the [overview](project-overview.md), system contracts in [architecture](architecture.md), conventions in [code standards](code-standards.md) and execution/verification policy in [workflow rules](ai-workflow-rules.md). Keep current work, dependencies, dated evidence and deferred-suite restoration in the tracker rather than duplicating logs here.
