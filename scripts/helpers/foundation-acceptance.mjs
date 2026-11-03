@@ -3,9 +3,9 @@ import { requireCurrentEvidence } from './verification-evidence.mjs';
 export const standardChecks = ['toolchain', 'lint', 'typegen', 'typecheck', 'unit', 'build'];
 export const databaseChecks = ['rollback-sql', 'constraints-auth-data-api', 'types', 'auth-browser-email',
   'request-sql', 'request-races', 'mrf-review-sql', 'document-sql', 'document-races', 'project-races', 'account-races', 'realtime-protocol', 'realtime-races'];
-export const authChecks = ['sessions', 'captured-email', 'accounts', 'projects', 'realtime-browser', 'shell-loading', 'http-roles-renewal', 'request-browser', 'document-browser-workflow', 'isolation'];
+export const authChecks = ['sessions', 'captured-email', 'accounts', 'projects', 'realtime-browser', 'shell-loading', 'http-roles-renewal', 'request-browser', 'document-browser-workflow', 'mrf-review-browser-workflow', 'isolation'];
 export const acceptanceRequirements = {
-  'mrf-submission-review': ['mrf-review-sql'],
+  'mrf-submission-review': ['mrf-review-sql', 'document-races', 'mrf-review-browser-workflow'],
   'required-mrf-documents': ['document-sql', 'document-races', 'document-browser-workflow'],
   'shared-mrf-drafts': ['request-sql', 'request-browser', 'request-races'],
   'invitation-recovery': ['captured-email', 'accounts'],
