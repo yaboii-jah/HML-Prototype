@@ -30,7 +30,7 @@ The listed order is the default. Record any agreed scope/order revision here and
 | Unit | Verified | Outcome and key prerequisite |
 | --- | --- | --- |
 | **4.0 Record the plan** | [x] | Record this roadmap, the 4.1 specification, ownership/reading pointers and the current stop before implementation. |
-| **4.1 Shared MRF drafts** | [ ] | Restore register, draft editor and detail views with authoritative storage and transactional numbering; depends on the completed foundation and 4.0. |
+| **4.1 Shared MRF drafts** | [x] | Restore register, draft editor and detail views with authoritative storage and transactional numbering; depends on the completed foundation and 4.0. |
 | **4.2 Required MRF documents** | [ ] | Protected supporting-PDF handling, required project-folder operations and retryable archive processing for migrated MRFs. |
 | **4.3 MRF submission and review** | [ ] | Submission, PM approval/return/rejection, corrections and permanent-identity self-approval prevention; requires verified document gates from 4.2. |
 | **4.4 Supplier directory** | [ ] | Shared supplier records and authorized maintenance. |
@@ -58,9 +58,9 @@ The listed order is the default. Record any agreed scope/order revision here and
 
 Completed 2026-11-03: documentation verification passed and evidence is recorded in the tracker. At that checkpoint 4.1 was deferred; the subsequent implementation authorization supersedes that stop.
 
-## 4.1 Shared MRF Drafts — Manual Acceptance Pending
+## 4.1 Shared MRF Drafts — Complete
 
-**User outcome:** assigned Site Personnel can create, save, reopen and collaboratively edit shared MRF drafts across sessions and devices. Implementation was authorized on 2026-11-03 after the grilling interview. It remains unchecked until required acceptance passes.
+**User outcome:** assigned Site Personnel can create, save, reopen and collaboratively edit shared MRF drafts across sessions and devices. Implementation was authorized on 2026-11-03 after the grilling interview. Verified complete on 2026-11-03 after all required automated and user-confirmed manual acceptance passed.
 
 ### Screens and Access
 
@@ -100,7 +100,7 @@ Retain the flexible Details / Materials / Review draft wizard and explicit Save 
 
 ### Targeted Manual Review
 
-Automated local, four-job standard CI, disposable SQL/Auth/browser/Realtime/type/concurrency checks and staging parity pass at `43f7f80`. The staging migration is applied and retained-state preservation is verified. Human review must be confirmed by the user; automated success does not check this unit.
+Automated local, four-job standard CI, disposable SQL/Auth/browser/Realtime/type/concurrency checks and staging parity pass at `43f7f80`. The staging migration is applied and retained-state preservation is verified. The user explicitly confirmed that all three manual checks below passed. Source-bound combined acceptance passed on 2026-11-03; 4.1 is complete. Step 4 remains open.
 
 Use a clearly named retained staging QA project (for example, `4.1 Manual QA`, code `QA-41`) and two separately provisioned Site Personnel accounts assigned to it. Configure these through the Administrator screens; do not repurpose the retained Administrator, impersonate its session or reset staging. Manually saved QA drafts and their audits remain retained because MRF deletion is unavailable.
 
@@ -108,7 +108,7 @@ Use a clearly named retained staging QA project (for example, `4.1 Manual QA`, c
 2. Open the same draft for editing in both sessions. Save in A while B has unsaved input. Verify B keeps its input, sees the saved differences and must review before saving. Repeat an intervening save to confirm review is required again.
 3. As Administrator, remove B's assignment while its editor is open. Verify its protected state clears, saving is denied and a fresh sign-in cannot read that project's MRFs.
 
-Record explicit user confirmation for `mrf-shared-drafts`, `mrf-conflict-review` and `mrf-revocation` in the source-bound manual evidence before completing 4.1. The existing foundation recovery review remains separately required by the maintained milestone aggregator. No manual confirmation has yet been recorded for this implementation.
+Completed 2026-11-03: explicit confirmation for `mrf-shared-drafts`, `mrf-conflict-review` and `mrf-revocation` is recorded in the source-bound manual evidence. The original foundation recovery attestation is preserved with its original date and provenance; its reviewed file hash remains byte-identical. The combined acceptance report passes. Detailed evidence is in the tracker.
 
 ## Milestone Completion and Documentation Ownership
 
