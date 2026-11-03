@@ -137,9 +137,9 @@ Use the retained QA project and two currently assigned Site accounts, restoring 
 
 Record actual results after the user confirms them. Generated approved MRFs/archive pairs are tested internally; official approval and its archive trigger remain unavailable until 4.3.
 
-## 4.3 MRF Submission and Review — Authorized
+## 4.3 MRF Submission and Review — Manual Acceptance Pending
 
-The finalized interview plan is authorized for implementation. Keep the editor layout redesign in step 6. Add atomic Save and submit on saved numbered MRFs, checking header and attachment versions; require complete requirements, funded scope and a validated PDF, with unfinished uploads completed or explicitly cancelled. Freeze project/form labels and source identity at submission. Submitted fields/files lock; no withdrawal. Preserve dirty collaborator input but require conflict review after a return. Saving returned edits retains Returned.
+Implementation `36a4857` passes local, four-job CI, disposable integration, real-Drive and staging parity checks. The reviewed migration is applied to staging with retained data preserved. Targeted manual acceptance below remains pending; 4.3 stays unchecked. Keep the editor layout redesign in step 6. Add atomic Save and submit on saved numbered MRFs, checking header and attachment versions; require complete requirements, funded scope and a validated PDF, with unfinished uploads completed or explicitly cancelled. Freeze project/form labels and source identity at submission. Submitted fields/files lock; no withdrawal. Preserve dirty collaborator input but require conflict review after a return. Saving returned edits retains Returned.
 
 Any assigned Site user may resubmit. Record each permanent submitter and block every historical submitter from approval after any role change; authorized PM return/rejection remains allowed. PM reviews exact submissions; reasons require five trimmed characters. Initial rejection is terminal. Add register filters and compact detail timeline.
 

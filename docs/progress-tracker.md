@@ -10,7 +10,7 @@ Update this file after every meaningful implementation or documentation change a
 
 ## Current Goal
 
-- **4.3 is authorized and implementation has started** under the finalized nine-decision interview plan. First closeout: recorded the user’s explicit All three passed for 4.2 with inherited evidence preserved; combined milestone acceptance passes before any 4.3 code changes. Next: checked lifecycle/submission/review/correction commands, archive integration, supported UI and verification. Editor layout redesign remains step 6.
+- Unit **4.3 is implemented and verified automatically at `36a4857`; targeted manual acceptance remains pending**. Submission/review, permanent-identity self-approval prevention, correction controls, approved archive pairs and private historical retrieval are available at `http://127.0.0.1:3000`. Staging migration/parity and retained-state preservation pass. [Draft PR #31](https://github.com/yaboii-jah/HML-Prototype/pull/31) is unmerged. Editor layout redesign remains step 6.
 
 
 ## Completed
@@ -53,7 +53,7 @@ Update this file after every meaningful implementation or documentation change a
 
 ## In Progress
 
-- **4.3:** lifecycle, archive integration, timeline and correction controls are implemented in [draft PR #31](https://github.com/yaboii-jah/HML-Prototype/pull/31). First local lint/types/399 existing tests/build and four-job standard CI pass at `e1de566`. Disposable SQL and existing integrations also pass there; its expected generated-type mismatch was imported. Expanded real-action browser and observed-lock race checks are running at `4bf5c9f`; three new focused projection tests pass. Staging migration and human 4.3 acceptance remain pending. Preserve the untracked private account file; no merge/production action.
+- **4.3:** waiting only for explicit confirmation of the [three manual-review groups](step-4-implementation.md#43-targeted-manual-review). Automated acceptance is complete; preserve retained QA MRFs/files and accounts. No 4.3 human success is inferred.
 
 
 
@@ -68,7 +68,7 @@ Update this file after every meaningful implementation or documentation change a
 
 Use the [production checklist](checklist.md#steps) for the ordered milestones and their completion conditions.
 
-- **Exact next action:** finish the expanded 4.3 disposable/standard verification, resolve any failures, then apply only the CI-verified migration to staging with retained-state checks and obtain the three 4.3 manual confirmations.
+- **Exact next action:** obtain actual results for submission/review, approved archives and corrections/history; preserve earlier human attestations, record the new confirmation against `36a4857`, then rerun combined acceptance before checking 4.3. Later units, merge and production remain separate.
 - Follow the guide's dependencies and completion criteria. The prototype's role switch currently selects another account, and its approval commands do not enforce the target permanent-user self-approval restriction. Preserve the documented target rules; verify approval enforcement with the migrated workflows in step 4.
 - Retain local Node 26.12.1, the Vercel Node 24.x target, CI baseline 24.22.1 and npm 11.20.0 across environments. Hosted deployment verification belongs to the later protected rehearsal.
 - Work foundations first: individual identity, shared records and server authorization before business-workflow migration. Tailwind remains a separate track.
@@ -121,6 +121,10 @@ The [architecture document](architecture.md) is the detailed source of truth. Ke
 | Private realtime signals and current authorized reads | Open permitted views update automatically; access-revision topics and session checks keep notifications independent from authority. |
 
 ## Session Notes
+
+- **4.3 automated/staging verification, 2026-11-03, implementation `36a4857`:** local lint/type generation/TypeScript/**402 unit/API tests**/Webpack build/public-browser checks pass. [All four standard jobs](https://github.com/yaboii-jah/HML-Prototype/actions/runs/41666223275) and [complete disposable integration](https://github.com/yaboii-jah/HML-Prototype/actions/runs/41666223458) pass with matching source/migration hashes and generated types. Coverage includes real application submission/PM return/approval, retained dirty collaborator input, provider archive failure/PM retry, exact private PDF/Range retrieval, full corrections and retained versions. Rollback SQL also covers every historical submitter after role changes, funded-scope checks, document-only correction exceptions and terminal rejection. Observed-lock retries, competing PM decisions, attachment changes and revocation pass at both isolation levels. Desktop/375px captures were reviewed; layout redesign remains step 6.
+- **4.3 live/staging closeout:** isolated real-Drive gateway smoke passed and verified ownership-scoped trash; retained QA files were excluded. Preview contained only `20261103143335_mrf_submission_review.sql`; applied after exact passing CI evidence. Every pre-existing record hash, Auth count, profile/access revision and guard remains unchanged after DDL, ignoring only the new default lifecycle columns in the before/after comparison. Complete staging migration/Auth/types/rollback/private-Realtime parity passed with no email and retained state unchanged. Canonical local origin matches and sign-in returns 200. The source-bound combined gate awaits new human confirmation; 4.3 remains unchecked. Updated overview, architecture, workflow rules, checklist, guide, tracker and README; code standards need no change. No merge or production action.
+- **4.3 review findings:** advisors report 20 deliberate [private RLS-without-policy INFO notices](https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy), three inherited [unindexed-FK INFO findings](https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys), 19 [unused-index INFO notices](https://supabase.com/docs/guides/database/database-linter?lint=0005_unused_index), and the existing [leaked-password-protection warning](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection). New FKs have covering indexes; no grant weakening, unrelated cleanup or paid upgrade. Earlier failed runs remain failures: initial generated-type mismatch, textarea setter misuse, and control-readiness timing. Corrected the native textarea setter and bounded waits without relaxing assertions. The untracked private account document remains excluded from commits.
 
 - **4.3 implementation checkpoint, 2026-11-03:** user finalized all nine interview decisions and authorized execution. The 4.2 source-bound combined gate passed after recording the explicit All three passed response with inherited 4.1/recovery provenance preserved. Branch `feat/step-4-mrf-review` and draft PR #31 retain unmerged lineage. Initial four-job standard run 41656665643 passes; disposable run 41656665366 passed lifecycle SQL and existing integration checks, then stopped at generated type consistency. Imported its generated types; expanded browser/Workflow/race coverage is being verified. This is not 4.3 completion.
 
