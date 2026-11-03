@@ -59,12 +59,35 @@ begin
   begin delete from public.scopes where id=scope_a; raise exception 'Referenced scope deleted'; exception when foreign_key_violation then null; end;
   begin delete from public.projects where id=target; raise exception 'Referenced project deleted'; exception when foreign_key_violation then null; end;
   begin
-    perform public.request_command(site,jsonb_build_object('type','createDraft','requestId',gen_random_uuid(),'projectId',target,'draft',detail));
+    perform public.request_command(site,jsonb_build_object('type','createDraft','requestId',gen_random_uuid(),'projectId',target,'draft',detail||'{"items":[]}'::jsonb));
     raise exception 'Rollback sentinel' using errcode='P4101';
   exception when sqlstate 'P4101' then null; end;
   if (select last_value from private.document_counters where project_id=target)<>1 then raise exception 'Rollback consumed number'; end if;
+  -- Invalid supplied values must fail without consuming numbers or effects.
+  begin
+    perform public.request_command(site,jsonb_build_object('type','createDraft','requestId',gen_random_uuid(),'projectId',target,'draft',jsonb_set(detail,'{items,0,quantity}','"0"')));
+    raise exception 'Zero quantity accepted';
+  exception when check_violation then null; end;
+  begin
+    perform public.request_command(site,jsonb_build_object('type','createDraft','requestId',gen_random_uuid(),'projectId',target,'draft',detail||'{"requestDate":"2026-02-29"}'));
+    raise exception 'Invalid date accepted';
+  exception when check_violation then null; end;
+  begin
+    perform public.request_command(site,jsonb_build_object('type','createDraft','requestId',gen_random_uuid(),'projectId',target,'draft',detail||jsonb_build_object('scopeId',gen_random_uuid())));
+    raise exception 'Foreign scope accepted';
+  exception when check_violation then null; end;
+  begin update public.material_requests set creator_name='Forged' where id=extra; raise exception 'Creator rewritten'; exception when check_violation then null; end;
+  begin update public.material_requests set ref='Forged' where id=extra; raise exception 'Number rewritten'; exception when check_violation then null; end;
+  begin delete from public.material_requests where id=extra; raise exception 'MRF deleted'; exception when check_violation then null; end;
+  if (select last_value from private.document_counters where project_id=target)<>1 then raise exception 'Rejected values consumed number'; end if;
+  update private.document_counters set last_value=9999 where project_id=target;
+  created:=public.request_command(site,jsonb_build_object('type','createDraft','requestId',gen_random_uuid(),'projectId',target,'draft',detail||'{"items":[]}'::jsonb));
+  if created->'record'->>'ref' not like '%-MRF-10000' then raise exception 'Large sequence truncated'; end if;
   foreach signature in array array['public.requests_read(jsonb,uuid)','public.request_command(jsonb,jsonb)'] loop
     if has_function_privilege('anon',signature,'execute') or has_function_privilege('authenticated',signature,'execute') then raise exception 'Request RPC privilege leak'; end if;
+  end loop;
+  foreach signature in array array['public.material_requests','public.material_request_items'] loop
+    if has_table_privilege('anon',signature,'select') or has_table_privilege('authenticated',signature,'insert') or has_table_privilege('authenticated',signature,'update') or has_table_privilege('authenticated',signature,'delete') then raise exception 'Request table privilege leak'; end if;
   end loop;
   delete from private.session_bindings b where b.session_id=site_session;
   begin perform public.request_command(site,command); raise exception 'Revoked retry returned data'; exception when insufficient_privilege then null; end;

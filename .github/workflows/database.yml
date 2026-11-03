@@ -38,5 +38,6 @@ jobs:
             .verification/browser-startup.json
             .verification/foundation-acceptance.json
             .verification/foundation-shell-*.png
+            .verification/request-*.png
           include-hidden-files: true
           retention-days: 7

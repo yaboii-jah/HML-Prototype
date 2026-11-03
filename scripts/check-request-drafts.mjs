@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
+import { writeFile } from 'node:fs/promises';
 
 /** Real accounts and ordinary browser saves; disposable CI only. */
 export async function checkRequestDrafts({ browser, second, client, login, logout, sql }) {
@@ -40,6 +41,12 @@ export async function checkRequestDrafts({ browser, second, client, login, logou
   assert.match(await second.run('return document.body.innerText'), /My preserved input/);
   await browser.navigate(`/requests/${id}`);
   assert.match(await browser.run('return document.body.innerText'), /My preserved input/);
+  for (const width of [1440, 375]) {
+    await browser.call('Emulation.setDeviceMetricsOverride', { width, height: 900, deviceScaleFactor: 1, mobile: width === 375 });
+    const screenshot = await browser.call('Page.captureScreenshot', { format: 'png' });
+    await writeFile(`.verification/request-detail-${width}.png`, Buffer.from(screenshot.data, 'base64'));
+  }
+  await browser.call('Emulation.clearDeviceMetricsOverride');
   await sql(`delete from public.project_assignments where user_id='${staff[1].id}' and project_id='${project}';`);
   assert.equal(await second.run("return (await fetch('/api/foundation/view?view=requests')).status"), 401);
   await logout(browser);

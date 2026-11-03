@@ -7,6 +7,7 @@ import { saveMrfDraftAction } from "@/app/(workspace)/requests/actions";
 import { useFoundationRealtime } from "@/src/app-state/FoundationRealtime";
 import { Register } from "@/src/components/ui/Register";
 import { Field, InlineError, PageHeader } from "@/src/components/ui/Primitives";
+import { MaterialDetailsRow, MaterialDetailsTrigger } from "@/src/components/ui/MaterialDetails";
 import { RecordModal } from "@/src/components/ui/RecordModal";
 import { detailFields, emptyMrfDraft, materialFields, type DraftCommand, type DraftMaterial, type MrfDraft, type RequestView, type SavedMrf } from "@/src/domain/requests/drafts";
 
@@ -64,7 +65,7 @@ function MaterialList({ items, edit, remove, move }: { items: DraftMaterial[]; e
   const item = items.find(item => item.id === selected);
   return <><Register embedded rows={items} unit="materials" empty="No materials added. A draft can be saved without materials."
     headers={<><th scope="col">Material</th><th scope="col">Quantity</th><th scope="col">Unit</th><th scope="col">Date needed</th>{edit && <th scope="col">Actions</th>}</>}
-    renderRow={(item) => <tr key={item.id}><td><button className="text-link" type="button" onClick={() => edit ? edit(item.id) : setSelected(item.id)}>{shown(item.name)}</button></td><td>{shown(item.quantity)}</td><td>{shown(item.unit)}</td><td>{shown(item.neededDate)}</td>{edit && <td><button type="button" className="button secondary" onClick={() => edit(item.id)}>Edit</button><button type="button" className="button secondary" onClick={() => remove?.(item.id)}>Remove</button><button type="button" className="button secondary" aria-label={`Move ${shown(item.name)} up`} disabled={items[0]?.id === item.id} onClick={() => move?.(item.id, -1)}>Up</button><button type="button" className="button secondary" aria-label={`Move ${shown(item.name)} down`} disabled={items.at(-1)?.id === item.id} onClick={() => move?.(item.id, 1)}>Down</button></td>}</tr>} />
+    renderRow={(item) => <MaterialDetailsRow key={item.id} onOpen={() => edit ? edit(item.id) : setSelected(item.id)}><td><MaterialDetailsTrigger onClick={() => edit ? edit(item.id) : setSelected(item.id)}>{shown(item.name)}</MaterialDetailsTrigger></td><td>{shown(item.quantity)}</td><td>{shown(item.unit)}</td><td>{shown(item.neededDate)}</td>{edit && <td><button type="button" className="button secondary" onClick={() => edit(item.id)}>Edit</button><button type="button" className="button secondary" onClick={() => remove?.(item.id)}>Remove</button><button type="button" className="button secondary" aria-label={`Move ${shown(item.name)} up`} disabled={items[0]?.id === item.id} onClick={() => move?.(item.id, -1)}>Up</button><button type="button" className="button secondary" aria-label={`Move ${shown(item.name)} down`} disabled={items.at(-1)?.id === item.id} onClick={() => move?.(item.id, 1)}>Down</button></td>}</MaterialDetailsRow>} />
     <RecordModal open={!!item} title={shown(item?.name)} onClose={() => setSelected(null)}>{item && <dl className="detail-grid">{materialFields.map(key => <div key={key}><dt>{labels[key]}</dt><dd>{shown(item[key])}</dd></div>)}</dl>}</RecordModal>
   </>;
 }
