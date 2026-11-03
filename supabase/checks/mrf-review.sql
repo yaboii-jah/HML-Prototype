@@ -103,6 +103,18 @@ begin
   saved:=public.request_command(site,jsonb_build_object('type','submitMrf','requestId',gen_random_uuid(),'mrfId',mrf,'expectedVersion',saved->>'version','draft',form,'attachmentRevision','2'))->'record';
   saved:=public.request_command(manager,jsonb_build_object('type','reviewMrf','requestId',gen_random_uuid(),'mrfId',mrf,'expectedVersion',saved->>'version','submissionId',saved->>'submissionId','decision','approve'))->'record';
   if (select count(*) from private.mrf_archive_snapshots where request_id=mrf)<>3 then raise exception 'Approval history lost'; end if;
+  -- Initial rejection is terminal, unlike correction returns.
+  update public.scope_budgets set amount=100 where scope_id=scope;
+  saved:=public.request_command(site,jsonb_build_object('type','createDraft','requestId',gen_random_uuid(),'projectId',project,'draft',form||jsonb_build_object('items',jsonb_build_array((form->'items'->0)||jsonb_build_object('id',gen_random_uuid())))))->'record';
+  mrf:=(saved->>'id')::uuid; document:=gen_random_uuid(); form:=saved->'draft';
+  insert into private.request_documents(id,request_id,folder_mapping_id,drive_file_id,name,size,sha256,uploader_id,uploader_name)
+    values(document,mrf,mapping,'reject-file-'||document,'reject.pdf',10,repeat('a',64),site_b,'Fixture');
+  insert into private.request_document_state values(mrf,1,document);
+  saved:=public.request_command(site,jsonb_build_object('type','submitMrf','requestId',gen_random_uuid(),'mrfId',mrf,'expectedVersion',saved->>'version','draft',form,'attachmentRevision','1'))->'record';
+  saved:=public.request_command(manager,jsonb_build_object('type','reviewMrf','requestId',gen_random_uuid(),'mrfId',mrf,'expectedVersion',saved->>'version','submissionId',saved->>'submissionId','decision','reject','reason','Rejected requirement'))->'record';
+  if saved->>'status'<>'rejected' then raise exception 'Rejection missing'; end if;
+  begin perform public.request_command(site,jsonb_build_object('type','saveDraft','requestId',gen_random_uuid(),'mrfId',mrf,'expectedVersion',saved->>'version','draft',form)); raise exception 'Rejected request edited'; exception when sqlstate 'P4301' then null; end;
+  begin perform public.request_command(procurement,jsonb_build_object('type','openCorrection','requestId',gen_random_uuid(),'mrfId',mrf,'expectedVersion',saved->>'version','reason','Reopen rejected')); raise exception 'Rejected request reopened'; exception when sqlstate 'P4307' then null; end;
   if has_table_privilege('service_role','private.mrf_submissions','insert') or has_function_privilege('authenticated','public.document_source_file(jsonb,uuid)','execute') then raise exception 'Private history leak'; end if;
 end $$;
 rollback;

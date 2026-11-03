@@ -63,6 +63,8 @@ Roles describe responsibilities; the server must still authorize each record and
 - Linked request history and clear prerequisites for subsequent departmental actions.
 - Save a numbered MRF before attaching its supporting PDF. File Upload/Replace/Remove actions save separately from unsaved Details/Materials. Accept one readable, unencrypted PDF up to 50 MiB; staff review that it contains the source MRF, key plan and work scope. Authorized colleagues share the current validated file. Interrupted uploads resume after reselecting the matching local PDF.
 - Submission requires valid material requirements and the combined supporting PDF. Return/correction and reapproval retain linked history; dependent work waits for the required review and archive states. Preserve approved archive versions and document metadata history; obsolete unapproved bytes may be cleaned up safely.
+- Save and submit commits the form and submission together. Submitted work locks until a PM decision; returned work remains Returned while assigned Site colleagues edit it. Rejection is terminal. Every person who has submitted the MRF remains barred from approving it after role changes. Submitted project labels remain frozen for review and the approved PDF.
+- A compact review timeline identifies submissions, reasons, decisions and corrections. PM approval starts archiving; current archive completion gates procurement. Procurement may reopen a fully archived approval for correction. Once downstream records exist, corrections change supporting PDFs only; PM reapproval creates another retained archive version.
 
 ### Sourcing and Procurement
 

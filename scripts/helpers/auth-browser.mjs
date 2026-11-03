@@ -133,7 +133,7 @@ export async function authBrowser(base, { startupTimeoutMs = 30000, onLaunch, su
       throw Error('Expected browser state did not appear: ' + await run('return document.body.innerText.slice(-500)') + '; recent action origins: ' + JSON.stringify(recentRequests));
     };
     const navigate = async route => { await navigateDocument(call, base + route); await wait("return !!document.querySelector('h1,h2')"); };
-    const fill = async (selector, value) => run(`const el=document.querySelector(${JSON.stringify(selector)});if(!el)throw Error('Input missing');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(el,${JSON.stringify(value)});el.dispatchEvent(new Event('input',{bubbles:true}));`);
+    const fill = async (selector, value) => run(`const el=document.querySelector(${JSON.stringify(selector)});if(!el)throw Error('Input missing');const prototype=el instanceof HTMLTextAreaElement?HTMLTextAreaElement.prototype:HTMLInputElement.prototype;Object.getOwnPropertyDescriptor(prototype,'value').set.call(el,${JSON.stringify(value)});el.dispatchEvent(new Event('input',{bubbles:true}));`);
     const click = async selector => run(`const el=document.querySelector(${JSON.stringify(selector)});if(!el)throw Error('Control missing');el.click();`);
     return { run, wait, navigate, fill, click, call, close, discoveryMs: Date.now() - startupStarted,
       assertIsolated: () => assert.deepEqual(violations, [], 'Browser made no external HTTP/WebSocket requests') };

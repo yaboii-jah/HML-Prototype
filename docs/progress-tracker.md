@@ -12,7 +12,6 @@ Update this file after every meaningful implementation or documentation change a
 
 - **4.3 is authorized and implementation has started** under the finalized nine-decision interview plan. First closeout: recorded the user’s explicit All three passed for 4.2 with inherited evidence preserved; combined milestone acceptance passes before any 4.3 code changes. Next: checked lifecycle/submission/review/correction commands, archive integration, supported UI and verification. Editor layout redesign remains step 6.
 
-- Historical pre-closeout status: unit **4.2 implementation is verified automatically at `664053a` and awaits targeted manual acceptance**. Local 399 tests/build/browser checks, all four CI jobs, disposable SQL/Auth/browser/Workflow/race/Realtime checks, real-Drive smoke/cleanup and staging parity pass. The migration is applied with retained rows preserved. The [three manual checks](step-4-implementation.md#42-targeted-manual-review) are the remaining gate; 4.2 stays unchecked. [Draft PR #30](https://github.com/yaboii-jah/HML-Prototype/pull/30) remains unmerged; 4.3 and production promotion are separate actions.
 
 ## Completed
 
@@ -54,7 +53,7 @@ Update this file after every meaningful implementation or documentation change a
 
 ## In Progress
 
-- **Historical 4.2 pending state (superseded by closeout above):** awaiting the user's manual review of shared files, recovery/conflicts and project folders. The implementation and staging migration are ready for testing through the local app at `http://127.0.0.1:3000`. Preserve retained QA records/files and accounts. Draft PRs #29/#30 remain unmerged; approval triggers remain 4.3.
+- **4.3:** lifecycle, archive integration, timeline and correction controls are implemented in [draft PR #31](https://github.com/yaboii-jah/HML-Prototype/pull/31). First local lint/types/399 existing tests/build and four-job standard CI pass at `e1de566`. Disposable SQL and existing integrations also pass there; its expected generated-type mismatch was imported. Expanded real-action browser and observed-lock race checks are running at `4bf5c9f`; three new focused projection tests pass. Staging migration and human 4.3 acceptance remain pending. Preserve the untracked private account file; no merge/production action.
 
 
 
@@ -69,7 +68,7 @@ Update this file after every meaningful implementation or documentation change a
 
 Use the [production checklist](checklist.md#steps) for the ordered milestones and their completion conditions.
 
-- **Superseded 4.2 next action:** obtain explicit results for the three 4.2 manual checks, record actual confirmation with provenance, then rerun combined acceptance before checking 4.2. The combined runner has verified preceding local/CI/staging evidence and stops at the stale/missing current manual report. Preserve earlier manual attestations; do not manufacture confirmation or infer authorization for 4.3, merge or production.
+- **Exact next action:** finish the expanded 4.3 disposable/standard verification, resolve any failures, then apply only the CI-verified migration to staging with retained-state checks and obtain the three 4.3 manual confirmations.
 - Follow the guide's dependencies and completion criteria. The prototype's role switch currently selects another account, and its approval commands do not enforce the target permanent-user self-approval restriction. Preserve the documented target rules; verify approval enforcement with the migrated workflows in step 4.
 - Retain local Node 26.12.1, the Vercel Node 24.x target, CI baseline 24.22.1 and npm 11.20.0 across environments. Hosted deployment verification belongs to the later protected rehearsal.
 - Work foundations first: individual identity, shared records and server authorization before business-workflow migration. Tailwind remains a separate track.
@@ -122,6 +121,8 @@ The [architecture document](architecture.md) is the detailed source of truth. Ke
 | Private realtime signals and current authorized reads | Open permitted views update automatically; access-revision topics and session checks keep notifications independent from authority. |
 
 ## Session Notes
+
+- **4.3 implementation checkpoint, 2026-11-03:** user finalized all nine interview decisions and authorized execution. The 4.2 source-bound combined gate passed after recording the explicit All three passed response with inherited 4.1/recovery provenance preserved. Branch `feat/step-4-mrf-review` and draft PR #31 retain unmerged lineage. Initial four-job standard run 41656665643 passes; disposable run 41656665366 passed lifecycle SQL and existing integration checks, then stopped at generated type consistency. Imported its generated types; expanded browser/Workflow/race coverage is being verified. This is not 4.3 completion.
 
 - **Staging QA password rotation, 2026-11-03:** at the user's explicit request, set separate new temporary passwords for the two existing Site QA identities (Mary/Trisha). Verified both through real password sign-in and closed verification sessions. Current role grants and project assignments match their pre-reset values. Password values are supplied only in the conversation and are not stored in source or documentation. Manual 4.2 acceptance remains pending; the user's reported existing-project folder origin error still needs investigation.
 
