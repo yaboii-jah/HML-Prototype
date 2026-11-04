@@ -161,8 +161,8 @@ begin
     select j.* into job from private.quotation_jobs j join private.quotation_files f on f.id=j.file_id where j.id=(command->>'jobId')::uuid and f.quote_id=target for update of j;
     if not found or job.state not in('failed','paused') then raise exception 'Choose a failed job' using errcode='23514'; end if;
     if job.kind='validate' and q.state<>'draft' then raise exception 'Reopen the draft first' using errcode='23514'; end if;
-    if job.kind='validate' and not exists(select 1 from private.quotation_files f join private.quotation_groups g on g.id=f.group_id
-      where f.id=job.file_id and g.state='uploading') then raise exception 'Original group is closed' using errcode='23514'; end if;
+    if job.kind='validate' and not exists(select 1 from private.quotation_files f join private.quotation_groups pending_group on pending_group.id=f.group_id
+      where f.id=job.file_id and pending_group.state='uploading') then raise exception 'Original group is closed' using errcode='23514'; end if;
     update private.quotation_jobs set actor=snapshot,state='pending',lease=null,lease_until=null,dispatched_at=null,message=null where id=job.id;
     update private.quotation_groups set actor=snapshot where id=(select f.group_id from private.quotation_files f where f.id=job.file_id);
     result:=jsonb_build_object('quoteId',target,'jobId',job.id);
