@@ -35,6 +35,8 @@ The listed order is the default. Record any agreed scope/order revision here and
 | **4.3 MRF submission and review** | [x] | Submission, PM approval/return/rejection, corrections and permanent-identity self-approval prevention; requires verified document gates from 4.2. |
 | **4.4 Supplier directory** | [x] | Completed 2026-11-04 at `480311b`: shared records/maintenance pass automated, staging, all three manual groups and combined acceptance. |
 | **4.5 Manual quotations** | [ ] | Split into 4.5a capture/source review/originals and 4.5b policy-dependent financial finalization/formal business revisions. Parent remains open until both pass. |
+| **4.5a Capture and originals** | [ ] | Implemented at `26305c3`; automated/staging checks pass. Awaiting the three new human confirmations and combined acceptance. |
+| **4.5b Financial finalization** | [ ] | Requires applicable company-policy decisions before calculations, finalization and immutable business revisions; not authorized by 4.5a. |
 | **4.6 Shared demand allocation** | [ ] | One authoritative demand limit shared by purchases, suitability holds and transfer allocations; based on approved MRF requirements. |
 | **4.7 Stock ledger and reservations** | [ ] | Shared stock availability and reservation rules before enabling competing inventory consumers. |
 | **4.8 Awards and PO drafts** | [ ] | Supplier awards, split purchasing and PO preparation using verified quotation archives and the shared demand rules. |
@@ -178,7 +180,7 @@ Use retained QA records and separately provisioned Procurement/read-only account
 2. **Conflict recovery (`supplier-conflict-recovery`):** edit the same supplier in two Procurement sessions. Save in one while the other retains unsaved input; verify saved differences and explicit review before replacement. Repeat an intervening change. Verify access revocation denies reads/saves and clears protected input.
 3. **Status/history (`supplier-status-history`):** deactivate with a reason; verify the default active register excludes it and the inactive filter finds it. A duplicate name remains blocked with an existing-record link. Edit/reactivate it and verify reasons, actor/role/time and field differences remain visible.
 
-## 4.5a Manual Quotation Capture and Originals - In Implementation
+## 4.5a Manual Quotation Capture and Originals - Manual Review Pending
 
 Authorized 2026-11-04 after the user locked all interview decisions. Overall 4.5 stays open; 4.5b requires applicable company-policy confirmation before financial calculations/finalization and formal business revisions. AI remains step 5; comparisons, awards and POs remain later units.
 
