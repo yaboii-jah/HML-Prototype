@@ -33,7 +33,7 @@ The listed order is the default. Record any agreed scope/order revision here and
 | **4.1 Shared MRF drafts** | [x] | Restore register, draft editor and detail views with authoritative storage and transactional numbering; depends on the completed foundation and 4.0. |
 | **4.2 Required MRF documents** | [x] | Protected supporting-PDF handling, required project-folder operations and retryable archive processing for migrated MRFs. |
 | **4.3 MRF submission and review** | [x] | Submission, PM approval/return/rejection, corrections and permanent-identity self-approval prevention; requires verified document gates from 4.2. |
-| **4.4 Supplier directory** | [ ] | Shared supplier records and authorized maintenance. |
+| **4.4 Supplier directory** | [x] | Completed 2026-11-04 at `480311b`: shared records/maintenance pass automated, staging, all three manual groups and combined acceptance. |
 | **4.5 Manual quotations** | [ ] | Capture, review, version and archive supplier quotations; financial finalization requires applicable policy confirmation and supplier-original archives. |
 | **4.6 Shared demand allocation** | [ ] | One authoritative demand limit shared by purchases, suitability holds and transfer allocations; based on approved MRF requirements. |
 | **4.7 Stock ledger and reservations** | [ ] | Shared stock availability and reservation rules before enabling competing inventory consumers. |
@@ -155,7 +155,7 @@ The earlier **Not tested yet** response on 2026-11-03 is superseded by the user�
 2. **Approved archives (`mrf-approved-archives`):** as a different PM, approve a submitted MRF. Confirm approval is visible while archiving remains pending; after completion, preview/download both the approved company form and supporting PDF. Verify visible failure/retry if encountered, and confirm Site cannot perform PM archive retries. The generated form must match the submitted project labels.
 3. **Corrections/history (`mrf-corrections-history`):** as Procurement reopen a fully archived approval with a reason. Confirm assigned Site staff can prepare a full correction, procurement readiness pauses, and PM can return or approve the correction without rejecting it. After reapproval/archive completion, both earlier and current approved document versions and the complete actor/reason timeline remain available. Automated disposable fixtures additionally cover document-only restrictions after downstream references and every submitter's self-approval restriction after role changes; these are not claimed as human tests.
 
-## 4.4 Supplier Directory — In Implementation
+## 4.4 Supplier Directory — Complete
 
 **Authorized 2026-11-04:** the user confirmed the complete interview scope and requested implementation. Procurement alone maintains one company-wide supplier record per business; all non-Site roles read profiles/history. Site Personnel have no supplier access. Preserve existing styling and project-style register/detail routes with add/edit dialogs.
 
@@ -168,9 +168,9 @@ The earlier **Not tested yet** response on 2026-11-03 is superseded by the user�
 
 **Done when:** focused unit/API, rollback SQL, observed-lock duplicate/edit/status/retry races and real-account browser/Realtime/access checks pass alongside local standard/public-browser, four-job CI, full disposable integration and retained-state-safe staging parity. Generated types must match the owning generator. Obtain the three manual confirmations below before checking 4.4. Earlier attestations retain their original dates/provenance. Supplier-only work does not require repeating live Drive smoke absent integration changes.
 
-### 4.4 Targeted Manual Review — Pending
+### 4.4 Targeted Manual Review — Complete
 
-Automated local/four-job CI/disposable/staging checks pass at `480311b`; the migration is applied with retained state preserved. On 2026-11-04 the user explicitly answered **Not tested yet**. All three groups below remain pending; 4.4 stays unchecked and combined acceptance awaits a new manual attestation. Earlier MRF/recovery attestations remain historical with their original provenance.
+Automated local/four-job CI/disposable/staging checks pass at `480311b`; the migration is applied with retained state preserved. The earlier **Not tested yet** response is superseded by explicit **All three passed** confirmation on 2026-11-04. All three groups below are accepted and source-bound combined acceptance passes. Unit 4.4 is complete. Earlier MRF/recovery attestations retain their original dates/provenance. Unit 4.5 requires separate scoped planning and implementation authorization.
 
 Use retained QA records and separately provisioned Procurement/read-only accounts; do not reset staging or repurpose retained identities. Suppliers have no deletion, so manually saved QA records and their audits remain retained.
 
