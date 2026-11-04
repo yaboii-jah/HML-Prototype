@@ -150,6 +150,9 @@ begin
     select * into g from private.quotation_groups where id=group_id and quote_id=target for update;
     if not found or g.state not in('uploading','conflict') then raise exception 'Group unavailable' using errcode='23514'; end if;
     update private.quotation_groups set state='cancelled' where id=group_id;
+    update private.quotation_jobs j set state='complete',lease=null,lease_until=null,
+      checkpoint=checkpoint||'{"cancelled":true}'::jsonb
+      from private.quotation_files f where j.file_id=f.id and f.group_id=files.group_id and j.kind='validate' and j.state<>'complete';
     for file_id in select id from private.quotation_files where quotation_files.group_id=files.group_id loop
       perform private.quotation_enqueue(file_id,'cleanup',snapshot);
     end loop;
@@ -158,6 +161,8 @@ begin
     select j.* into job from private.quotation_jobs j join private.quotation_files f on f.id=j.file_id where j.id=(command->>'jobId')::uuid and f.quote_id=target for update of j;
     if not found or job.state not in('failed','paused') then raise exception 'Choose a failed job' using errcode='23514'; end if;
     if job.kind='validate' and q.state<>'draft' then raise exception 'Reopen the draft first' using errcode='23514'; end if;
+    if job.kind='validate' and not exists(select 1 from private.quotation_files f join private.quotation_groups g on g.id=f.group_id
+      where f.id=job.file_id and g.state='uploading') then raise exception 'Original group is closed' using errcode='23514'; end if;
     update private.quotation_jobs set actor=snapshot,state='pending',lease=null,lease_until=null,dispatched_at=null,message=null where id=job.id;
     update private.quotation_groups set actor=snapshot where id=(select f.group_id from private.quotation_files f where f.id=job.file_id);
     result:=jsonb_build_object('quoteId',target,'jobId',job.id);
@@ -191,7 +196,7 @@ begin
         encrypted_session=coalesce(patch->>'session',f.encrypted_session),offset_bytes=coalesce((patch->>'offset')::bigint,f.offset_bytes) where id=file_id;
     elsif action='finish' then
       if f.drive_file_id is null then raise exception 'Provider identity missing' using errcode='23514'; end if;
-      update private.quotation_files set state='validating',offset_bytes=size where id=file_id;
+      update private.quotation_files set state='validating',offset_bytes=size,lease=null,lease_until=null where id=file_id;
       perform private.quotation_enqueue(file_id,'validate',(select g.actor from private.quotation_groups g where g.id=f.group_id));
     elsif action='release' then update private.quotation_files set lease=null,lease_until=null where id=file_id;
     else raise exception 'Invalid transfer action' using errcode='23514'; end if;
@@ -202,6 +207,10 @@ create function private.quotation_dispatch() returns jsonb language plpgsql secu
 declare ids uuid[];
 begin
   -- Reconcile abandoned candidate files, retaining current and protected files.
+  update private.quotation_jobs j set state='complete',lease=null,lease_until=null,
+    checkpoint=checkpoint||'{"cancelled":true}'::jsonb
+    from private.quotation_files f join private.quotation_groups g on g.id=f.group_id
+    where j.file_id=f.id and j.kind='validate' and j.state<>'complete' and g.state in('cancelled','conflict');
   insert into private.quotation_jobs(file_id,kind,actor,original_actor)
     select f.id,'cleanup',g.actor,g.original_actor from private.quotation_files f join private.quotation_groups g on g.id=f.group_id
     where g.state in('cancelled','conflict') and f.state not in('trashed','cleaning') and not f.retained
@@ -443,7 +452,13 @@ begin
       reason:=btrim(command->>'reason'); next_state:=command->>'state';
       if reason is null or length(reason) not between 5 and 2000 or next_state is null or next_state not in('draft','cancelled') then raise exception 'Status and reason required' using errcode='23514'; end if;
       update private.quotation_drafts set state=next_state,version=version+1 where id=target and state<>next_state; changed:=found;
-      if changed and next_state='cancelled' then update private.quotation_groups set state='cancelled' where quote_id=target and state in('uploading','conflict'); end if;
+      if changed and next_state='cancelled' then
+        update private.quotation_groups set state='cancelled' where quote_id=target and state in('uploading','conflict');
+        update private.quotation_jobs j set state='complete',lease=null,lease_until=null,
+          checkpoint=checkpoint||'{"cancelled":true}'::jsonb
+          from private.quotation_files f join private.quotation_groups g on g.id=f.group_id
+          where j.file_id=f.id and f.quote_id=target and g.state='cancelled' and j.kind='validate' and j.state<>'complete';
+      end if;
     else
       if q.file_version::text is distinct from command->>'expectedFiles' then raise exception 'Originals changed; review again' using errcode='40001'; end if;
       if not private.quotation_ready_files(q) then raise exception 'Save and verify originals first' using errcode='23514'; end if;

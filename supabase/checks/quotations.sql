@@ -123,6 +123,20 @@ begin
   saved:=private.quotation_view(quote);
   if saved->>'version'<>v or saved->>'fileVersion'=fv or jsonb_array_length(saved->'files')<>1 then raise exception 'Independent file version broken'; end if;
   perform public.quotation_file(reader,retained_file);
+  part:=public.quotation_files_command(buyer,jsonb_build_object('type','beginGroup','requestId',gen_random_uuid(),'quoteId',quote,'expectedFiles',saved->>'fileVersion',
+    'keep',jsonb_build_array(retained_file),'uploads',jsonb_build_array(jsonb_build_object('name','damaged.png','mime','image/png','size',10,'sha256',repeat('c',64)))));
+  target_group:=(part->>'groupId')::uuid;
+  select id into fid from private.quotation_files where group_id=target_group;
+  part:=public.quotation_transfer(buyer,fid,'claim'); lease:=(part->>'lease')::uuid;
+  perform public.quotation_transfer(buyer,fid,'checkpoint',lease,jsonb_build_object('driveFileId','damaged-original-'||fid));
+  perform public.quotation_transfer(buyer,fid,'finish',lease);
+  if (select lease_until is not null from private.quotation_files where id=fid) then raise exception 'Completed transfer retained an upload lease'; end if;
+  select id into job from private.quotation_jobs where file_id=fid and kind='validate';
+  part:=public.quotation_worker(job,'claim'); lease:=(part->>'lease')::uuid;
+  perform public.quotation_worker(job,'fail',lease,'{"invalid":true}');
+  perform public.quotation_files_command(buyer,jsonb_build_object('type','cancelGroup','requestId',gen_random_uuid(),'quoteId',quote,'groupId',target_group));
+  if (select state<>'complete' or checkpoint->>'cancelled' is distinct from 'true' from private.quotation_jobs where id=job) then raise exception 'Cancelled validation stayed retryable'; end if;
+  begin perform public.quotation_files_command(buyer,jsonb_build_object('type','retryJob','requestId',gen_random_uuid(),'quoteId',quote,'jobId',job)); raise exception 'Closed validation retried'; exception when check_violation then null; end;
   saved:=public.quotation_command(buyer,jsonb_build_object('type','status','requestId',gen_random_uuid(),'quoteId',quote,'expectedVersion',saved->>'version','state','cancelled','reason','Supplier withdrawn'))->'quote';
   perform public.quotation_file(reader,retained_file);
   if jsonb_array_length(saved->'files')<>1 then raise exception 'Cancellation discarded current originals'; end if;

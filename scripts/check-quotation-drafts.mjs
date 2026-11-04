@@ -280,6 +280,7 @@ async function checkCapture({
   await browser.wait(
     "return !document.body.innerText.includes('Group uploading')",
   );
+  await browser.wait("return !document.querySelector('.quotation-originals')?.textContent.includes('Checking original: failed')");
   await browser.fill("input[name=ref]", "Dirty after review");
   assert.equal(
     await browser.run(
