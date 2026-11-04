@@ -93,6 +93,8 @@ begin
   end loop;
   saved:=private.quotation_view(quote);
   if jsonb_array_length(saved->'files')<>2 or saved->>'fileVersion'<>'2' or saved->>'version'<>result->'quote'->>'version' then raise exception 'Group commit changed text or lost files'; end if;
+  select details into part from private.audit_events where entity_id=quote and action='quotation.files' order by occurred_at desc limit 1;
+  if jsonb_array_length(part->'afterFiles') is distinct from 2 or length(part->'afterFiles'->0->>'sha256') is distinct from 64 then raise exception 'Original filename/hash history missing'; end if;
   retained_file:=(saved->'files'->0->>'id')::uuid;
   foreach reader_role in array array['Administrator','Project Manager','Accounting','Finance','Logistics'] loop
     delete from public.role_grants where user_id=reader_id;

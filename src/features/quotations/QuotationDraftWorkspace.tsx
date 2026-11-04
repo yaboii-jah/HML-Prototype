@@ -134,6 +134,45 @@ const historyActions: Record<string, string> = {
   "quotation.cancelGroup": "Cancelled original-file changes",
   "quotation.retryJob": "Retried file processing",
 };
+function OriginalHistory({ value, label }: { value: unknown; label: string }) {
+  if (!Array.isArray(value)) return null;
+  const files = value.flatMap((raw) => {
+    const file = record(raw);
+    return file &&
+      typeof file.name === "string" &&
+      typeof file.mime === "string" &&
+      typeof file.size === "number" &&
+      typeof file.sha256 === "string"
+      ? [
+          {
+            name: file.name,
+            mime: file.mime,
+            size: file.size,
+            sha256: file.sha256,
+          },
+        ]
+      : [];
+  });
+  return (
+    <details className="quotation-file-history">
+      <summary>
+        {label} ({files.length})
+      </summary>
+      <ul>
+        {files.map((file, index) => (
+          <li key={`${file.sha256}-${index}`}>
+            <strong>{file.name}</strong> · {file.mime} ·{" "}
+            {file.size.toLocaleString()} bytes
+            <details>
+              <summary>SHA-256 fingerprint</summary>
+              <code>{file.sha256}</code>
+            </details>
+          </li>
+        ))}
+      </ul>
+    </details>
+  );
+}
 function HistoryDetails({
   event,
   view,
@@ -158,6 +197,14 @@ function HistoryDetails({
           and hashes remain in retained history.
         </p>
       )}
+      <OriginalHistory
+        value={event.details.beforeFiles}
+        label="Previous originals"
+      />
+      <OriginalHistory
+        value={event.details.afterFiles}
+        label="Saved originals"
+      />
       {savedBody && (
         <details>
           <summary>Saved source data at this change</summary>
@@ -442,6 +489,9 @@ function SourceEditor({
           Created by {quote.creatorName}. Business identity and MRF are fixed.
           Financial finalization and purchasing are not available yet.
         </p>
+        <Link href={`/suppliers/${quote.supplierId}`}>
+          View the linked supplier directory profile
+        </Link>
         {canStatus && (
           <div className="form-actions">
             <button
@@ -922,11 +972,10 @@ export function QuotationDraftWorkspace({
         ← {quoteId ? "Quotations" : "Material request"}
       </Link>
       <PageHeader
-        eyebrow={data.request?.ref}
         title={
           quoteId ? quote?.body.ref || "Quotation draft" : "Supplier quotations"
         }
-        description="Capture and check supplier source information. Financial finalization is not available yet."
+        description={`${data.request?.ref || "Material request"}. Capture and check supplier source information. Financial finalization is not available yet.`}
         actions={
           data.role === "Procurement" &&
           !quoteId && (

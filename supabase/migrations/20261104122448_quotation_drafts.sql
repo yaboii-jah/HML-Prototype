@@ -90,7 +90,9 @@ begin
   end if;
   update private.quotation_drafts set current_files=g.files,file_version=file_version+1 where id=q.id;
   update private.quotation_groups set state='committed' where id=target;
-  perform private.quotation_audit(g.actor,'quotation.files',q.id,target,jsonb_build_object('before',previous,'after',g.files,'originalActor',g.original_actor));
+  perform private.quotation_audit(g.actor,'quotation.files',q.id,target,jsonb_build_object('before',previous,'after',g.files,'originalActor',g.original_actor,
+    'beforeFiles',coalesce((select jsonb_agg(jsonb_build_object('name',f.name,'mime',f.mime,'size',f.size,'sha256',f.sha256) order by f.id) from private.quotation_files f where f.id=any(previous)),'[]'),
+    'afterFiles',coalesce((select jsonb_agg(jsonb_build_object('name',f.name,'mime',f.mime,'size',f.size,'sha256',f.sha256) order by f.id) from private.quotation_files f where f.id=any(g.files)),'[]')));
   foreach old_file in array previous loop
     if not old_file=any(g.files) then perform private.quotation_enqueue(old_file,'cleanup',g.actor); end if;
   end loop;

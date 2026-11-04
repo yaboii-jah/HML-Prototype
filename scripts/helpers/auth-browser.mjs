@@ -8,7 +8,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { browserCallTimeout, configureBrowserChecks, navigateDocument } from './browser-environment.mjs';
 import { disposableHttpOrigin, browserRequestAllowed, realtimeSocketAllowed } from './disposable-endpoints.mjs';
 
-export async function authBrowser(base, { startupTimeoutMs = 30000, onLaunch, supabaseOrigin } = {}) {
+export async function authBrowser(base, { startupTimeoutMs = 30000, onLaunch, discoveryReady = () => true, supabaseOrigin } = {}) {
   if (!Number.isInteger(startupTimeoutMs) || startupTimeoutMs < 1000 || startupTimeoutMs > 30000) throw Error('Invalid bounded browser startup deadline');
   const appOrigin = disposableHttpOrigin(base);
   const apiOrigin = supabaseOrigin ? disposableHttpOrigin(supabaseOrigin) : null;
@@ -59,6 +59,7 @@ export async function authBrowser(base, { startupTimeoutMs = 30000, onLaunch, su
     let lastProbe = '';
     while (Date.now() - startupStarted < startupTimeoutMs && !target) {
       if (failedStart || child.exitCode !== null) throw Error('Browser could not start');
+      if (!discoveryReady()) { await delay(100); continue; }
       try {
         const port = Number((await readFile(join(profile, 'DevToolsActivePort'), 'utf8')).split('\n')[0]);
         if (!Number.isInteger(port) || port < 1 || port > 65535) throw Error('Invalid run-owned debugging port');

@@ -40,6 +40,9 @@
 .quotation-saved-source {
   overflow-wrap: anywhere;
 }
+.quotation-file-history {
+  overflow-wrap: anywhere;
+}
 .quotation-saved-source dl > div {
   display: grid;
   grid-template-columns: minmax(120px, 1fr) 2fr;

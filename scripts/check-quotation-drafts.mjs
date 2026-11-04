@@ -325,7 +325,9 @@ async function checkCapture({
       "document.querySelector('.mobile-scrim')?.click();window.scrollTo(0,0)",
     );
     if (width === 375)
-      await browser.wait("return !document.querySelector('.mobile-scrim')");
+      await browser.wait(
+        "return !document.querySelector('.mobile-scrim')&&document.querySelector('.side-nav').getBoundingClientRect().right<=1",
+      );
     assert.equal(
       await browser.run(
         "return document.documentElement.scrollWidth<=innerWidth",
@@ -338,6 +340,32 @@ async function checkCapture({
     await writeFile(
       `.verification/quotation-${width}.png`,
       Buffer.from(shot.data, "base64"),
+    );
+    await browser.run(
+      "document.querySelector('.quotation-originals').scrollIntoView()",
+    );
+    const originalsShot = await browser.call("Page.captureScreenshot", {
+      format: "png",
+    });
+    await writeFile(
+      `.verification/quotation-originals-${width}.png`,
+      Buffer.from(originalsShot.data, "base64"),
+    );
+    await browser.run(
+      "const history=[...document.querySelectorAll('.quotation-file-history')].find(el=>el.querySelector('details'));if(!history)throw Error('File metadata history missing');history.open=true;history.querySelector('details').open=true;history.scrollIntoView()",
+    );
+    assert.equal(
+      await browser.run(
+        "return document.documentElement.scrollWidth<=innerWidth",
+      ),
+      true,
+    );
+    const historyShot = await browser.call("Page.captureScreenshot", {
+      format: "png",
+    });
+    await writeFile(
+      `.verification/quotation-history-${width}.png`,
+      Buffer.from(historyShot.data, "base64"),
     );
   }
   await browser.call("Emulation.clearDeviceMetricsOverride");
