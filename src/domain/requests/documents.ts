@@ -6,7 +6,8 @@ export const DOCUMENT_CHUNK_SIZE = 3 * 1024 * 1024;
 export type SupportingDocument = { id: string; name: string; size: number; sha256: string; uploaderName: string; createdAt: string };
 export type UploadView = { id: string; name: string; size: number; sha256: string; offset: number; state: string; expiresAt: string; uploaderName: string };
 export type DocumentJob = { id: string; kind: "folder" | "validate" | "cleanup" | "archive"; state: string; message: string | null; attempts: number };
-export type DocumentsView = { revision: string; current: SupportingDocument | null; uploads: UploadView[]; folder: { id: string; name: string } | null; jobs: DocumentJob[] };
+export type ApprovedArchive = { id: string; version: string; approvedBy: string; approvedAt: string; complete: boolean; files: { id: string; kind: "form" | "supporting" }[] };
+export type DocumentsView = { revision: string; current: SupportingDocument | null; uploads: UploadView[]; folder: { id: string; name: string } | null; jobs: DocumentJob[]; editable: boolean; archives: ApprovedArchive[] };
 export const pdfFingerprint = (value: unknown): value is string => typeof value === "string" && /^[a-f0-9]{64}$/.test(value);
 export function validPdfSelection(name: unknown, size: unknown, sha256: unknown) {
   return typeof name === "string" && name.length >= 5 && name.length <= 240 && /\.pdf$/i.test(name)
@@ -31,8 +32,21 @@ export function parseDocumentsView(value: unknown): DocumentsView | null {
     if (!j || !uuid(j.id) || !["folder", "validate", "cleanup", "archive"].includes(String(j.kind)) || !["pending", "running", "failed", "paused"].includes(String(j.state)) || !(j.message === null || typeof j.message === "string") || typeof j.attempts !== "number") return null;
     jobs.push({ id: j.id, kind: j.kind as DocumentJob["kind"], state: String(j.state), message: j.message, attempts: j.attempts });
   }
+  const archives: ApprovedArchive[] = [];
+  if (raw.archives !== undefined && !Array.isArray(raw.archives)) return null;
+  for (const value of raw.archives ?? []) {
+    const a = record(value);
+    if (!a || !uuid(a.id) || typeof a.version !== "string" || !/^[1-9]\d*$/.test(a.version) || typeof a.approvedBy !== "string" || typeof a.approvedAt !== "string" || typeof a.complete !== "boolean" || !Array.isArray(a.files)) return null;
+    const files: ApprovedArchive["files"] = [];
+    for (const value of a.files) {
+      const f = record(value);
+      if (!f || !uuid(f.id) || f.kind !== "form" && f.kind !== "supporting") return null;
+      files.push({ id: f.id, kind: f.kind });
+    }
+    archives.push({ id: a.id, version: a.version, approvedBy: a.approvedBy, approvedAt: a.approvedAt, complete: a.complete, files });
+  }
   return { revision: raw.revision, current: current ? { id: String(current.id), name: String(current.name), size: Number(current.size), sha256: String(current.sha256), uploaderName: String(current.uploaderName), createdAt: String(current.createdAt) } : null,
-    folder: folder ? { id: String(folder.id), name: String(folder.name) } : null, uploads, jobs };
+    folder: folder ? { id: String(folder.id), name: String(folder.name) } : null, uploads, jobs, editable: raw.editable === true, archives };
 }
 
 /** Only a single byte range is accepted; do not forward arbitrary upstream headers. */

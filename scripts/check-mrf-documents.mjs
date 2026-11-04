@@ -154,4 +154,5 @@ export async function checkMrfDocuments({ browser, second, client, login, logout
   await browser.wait(`return location.pathname==='/requests/${mrf}'`);
   await logout(browser);
   console.log('Private document sharing, independent saves, Range, corrupt replacement, multi-chunk recovery, revocation and Workflow archive integrity passed.');
+  return { staff, manager, bytes };
 }

@@ -2,7 +2,7 @@ import { requireStaging, STAGING_REF } from './supabase-target.mjs';
 
 /** Read-only retained-state evidence. No Auth passwords, tokens or raw business
  * rows are returned. Application rows are compared using deterministic hashes. */
-export async function stagingSnapshot({ includeProjectOperations = true, includeDocuments = true } = {}) {
+export async function stagingSnapshot({ includeProjectOperations = true, includeDocuments = true, includeReview = true } = {}) {
   requireStaging(process.env);
   const tables = [
     ['profiles', 'public.profiles', 'user_id'], ['grants', 'public.role_grants', 'user_id,role'],
@@ -20,8 +20,15 @@ export async function stagingSnapshot({ includeProjectOperations = true, include
     ['uploads', 'private.document_uploads', 'id'], ['documentJobs', 'private.document_jobs', 'id'], ['documentOperations', 'private.document_operations', 'id'],
     ['archiveSnapshots', 'private.mrf_archive_snapshots', 'id'], ['archives', 'private.mrf_archives', 'snapshot_id'],
   );
+  if (includeReview) tables.push(
+    ['mrfSubmissions', 'private.mrf_submissions', 'id'], ['mrfReviews', 'private.mrf_review_events', 'id'],
+    ['mrfReferences', 'private.mrf_downstream_references', 'request_id,kind,record_id'], ['mrfArchiveFiles', 'private.mrf_archive_files', 'id'],
+  );
   if (includeProjectOperations) tables.push(['projectOperations', 'private.project_operations', 'id']);
-  const hashes = tables.map(([name, table, order]) => `'${name}',(select jsonb_build_object('count',count(*),'digest',md5(coalesce(jsonb_agg(to_jsonb(t) order by ${order})::text,'[]'))) from ${table} t)`).join(',');
+  const hashes = tables.map(([name, table, order]) => {
+    const row = name === 'requests' && !includeReview ? "to_jsonb(t)-'status'-'correction_kind'-'correction_state'-'submission_id'" : 'to_jsonb(t)';
+    return `'${name}',(select jsonb_build_object('count',count(*),'digest',md5(coalesce(jsonb_agg(${row} order by ${order})::text,'[]'))) from ${table} t)`;
+  }).join(',');
   const query = `select jsonb_build_object('records',jsonb_build_object(${hashes}),
     'authCounts',jsonb_build_array((select count(*) from auth.users),(select count(*) from auth.sessions)),
     'profiles',(select coalesce(jsonb_agg(jsonb_build_array(user_id,version::text,access_revision::text,is_active) order by user_id),'[]'::jsonb) from public.profiles),

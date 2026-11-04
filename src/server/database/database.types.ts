@@ -122,6 +122,26 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"mrf_archive_files": {
+                  Row: {
+                    "id": string,"kind": string,"size": number,"snapshot_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "id"?: string,"kind": string,"size": number,"snapshot_id": string
+                  }
+                  Update: {
+                    "id"?: string,"kind"?: string,"size"?: number,"snapshot_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "mrf_archive_files_snapshot_id_fkey"
+      columns: ["snapshot_id"]
+isOneToOne: false
+      referencedRelation: "mrf_archive_snapshots"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"mrf_archive_snapshots": {
                   Row: {
                     "approved_at": string,"approved_by": string,"approved_name": string,"attachment_revision": number,"created_at": string,"id": string,"request_id": string,"request_version": number,"snapshot": NonNullable<Json>,"source_document": string,"version": number
@@ -165,6 +185,60 @@ isOneToOne: false
       columns: ["snapshot_id"]
 isOneToOne: true
       referencedRelation: "mrf_archive_snapshots"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"mrf_downstream_references": {
+                  Row: {
+                    "kind": string,"record_id": string,"request_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "kind": string,"record_id": string,"request_id": string
+                  }
+                  Update: {
+                    "kind"?: string,"record_id"?: string,"request_id"?: string
+                  }
+                  Relationships: [
+
+                  ]
+                },"mrf_review_events": {
+                  Row: {
+                    "action": string,"actor_id": string,"actor_name": string,"actor_role": string,"created_at": string,"id": string,"reason": string,"request_id": string,"submission_id": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "action": string,"actor_id": string,"actor_name": string,"actor_role": string,"created_at"?: string,"id"?: string,"reason"?: string,"request_id": string,"submission_id"?: string | null
+                  }
+                  Update: {
+                    "action"?: string,"actor_id"?: string,"actor_name"?: string,"actor_role"?: string,"created_at"?: string,"id"?: string,"reason"?: string,"request_id"?: string,"submission_id"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "mrf_review_events_submission_id_fkey"
+      columns: ["submission_id"]
+isOneToOne: false
+      referencedRelation: "mrf_submissions"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"mrf_submissions": {
+                  Row: {
+                    "actor_id": string,"actor_name": string,"attachment_revision": number,"created_at": string,"id": string,"request_id": string,"request_version": number,"snapshot": NonNullable<Json>,"source_document": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "actor_id": string,"actor_name": string,"attachment_revision": number,"created_at"?: string,"id": string,"request_id": string,"request_version": number,"snapshot": NonNullable<Json>,"source_document": string
+                  }
+                  Update: {
+                    "actor_id"?: string,"actor_name"?: string,"attachment_revision"?: number,"created_at"?: string,"id"?: string,"request_id"?: string,"request_version"?: number,"snapshot"?: NonNullable<Json>,"source_document"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "mrf_submissions_source_document_fkey"
+      columns: ["source_document"]
+isOneToOne: false
+      referencedRelation: "request_documents"
       referencedColumns: ["id"]
     }
                   ]
@@ -333,6 +407,9 @@ isOneToOne: false
 "document_worker":
 { Args: { "action": string,"job_id": string,"lease_id"?: string,"patch"?: Json }; Returns: Json
                            },
+"documents_before_review":
+{ Args: { "actor": Json,"target_project"?: string,"target_request"?: string }; Returns: Json
+                           },
 "documents_read":
 { Args: { "actor": Json,"target_project"?: string,"target_request"?: string }; Returns: Json
                            },
@@ -350,6 +427,15 @@ isOneToOne: false
                            },
 "login_preflight":
 { Args: { "login_email": string }; Returns: Json
+                           },
+"mrf_editable":
+{ Args: { "target": string }; Returns: boolean
+                           },
+"mrf_ready":
+{ Args: { "target": string }; Returns: boolean
+                           },
+"mrf_register_downstream":
+{ Args: { "kind": string,"record_id": string,"target": string }; Returns: undefined
                            },
 "project_actor":
 { Args: { "actor": Json,"writing"?: boolean }; Returns: string
@@ -383,6 +469,12 @@ isOneToOne: false
                            },
 "request_draft":
 { Args: { "value": Json }; Returns: Json
+                           },
+"request_draft_command":
+{ Args: { "actor": Json,"command": Json }; Returns: Json
+                           },
+"request_draft_snapshot":
+{ Args: { "target": string }; Returns: Json
                            },
 "request_project_allowed":
 { Args: { "actor": Json,"target": string }; Returns: boolean
@@ -433,14 +525,14 @@ isOneToOne: false
                   ]
                 },"material_requests": {
                   Row: {
-                    "created_at": string,"creator_id": string,"creator_name": string,"data": NonNullable<Json>,"id": string,"project_id": string,"ref": string,"scope_id": string | null,"sequence": number,"updated_at": string,"updater_id": string,"updater_name": string,"version": number
+                    "correction_kind": string | null,"correction_state": string | null,"created_at": string,"creator_id": string,"creator_name": string,"data": NonNullable<Json>,"id": string,"project_id": string,"ref": string,"scope_id": string | null,"sequence": number,"status": string,"submission_id": string | null,"updated_at": string,"updater_id": string,"updater_name": string,"version": number
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"creator_id": string,"creator_name": string,"data": NonNullable<Json>,"id"?: string,"project_id": string,"ref": string,"scope_id"?: string | null,"sequence": number,"updated_at"?: string,"updater_id": string,"updater_name": string,"version"?: number
+                    "correction_kind"?: string | null,"correction_state"?: string | null,"created_at"?: string,"creator_id": string,"creator_name": string,"data": NonNullable<Json>,"id"?: string,"project_id": string,"ref": string,"scope_id"?: string | null,"sequence": number,"status"?: string,"submission_id"?: string | null,"updated_at"?: string,"updater_id": string,"updater_name": string,"version"?: number
                   }
                   Update: {
-                    "created_at"?: string,"creator_id"?: string,"creator_name"?: string,"data"?: NonNullable<Json>,"id"?: string,"project_id"?: string,"ref"?: string,"scope_id"?: string | null,"sequence"?: number,"updated_at"?: string,"updater_id"?: string,"updater_name"?: string,"version"?: number
+                    "correction_kind"?: string | null,"correction_state"?: string | null,"created_at"?: string,"creator_id"?: string,"creator_name"?: string,"data"?: NonNullable<Json>,"id"?: string,"project_id"?: string,"ref"?: string,"scope_id"?: string | null,"sequence"?: number,"status"?: string,"submission_id"?: string | null,"updated_at"?: string,"updater_id"?: string,"updater_name"?: string,"version"?: number
                   }
                   Relationships: [
                     {
@@ -646,6 +738,9 @@ isOneToOne: false
 { Args: { "target_project"?: string }; Returns: Json
                            },
 "document_file":
+{ Args: { "actor": Json,"document_id": string }; Returns: Json
+                           },
+"document_source_file":
 { Args: { "actor": Json,"document_id": string }; Returns: Json
                            },
 "document_transfer":

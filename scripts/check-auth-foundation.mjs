@@ -1,5 +1,6 @@
 import { checkRequestDrafts } from './check-request-drafts.mjs';
 import { checkMrfDocuments } from './check-mrf-documents.mjs';
+import { checkMrfReview } from './check-mrf-review.mjs';
 import { fakeDrive } from './helpers/fake-drive.mjs';
 import assert from 'node:assert/strict';
 import { randomUUID, randomBytes } from 'node:crypto';
@@ -278,8 +279,10 @@ export async function checkAuthFoundation({ api, anon, secret, mailpit, sql, env
     checks.push('http-roles-renewal');
     await checkRequestDrafts({ browser, second, client, login, logout, sql });
     checks.push('request-browser');
-    await checkMrfDocuments({ browser, second, client, login, logout, sql, administrator: bootstrapInputs[winner], base, drive });
+    const documents = await checkMrfDocuments({ browser, second, client, login, logout, sql, administrator: bootstrapInputs[winner], base, drive });
     checks.push('document-browser-workflow');
+    await checkMrfReview({ browser, second, client, login, logout, sql, base, drive, ...documents });
+    checks.push('mrf-review-browser-workflow');
     for (const browser of browsers) browser.assertIsolated();
     checks.push('isolation');
     console.log('Real-account browser, session revocation, role, bootstrap and captured-email checks passed.');
