@@ -338,6 +338,40 @@ isOneToOne: false
                   Relationships: [
 
                   ]
+                },"supplier_operations": {
+                  Row: {
+                    "actor_id": string,"id": string,"payload": NonNullable<Json>,"result": Json | null,"supplier_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "actor_id": string,"id": string,"payload": NonNullable<Json>,"result"?: Json | null,"supplier_id": string
+                  }
+                  Update: {
+                    "actor_id"?: string,"id"?: string,"payload"?: NonNullable<Json>,"result"?: Json | null,"supplier_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "supplier_operations_supplier_id_fkey"
+      columns: ["supplier_id"]
+isOneToOne: false
+      referencedRelation: "suppliers"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"suppliers": {
+                  Row: {
+                    "id": string,"is_active": boolean,"name_key": string,"profile": NonNullable<Json>,"version": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "id"?: string,"is_active"?: boolean,"name_key": string,"profile": NonNullable<Json>,"version"?: number
+                  }
+                  Update: {
+                    "id"?: string,"is_active"?: boolean,"name_key"?: string,"profile"?: NonNullable<Json>,"version"?: number
+                  }
+                  Relationships: [
+
+                  ]
                 }
           }
           Views: {
@@ -490,6 +524,21 @@ isOneToOne: false
                            },
 "session_context":
 { Args: Record<PropertyKey, never>; Returns: Json
+                           },
+"supplier_command":
+{ Args: { "actor": Json,"command": Json }; Returns: Json
+                           },
+"supplier_history":
+{ Args: { "target"?: string }; Returns: Json
+                           },
+"supplier_profile":
+{ Args: { "value": Json }; Returns: Json
+                           },
+"supplier_view":
+{ Args: { "target": string }; Returns: Json
+                           },
+"suppliers_read":
+{ Args: { "actor": Json,"target_supplier"?: string }; Returns: Json
                            },
 "unbind_session":
 { Args: { "target_session": string,"target_user": string }; Returns: undefined
@@ -763,6 +812,12 @@ isOneToOne: false
                            },
 "requests_read":
 { Args: { "actor": Json,"target_request"?: string }; Returns: Json
+                           },
+"supplier_command":
+{ Args: { "actor": Json,"command": Json }; Returns: Json
+                           },
+"suppliers_read":
+{ Args: { "actor": Json,"target_supplier"?: string }; Returns: Json
                            }
           }
           Enums: {
