@@ -10,6 +10,7 @@ create table private.quotation_drafts (
   created_at timestamptz not null default clock_timestamp()
 );
 create unique index quotation_one_draft on private.quotation_drafts(request_id,supplier_id) where state='draft';
+create index quotation_request on private.quotation_drafts(request_id);
 create index quotation_supplier on private.quotation_drafts(supplier_id);
 create index quotation_creator on private.quotation_drafts(creator_id);
 create table private.quotation_operations (
@@ -25,6 +26,7 @@ create table private.quotation_groups (
   created_at timestamptz not null default clock_timestamp()
 );
 create unique index quotation_one_pending_group on private.quotation_groups(quote_id) where state='uploading';
+create index quotation_groups_quote on private.quotation_groups(quote_id);
 create table private.quotation_files (
   id uuid primary key, quote_id uuid not null references private.quotation_drafts(id),
   group_id uuid not null references private.quotation_groups(id),
@@ -50,6 +52,7 @@ create table private.quotation_jobs (
   dispatched_at timestamptz, attempts integer not null default 0, message text,
   unique(file_id,kind)
 );
+create index quotation_pending_jobs on private.quotation_jobs(dispatched_at,id) where state in('pending','running');
 do $$ declare t text; begin
   foreach t in array array['quotation_drafts','quotation_operations','quotation_groups','quotation_files','quotation_jobs'] loop
     execute format('alter table private.%I enable row level security',t);
@@ -388,9 +391,12 @@ create function private.quotation_view(target uuid) returns jsonb language sql s
 $$;
 create function private.quotations_read(actor jsonb,target_request uuid) returns jsonb
 language plpgsql security definer set search_path='' as $$
+declare parent jsonb;
 begin
   perform private.quotation_actor(actor);
-  return jsonb_build_object('request',private.request_snapshot(target_request),
+  parent:=private.request_snapshot(target_request);
+  return jsonb_build_object('request',case when parent is null then null else jsonb_build_object(
+      'id',parent->'id','ref',parent->'ref','procurementReady',parent->'procurementReady','items',parent->'draft'->'items') end,
     'suppliers',coalesce((select jsonb_agg(private.supplier_view(s.id) order by s.name_key) from private.suppliers s where s.is_active),'[]'),
     'quotes',coalesce((select jsonb_agg(private.quotation_view(q.id) order by q.created_at,q.id) from private.quotation_drafts q where q.request_id=target_request),'[]'),
     'history',coalesce((select jsonb_agg(h.entry order by h.occurred_at desc,h.id) from (

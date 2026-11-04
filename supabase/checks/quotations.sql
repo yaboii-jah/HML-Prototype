@@ -55,6 +55,8 @@ begin
   if not exists(select 1 from private.mrf_downstream_references where request_id=mrf and record_id=quote) then raise exception 'First save omitted permanent reference'; end if;
   begin perform public.quotation_command(buyer,command||jsonb_build_object('requestId',gen_random_uuid())); raise exception 'Duplicate active draft accepted'; exception when unique_violation then null; end;
   if jsonb_array_length(public.quotations_read(reader,mrf)->'quotes')<>1 then raise exception 'Reader cannot read quote'; end if;
+  part:=public.quotations_read(reader,mrf)->'request';
+  if jsonb_typeof(part->'items') is distinct from 'array' or part->'items'->0->>'id' is distinct from form->'items'->0->>'id' then raise exception 'Quotation MRF projection contract failed'; end if;
   -- Current supplier status only gates first selection, not existing work.
   update private.suppliers set is_active=false where id=supplier;
   foreach k in array array['description','code','unit','quantity','unitPrice','brand','specification','conversionFactor','varianceReason','discountType','discountValue','taxLabel','taxRate','printedTotal','discrepancyNote','leadTime','notes','sourcePage'] loop line:=line||jsonb_build_object(k,''); end loop;
