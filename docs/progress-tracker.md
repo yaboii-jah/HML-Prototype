@@ -57,7 +57,7 @@ Update this file after every meaningful implementation or documentation change a
 
 ## In Progress
 
-- Unit 4.5a capture routes, checked SQL commands, private realtime views, separate text/file versions, source stamps and protected mixed-original groups/jobs are implemented. Focused tests pass for precision/blank-zero preservation, validation, private projections and MIME-aware transport. Full local verification has passed lint/types and all 410 tests; build is running. New rollback SQL, actual application browser and observed-lock race checks await disposable CI; live Drive, retained-state staging and the three new human confirmations remain pending. The private untracked account note remains unrelated and excluded.
+- Unit 4.5a is published as checkpoint `8fc4700` in [draft PR #33](https://github.com/yaboii-jah/HML-Prototype/pull/33), stacked on the supplier branch. Full local lint/types, all 410 tests, production build and isolated public-browser checks pass. The owned live-Drive smoke passes PDF/JPEG/PNG/WebP identity, hash, decoding and Range checks with verified cleanup. Disposable migration replay succeeds; the first SQL fixture run failed because synthetic MRF printed signatories were incomplete. That fixture is corrected and application browser coverage now includes offered lines, material-match confirmation and cancel/reopen. A separate earlier runner failed browser startup. These failures remain failures; disposable SQL/Auth/browser/Realtime/race/type and four-job CI, retained-state staging and three new human confirmations are pending. The private untracked account note remains unrelated and excluded.
 
 
 

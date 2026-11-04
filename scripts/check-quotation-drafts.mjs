@@ -51,6 +51,18 @@ export async function checkQuotationDrafts({ browser, second, client, login, log
   await click(browser, 'Save quotation');
   await browser.wait("return !document.body.innerText.includes('Review latest saved quotation')");
   assert.equal((await sql(`select body->>'ref' from private.quotation_drafts where id='${quote}';`)).output.trim(), 'Preserved local source');
+  await click(browser, 'Add offered line');
+  await browser.fill('input[aria-label="Supplier description 1"]', 'Exact material from supplier');
+  await browser.fill('input[aria-label="Offered quantity 1"]', '12.12500');
+  await browser.fill('input[aria-label="Offered unit 1"]', 'pc');
+  await browser.fill('input[aria-label="Quoted unit price 1"]', '12345678901234567890.12345678901234567890');
+  await browser.run("const select=document.querySelector('select[aria-label=\"Requested material 1\"]');select.value=select.options[1].value;select.dispatchEvent(new Event('change',{bubbles:true}));");
+  await click(browser, 'Line details');
+  await browser.fill('input[name=line-conversionFactor]', '1');
+  await click(browser, 'Close line details');
+  await click(browser, 'Save quotation');
+  await browser.wait("return !document.body.innerText.includes('Save or discard your text changes')");
+  assert.equal((await sql(`select body->'lines'->0->>'unitPrice' from private.quotation_drafts where id='${quote}';`)).output.trim(), '12345678901234567890.12345678901234567890');
   const image = await sharp({ create: { width: 10, height: 10, channels: 3, background: '#165c43' } }).png().toBuffer();
   const select = async files => browser.run(`const dt=new DataTransfer();${files.map(f => `dt.items.add(new File([Uint8Array.from(atob('${f.bytes.toString('base64')}'),c=>c.charCodeAt(0))],${JSON.stringify(f.name)},{type:${JSON.stringify(f.mime)}}));`).join('')}const input=document.querySelector('.quotation-originals input[type=file]');input.files=dt.files;input.dispatchEvent(new Event('change',{bubbles:true}));`);
   // Interrupted chunks survive reload and require matching local-file reselection.
@@ -65,6 +77,10 @@ export async function checkQuotationDrafts({ browser, second, client, login, log
   await click(browser, 'Resume uploads');
   await browser.wait("return document.querySelectorAll('.quotation-originals a[download],.quotation-originals li>a:first-of-type').length===2&&!document.body.innerText.includes('Group uploading')", 60000);
   await browser.wait("return [...document.querySelectorAll('button')].some(b=>b.textContent==='Entered data checked against originals'&&!b.disabled)");
+  await click(browser, 'Line details');
+  await click(browser, 'Confirm material match');
+  await browser.wait("return document.querySelector('.quotation-source-table')?.textContent.includes('Confirmed')");
+  await click(browser, 'Close line details');
   await click(browser, 'Entered data checked against originals');
   await browser.wait("return document.querySelector('.quotation-review-status')?.textContent.includes('Entered data checked against the saved originals.')");
   const original = JSON.parse((await sql(`select private.quotation_view('${quote}');`)).output.trim());
@@ -88,6 +104,15 @@ export async function checkQuotationDrafts({ browser, second, client, login, log
   assert.equal(await browser.run("return [...document.querySelectorAll('button')].find(b=>b.textContent==='Entered data checked against originals').disabled"), true);
   await click(browser, 'Save quotation');
   await browser.wait("return document.querySelector('.quotation-review-status')?.textContent.includes('has not been checked')");
+  await click(browser, 'Cancel quotation');
+  await browser.fill('textarea[name=statusReason]', 'Withdrawn supplier offer');
+  await browser.click('.record-dialog .primary');
+  await browser.wait("return document.querySelector('.quotation-review-status')?.textContent.includes('Cancelled quotation')");
+  assert.equal(JSON.parse((await sql(`select private.quotation_view('${quote}')->'files';`)).output.trim()).length, 2);
+  await click(browser, 'Reopen quotation');
+  await browser.fill('textarea[name=statusReason]', 'Supplier confirmed the offer');
+  await browser.click('.record-dialog .primary');
+  await browser.wait("return document.querySelector('.quotation-review-status')?.textContent.includes('Editable quotation draft')");
   for (const width of [1440, 375]) {
     await browser.call('Emulation.setDeviceMetricsOverride', { width, height: 1000, deviceScaleFactor: 1, mobile: width === 375 });
     await browser.run("document.querySelector('.mobile-scrim')?.click();window.scrollTo(0,0)");

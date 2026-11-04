@@ -25,7 +25,7 @@ begin
       case uid when pm_id then 'Project Manager' when buyer_id then 'Procurement' when reader_id then 'Accounting' else 'Site Personnel' end));
   end loop;
   site:=actors->site_id::text; manager:=actors->pm_id::text; buyer:=actors->buyer_id::text; reader:=actors->reader_id::text;
-  form:=jsonb_build_object('scopeId',scope,'requestDate','2026-11-04','sourceRef','','requestedBy','Site','approvedBy','PM','purchaser','','financeOfficer','','specialInstructions','',
+  form:=jsonb_build_object('scopeId',scope,'requestDate','2026-11-04','sourceRef','','requestedBy','Site','approvedBy','PM','purchaser','Buyer','financeOfficer','Finance','specialInstructions','',
     'items',jsonb_build_array(jsonb_build_object('id',gen_random_uuid(),'name','Cement','unit','bag','quantity','12.125','neededDate','2026-11-05','purpose','','location','Site','remarks','')));
   saved:=public.request_command(site,jsonb_build_object('type','createDraft','requestId',gen_random_uuid(),'projectId',project,'draft',form))->'record';
   mrf:=(saved->>'id')::uuid;
