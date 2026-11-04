@@ -168,7 +168,9 @@ The earlier **Not tested yet** response on 2026-11-03 is superseded by the userâ
 
 **Done when:** focused unit/API, rollback SQL, observed-lock duplicate/edit/status/retry races and real-account browser/Realtime/access checks pass alongside local standard/public-browser, four-job CI, full disposable integration and retained-state-safe staging parity. Generated types must match the owning generator. Obtain the three manual confirmations below before checking 4.4. Earlier attestations retain their original dates/provenance. Supplier-only work does not require repeating live Drive smoke absent integration changes.
 
-### 4.4 Targeted Manual Review ? Pending
+### 4.4 Targeted Manual Review â€” Pending
+
+Automated local/four-job CI/disposable/staging checks pass at `480311b`; the migration is applied with retained state preserved. On 2026-11-04 the user explicitly answered **Not tested yet**. All three groups below remain pending; 4.4 stays unchecked and combined acceptance awaits a new manual attestation. Earlier MRF/recovery attestations remain historical with their original provenance.
 
 Use retained QA records and separately provisioned Procurement/read-only accounts; do not reset staging or repurpose retained identities. Suppliers have no deletion, so manually saved QA records and their audits remain retained.
 
