@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, type FormEvent } from "react";
 import { supplierCommandAction } from "@/app/(workspace)/suppliers/actions";
 import { useFoundationRealtime } from "@/src/app-state/FoundationRealtime";
 import { Register } from "@/src/components/ui/Register";
@@ -10,6 +10,7 @@ import { RecordModal } from "@/src/components/ui/RecordModal";
 import { Field, InlineError, PageHeader } from "@/src/components/ui/Primitives";
 import { SUPPLIER_FIELDS, type Supplier, type SupplierHistory, type SupplierInput, type SupplierProfile, type SupplierResult, type SupplierView } from "@/src/domain/suppliers/suppliers";
 
+const subscribe = () => () => {};
 const fields = Object.keys(SUPPLIER_FIELDS) as (keyof SupplierProfile)[];
 const emptyProfile: SupplierProfile = { name: "", address: "", tin: "", contactName: "", email: "", phone: "", accreditationNote: "" };
 
@@ -73,6 +74,7 @@ function SupplierEditor({ source, latest, statusOnly, onClose, onSaved }: {
     <form className="form-stack project-editor" onSubmit={save}>
       <fieldset disabled={busy}>
         {statusOnly ? <>
+          <strong>{source?.name}</strong>
           <p>{source?.active ? "This supplier will be unavailable for new selections. Existing linked work may proceed." : "This supplier will be available for new selections."}</p>
           <Field label="Reason" hint="At least five characters; retained in change history."><textarea name="reason" required minLength={5} maxLength={2000} value={reason} onChange={e => setReason(e.target.value)} /></Field>
         </> : <div className="form-grid">
@@ -123,6 +125,7 @@ export function SupplierWorkspace({ initial, supplierId }: { initial: SupplierVi
   const { view } = useFoundationRealtime();
   const data = view?.kind === "suppliers" ? view.data : initial;
   const router = useRouter();
+  const hydrated = useSyncExternalStore(subscribe, () => true, () => false);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("Active");
   const [editor, setEditor] = useState<{ source: Supplier | null; statusOnly: boolean } | null>(null);
@@ -136,13 +139,13 @@ export function SupplierWorkspace({ initial, supplierId }: { initial: SupplierVi
     <PageHeader eyebrow="Workspace" title={supplierId ? supplier?.name ?? "Supplier unavailable" : "Suppliers"}
       description={supplierId ? "Company-wide supplier profile and change history." : "Shared business contacts maintained by Procurement."}
       actions={editable && (supplierId ? supplier && <>
-        <button className="button secondary" onClick={() => setEditor({ source: supplier, statusOnly: false })}>Edit supplier</button>
-        <button className="button secondary" onClick={() => setEditor({ source: supplier, statusOnly: true })}>{supplier.active ? "Deactivate" : "Reactivate"} supplier</button>
-      </> : <button className="button primary" onClick={() => setEditor({ source: null, statusOnly: false })}>Add supplier</button>)} />
+        <button className="button secondary" disabled={!hydrated} onClick={() => setEditor({ source: supplier, statusOnly: false })}>Edit supplier</button>
+        <button className="button secondary" disabled={!hydrated} onClick={() => setEditor({ source: supplier, statusOnly: true })}>{supplier.active ? "Deactivate" : "Reactivate"} supplier</button>
+      </> : <button className="button primary" disabled={!hydrated} onClick={() => setEditor({ source: null, statusOnly: false })}>Add supplier</button>)} />
     {supplierId ? supplier && <section className="panel"><SupplierValues supplier={supplier} /></section> : <Register rows={rows} unit="suppliers" resetKey={`${search}:${status}`}
       headers={<><th>Supplier</th><th>Address</th><th>Contact</th><th>Status</th><th>Action</th></>}
       filters={<><Field label="Search suppliers"><input type="search" value={search} onChange={e => setSearch(e.target.value)} /></Field><Field label="Status"><select value={status} onChange={e => setStatus(e.target.value)}>{["Active", "Inactive", "All"].map(s => <option key={s}>{s}</option>)}</select></Field></>}
-      renderRow={s => <tr key={s.id}><td><Link href={`/suppliers/${s.id}`}>{s.name}</Link></td><td>{s.address || "Not recorded"}</td><td>{[s.contactName, s.email, s.phone].filter(Boolean).join(" · ") || "Not recorded"}</td><td>{s.active ? "Active" : "Inactive"}</td><td>{editable ? <button className="text-link" onClick={() => setEditor({ source: s, statusOnly: false })}>Edit supplier</button> : <Link href={`/suppliers/${s.id}`}>View supplier</Link>}</td></tr>} />}
+      renderRow={s => <tr key={s.id}><td><Link href={`/suppliers/${s.id}`}>{s.name}</Link></td><td>{s.address || "Not recorded"}</td><td>{[s.contactName, s.email, s.phone].filter(Boolean).join(" · ") || "Not recorded"}</td><td>{s.active ? "Active" : "Inactive"}</td><td>{editable ? <button className="text-link" disabled={!hydrated} onClick={() => setEditor({ source: s, statusOnly: false })}>Edit supplier</button> : <Link href={`/suppliers/${s.id}`}>View supplier</Link>}</td></tr>} />}
     <SupplierChanges history={data.history} />
     {editable && editor && <SupplierEditor key={`${editor.source?.id ?? "new"}:${editor.statusOnly}`} {...editor}
       latest={editor.source ? data.suppliers.find(s => s.id === editor.source?.id) : undefined}

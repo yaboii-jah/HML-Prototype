@@ -18,7 +18,7 @@ export async function checkSupplierDirectory({ browser, second, client, login, l
   }
   await login(browser, staff[0]);
   await browser.navigate('/suppliers');
-  await browser.wait("return document.querySelector('h1')?.textContent==='Suppliers'&&!!document.querySelector('.page-header .primary')");
+  await browser.wait("return document.querySelector('h1')?.textContent==='Suppliers'&&!!document.querySelector('.page-header .primary')&&!document.querySelector('.page-header .primary').disabled");
   await browser.click('.page-header .primary');
   await browser.wait("return !!document.querySelector('.record-dialog[open] input[name=name]')");
   const name = `Supplier browser ${randomUUID()}`;
@@ -28,7 +28,7 @@ export async function checkSupplierDirectory({ browser, second, client, login, l
   const id = await browser.run("return location.pathname.split('/').at(-1)");
   await login(second, staff[1]);
   await second.navigate(`/suppliers/${id}`);
-  await second.wait(`return document.querySelector('h1')?.textContent===${JSON.stringify(name)}`);
+  await second.wait(`return document.querySelector('h1')?.textContent===${JSON.stringify(name)}&&!document.querySelector('.page-header .secondary').disabled`);
   const session = await sessionCookie(second);
   const claims = await client.auth.getClaims(session.access_token);
   assert.equal(claims.error, null);

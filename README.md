@@ -14,7 +14,7 @@ Use the companion [production checklist](docs/checklist.md) to follow foundation
 
 The account/project foundation is complete. Consult the [architecture](docs/architecture.md) for its maintained contracts and the [tracker](docs/progress-tracker.md#current-goal) for completion evidence and the next milestone.
 
-For checklist step 4, read the active [implementation guide](docs/step-4-implementation.md) for the operational roadmap and current unit criteria. MRF drafts and supporting PDFs are verified complete. Submission, PM review, approved archives and Procurement corrections are verified complete in 4.3, including explicit manual acceptance and the combined acceptance gate. The next unit is 4.4 supplier-directory planning. Use the tracker for current authorization and evidence.
+For checklist step 4, read the active [implementation guide](docs/step-4-implementation.md) for the operational roadmap and current unit criteria. MRF drafts and supporting PDFs are verified complete. Submission, PM review, approved archives and Procurement corrections are verified complete in 4.3, including explicit manual acceptance and the combined acceptance gate. Unit 4.4 supplier-directory implementation is underway: Procurement maintains company-wide structured profiles and active/inactive status; non-Site roles read profiles/history. CI, staging and targeted human acceptance remain tracked separately. Use the tracker for current authorization and evidence.
 
 ## Run locally
 

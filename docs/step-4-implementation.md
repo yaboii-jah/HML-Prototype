@@ -155,7 +155,7 @@ The earlier **Not tested yet** response on 2026-11-03 is superseded by the userâ
 2. **Approved archives (`mrf-approved-archives`):** as a different PM, approve a submitted MRF. Confirm approval is visible while archiving remains pending; after completion, preview/download both the approved company form and supporting PDF. Verify visible failure/retry if encountered, and confirm Site cannot perform PM archive retries. The generated form must match the submitted project labels.
 3. **Corrections/history (`mrf-corrections-history`):** as Procurement reopen a fully archived approval with a reason. Confirm assigned Site staff can prepare a full correction, procurement readiness pauses, and PM can return or approve the correction without rejecting it. After reapproval/archive completion, both earlier and current approved document versions and the complete actor/reason timeline remain available. Automated disposable fixtures additionally cover document-only restrictions after downstream references and every submitter's self-approval restriction after role changes; these are not claimed as human tests.
 
-## 4.4 Supplier Directory ? In Implementation
+## 4.4 Supplier Directory â€” In Implementation
 
 **Authorized 2026-11-04:** the user confirmed the complete interview scope and requested implementation. Procurement alone maintains one company-wide supplier record per business; all non-Site roles read profiles/history. Site Personnel have no supplier access. Preserve existing styling and project-style register/detail routes with add/edit dialogs.
 

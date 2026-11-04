@@ -39,8 +39,10 @@ begin
     -- Role changes revoke bindings; bind a fresh session proof for each role.
     delete from public.role_grants where user_id=person;
     insert into public.role_grants values(person,role);
+    delete from private.session_bindings where session_id=session;
     proof:=private.login_preflight(person::text||'@example.invalid');
-    perform private.bind_session(person,session,proof->>'revision',proof->>'credential');
+    if not private.bind_session(person,session,proof->>'revision',proof->>'credential') then
+      raise exception 'Fresh supplier fixture binding failed'; end if;
     reader:=actor||jsonb_build_object('activeRole',role,'revision',proof->>'revision');
     if role='Site Personnel' then
       begin perform public.suppliers_read(reader); raise exception 'Site read suppliers'; exception when insufficient_privilege then null; end;
