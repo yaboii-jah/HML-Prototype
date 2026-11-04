@@ -118,6 +118,9 @@ begin
   body:=jsonb_set(body,'{lines,0,quantity}','"1"');
   saved:=public.quotation_command(buyer,jsonb_build_object('type','save','requestId',gen_random_uuid(),'quoteId',quote,'expectedVersion',saved->>'version','body',body))->'quote';
   if jsonb_array_length(saved->'matches')<>0 then raise exception 'Changed line kept match'; end if;
+  body:=jsonb_set(body,'{lines,0,quantity}','"0"');
+  saved:=public.quotation_command(buyer,jsonb_build_object('type','save','requestId',gen_random_uuid(),'quoteId',quote,'expectedVersion',saved->>'version','body',body))->'quote';
+  if jsonb_array_length(saved->'matches')<>0 then raise exception 'Restored source values revived an expired match'; end if;
   v:=saved->>'version'; fv:=saved->>'fileVersion';
   perform public.quotation_files_command(buyer,jsonb_build_object('type','beginGroup','requestId',gen_random_uuid(),'quoteId',quote,'expectedFiles',fv,'keep',jsonb_build_array(retained_file),'uploads','[]'::jsonb));
   saved:=private.quotation_view(quote);

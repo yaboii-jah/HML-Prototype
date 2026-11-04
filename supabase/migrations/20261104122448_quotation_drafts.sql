@@ -88,7 +88,7 @@ begin
     update private.quotation_groups set state='committed' where id=target;
     return;
   end if;
-  update private.quotation_drafts set current_files=g.files,file_version=file_version+1 where id=q.id;
+  update private.quotation_drafts set current_files=g.files,file_version=file_version+1,checked=null,matches='{}' where id=q.id;
   update private.quotation_groups set state='committed' where id=target;
   perform private.quotation_audit(g.actor,'quotation.files',q.id,target,jsonb_build_object('before',previous,'after',g.files,'originalActor',g.original_actor,
     'beforeFiles',coalesce((select jsonb_agg(jsonb_build_object('name',f.name,'mime',f.mime,'size',f.size,'sha256',f.sha256) order by f.id) from private.quotation_files f where f.id=any(previous)),'[]'),
@@ -446,7 +446,10 @@ begin
       body:=private.quotation_body(command->'body',q.request_id);
       if exists(select 1 from jsonb_array_elements(body->'lines') l where l->'sourceFileId'<>'null' and not (l->>'sourceFileId')::uuid=any(q.current_files)) then
         raise exception 'Choose a current quotation source file' using errcode='23514'; end if;
-      update private.quotation_drafts set body=cmd.body,version=version+1,content_version=content_version+1 where id=target and quotation_drafts.body is distinct from cmd.body;
+      update private.quotation_drafts set body=cmd.body,version=version+1,content_version=content_version+1,checked=null,
+        matches=coalesce((select jsonb_object_agg(stamp.key,stamp.value) from jsonb_each(q.matches) stamp
+          join jsonb_array_elements(cmd.body->'lines') offered on offered->>'id'=stamp.key where stamp.value->'line'=offered),'{}')
+        where id=target and quotation_drafts.body is distinct from cmd.body;
       changed:=found;
     elsif kind='status' then
       reason:=btrim(command->>'reason'); next_state:=command->>'state';
