@@ -28,7 +28,9 @@ test('every disabled endpoint denies forged snapshots without reading bodies or 
   for (const file of await routes('app/api')) {
     // These migrated reads have their own real-session authorization coverage.
     if (['app/api/foundation/view/route.ts', 'app/api/realtime/session/route.ts', 'app/api/mrf-documents/route.ts',
-      'app/api/mrf-documents/files/[id]/route.ts', 'app/api/mrf-documents/uploads/[id]/route.ts'].includes(file)) continue;
+      'app/api/mrf-documents/files/[id]/route.ts', 'app/api/mrf-documents/uploads/[id]/route.ts',
+      'app/api/quotation-files/route.ts', 'app/api/quotation-files/[id]/route.ts',
+      'app/api/quotation-files/uploads/[id]/route.ts'].includes(file)) continue;
     const handlers = await import(new URL('../' + file, import.meta.url));
     for (const method of ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD']) {
       if (typeof handlers[method] !== 'function') continue;

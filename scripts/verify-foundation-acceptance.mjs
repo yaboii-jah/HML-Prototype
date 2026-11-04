@@ -30,16 +30,19 @@ try {
     const staging = await read('staging-acceptance.json');
     requireCurrentEvidence(staging, source, 'staging');
     if (staging.projectRef !== 'gxphubtycnvhpgstruqb' || !staging.retainedStateMatches || staging.emailSent !== false) throw Error('Staging parity incomplete');
+    const drive = await read('document-drive-live.json');
+    requireCurrentEvidence(drive, source, 'quotation original live Drive');
+    if (!drive.cleaned || !drive.checks?.includes('quotation-mixed-originals')) throw Error('Live quotation originals/owned cleanup incomplete');
     // Manual review is deliberately explicit, never inferred from green CI.
     const manual = await read('foundation-manual.json');
     requireCurrentEvidence(manual, source, 'targeted manual review');
     if (!manual.confirmedByUser || !manual.reviewedBehavior?.includes('error-retry')) throw Error('Targeted recovery review pending');
-    for (const behavior of ['mrf-shared-drafts', 'mrf-conflict-review', 'mrf-revocation', 'mrf-document-sharing', 'mrf-document-recovery', 'project-document-folders', 'mrf-submission-review', 'mrf-approved-archives', 'mrf-corrections-history', 'supplier-sharing-permissions', 'supplier-conflict-recovery', 'supplier-status-history']) {
+    for (const behavior of ['mrf-shared-drafts', 'mrf-conflict-review', 'mrf-revocation', 'mrf-document-sharing', 'mrf-document-recovery', 'project-document-folders', 'mrf-submission-review', 'mrf-approved-archives', 'mrf-corrections-history', 'supplier-sharing-permissions', 'supplier-conflict-recovery', 'supplier-status-history', 'quotation-capture-access', 'quotation-review-conflicts', 'quotation-originals-recovery']) {
       if (!manual.reviewedBehavior?.includes(behavior)) throw Error(`Targeted operational review pending: ${behavior}`);
     }
     result = { ...source, complete: true, passed: true, scope: 'milestone', scenarios: database.scenarios,
       evidence: ['acceptance-import/local/foundation-acceptance.json', ...evidence,
-        'acceptance-import/database/foundation-acceptance.json', 'staging-acceptance.json', 'foundation-manual.json'] };
+        'acceptance-import/database/foundation-acceptance.json', 'staging-acceptance.json', 'document-drive-live.json', 'foundation-manual.json'] };
   } else {
     const requireBrowser = profile === 'local' || process.platform === 'win32';
     result = standardAcceptance(source, await read('checks.json'), requireBrowser ? await read('browser/verification.json') : null, requireBrowser);

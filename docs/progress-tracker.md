@@ -10,7 +10,7 @@ Update this file after every meaningful implementation or documentation change a
 
 ## Current Goal
 
-- **4.4 Supplier directory is verified complete on 2026-11-04 at implementation `480311b`.** The user explicitly confirmed all three manual groups passed, and source-bound combined acceptance passes with matching local/four-job CI/disposable/staging evidence. Next is **4.5 manual-quotation planning**; its implementation is not authorized by this closeout. [Draft PR #32](https://github.com/yaboii-jah/HML-Prototype/pull/32) remains unmerged; production is unchanged.
+- **4.5a manual quotation capture/source review/originals is authorized and in implementation on `feat/step-4-quotation-drafts` (2026-11-04).** The user locked the split plan and requested implementation. Financial finalization/formal business revisions remain 4.5b, blocked on applicable policy confirmation; overall 4.5 stays open. Preserve accepted 4.4 evidence and retained QA records/files. No merge or production action is authorized.
 
 
 ## Completed
@@ -57,7 +57,7 @@ Update this file after every meaningful implementation or documentation change a
 
 ## In Progress
 
-- No operational unit is currently in implementation. Unit 4.4 is closed; 4.5 needs scoped planning and its own implementation authorization. The private untracked account note remains unrelated and excluded.
+- Unit 4.5a capture routes, checked SQL commands, private realtime views, separate text/file versions, source stamps and protected mixed-original groups/jobs are implemented. Focused tests pass for precision/blank-zero preservation, validation, private projections and MIME-aware transport. Full local verification has passed lint/types and all 410 tests; build is running. New rollback SQL, actual application browser and observed-lock race checks await disposable CI; live Drive, retained-state staging and the three new human confirmations remain pending. The private untracked account note remains unrelated and excluded.
 
 
 
@@ -72,7 +72,7 @@ Update this file after every meaningful implementation or documentation change a
 
 Use the [production checklist](checklist.md#steps) for the ordered milestones and their completion conditions.
 
-- **Exact next action:** plan 4.5 manual-quotation scope and acceptance before implementation. Preserve completed 4.4 evidence and retained QA records/files; merging and production remain separate. Preserve completed 4.3 evidence and retained QA records/files; merging and production remain separate.
+- **Exact next action:** implement and verify the agreed 4.5a scope before scoped staging rollout and targeted human review. Preserve completed 4.4 evidence and retained QA records/files; merging and production remain separate. Preserve completed 4.3 evidence and retained QA records/files; merging and production remain separate.
 - Follow the guide's dependencies and completion criteria. The prototype role switch/approval commands are not production authority. Migrated MRF review now enforces permanent-user self-approval prevention; prepared-PO enforcement remains part of its later workflow unit.
 - Retain local Node 26.12.1, the Vercel Node 24.x target, CI baseline 24.22.1 and npm 11.20.0 across environments. Hosted deployment verification belongs to the later protected rehearsal.
 - Work foundations first: individual identity, shared records and server authorization before business-workflow migration. Tailwind remains a separate track.
@@ -125,6 +125,8 @@ The [architecture document](architecture.md) is the detailed source of truth. Ke
 | Private realtime signals and current authorized reads | Open permitted views update automatically; access-revision topics and session checks keep notifications independent from authority. |
 
 ## Session Notes
+
+- **4.5a authorization, 2026-11-04:** all interview decisions locked; user requested implementation. Recorded the 4.5a/4.5b split in the active guide. First saved quotation permanently restricts MRF correction; one active draft per MRF/supplier, fixed identities, exact source values without financial calculations, atomic mixed-file groups and Procurement-only retries. Earlier 4.4 acceptance remains historical, not a 4.5a pass.
 
 - **4.4 closeout, 2026-11-04:** the overall-success report was clarified by explicit **All three passed** confirmation for sharing/permissions, conflicts/revocation and status/duplicates/history. Recorded source-current manual evidence while preserving the complete preceding MRF/recovery attestations, original dates and byte-identical recovery-file hash. `npm run verify:foundation -- milestone` passes. The earlier **Not tested yet** response remains historical and is superseded by this confirmation. Updated guide, tracker, checklist, overview, architecture and README; workflow/code standards need no changes. This documentation/evidence closeout repeats no application tests and changes no schema/provider configuration. Preserved Jude's credential-setup note and the private account file. No merge, production promotion or 4.5 implementation.
 

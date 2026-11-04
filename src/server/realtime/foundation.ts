@@ -5,6 +5,7 @@ import { projectDirectory, projectDetail } from "@/src/server/projects/projects"
 import { accountDirectory } from "@/src/server/accounts/accounts";
 import { UUID_PATTERN } from "@/src/domain/auth/session";
 import { requestView } from "@/src/server/requests/drafts";
+import { quotationsView } from "@/src/server/quotations/drafts";
 import { supplierView } from "@/src/server/suppliers/suppliers";
 import { sameApplicationOrigin } from "../request-origin.ts";
 
@@ -39,6 +40,12 @@ export async function foundationResponse(request: Request, credentials = false) 
         accessToken: token.access_token, expiresAt: token.expires_at });
     }
     const query = new URL(request.url).searchParams, view = query.get("view");
+    if (view === "quotations") {
+      if (session.activeRole === "Site Personnel") return json({ error: "Quotation access denied." }, 403);
+      const id = query.get("mrfId");
+      if (!id || !UUID_PATTERN.test(id)) return json({ error: "Valid MRF required." }, 400);
+      return json({ session, view: { kind: "quotations", data: await quotationsView(id) } });
+    }
     if (view === "suppliers") {
       if (session.activeRole === "Site Personnel") return json({ error: "Supplier access denied." }, 403);
       const id = query.get("supplierId");

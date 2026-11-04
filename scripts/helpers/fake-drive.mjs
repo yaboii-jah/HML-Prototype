@@ -58,7 +58,7 @@ export async function fakeDrive() {
         if (!file.body || file.trashed) { json({}, 404); return; }
         const range = /^bytes=(\d+)-(\d+)$/.exec(req.headers.range ?? '');
         const bytes = range ? file.body.subarray(Number(range[1]), Number(range[2]) + 1) : file.body;
-        res.writeHead(range ? 206 : 200, { 'Content-Type': 'application/pdf', 'Content-Length': bytes.length, ...(range ? { 'Content-Range': `bytes ${range[1]}-${range[2]}/${file.body.length}` } : {}) }); res.end(bytes); return;
+        res.writeHead(range ? 206 : 200, { 'Content-Type': file.mimeType, 'Content-Length': bytes.length, ...(range ? { 'Content-Range': `bytes ${range[1]}-${range[2]}/${file.body.length}` } : {}) }); res.end(bytes); return;
       }
       const { body: omitted, ...publicMetadata } = file;
       void omitted;

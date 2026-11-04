@@ -1,0 +1,63 @@
+.quotation-capture fieldset {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.quotation-capture details > summary {
+  font-weight: 700;
+  cursor: pointer;
+  margin-bottom: 16px;
+}
+.quotation-source-table {
+  overflow-x: auto;
+}
+.quotation-source-table table {
+  min-width: 1050px;
+  width: 100%;
+}
+.quotation-source-table input {
+  width: 100%;
+  min-width: 90px;
+}
+.quotation-source-table td:first-child input {
+  min-width: 200px;
+}
+.quotation-source-table select {
+  max-width: 220px;
+}
+.quotation-adjustment {
+  border-top: 1px solid var(--line);
+  padding: 16px 0;
+}
+.quotation-originals li {
+  overflow-wrap: anywhere;
+  margin-bottom: 10px;
+}
+.quotation-review-status {
+  margin-bottom: 20px;
+}
+.quotation-saved-source {
+  overflow-wrap: anywhere;
+}
+.quotation-saved-source dl > div {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) 2fr;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+}
+.quotation-saved-source dt {
+  font-weight: 600;
+}
+.quotation-saved-source dd {
+  margin: 0;
+  white-space: pre-wrap;
+  min-width: 0;
+}
+@media (max-width: 600px) {
+  .quotation-saved-source dl > div {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+}

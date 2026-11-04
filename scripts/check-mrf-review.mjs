@@ -106,4 +106,5 @@ export async function checkMrfReview({ browser, second, client, login, logout, s
   await browser.call('Emulation.clearDeviceMetricsOverride');
   await logout(browser);
   console.log('Real submission/review actions, dirty collaborator locks, PM archive failure/retry, private approved PDFs and corrected versions passed.');
+  return { mrf, project, staff, manager, bytes };
 }
