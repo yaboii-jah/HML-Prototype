@@ -4,7 +4,32 @@ import { writeFile } from "node:fs/promises";
 import sharp from "sharp";
 
 /** Reuses an MRF archived by the actual application review/Workflow path. */
-export async function checkQuotationDrafts({
+export async function checkQuotationDrafts(options) {
+  try {
+    return await checkCapture(options);
+  } catch (error) {
+    for (const [index, page] of [options.browser, options.second].entries()) {
+      const shot = await page
+        .call("Page.captureScreenshot", { format: "png" })
+        .catch(() => null);
+      if (shot)
+        await writeFile(
+          `.verification/quotation-failure-${index}.png`,
+          Buffer.from(shot.data, "base64"),
+        );
+      console.error(
+        "Quotation failure state:",
+        await page
+          .run(
+            "return [...document.querySelectorAll('[role=alert],.quotation-originals [role=status]')].map(el=>el.textContent).join(' | ')",
+          )
+          .catch(() => "unavailable"),
+      );
+    }
+    throw error;
+  }
+}
+async function checkCapture({
   browser,
   second,
   client,
@@ -31,13 +56,11 @@ export async function checkQuotationDrafts({
       await client.auth.admin.createUser({ ...account, email_confirm: true }),
     ).user.id;
     ok(
-      await client
-        .from("profiles")
-        .insert({
-          user_id: account.id,
-          display_name: "Quotation " + role,
-          is_active: true,
-        }),
+      await client.from("profiles").insert({
+        user_id: account.id,
+        display_name: "Quotation " + role,
+        is_active: true,
+      }),
     );
     ok(await client.from("role_grants").insert({ user_id: account.id, role }));
     accounts.push(account);
@@ -60,6 +83,12 @@ export async function checkQuotationDrafts({
     const expression = `const button=[...document.querySelectorAll('button')].find(b=>b.textContent.trim()===${JSON.stringify(text)}&&!b.disabled);`;
     await page.wait(expression + "return !!button;");
     await page.run(expression + "button.click();");
+  };
+  const save = async (page) => {
+    await click(page, "Save quotation");
+    await page.wait(
+      "return !document.body.innerText.includes('Save or discard your text changes')&&[...document.querySelectorAll('button')].some(b=>b.textContent==='Save quotation'&&!b.disabled)",
+    );
   };
   await login(browser, accounts[0]);
   const buyer = await actor(browser);
@@ -97,7 +126,7 @@ export async function checkQuotationDrafts({
   const colleague = await actor(second);
   await browser.fill("input[name=ref]", "Preserved local source");
   await second.fill("input[name=ref]", "Saved by colleague");
-  await click(second, "Save quotation");
+  await save(second);
   await browser.wait(
     "return document.body.innerText.includes('Review latest saved quotation')",
   );
@@ -107,12 +136,12 @@ export async function checkQuotationDrafts({
   );
   await click(browser, "I reviewed the latest quotation; keep my draft");
   await second.fill("input[name=ref]", "Changed again");
-  await click(second, "Save quotation");
+  await save(second);
   await browser.wait(
     "return document.body.innerText.includes('Review latest saved quotation')",
   );
   await click(browser, "I reviewed the latest quotation; keep my draft");
-  await click(browser, "Save quotation");
+  await save(browser);
   await browser.wait(
     "return !document.body.innerText.includes('Review latest saved quotation')",
   );
@@ -141,7 +170,7 @@ export async function checkQuotationDrafts({
   await click(browser, "Line details");
   await browser.fill("input[name=line-conversionFactor]", "1");
   await click(browser, "Close line details");
-  await click(browser, "Save quotation");
+  await save(browser);
   await browser.wait(
     "return !document.body.innerText.includes('Save or discard your text changes')",
   );
@@ -258,7 +287,7 @@ export async function checkQuotationDrafts({
     ),
     true,
   );
-  await click(browser, "Save quotation");
+  await save(browser);
   await browser.wait(
     "return document.querySelector('.quotation-review-status')?.textContent.includes('has not been checked')",
   );

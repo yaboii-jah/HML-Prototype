@@ -423,7 +423,7 @@ function SourceEditor({
     operation.conflict ||
     busy ||
     !quote.files.length ||
-    quote.groups.some((g) => g.state === "uploading");
+    quote.groups.length > 0;
   return (
     <>
       <div className="panel quotation-review-status">

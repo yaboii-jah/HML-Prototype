@@ -374,7 +374,7 @@ language sql security definer set search_path='' as $$
 $$;
 create function private.quotation_ready_files(q private.quotation_drafts) returns boolean
 language sql stable set search_path='' as $$
-  select cardinality(q.current_files)>0 and not exists(select 1 from private.quotation_groups g where g.quote_id=q.id and g.state='uploading')
+  select cardinality(q.current_files)>0 and not exists(select 1 from private.quotation_groups g where g.quote_id=q.id and g.state in('uploading','conflict'))
     and not exists(select 1 from unnest(q.current_files) as selected(file_id) where not exists(select 1 from private.quotation_files f where f.id=selected.file_id and f.state='verified'));
 $$;
 create function private.quotation_view(target uuid) returns jsonb language sql stable security definer set search_path='' as $$

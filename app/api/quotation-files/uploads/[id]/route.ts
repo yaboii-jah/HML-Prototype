@@ -45,11 +45,11 @@ async function transfer(
     return quotationFileError(error);
   }
 }
-export const GET = (
+export const POST = (
   request: Request,
   context: { params: Promise<{ id: string }> },
 ) => transfer(request, context, false);
-export const POST = (
+export const PUT = (
   request: Request,
   context: { params: Promise<{ id: string }> },
 ) => transfer(request, context, true);

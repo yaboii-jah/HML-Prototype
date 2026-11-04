@@ -85,6 +85,8 @@ Use the repository's isolated verification paths by default. Run live integratio
 
 ### Verification Profiles
 
+Quotation capture acceptance includes checked first-save downstream restrictions, one active draft per MRF/supplier, exact source decimals, content/file-bound review stamps and atomic mixed-file groups. Exercise actual application capture, repeated two-session conflicts, local-file reselection, failed decode preservation, cancellation and revocation through the disposable browser path. Observed-lock races cover file acknowledgement after access changes. The owned live-Drive smoke now also verifies JPEG/PNG/WebP decoding, MIME, exact bytes and Range behavior; retain the three quotation human-review confirmations separately from earlier units.
+
 The maintained [acceptance scenario mapping](../scripts/helpers/foundation-acceptance.mjs) and [acceptance runner](../scripts/verify-foundation-acceptance.mjs) define executable foundation coverage and evidence requirements. Keep that mapping current when supported behavior changes.
 
 MRF review acceptance includes the actual application submission/PM decision path through immutable snapshots and Workflow archive acknowledgement, not only direct archive fixtures. Verify all historical submitters after role changes, submitted dirty-editor locks, competing decisions and attachment/revocation races, correction restrictions and protected approved-version retrieval. Retained manual QA documents stay with their records; record new human confirmations separately from inherited 4.1/4.2 attestations.

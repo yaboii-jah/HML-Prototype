@@ -109,6 +109,7 @@ export function QuotationOriginals({
         );
       let state = await responseJson(
         await fetch(`/api/quotation-files/uploads/${upload.id}`, {
+          method: "POST",
           cache: "no-store",
         }),
       );
@@ -128,7 +129,7 @@ export function QuotationOriginals({
             await fetch(
               `/api/quotation-files/uploads/${upload.id}?offset=${offset}`,
               {
-                method: "POST",
+                method: "PUT",
                 headers: { "Content-Type": "application/octet-stream" },
                 body: match.file.slice(offset, offset + QUOTE_CHUNK_SIZE),
               },
@@ -138,6 +139,7 @@ export function QuotationOriginals({
           // Resolve an uncertain POST before deciding whether another chunk is needed.
           const recovered = await responseJson(
             await fetch(`/api/quotation-files/uploads/${upload.id}`, {
+              method: "POST",
               cache: "no-store",
             }),
           );
