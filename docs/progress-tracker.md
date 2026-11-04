@@ -1,19 +1,21 @@
 # Progress Tracker
 
-Update this file after every meaningful implementation or documentation change and consequential decision. Keep completed work, active work and plans distinct. **Last reviewed: 2026-11-03.**
+Update this file after every meaningful implementation or documentation change and consequential decision. Keep completed work, active work and plans distinct. **Last reviewed: 2026-11-04.**
 
 ## Current Phase
 
-- Runtime/CI milestone 2 and foundation units 3.1-3.6 are verified. The account/project foundation includes sessions, accounts, shared projects/scopes and protected realtime, with complete local/CI/staging acceptance. The operational roadmap and 4.0 are verified; 4.1 shared MRF drafts is verified complete, including user-confirmed manual acceptance.
+- Runtime/CI milestone 2 and foundation units 3.1-3.6 are verified. The account/project foundation includes sessions, accounts, shared projects/scopes and protected realtime, with complete local/CI/staging acceptance. The operational roadmap and 4.0 are verified; 4.1 shared MRF drafts, 4.2 required documents and 4.3 submission/review are verified complete, including user-confirmed manual acceptance.
 - The supported runtime no longer starts the global demo workspace or trusts browser-selected accounts. Projects/MRFs use protected shared records; supporting-PDF upload/preview/download and required folder operations are implemented. Unmigrated provider endpoints remain disabled. The committed prototype and isolated regression fixtures remain recoverable.
 - Production configuration/deployment, verified real email, company-owned services, backup/restore and operational acceptance remain release work. Checklist step 3 is complete; operational and release milestones remain open.
 
 ## Current Goal
 
-- Unit **4.3 is implemented and verified automatically at `36a4857`; targeted manual acceptance remains pending**. Submission/review, permanent-identity self-approval prevention, correction controls, approved archive pairs and private historical retrieval are available at `http://127.0.0.1:3000`. Staging migration/parity and retained-state preservation pass. [Draft PR #31](https://github.com/yaboii-jah/HML-Prototype/pull/31) is unmerged. Editor layout redesign remains step 6.
+- **4.3 is verified complete on 2026-11-04** at implementation `36a4857`, including explicit confirmation of all three manual groups and passing source-bound combined acceptance. The next unit is **4.4 Supplier directory planning**; implementation of 4.4 is not authorized by this closeout. [Draft PR #31](https://github.com/yaboii-jah/HML-Prototype/pull/31) remains unmerged. Editor layout redesign remains step 6.
 
 
 ## Completed
+
+- **Unit 4.3, 2026-11-04:** submission/PM review, permanent-identity self-approval protection, archive pairs/private version retrieval and corrections are verified complete at `36a4857`. The user explicitly selected **All three groups passed** for submission/decisions, approved PDFs and corrections/history. Recorded source-current confirmation without changing earlier attestation dates or claiming new automated retests. `npm run verify:foundation -- milestone` passes with matching local/four-job CI/disposable/staging evidence. Step 4 remains open; 4.4 is next for planning. Draft PR #31 remains unmerged.
 
 - **Unit 4.2, 2026-11-03:** the user explicitly confirmed all three targeted manual groups passed after local origin configuration was corrected. Recorded source-current confirmation while preserving the original 4.1/recovery attestations and dates; `npm run verify:foundation -- milestone` passes. Automated/live/staging evidence remains at implementation `664053a`. No merge or production action.
 
@@ -53,7 +55,7 @@ Update this file after every meaningful implementation or documentation change a
 
 ## In Progress
 
-- **4.3:** waiting only for explicit confirmation of the [three manual-review groups](step-4-implementation.md#43-targeted-manual-review). Automated acceptance is complete; preserve retained QA MRFs/files and accounts. No 4.3 human success is inferred.
+- No operational unit is currently in implementation. Unit 4.3 is closed; 4.4 needs scoped planning and its own implementation authorization.
 
 
 
@@ -68,8 +70,8 @@ Update this file after every meaningful implementation or documentation change a
 
 Use the [production checklist](checklist.md#steps) for the ordered milestones and their completion conditions.
 
-- **Exact next action:** obtain actual results for submission/review, approved archives and corrections/history; preserve earlier human attestations, record the new confirmation against `36a4857`, then rerun combined acceptance before checking 4.3. Later units, merge and production remain separate.
-- Follow the guide's dependencies and completion criteria. The prototype's role switch currently selects another account, and its approval commands do not enforce the target permanent-user self-approval restriction. Preserve the documented target rules; verify approval enforcement with the migrated workflows in step 4.
+- **Exact next action:** plan 4.4 supplier-directory scope and acceptance before implementation. Preserve completed 4.3 evidence and retained QA records/files; merging and production remain separate.
+- Follow the guide's dependencies and completion criteria. The prototype role switch/approval commands are not production authority. Migrated MRF review now enforces permanent-user self-approval prevention; prepared-PO enforcement remains part of its later workflow unit.
 - Retain local Node 26.12.1, the Vercel Node 24.x target, CI baseline 24.22.1 and npm 11.20.0 across environments. Hosted deployment verification belongs to the later protected rehearsal.
 - Work foundations first: individual identity, shared records and server authorization before business-workflow migration. Tailwind remains a separate track.
 - The completed foundation covers accounts, permissions, shared projects/scopes and protected realtime. Operational records and their required document handling move with step 4 workflows, including necessary protected folder operations. Broader document features and optional AI remain step 5. Temporary unavailable screens and explicitly deferred suites remain visible until their replacements are verified.
@@ -121,6 +123,10 @@ The [architecture document](architecture.md) is the detailed source of truth. Ke
 | Private realtime signals and current authorized reads | Open permitted views update automatically; access-revision topics and session checks keep notifications independent from authority. |
 
 ## Session Notes
+
+- **4.3 closeout, 2026-11-04:** the user’s overall-success report was clarified by explicit confirmation that all three manual groups passed. Preserved complete 4.2/4.1/recovery attestations, original dates and byte-identical recovery-file hash in the source-current manual report. Combined milestone acceptance passes. Updated overview, architecture, checklist, guide, tracker and README; workflow rules/code standards need no changes because their contracts remain unchanged. This is a documentation/evidence closeout: no application/schema/provider changes or repeated application tests. Preserved Kristine’s account-setup note and the untracked private account file. No merge, production promotion or 4.4 implementation.
+
+- **Kristine PM staging sign-in, 2026-11-04:** at the user's explicit request, set a new temporary password and confirmed email for the existing active Kristine Ignas account. Verified real password authentication, application session binding and Project Manager context; closed the verification session. Existing role grants and project assignments were preserved. No email was sent. Credentials were shared only in conversation and were not stored in source/documentation. This does not establish 4.3 manual acceptance.
 
 - **4.3 human review status, 2026-11-03:** the user explicitly answered **Not tested yet** for submission/review, approved archives and corrections/history. All three remain pending and 4.3 stays unchecked. The combined acceptance runner passes preceding source-current local/four-job CI/disposable/staging evidence and stops at the missing new manual attestation. Earlier 4.1/4.2 confirmations remain preserved and do not establish 4.3 human acceptance.
 
@@ -196,9 +202,9 @@ The [architecture document](architecture.md) is the detailed source of truth. Ke
 - **Staging limits/advisors:** Free/default-provider projects reject email-template updates. The guarded staging Auth command applies security/URL settings only; committed templates run in Mailpit CI. Hosted parity uses a restricted generated recovery link without sending email. Real delivery needs the verified custom SMTP setup. Security advisors report the deliberate private-table RLS-without-client-policies INFO entries and a leaked-password-protection WARN (Pro-only); no upgrade or claim of a clean Auth advisory report is made. Retain the unused assignment/audit indexes that support constraints and future queries.
 - **Deferred/retired prototype browser suites:** `showcase` (demo-only, retired); `shell-controls`, `skeleton-loading` (legacy demo suites retired; supported foundation assertions replaced by `check-foundation-shell.mjs` in 3.6, operational/document portions follow their step 4/5 workflows); `user-management` (legacy suite retired: account assertions replaced by real-session 3.3 coverage and project assertions by 3.4; required Drive folder operations move to 4.2, broader folder features remain step 5); `site-visibility` (project/scope and financial-denial assertions replaced in 3.4, realtime recovery covered in 3.5 and full foundation acceptance in 3.6, stock/operations remain step 4); `register`, `browser`, `quotation`, `compare-allocate`, `full-disbursement`, `credit-terms`, `site-stock-transfers`, `stock-transfer-forwarding`, `quotation-editor`, `quotation-worksheet`, `quotation-financial-review`, `quotation-confirmations`, `suggestions`, `document-numbering`, `material-rows`, `qa-fixes`, `usage-entries`, `next-iteration` (operational workflows, step 4); `delivery-documents`, `document-gallery`, `supplier-upload`, `quotation-extraction`, `project-folder` (restore required document/upload/archive assertions with 4.2/4.5/4.11/4.13/4.16 as applicable; broader gallery/folder features and optional extraction remain step 5). These 28 legacy suite labels are deferred/retired, not passed; replacement account/project suites, pure/domain tests and isolated legacy-handler regressions are maintained separately.
 
-- **Resume context:** published `feat/step-4-mrf-documents`, draft PR #30, from the accepted 4.1 lineage (PR #29 remains unmerged). Units 3.1-3.6, 4.0 and 4.1 are complete. 4.2 implementation `664053a` passes automated/live/staging checks and awaits its three manual results. Retain staging records/files and QA accounts; do not reset staging or rerun bootstrap. The active guide owns the later-unit sequence.
+- **Resume context:** published `feat/step-4-mrf-review`, draft PR #31, retains the unmerged 4.1/4.2 lineage (PRs #29/#30). Units 3.1-3.6 and 4.0-4.3 are complete. Unit 4.3 implementation `36a4857` has passing combined acceptance including all three explicit manual confirmations. Next is 4.4 planning. Retain staging records/files and QA accounts; do not reset staging or rerun bootstrap. The active guide owns the later-unit sequence.
 - **Dependency follow-up:** the high-severity audit gate passes in final standard CI; npm currently reports 24 moderate findings. Earlier two-finding counts remain historical evidence, not a current zero-vulnerability claim. Assess compatible upstream remediation separately; no forced dependency downgrade or unrelated package change was applied.
-- **Read before the next unit:** all five core documents required by [AGENTS.md](../AGENTS.md), the [checklist](checklist.md) and the active [step 4 guide](step-4-implementation.md). Check current authorization and the exact next action. 4.2 awaits manual acceptance; 4.3 and later units require their own scoped planning and authorization.
+- **Read before the next unit:** all five core documents required by [AGENTS.md](../AGENTS.md), the [checklist](checklist.md) and the active [step 4 guide](step-4-implementation.md). Check current authorization and the exact next action. 4.1-4.3 are verified complete. Next is 4.4 scoped planning; implementation and later units require their own authorization.
 
 - **4.1 coverage restoration:** maintained request-domain, rollback SQL, request-race and real-account request/browser checks replace the shared-draft portions of the legacy register/document-numbering/material-row coverage. Later workflow assertions in those legacy suites remain deferred; no whole legacy-suite pass is claimed.
 - **4.2 coverage restoration:** maintained document-domain/gateway/PDF tests, rollback SQL, observed document races and real-account browser/Workflow checks replace the required MRF portions of the legacy project-folder/document-upload/gallery coverage. Wider browsing, AI and later workflow evidence remain deferred; no whole legacy-suite pass is claimed.

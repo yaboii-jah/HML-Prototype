@@ -8,7 +8,7 @@ Read the five core documents required by [AGENTS.md](../AGENTS.md), the checklis
 
 1. Reconcile Git status, the tracker and the actual implementation. Preserve unrelated pending work and the completed foundation planning retirement.
 2. Check the user's latest instruction before starting a unit. **The user finalized the 4.3 interview plan and authorized implementation. Later units, merging and production remain separate.**
-3. Use the sequence below as the roadmap. Units 4.1 and 4.2 have detailed scopes; later units require scoped planning and acceptance criteria before implementation.
+3. Use the sequence below as the roadmap. Units 4.1-4.3 have detailed scopes; later units require scoped planning and acceptance criteria before implementation.
 4. Verify a unit within its boundary, record actual results in the tracker, then check its completion box. A documentation checkpoint does not complete an operational workflow or checklist step 4.
 5. Retire this companion after the milestone is complete, preserving durable contracts in the core documents and completion evidence in the tracker.
 
@@ -32,7 +32,7 @@ The listed order is the default. Record any agreed scope/order revision here and
 | **4.0 Record the plan** | [x] | Record this roadmap, the 4.1 specification, ownership/reading pointers and the current stop before implementation. |
 | **4.1 Shared MRF drafts** | [x] | Restore register, draft editor and detail views with authoritative storage and transactional numbering; depends on the completed foundation and 4.0. |
 | **4.2 Required MRF documents** | [x] | Protected supporting-PDF handling, required project-folder operations and retryable archive processing for migrated MRFs. |
-| **4.3 MRF submission and review** | [ ] | Submission, PM approval/return/rejection, corrections and permanent-identity self-approval prevention; requires verified document gates from 4.2. |
+| **4.3 MRF submission and review** | [x] | Submission, PM approval/return/rejection, corrections and permanent-identity self-approval prevention; requires verified document gates from 4.2. |
 | **4.4 Supplier directory** | [ ] | Shared supplier records and authorized maintenance. |
 | **4.5 Manual quotations** | [ ] | Capture, review, version and archive supplier quotations; financial finalization requires applicable policy confirmation and supplier-original archives. |
 | **4.6 Shared demand allocation** | [ ] | One authoritative demand limit shared by purchases, suitability holds and transfer allocations; based on approved MRF requirements. |
@@ -137,9 +137,9 @@ Use the retained QA project and two currently assigned Site accounts, restoring 
 
 Record actual results after the user confirms them. Generated approved MRFs/archive pairs are tested internally; official approval and its archive trigger remain unavailable until 4.3.
 
-## 4.3 MRF Submission and Review — Manual Acceptance Pending
+## 4.3 MRF Submission and Review — Complete
 
-Implementation `36a4857` passes local, four-job CI, disposable integration, real-Drive and staging parity checks. The reviewed migration is applied to staging with retained data preserved. Targeted manual acceptance below remains pending; 4.3 stays unchecked. Keep the editor layout redesign in step 6. Add atomic Save and submit on saved numbered MRFs, checking header and attachment versions; require complete requirements, funded scope and a validated PDF, with unfinished uploads completed or explicitly cancelled. Freeze project/form labels and source identity at submission. Submitted fields/files lock; no withdrawal. Preserve dirty collaborator input but require conflict review after a return. Saving returned edits retains Returned.
+Implementation `36a4857` passes local, four-job CI, disposable integration, real-Drive and staging parity checks. The reviewed migration is applied to staging with retained data preserved. The user explicitly confirmed all three manual groups passed on 2026-11-04; source-bound combined acceptance passes and 4.3 is complete. Keep the editor layout redesign in step 6. Add atomic Save and submit on saved numbered MRFs, checking header and attachment versions; require complete requirements, funded scope and a validated PDF, with unfinished uploads completed or explicitly cancelled. Freeze project/form labels and source identity at submission. Submitted fields/files lock; no withdrawal. Preserve dirty collaborator input but require conflict review after a return. Saving returned edits retains Returned.
 
 Any assigned Site user may resubmit. Record each permanent submitter and block every historical submitter from approval after any role change; authorized PM return/rejection remains allowed. PM reviews exact submissions; reasons require five trimmed characters. Initial rejection is terminal. Add register filters and compact detail timeline.
 
@@ -149,7 +149,7 @@ Gate saves and every attachment-changing/background acknowledgement path by life
 
 ### 4.3 Targeted Manual Review
 
-The user explicitly answered **Not tested yet** on 2026-11-03. These checks remain pending until explicitly confirmed. Use the retained QA project, assigned Site accounts and separate PM/Procurement sessions. Preserve saved MRFs and all their files. Local review uses `http://127.0.0.1:3000` with the full absolute `APP_ORIGIN=http://127.0.0.1:3000`; restart development after environment changes.
+The earlier **Not tested yet** response on 2026-11-03 is superseded by the user’s explicit **All three groups passed** confirmation on 2026-11-04. All three checks below are accepted, with inherited 4.1/4.2/recovery provenance preserved. Combined acceptance passes at implementation `36a4857`. Use the retained QA project, assigned Site accounts and separate PM/Procurement sessions. Preserve saved MRFs and all their files. Local review uses `http://127.0.0.1:3000` with the full absolute `APP_ORIGIN=http://127.0.0.1:3000`; restart development after environment changes.
 
 1. **Submission/review (`mrf-submission-review`):** save a complete MRF with a funded scope and verified PDF. Confirm incomplete requirements or unfinished uploads prevent submission. Keep unsaved text in a second Site editor, submit from the first, and confirm the second retains its text but cannot save. As PM return with a reason; reconcile and resubmit as assigned Site staff. Saving returned work must retain Returned. Reject a separate submitted QA MRF and confirm it cannot be edited or reopened.
 2. **Approved archives (`mrf-approved-archives`):** as a different PM, approve a submitted MRF. Confirm approval is visible while archiving remains pending; after completion, preview/download both the approved company form and supporting PDF. Verify visible failure/retry if encountered, and confirm Site cannot perform PM archive retries. The generated form must match the submitted project labels.
