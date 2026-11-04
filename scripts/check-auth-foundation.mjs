@@ -1,5 +1,6 @@
 import { checkRequestDrafts } from './check-request-drafts.mjs';
 import { checkMrfDocuments } from './check-mrf-documents.mjs';
+import { checkSupplierDirectory } from './check-supplier-directory.mjs';
 import { checkMrfReview } from './check-mrf-review.mjs';
 import { fakeDrive } from './helpers/fake-drive.mjs';
 import assert from 'node:assert/strict';
@@ -283,6 +284,8 @@ export async function checkAuthFoundation({ api, anon, secret, mailpit, sql, env
     checks.push('document-browser-workflow');
     await checkMrfReview({ browser, second, client, login, logout, sql, base, drive, ...documents });
     checks.push('mrf-review-browser-workflow');
+    await checkSupplierDirectory({ browser, second, client, login, logout, sessionCookie, sql });
+    checks.push('supplier-browser');
     for (const browser of browsers) browser.assertIsolated();
     checks.push('isolation');
     console.log('Real-account browser, session revocation, role, bootstrap and captured-email checks passed.');

@@ -14,6 +14,7 @@ globalThis.__foundation = {
     getClaims: async () => ({ data: { claims: { sub: userId, session_id: sessionId } }, error: null }),
   } }),
   projectDirectory: async () => ({ projects: [], history: [], role: current.activeRole }),
+  supplierView: async () => ({ suppliers: [], history: [], role: current.activeRole }),
   requestView: async () => ({ requests: [], projects: [], role: current.activeRole }),
   projectDetail: async () => ({ project: null, history: [], role: current.activeRole }),
   accountDirectory: async () => ({ users: [], projects: [], pending: [], history: [], actorId: userId, emailEnabled: false }),
@@ -24,6 +25,7 @@ registerHooks({ resolve(specifier, context, nextResolve) {
     '@/src/server/auth/session': ['readSession'],
     '@/src/server/auth/clients': ['cookieAuthClient'],
     '@/src/server/projects/projects': ['projectDirectory', 'projectDetail'],
+    '@/src/server/suppliers/suppliers': ['supplierView'],
     '@/src/server/requests/drafts': ['requestView'],
     '@/src/server/accounts/accounts': ['accountDirectory'],
   }[specifier];
@@ -41,6 +43,13 @@ test('foundation reads distinguish missing sessions, temporary failures, roles a
   assert.equal((await foundationResponse(request())).status, 503);
   down = false; current = signedIn('Site Personnel');
   assert.equal((await foundationResponse(request('view=accounts'))).status, 403);
+  assert.equal((await foundationResponse(request('view=suppliers'))).status, 403);
+  current = signedIn('Accounting');
+  assert.equal((await foundationResponse(request('view=suppliers&supplierId=invalid'))).status, 400);
+  const suppliers = await foundationResponse(request('view=suppliers'));
+  assert.equal(suppliers.status, 200);
+  assert.match(suppliers.headers.get('cache-control'), /private, no-store/);
+  current = signedIn('Site Personnel');
   assert.equal((await foundationResponse(request('view=project&projectId=invalid'))).status, 400);
   assert.equal((await foundationResponse(request('view=unknown'))).status, 400);
   assert.equal((await foundationResponse(request('view=requests&requestId=invalid'))).status, 400);

@@ -10,7 +10,7 @@ Update this file after every meaningful implementation or documentation change a
 
 ## Current Goal
 
-- **4.3 is verified complete on 2026-11-04** at implementation `36a4857`, including explicit confirmation of all three manual groups and passing source-bound combined acceptance. The next unit is **4.4 Supplier directory planning**; implementation of 4.4 is not authorized by this closeout. [Draft PR #31](https://github.com/yaboii-jah/HML-Prototype/pull/31) remains unmerged. Editor layout redesign remains step 6.
+- **4.4 Supplier directory implementation is authorized and active (2026-11-04).** The agreed interview scope is recorded in the [guide](step-4-implementation.md#44-supplier-directory--in-implementation). Work is on `feat/step-4-suppliers`; 4.3 acceptance and retained QA records/files remain preserved. Unit 4.4 is not yet verified or checked. No merge or production action is authorized.
 
 
 ## Completed
@@ -55,7 +55,7 @@ Update this file after every meaningful implementation or documentation change a
 
 ## In Progress
 
-- No operational unit is currently in implementation. Unit 4.3 is closed; 4.4 needs scoped planning and its own implementation authorization.
+- Unit 4.4: implementing supplier persistence, Procurement maintenance, non-Site reads, history, private realtime and acceptance coverage. Local/CI/staging/manual results remain pending; the private untracked account note is unrelated.
 
 
 
@@ -70,7 +70,7 @@ Update this file after every meaningful implementation or documentation change a
 
 Use the [production checklist](checklist.md#steps) for the ordered milestones and their completion conditions.
 
-- **Exact next action:** plan 4.4 supplier-directory scope and acceptance before implementation. Preserve completed 4.3 evidence and retained QA records/files; merging and production remain separate.
+- **Exact next action:** finish 4.4 verification, then reviewed CI/staging rollout and targeted manual acceptance. Preserve completed 4.3 evidence and retained QA records/files; merging and production remain separate.
 - Follow the guide's dependencies and completion criteria. The prototype role switch/approval commands are not production authority. Migrated MRF review now enforces permanent-user self-approval prevention; prepared-PO enforcement remains part of its later workflow unit.
 - Retain local Node 26.12.1, the Vercel Node 24.x target, CI baseline 24.22.1 and npm 11.20.0 across environments. Hosted deployment verification belongs to the later protected rehearsal.
 - Work foundations first: individual identity, shared records and server authorization before business-workflow migration. Tailwind remains a separate track.
@@ -123,6 +123,8 @@ The [architecture document](architecture.md) is the detailed source of truth. Ke
 | Private realtime signals and current authorized reads | Open permitted views update automatically; access-revision topics and session checks keep notifications independent from authority. |
 
 ## Session Notes
+
+- **4.4 implementation authorization, 2026-11-04:** the user selected all eleven interview decisions and explicitly locked the complete scope, then requested implementation. Added the agreed guide scope and pending manual groups. Supplier directory uses existing styling and project-style routes/dialogs; only Procurement maintains records, all non-Site roles read. Work remains unverified. Earlier 4.3 evidence is historical for this new source, not a new 4.4 pass.
 
 - **4.3 closeout, 2026-11-04:** the user’s overall-success report was clarified by explicit confirmation that all three manual groups passed. Preserved complete 4.2/4.1/recovery attestations, original dates and byte-identical recovery-file hash in the source-current manual report. Combined milestone acceptance passes. Updated overview, architecture, checklist, guide, tracker and README; workflow rules/code standards need no changes because their contracts remain unchanged. This is a documentation/evidence closeout: no application/schema/provider changes or repeated application tests. Preserved Kristine’s account-setup note and the untracked private account file. No merge, production promotion or 4.4 implementation.
 

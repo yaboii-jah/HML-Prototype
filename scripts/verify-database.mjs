@@ -1,3 +1,4 @@
+import { checkSupplierRaces } from './check-supplier-races.mjs';
 import { checkRequestRaces } from './check-request-races.mjs';
 import { checkDocumentRaces } from './check-document-races.mjs';
 import assert from 'node:assert/strict';
@@ -88,6 +89,8 @@ try {
   await sql(await readFile('supabase/checks/requests.sql', 'utf8'));
   await sql(await readFile('supabase/checks/documents.sql', 'utf8'));
   await sql(await readFile('supabase/checks/mrf-review.sql', 'utf8'));
+  await sql(await readFile('supabase/checks/suppliers.sql', 'utf8'));
+  checks.push('supplier-sql');
   checks.push('rollback-sql', 'request-sql', 'document-sql', 'mrf-review-sql');
 
   // Hold the parent lock in one connection; the second must observe committed allocation.
@@ -245,6 +248,8 @@ try {
     mailpit: requireLoopback(status.INBUCKET_URL ?? status.MAILPIT_URL ?? status.inbucket_url).origin,
     sql, environment });
   checks.push('auth-browser-email');
+  await checkSupplierRaces({ sql, database, environment });
+  checks.push('supplier-races');
   await checkProjectRaces({ sql, database, environment });
   checks.push('project-races');
   await checkRequestRaces({ sql, database, environment });

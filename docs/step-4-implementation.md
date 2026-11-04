@@ -7,7 +7,7 @@ Agreed 2026-11-03. This active companion owns the operational migration sequence
 Read the five core documents required by [AGENTS.md](../AGENTS.md), the checklist and this guide before planning, implementing, reviewing or resuming step 4.
 
 1. Reconcile Git status, the tracker and the actual implementation. Preserve unrelated pending work and the completed foundation planning retirement.
-2. Check the user's latest instruction before starting a unit. **The user finalized the 4.3 interview plan and authorized implementation. Later units, merging and production remain separate.**
+2. Check the user's latest instruction before starting a unit. **The user finalized the 4.4 supplier interview plan and authorized implementation on 2026-11-04. Later units, merging and production remain separate.**
 3. Use the sequence below as the roadmap. Units 4.1-4.3 have detailed scopes; later units require scoped planning and acceptance criteria before implementation.
 4. Verify a unit within its boundary, record actual results in the tracker, then check its completion box. A documentation checkpoint does not complete an operational workflow or checklist step 4.
 5. Retire this companion after the milestone is complete, preserving durable contracts in the core documents and completion evidence in the tracker.
@@ -154,6 +154,27 @@ The earlier **Not tested yet** response on 2026-11-03 is superseded by the userâ
 1. **Submission/review (`mrf-submission-review`):** save a complete MRF with a funded scope and verified PDF. Confirm incomplete requirements or unfinished uploads prevent submission. Keep unsaved text in a second Site editor, submit from the first, and confirm the second retains its text but cannot save. As PM return with a reason; reconcile and resubmit as assigned Site staff. Saving returned work must retain Returned. Reject a separate submitted QA MRF and confirm it cannot be edited or reopened.
 2. **Approved archives (`mrf-approved-archives`):** as a different PM, approve a submitted MRF. Confirm approval is visible while archiving remains pending; after completion, preview/download both the approved company form and supporting PDF. Verify visible failure/retry if encountered, and confirm Site cannot perform PM archive retries. The generated form must match the submitted project labels.
 3. **Corrections/history (`mrf-corrections-history`):** as Procurement reopen a fully archived approval with a reason. Confirm assigned Site staff can prepare a full correction, procurement readiness pauses, and PM can return or approve the correction without rejecting it. After reapproval/archive completion, both earlier and current approved document versions and the complete actor/reason timeline remain available. Automated disposable fixtures additionally cover document-only restrictions after downstream references and every submitter's self-approval restriction after role changes; these are not claimed as human tests.
+
+## 4.4 Supplier Directory ? In Implementation
+
+**Authorized 2026-11-04:** the user confirmed the complete interview scope and requested implementation. Procurement alone maintains one company-wide supplier record per business; all non-Site roles read profiles/history. Site Personnel have no supplier access. Preserve existing styling and project-style register/detail routes with add/edit dialogs.
+
+- Require name only. Address, TIN, contact person, email, phone and informational accreditation note are optional. Validate supplied email syntax; phone/TIN remain text without verification or financial interpretation.
+- Names are unique across active/inactive suppliers after trimming, collapsing whitespace and ignoring case. Duplicate feedback links to the existing record. No deletion, merging, bank details, imports, uploads or accreditation approval workflow.
+- New suppliers start active; Procurement can edit inactive profiles. Deactivate/reactivate requires at least five trimmed characters of reason. Later writers must disallow new inactive supplier selections while preserving existing linked work and frozen quotation/PO details.
+- Search the register, default its Active/Inactive/All filter to Active, and order alphabetically. Show the latest 30 relevant changes with permanent actor identity, frozen name/role/time, field differences and status reasons; retain the full protected audit.
+- Use grouped domain/server/feature modules, service-only checked RPCs, transactional records/audits/retry receipts, opaque expected versions and no-op saves. Reuse exact-session private realtime and authorized refetches; preserve filters/dirty input, require repeated conflict review, and clear protected state on confirmed access loss.
+- Keep quotation counts/history and all purchasing workflows unavailable until their corresponding units. No prototype-data import.
+
+**Done when:** focused unit/API, rollback SQL, observed-lock duplicate/edit/status/retry races and real-account browser/Realtime/access checks pass alongside local standard/public-browser, four-job CI, full disposable integration and retained-state-safe staging parity. Generated types must match the owning generator. Obtain the three manual confirmations below before checking 4.4. Earlier attestations retain their original dates/provenance. Supplier-only work does not require repeating live Drive smoke absent integration changes.
+
+### 4.4 Targeted Manual Review ? Pending
+
+Use retained QA records and separately provisioned Procurement/read-only accounts; do not reset staging or repurpose retained identities. Suppliers have no deletion, so manually saved QA records and their audits remain retained.
+
+1. **Sharing/permissions (`supplier-sharing-permissions`):** create a name-only supplier as Procurement; reopen it in another session, search it and review its optional fields. A non-Site reader sees details/history without maintenance controls; Site cannot access supplier data.
+2. **Conflict recovery (`supplier-conflict-recovery`):** edit the same supplier in two Procurement sessions. Save in one while the other retains unsaved input; verify saved differences and explicit review before replacement. Repeat an intervening change. Verify access revocation denies reads/saves and clears protected input.
+3. **Status/history (`supplier-status-history`):** deactivate with a reason; verify the default active register excludes it and the inactive filter finds it. A duplicate name remains blocked with an existing-record link. Edit/reactivate it and verify reasons, actor/role/time and field differences remain visible.
 
 ## Milestone Completion and Documentation Ownership
 

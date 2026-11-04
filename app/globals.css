@@ -24,6 +24,7 @@
 @import "../src/styles/shell-controls.css";
 @import "../src/styles/accounts.css";
 @import "../src/styles/projects.css";
+@import "../src/styles/suppliers.css";
 /* Foundation connection feedback uses the existing application controls. */
 .foundation-status {
   display: flex;

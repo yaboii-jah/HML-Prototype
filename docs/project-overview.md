@@ -69,7 +69,8 @@ Roles describe responsibilities; the server must still authorize each record and
 ### Sourcing and Procurement
 
 - Stock checks across projects, material specification confirmation where needed and source-release approval.
-- Internal supplier directory, reviewed quotations, comparative bids, supplier awards and split material allocations.
+- Company-wide supplier directory: Procurement maintains structured profiles and active/inactive status; non-Site roles read profiles and history. Name is required; contact details/TIN and an informational accreditation note are optional. Names remain unique across inactive records; deactivation/reactivation retains reasons and history. Later supplier selection excludes inactive records without rewriting existing purchasing snapshots. Unit 4.4 implementation/verification is tracked separately.
+- Reviewed quotations, comparative bids, supplier awards and split material allocations.
 - PO preparation and supplier issuance, with generated comparison PDFs and spreadsheets.
 - Finalizable quotations use PHP. Explicit foreign currency requires a corrected source document or extraction; there is no implicit conversion. Finalized quotation revisions and approved purchasing details retain their recorded basis rather than being silently overwritten.
 - Quotation finalization requires the supplier originals and reviewed content; awarding and PO creation wait for the required quotation archives. Supplier issuance waits for the current MRF and approved-PO archives. An approval or local file copy does not bypass these archive gates.
