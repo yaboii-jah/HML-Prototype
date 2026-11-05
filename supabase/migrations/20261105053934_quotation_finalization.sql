@@ -150,7 +150,7 @@ begin
   if not exists(select 1 from private.quotation_archives where revision_id=target) then reasons:=reasons||'"Quotation archive is incomplete"'::jsonb; end if;
   return reasons;
 end $$;
-create function private.quotation_try_activate(target uuid,actor jsonb,operation uuid default null,reason text default 'Archive complete and current eligibility verified') returns boolean
+create function private.quotation_try_activate(target uuid,actor jsonb,reason text default 'Archive complete and current eligibility verified') returns boolean
 language plpgsql security definer set search_path='' as $$
 declare r private.quotation_revisions; f private.quotation_families;
 begin
@@ -159,7 +159,6 @@ begin
   if f.pending_quote_id is distinct from r.quote_id or private.quotation_revision_blockers(target)<>'[]'::jsonb then return false; end if;
   update private.quotation_families set current_quote_id=r.quote_id,pending_quote_id=null,version=version+1 where id=f.id;
   insert into private.quotation_revision_events(revision_id,kind,actor,reason) values(target,'activate',actor,reason);
-  perform private.quotation_audit(actor,'quotation.activateRevision',r.quote_id,operation,jsonb_build_object('revisionId',r.id,'previousQuoteId',f.current_quote_id,'reason',reason));
   return true;
 end $$;
 
@@ -220,7 +219,7 @@ language plpgsql security definer set search_path='' as $$
 declare caller uuid; operation uuid:=(command->>'requestId')::uuid; kind text:=command->>'type'; target uuid:=(command->>'quoteId')::uuid;
   q private.quotation_drafts; f private.quotation_families; v private.quotation_financial_reviews; r private.quotation_revisions;
   receipt private.quotation_operations; result jsonb; review jsonb; next_quote uuid; snap uuid; mapping uuid; original uuid; current_mrf uuid;
-  actor_snapshot jsonb; reason text:=btrim(coalesce(command->>'reason','')); changed boolean:=true; review_row jsonb; matched integer:=0; key text;
+  actor_snapshot jsonb; reason text:=btrim(coalesce(command->>'reason','')); changed boolean:=true; did_activate boolean:=false; review_row jsonb; matched integer:=0; key text;
 begin
   perform set_config('lock_timeout','5s',true); update private.account_guard set revision=revision+1 where id;
   caller:=private.quotation_actor(actor,true); actor_snapshot:=private.document_actor_snapshot(actor);
@@ -329,19 +328,22 @@ begin
       if kind='reconfirmMrf' then
         insert into private.quotation_revision_events(revision_id,kind,mrf_archive_id,actor,reason) values(r.id,'reconfirmMrf',current_mrf,actor_snapshot,reason);
         update private.quotation_families set version=version+1 where id=f.id;
-        perform private.quotation_try_activate(r.id,actor_snapshot,operation,reason);
-      elsif not private.quotation_try_activate(r.id,actor_snapshot,operation,reason) then raise exception 'Replacement still has eligibility blockers' using errcode='P4504'; end if;
+        did_activate:=private.quotation_try_activate(r.id,actor_snapshot,reason);
+      else
+        did_activate:=private.quotation_try_activate(r.id,actor_snapshot,reason);
+        if not did_activate then raise exception 'Replacement still has eligibility blockers' using errcode='P4504'; end if;
+      end if;
     elsif kind='retryArchive' then
       select d.id into mapping from private.project_document_folders d join public.material_requests m on m.project_id=d.project_id where m.id=q.request_id and d.current;
       if mapping is null then raise exception 'Project document folder required' using errcode='P4201'; end if;
       update private.quotation_archive_jobs set state='pending',actor=actor_snapshot,lease=null,lease_until=null,dispatched_at=null,message=null,
-        attempts=attempts||jsonb_build_array(jsonb_build_object('folderMappingId',folder_mapping_id,'checkpoint',checkpoint,'actor',actor,'retriedBy',actor_snapshot)),
+        attempts=attempts||jsonb_build_array(jsonb_build_object('folderMappingId',folder_mapping_id,'checkpoint',checkpoint,'actor',actor,'retriedBy',actor_snapshot,'state',state,'message',message,'retriedAt',clock_timestamp())),
         checkpoint=case when folder_mapping_id=mapping then checkpoint else '{}'::jsonb end,folder_mapping_id=mapping
         where revision_id=r.id and state in('failed','paused');
       if not found then raise exception 'Choose a failed archive' using errcode='P4504'; end if;
     end if;
   end if;
-  if changed then perform private.quotation_audit(actor,'quotation.'||kind,target,operation,jsonb_build_object('revisionId',snap,'fromQuoteId',q.id,'reason',reason,'review',case when kind='saveFinancial' then command->'review' else null end)); end if;
+  if changed then perform private.quotation_audit(actor,'quotation.'||kind,target,operation,jsonb_build_object('revisionId',coalesce(snap,r.id),'fromQuoteId',q.id,'reason',reason,'activated',did_activate,'review',case when kind='saveFinancial' then command->'review' else null end)); end if;
   result:=jsonb_build_object('quoteId',target,'changed',changed,'quote',private.quotation_view(target));
   update private.quotation_operations set result=finance.result where id=operation;
   if changed then perform private.quotation_notify(); end if;
@@ -401,7 +403,7 @@ end $$;
 create function private.quotation_archive_worker(job_id uuid,action text,lease_id uuid default null,patch jsonb default '{}') returns jsonb
 language plpgsql security definer set search_path='' as $$
 #variable_conflict use_variable
-declare j private.quotation_archive_jobs; r private.quotation_revisions; q private.quotation_drafts; acquired uuid; k text; new_checkpoint jsonb;
+declare j private.quotation_archive_jobs; r private.quotation_revisions; q private.quotation_drafts; acquired uuid; k text; new_checkpoint jsonb; previous_quote uuid; activated boolean;
 begin
   perform set_config('lock_timeout','5s',true); update private.account_guard set revision=revision+1 where id;
   select * into j from private.quotation_archive_jobs where id=job_id;
@@ -444,8 +446,9 @@ begin
       insert into private.quotation_archives(revision_id,folder_mapping_id,file_id,sha256,size,manifest)
         values(r.id,j.folder_mapping_id,new_checkpoint->>'pdfFileId',new_checkpoint->>'pdfSha256',(new_checkpoint->>'pdfSize')::bigint,new_checkpoint->'manifest');
       update private.quotation_archive_jobs set state='complete',lease=null,lease_until=null where id=job_id;
-      perform private.quotation_audit(j.actor,'quotation.archiveComplete',r.quote_id,j.id,jsonb_build_object('revisionId',r.id,'originalActor',j.original_actor,'retryingActor',j.actor));
-      perform private.quotation_try_activate(r.id,j.actor,j.id);
+      select current_quote_id into previous_quote from private.quotation_families where id=r.family_id;
+      activated:=private.quotation_try_activate(r.id,j.actor);
+      perform private.quotation_audit(j.actor,'quotation.archiveComplete',r.quote_id,j.id,jsonb_build_object('revisionId',r.id,'activated',activated,'previousQuoteId',previous_quote,'originalActor',j.original_actor,'retryingActor',j.actor));
       perform private.quotation_notify(); return null;
     else raise exception 'Invalid archive worker action' using errcode='23514'; end if;
   end if;
