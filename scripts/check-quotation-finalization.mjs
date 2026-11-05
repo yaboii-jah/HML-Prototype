@@ -412,20 +412,14 @@ async function checkFinalization({
   const applicabilityReason =
     "Supplier offer still applies to reviewed corrected plans";
   await browser.fill("textarea[name=revisionReason]", applicabilityReason);
-  const concurrent = await current(quote);
-  ok(
-    await client.rpc("quotation_financial_command", {
-      actor: colleague,
-      command: {
-        type: "reconfirmMrf",
-        requestId: randomUUID(),
-        quoteId: quote,
-        expectedVersion: concurrent.version,
-        expectedFamily: concurrent.family.version,
-        expectedMrf: concurrent.family.currentMrfArchiveId,
-        reason: "Colleague checked the same corrected plans",
-      },
-    }),
+  await logout(second);
+  await login(second, accounts[1]);
+  await second.navigate(path);
+  await reasonAction(
+    second,
+    "Review corrected MRF",
+    "Colleague checked the same corrected plans",
+    "Reconfirm current MRF",
   );
   await browser.wait(
     "return document.querySelector('.record-dialog')?.textContent.includes('Saved revision information changed')",
