@@ -21,7 +21,8 @@ export async function checkMrfReview({ browser, second, client, login, logout, s
   };
   const fill = async (b, selector, value) => {
     await b.wait(`return !!document.querySelector(${JSON.stringify(selector)})&&!document.querySelector(${JSON.stringify(selector)}).matches(':disabled')`);
-    await b.fill(selector,value);
+    await b.run(`const input=document.querySelector(${JSON.stringify(selector)});input.focus();input.select();`);
+    await b.call('Input.insertText', { text: value });
   };
   const current = id => sql(`select private.request_snapshot('${id}');`).then(result => JSON.parse(result.output.trim()));
   const managerActor = await actor(second), operation = randomUUID();

@@ -36,7 +36,9 @@ export async function runFinancialCommand(
         : quote.financial?.review;
     if (!review) throw Error("Save the financial review first.");
     calculation = calculateQuotation(quote.body, review);
-    if (command.type === "finalize") {
+    // A finalized source must reach the durable receipt even if its offer later
+    // expires. The transaction rejects a new finalization identity for it.
+    if (command.type === "finalize" && quote.state !== "finalized") {
       const today = new Intl.DateTimeFormat("en-CA", {
         timeZone: "Asia/Manila",
         year: "numeric",

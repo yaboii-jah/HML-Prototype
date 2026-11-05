@@ -126,8 +126,9 @@ export async function authBrowser(base, { startupTimeoutMs = 30000, onLaunch, di
       if (result.exceptionDetails) throw Error(result.exceptionDetails.exception?.description || 'Browser evaluation failed');
       return result.result.value;
     };
-    const wait = async code => {
-      const deadline = Date.now() + 30000;
+    const wait = async (code, timeoutMs = 30000) => {
+      if (!Number.isInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 60000) throw Error('Invalid bounded browser state deadline');
+      const deadline = Date.now() + timeoutMs;
       while (Date.now() < deadline) {
         try { if (await run(code)) return; } catch (error) { if (!/context|navigat/i.test(error.message)) throw error; }
         await delay(75);

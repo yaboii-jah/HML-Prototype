@@ -24,7 +24,7 @@ export async function checkQuotationFinalization(options) {
         "Finalization failure state:",
         await page
           .run(
-            "return [...document.querySelectorAll('[role=alert],.quotation-readiness,.quotation-revision')].map(el=>el.textContent).join(' | ')",
+            "return [...document.querySelectorAll('[role=alert],.quotation-originals,.quotation-readiness,.quotation-revision')].map(el=>el.textContent).join(' | ')",
           )
           .catch(() => "unavailable"),
       );
