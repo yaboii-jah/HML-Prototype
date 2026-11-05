@@ -165,6 +165,7 @@ end $$;
 alter function private.quotation_view(uuid) rename to quotation_capture_view;
 create function private.quotation_view(target uuid) returns jsonb language sql stable security definer set search_path='' as $$
   select private.quotation_capture_view(target)||jsonb_build_object('contentVersion',q.content_version::text,
+    'checked',coalesce(q.checked->>'contentVersion'=q.content_version::text and q.checked->>'fileVersion'=q.file_version::text and private.quotation_ready_files(q),false),
     'family',jsonb_build_object('id',f.id,'version',f.version::text,'currentQuoteId',f.current_quote_id,'pendingQuoteId',f.pending_quote_id,
       'currentMrfArchiveId',private.quotation_mrf_archive(q.request_id),'supplierActive',exists(select 1 from private.suppliers s where s.id=q.supplier_id and s.is_active)),
     'financial',case when v.quote_id is null then jsonb_build_object('version','1','sourceVersion',q.content_version::text,'filesVersion',q.file_version::text,'review',null,'calculation',null,'checked',false)

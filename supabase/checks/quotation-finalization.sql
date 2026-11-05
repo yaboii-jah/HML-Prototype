@@ -132,7 +132,7 @@ begin
   -- A replacement reuses same-family retained bytes, while every attestation clears.
   replacement:=(pg_temp.quotation_test_action(buyer,quote,'startRevision',jsonb_build_object('reason','Correct captured supplier notes'))->>'quoteId')::uuid;
   saved:=private.quotation_view(replacement);
-  if saved->>'checked'='true' or saved->'financial'->>'checked'='true' or saved->'matches'<>'[]'::jsonb or jsonb_array_length(saved->'files')<>1 then raise exception 'Copied revision inherited review or lost source'; end if;
+  if saved->>'checked' is distinct from 'false' or saved->'financial'->>'checked' is distinct from 'false' or saved->'matches'<>'[]'::jsonb or jsonb_array_length(saved->'files')<>1 then raise exception 'Copied revision inherited review or lost source'; end if;
   if private.quotation_view(quote)->'revision'->>'eligible'<>'true' then raise exception 'Draft replacement displaced prior offer'; end if;
   begin perform pg_temp.quotation_test_action(buyer,quote,'startRevision',jsonb_build_object('reason','Duplicate replacement')); raise exception 'Parallel replacement admitted'; exception when sqlstate 'P4504' then null; end;
   perform public.quotation_files_command(buyer,jsonb_build_object('type','beginGroup','requestId',gen_random_uuid(),'quoteId',replacement,'expectedFiles',saved->>'fileVersion','keep',jsonb_build_array(file),'uploads','[]'::jsonb));
