@@ -7,6 +7,8 @@ import { verificationSource } from './helpers/verification-evidence.mjs';
 import { driveAccessToken } from '../src/server/documents/drive-auth.ts';
 import { createDriveGateway } from '../src/server/documents/drive-gateway.ts';
 import { validateSupportingPdf } from '../src/server/documents/pdf-validation.ts';
+import sharp from 'sharp';
+import { validateQuotationOriginal } from '../src/server/quotations/original-validation.ts';
 
 requireStaging(process.env);
 if (process.argv.length !== 2 || process.env.GOOGLE_DRIVE_ENABLED !== 'true' || process.env.DOCUMENT_DRIVE_TEST_ORIGIN) throw Error('Use explicitly configured staging Drive without test overrides.');
@@ -33,6 +35,18 @@ try {
   const range = await drive.stream(id, { start: 0, end: 4 }); assert.equal(range.status, 206); assert.equal(await range.text(), '%PDF-');
   assert.equal((await drive.ensureFolder(folderId, root, 'same owned folder', tags)).id, folderId);
   result.checks.push('folder-create-retry', 'resumable-offset', 'upload-byte-hash', 'readable-pdf', 'stream-range');
+  for (const [format, mime] of [['png', 'image/png'], ['jpeg', 'image/jpeg'], ['webp', 'image/webp']]) {
+    const image = await sharp({ create: { width: 8, height: 8, channels: 3, background: '#165c43' } }).toFormat(format).toBuffer();
+    const fileId = await drive.generateId(), hash = createHash('sha256').update(image).digest('hex');
+    const session = await drive.begin(fileId, folderId, 'synthetic-quotation.' + format, image.length, tags, mime);
+    assert.ok(session);
+    assert.equal((await drive.transfer(session, image.length, image, 0, mime)).complete, true);
+    await validateQuotationOriginal(await drive.verifyFile(fileId, folderId, tags, image.length, hash, mime), mime);
+    const part = await drive.stream(fileId, { start: 0, end: 4 });
+    assert.equal(part.status, 206);
+    assert.deepEqual(Buffer.from(await part.arrayBuffer()), image.subarray(0, 5));
+  }
+  result.checks.push('quotation-mixed-originals');
   result.passed = true;
 } finally {
   if (folderId) {

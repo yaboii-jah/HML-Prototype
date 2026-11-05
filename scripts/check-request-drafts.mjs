@@ -50,6 +50,7 @@ export async function checkRequestDrafts({ browser, second, client, login, logou
   await second.wait(`return location.pathname==='/requests/${id}'&&document.querySelector('h1')?.textContent==='${code}-MRF-0001'`);
   assert.match(await second.run('return document.body.innerText'), /My preserved input/);
   await browser.navigate(`/requests/${id}`);
+  await browser.wait("return document.body.innerText.includes('My preserved input')");
   assert.match(await browser.run('return document.body.innerText'), /My preserved input/);
   for (const width of [1440, 375]) {
     await browser.call('Emulation.setDeviceMetricsOverride', { width, height: 900, deviceScaleFactor: 1, mobile: width === 375 });

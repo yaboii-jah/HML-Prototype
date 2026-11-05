@@ -1,6 +1,6 @@
 # HML ConstructSync
 
-An internal construction operations application undergoing production migration. The foundation uses Supabase sign-in, current access grants, Administrator user management and shared project/scope setup; consult the tracker for verification. Projects is the landing page. Operational screens remain temporarily unavailable until their migration units are complete.
+An internal construction operations application undergoing production migration. The foundation uses Supabase sign-in, current access grants, Administrator user management and shared project/scope setup; consult the tracker for verification. Projects is the landing page. Unmigrated operations remain unavailable.
 
 See the [project overview](docs/project-overview.md) for the agreed production purpose, workflows, scope and success criteria.
 
@@ -14,7 +14,9 @@ Use the companion [production checklist](docs/checklist.md) to follow foundation
 
 The account/project foundation is complete. Consult the [architecture](docs/architecture.md) for its maintained contracts and the [tracker](docs/progress-tracker.md#current-goal) for completion evidence and the next milestone.
 
-For checklist step 4, read the active [implementation guide](docs/step-4-implementation.md) for the operational roadmap and current unit criteria. MRF drafts and supporting PDFs are verified complete. Submission, PM review, approved archives and Procurement corrections are verified complete in 4.3, including explicit manual acceptance and the combined acceptance gate. Unit 4.4 supplier-directory code and automated/staging checks pass: Procurement maintains company-wide structured profiles and active/inactive status; non-Site roles read profiles/history. All three targeted manual groups are confirmed and combined acceptance passes; 4.4 is complete. Next is 4.5 manual-quotation planning. Use the tracker for current authorization and evidence.
+For checklist step 4, read the active [implementation guide](docs/step-4-implementation.md) for the operational roadmap and current unit criteria. MRF drafts, supporting PDFs, submission/PM review, approved archives, corrections and the supplier directory are verified complete through 4.4, including explicit manual acceptance.
+
+Unit 4.5a manual quotation drafts, source checks and protected PDF/image originals are verified complete on 2026-11-05: automated/staging checks, all three explicit human-review confirmations and combined acceptance pass at `26305c3`. In Material requests, open an approved archived MRF and choose **Supplier quotations**. Procurement maintains drafts; all non-Site roles read them. First save fixes the MRF/supplier and permanently restricts later MRF correction to documents. Values remain exact source strings without financial calculations. Parent 4.5 remains open for policy-dependent financial finalization and formal business revisions in 4.5b. Use the tracker for evidence and current authorization.
 
 ## Run locally
 

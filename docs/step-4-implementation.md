@@ -7,7 +7,7 @@ Agreed 2026-11-03. This active companion owns the operational migration sequence
 Read the five core documents required by [AGENTS.md](../AGENTS.md), the checklist and this guide before planning, implementing, reviewing or resuming step 4.
 
 1. Reconcile Git status, the tracker and the actual implementation. Preserve unrelated pending work and the completed foundation planning retirement.
-2. Check the user's latest instruction before starting a unit. **The user finalized the 4.4 supplier interview plan and authorized implementation on 2026-11-04. Later units, merging and production remain separate.**
+2. Check the user's latest instruction before starting a unit. **The user finalized the 4.5a interview plan and authorized implementation on 2026-11-04. Financial finalization (4.5b), later units, merging and production remain separate.**
 3. Use the sequence below as the roadmap. Units 4.1-4.3 have detailed scopes; later units require scoped planning and acceptance criteria before implementation.
 4. Verify a unit within its boundary, record actual results in the tracker, then check its completion box. A documentation checkpoint does not complete an operational workflow or checklist step 4.
 5. Retire this companion after the milestone is complete, preserving durable contracts in the core documents and completion evidence in the tracker.
@@ -34,7 +34,9 @@ The listed order is the default. Record any agreed scope/order revision here and
 | **4.2 Required MRF documents** | [x] | Protected supporting-PDF handling, required project-folder operations and retryable archive processing for migrated MRFs. |
 | **4.3 MRF submission and review** | [x] | Submission, PM approval/return/rejection, corrections and permanent-identity self-approval prevention; requires verified document gates from 4.2. |
 | **4.4 Supplier directory** | [x] | Completed 2026-11-04 at `480311b`: shared records/maintenance pass automated, staging, all three manual groups and combined acceptance. |
-| **4.5 Manual quotations** | [ ] | Capture, review, version and archive supplier quotations; financial finalization requires applicable policy confirmation and supplier-original archives. |
+| **4.5 Manual quotations** | [ ] | Split into 4.5a capture/source review/originals and 4.5b policy-dependent financial finalization/formal business revisions. Parent remains open until both pass. |
+| **4.5a Capture and originals** | [x] | Completed 2026-11-05 at `26305c3`: automated/staging checks, all three explicit manual confirmations and source-bound combined acceptance pass. |
+| **4.5b Financial finalization** | [ ] | Requires applicable company-policy decisions before calculations, finalization and immutable business revisions; not authorized by 4.5a. |
 | **4.6 Shared demand allocation** | [ ] | One authoritative demand limit shared by purchases, suitability holds and transfer allocations; based on approved MRF requirements. |
 | **4.7 Stock ledger and reservations** | [ ] | Shared stock availability and reservation rules before enabling competing inventory consumers. |
 | **4.8 Awards and PO drafts** | [ ] | Supplier awards, split purchasing and PO preparation using verified quotation archives and the shared demand rules. |
@@ -177,6 +179,30 @@ Use retained QA records and separately provisioned Procurement/read-only account
 1. **Sharing/permissions (`supplier-sharing-permissions`):** create a name-only supplier as Procurement; reopen it in another session, search it and review its optional fields. A non-Site reader sees details/history without maintenance controls; Site cannot access supplier data.
 2. **Conflict recovery (`supplier-conflict-recovery`):** edit the same supplier in two Procurement sessions. Save in one while the other retains unsaved input; verify saved differences and explicit review before replacement. Repeat an intervening change. Verify access revocation denies reads/saves and clears protected input.
 3. **Status/history (`supplier-status-history`):** deactivate with a reason; verify the default active register excludes it and the inactive filter finds it. A duplicate name remains blocked with an existing-record link. Edit/reactivate it and verify reasons, actor/role/time and field differences remain visible.
+
+## 4.5a Manual Quotation Capture and Originals - Complete
+
+Authorized 2026-11-04 after the user locked all interview decisions. Overall 4.5 stays open; 4.5b requires applicable company-policy confirmation before financial calculations/finalization and formal business revisions. AI remains step 5; comparisons, awards and POs remain later units.
+
+Completed 2026-11-05 at implementation `26305c3`. Automated local/four-job CI/disposable/live-Drive/staging checks pass; the user explicitly confirmed all three targeted manual groups passed without skips, and matching combined acceptance passes. Detailed evidence is in the tracker.
+
+- Procurement alone maintains drafts/files and retries jobs. All non-Site roles read quotations/originals/history; Site is denied. Create only from a currently approved, fully archived MRF and active supplier. First save fixes both identities and permanently registers the downstream MRF reference, including when later cancelled.
+- One active draft per MRF/supplier. Require only those identities for first save; allow incomplete source fields, no lines and no files. Explicit Save, stable row identities, safe retries, no-op saves, immutable audits and repeated conflict review preserve input. Cancel/reopen with a reason of at least five trimmed characters; retain history and current files. Existing work may continue after supplier deactivation.
+- Capture full supplier/header/terms, offered lines, matches/conversions, printed amounts and source tax/discount/charge fields as exact decimal strings; blank is distinct from zero. Preserve signed financial values, nonnegative quantities and positive conversion factors. No rounding, formulas, default VAT/rate/currency, financial approval or normalized generated quotation PDF. Quote details never update supplier master data.
+- Source-check attestation plus line-match confirmations bind saved content/file versions. Require verified originals and no unfinished group change for checking. Content edits expire the quote check; changed lines/files expire relevant matches. Drafts remain editable; reviewed does not mean finalized.
+- Originals support readable unencrypted PDF and decodable JPEG/PNG/WebP, up to 12 files, 20 MiB each and 45 MiB total. Atomic group changes retain previous originals until all selected changes validate. File saves/progress are independent of text. Reuse protected chunk/hash/provider/Range/Workflow foundations with explicit quotation metadata and MIME-aware validation.
+- Resume after matching local-file reselection; retain frozen destinations and durable jobs. Recheck authority and MRF eligibility; pause writes during correction/revocation. Clean obsolete draft bytes only after current/candidate/protected reference checks; retain metadata. Current files on cancelled drafts remain retained. Future 4.5b must transactionally protect finalized file references before enabling finalization.
+- Preserve worksheet structure with focused authoritative modules; no prototype dispatcher, Number-based financial helpers or unsupported workflow tabs. Missing suppliers open the directory in another tab; refresh options without replacing input.
+
+**Done when:** local, four-job CI, disposable SQL/Auth/browser/Realtime/type/race, scoped live-Drive and retained-state-safe staging checks pass, then explicit human confirmation of shared capture/access, source review/conflicts, and originals/recovery/cancellation. Unit 4.5a meets these criteria on 2026-11-05; parent 4.5 remains unchecked until 4.5b also passes. Current evidence/blockers belong in the tracker.
+
+### 4.5a Targeted Manual Review - Complete
+
+All three groups below are accepted after the user's explicit **All three passed** confirmation on 2026-11-05, with no skipped checks. This supersedes the earlier **Not tested yet** response. Source-bound combined acceptance passes at `26305c3`; earlier units retain their own attestation dates and provenance. The steps remain below for reference.
+
+1. **Capture and access:** Procurement opens an approved archived MRF, creates a draft from an active supplier and saves incomplete and full source data. Refresh and another permitted session show the same values, including exact decimals, blank/zero and quoted supplier details. Non-Site readers cannot edit; Site cannot open quotations or originals. Verify the first-save warning and permanent document-only MRF correction restriction.
+2. **Source review and conflicts:** Attach originals, save material links/conversions and explicitly confirm matches and the overall source check. Change headers, lines and originals and verify the corresponding checks expire. Use two Procurement sessions for repeated conflicting edits; review the latest values while preserving input. Change access during editing and confirm writes stop.
+3. **Originals and recovery:** Save PDF/image groups, preview/download them, replace/remove files and verify the previous group remains until every new file validates. Interrupt and reload an upload, reselect matching local files and resume; exercise invalid-file/job recovery. Cancel/reopen with reasons, confirm one active draft per supplier, retained current originals and readable history. Existing work remains editable after supplier deactivation.
 
 ## Milestone Completion and Documentation Ownership
 

@@ -69,8 +69,8 @@ export function createDriveGateway(origin: string, accessToken: () => Promise<st
     if (!file.writable) throw Error("Destination cannot receive files");
     return file;
   }
-  async function begin(id: string, parent: string, name: string, size: number, tags: Record<string, string>) {
-    const response = await request(`${uploadApi}?uploadType=resumable&supportsAllDrives=true&fields=${encodeURIComponent(fields)}`, { method: "POST", headers: { "Content-Type": "application/json", "X-Upload-Content-Type": "application/pdf", "X-Upload-Content-Length": String(size) }, body: JSON.stringify({ id, name, mimeType: "application/pdf", parents: [parent], appProperties: tags }) }, [409]);
+  async function begin(id: string, parent: string, name: string, size: number, tags: Record<string, string>, mime = "application/pdf") {
+    const response = await request(`${uploadApi}?uploadType=resumable&supportsAllDrives=true&fields=${encodeURIComponent(fields)}`, { method: "POST", headers: { "Content-Type": "application/json", "X-Upload-Content-Type": mime, "X-Upload-Content-Length": String(size) }, body: JSON.stringify({ id, name, mimeType: mime, parents: [parent], appProperties: tags }) }, [409]);
     if (response.status === 409) { await response.body?.cancel(); return null; }
     const uri = response.headers.get("location"); await response.body?.cancel();
     if (!uri || !validSession(uri)) throw Error("Invalid upload session");
@@ -79,9 +79,9 @@ export function createDriveGateway(origin: string, accessToken: () => Promise<st
   function validSession(uri: string) {
     try { const url = new URL(uri); return url.origin === origin && !url.username && !url.password && /^\/upload\/drive\/v3\/files(?:\/[\w-]+)?$/.test(url.pathname) && url.searchParams.get("uploadType") === "resumable" && !!url.searchParams.get("upload_id"); } catch { return false; }
   }
-  async function transfer(uri: string, total: number, bytes?: Uint8Array, offset = 0) {
+  async function transfer(uri: string, total: number, bytes?: Uint8Array, offset = 0, mime = "application/pdf") {
     if (!validSession(uri)) throw Error("Invalid upload session");
-    const response = await request(uri, { method: "PUT", headers: { "Content-Type": "application/pdf", "Content-Range": bytes ? `bytes ${offset}-${offset + bytes.length - 1}/${total}` : `bytes */${total}` }, body: bytes ? Buffer.from(bytes) : undefined }, [308, 404, 410]);
+    const response = await request(uri, { method: "PUT", headers: { "Content-Type": mime, "Content-Range": bytes ? `bytes ${offset}-${offset + bytes.length - 1}/${total}` : `bytes */${total}` }, body: bytes ? Buffer.from(bytes) : undefined }, [308, 404, 410]);
     if ([404, 410].includes(response.status)) { await response.body?.cancel(); return { expired: true, offset: 0, complete: false }; }
     const range = response.headers.get("range"); await response.body?.cancel();
     const confirmed = response.status === 308 ? range ? /^bytes=0-(\d+)$/.exec(range) : null : null;
@@ -104,13 +104,14 @@ export function createDriveGateway(origin: string, accessToken: () => Promise<st
     } finally { await reader.cancel(); }
     return Buffer.concat(chunks, size);
   }
-  async function verifyPdf(id: string, parent: string, tags: Record<string, string>, size: number, sha256: string) {
-    const file = await get(id); verifyIdentity(file, parent, tags);
+  async function verifyFile(id: string, parent: string, tags: Record<string, string>, size: number, sha256: string, mime = "application/pdf") {
+    const file = await get(id); verifyIdentity(file, parent, tags, mime);
     if (file.size !== String(size)) throw Error("Document size mismatch");
     const body = await bytes(id, size);
     if (body.length !== size || createHash("sha256").update(body).digest("hex") !== sha256) throw Error("Document integrity mismatch");
     return body;
   }
+  const verifyPdf = (id: string, parent: string, tags: Record<string, string>, size: number, sha256: string) => verifyFile(id, parent, tags, size, sha256);
   async function trash(id: string, tags: Record<string, string>) {
     const file = await find(id);
     if (!file) return;
@@ -118,6 +119,6 @@ export function createDriveGateway(origin: string, accessToken: () => Promise<st
     if (!file.trashed) { const response = await request(`${api}/${encodeURIComponent(id)}?supportsAllDrives=true`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: '{"trashed":true}' }); await response.body?.cancel(); }
     if (!(await get(id)).trashed) throw Error("Cleanup was not confirmed");
   }
-  return { get, find, generateId, validateFolder, verifyIdentity, ensureFolder, begin, transfer, validSession, stream, bytes, verifyPdf, trash };
+  return { get, find, generateId, validateFolder, verifyIdentity, ensureFolder, begin, transfer, validSession, stream, bytes, verifyFile, verifyPdf, trash };
 }
 export type DriveGateway = ReturnType<typeof createDriveGateway>;

@@ -25,6 +25,7 @@
 @import "../src/styles/accounts.css";
 @import "../src/styles/projects.css";
 @import "../src/styles/suppliers.css";
+@import "../src/styles/quotation-capture.css";
 /* Foundation connection feedback uses the existing application controls. */
 .foundation-status {
   display: flex;

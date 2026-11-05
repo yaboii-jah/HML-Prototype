@@ -64,6 +64,7 @@ function RequestDetail({ saved, data }: { saved: SavedMrf; data: RequestView }) 
     <section className="panel"><h2>Recorded responsibility</h2><p>Created by {saved.creatorName} · <time dateTime={saved.createdAt}>{new Date(saved.createdAt).toLocaleString("en-PH", { timeZone: "Asia/Manila" })}</time></p><p>Latest editor: {saved.updaterName} · <time dateTime={saved.updatedAt}>{new Date(saved.updatedAt).toLocaleString("en-PH", { timeZone: "Asia/Manila" })}</time></p><p className="muted">Printed signatory names do not establish approval or submission.</p></section>
     <MrfDocuments mrfId={saved.id} editable={data.role === "Site Personnel" && mrfEditable(saved)} archiveManager={data.role === "Project Manager"} onPendingFile={setFilePending} />
     <MrfReview saved={saved} role={data.role} disabled={filePending} />
+    {data.role !== "Site Personnel" && <Link className="button secondary" href={`/requests/${saved.id}/quotes`}>Supplier quotations</Link>}
     <p className="muted">{availability}</p></>;
 }
 

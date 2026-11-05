@@ -2,7 +2,7 @@ import { requireStaging, STAGING_REF } from './supabase-target.mjs';
 
 /** Read-only retained-state evidence. No Auth passwords, tokens or raw business
  * rows are returned. Application rows are compared using deterministic hashes. */
-export async function stagingSnapshot({ includeProjectOperations = true, includeDocuments = true, includeReview = true, includeSuppliers = true } = {}) {
+export async function stagingSnapshot({ includeProjectOperations = true, includeDocuments = true, includeReview = true, includeSuppliers = true, includeQuotations = true } = {}) {
   requireStaging(process.env);
   const tables = [
     ['profiles', 'public.profiles', 'user_id'], ['grants', 'public.role_grants', 'user_id,role'],
@@ -15,6 +15,10 @@ export async function stagingSnapshot({ includeProjectOperations = true, include
   // During the 4.2 migration, compare all pre-existing rows before/after DDL.
   // Post-migration acceptance retains its default coverage of every new table.
   if (includeSuppliers) tables.push(['suppliers', 'private.suppliers', 'id'], ['supplierOperations', 'private.supplier_operations', 'id']);
+  if (includeQuotations) tables.push(
+    ['quotationDrafts', 'private.quotation_drafts', 'id'], ['quotationOperations', 'private.quotation_operations', 'id'],
+    ['quotationGroups', 'private.quotation_groups', 'id'], ['quotationFiles', 'private.quotation_files', 'id'], ['quotationJobs', 'private.quotation_jobs', 'id'],
+  );
   if (includeDocuments) tables.push(
     ['documentFolders', 'private.project_document_folders', 'id'], ['folderOwners', 'private.document_folder_owners', 'folder_id'],
     ['documentState', 'private.request_document_state', 'request_id'], ['documents', 'private.request_documents', 'id'],
