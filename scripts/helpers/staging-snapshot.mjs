@@ -2,7 +2,7 @@ import { requireStaging, STAGING_REF } from './supabase-target.mjs';
 
 /** Read-only retained-state evidence. No Auth passwords, tokens or raw business
  * rows are returned. Application rows are compared using deterministic hashes. */
-export async function stagingSnapshot({ includeProjectOperations = true, includeDocuments = true, includeReview = true, includeSuppliers = true, includeQuotations = true } = {}) {
+export async function stagingSnapshot({ includeProjectOperations = true, includeDocuments = true, includeReview = true, includeSuppliers = true, includeQuotations = true, includeQuotationFinalization = true } = {}) {
   requireStaging(process.env);
   const tables = [
     ['profiles', 'public.profiles', 'user_id'], ['grants', 'public.role_grants', 'user_id,role'],
@@ -19,6 +19,12 @@ export async function stagingSnapshot({ includeProjectOperations = true, include
     ['quotationDrafts', 'private.quotation_drafts', 'id'], ['quotationOperations', 'private.quotation_operations', 'id'],
     ['quotationGroups', 'private.quotation_groups', 'id'], ['quotationFiles', 'private.quotation_files', 'id'], ['quotationJobs', 'private.quotation_jobs', 'id'],
   );
+  if (includeQuotations && includeQuotationFinalization) tables.push(
+    ['quotationFamilies', 'private.quotation_families', 'id'], ['quotationFinancialReviews', 'private.quotation_financial_reviews', 'quote_id'],
+    ['quotationRevisions', 'private.quotation_revisions', 'id'], ['quotationRevisionFiles', 'private.quotation_revision_files', 'revision_id,file_id'],
+    ['quotationRevisionEvents', 'private.quotation_revision_events', 'id'], ['quotationArchiveJobs', 'private.quotation_archive_jobs', 'id'],
+    ['quotationArchives', 'private.quotation_archives', 'revision_id'],
+  );
   if (includeDocuments) tables.push(
     ['documentFolders', 'private.project_document_folders', 'id'], ['folderOwners', 'private.document_folder_owners', 'folder_id'],
     ['documentState', 'private.request_document_state', 'request_id'], ['documents', 'private.request_documents', 'id'],
@@ -31,7 +37,8 @@ export async function stagingSnapshot({ includeProjectOperations = true, include
   );
   if (includeProjectOperations) tables.push(['projectOperations', 'private.project_operations', 'id']);
   const hashes = tables.map(([name, table, order]) => {
-    const row = name === 'requests' && !includeReview ? "to_jsonb(t)-'status'-'correction_kind'-'correction_state'-'submission_id'" : 'to_jsonb(t)';
+    const row = name === 'requests' && !includeReview ? "to_jsonb(t)-'status'-'correction_kind'-'correction_state'-'submission_id'"
+      : name === 'quotationDrafts' && !includeQuotationFinalization ? "to_jsonb(t)-'family_id'-'copied_from_revision'" : 'to_jsonb(t)';
     return `'${name}',(select jsonb_build_object('count',count(*),'digest',md5(coalesce(jsonb_agg(${row} order by ${order})::text,'[]'))) from ${table} t)`;
   }).join(',');
   const query = `select jsonb_build_object('records',jsonb_build_object(${hashes}),

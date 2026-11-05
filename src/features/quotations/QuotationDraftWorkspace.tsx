@@ -141,6 +141,7 @@ const historyActions: Record<string, string> = {
   "quotation.reconfirmMrf": "Reconfirmed corrected MRF applicability",
   "quotation.activateRevision": "Activated archived revision",
   "quotation.retryArchive": "Retried quotation archive",
+  "quotation.archiveComplete": "Verified quotation revision archive",
 };
 function OriginalHistory({ value, label }: { value: unknown; label: string }) {
   if (!Array.isArray(value)) return null;

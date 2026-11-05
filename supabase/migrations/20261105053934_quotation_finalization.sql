@@ -224,7 +224,7 @@ declare caller uuid; operation uuid:=(command->>'requestId')::uuid; kind text:=c
 begin
   perform set_config('lock_timeout','5s',true); update private.account_guard set revision=revision+1 where id;
   caller:=private.quotation_actor(actor,true); actor_snapshot:=private.document_actor_snapshot(actor);
-  if operation is null or kind not in('saveFinancial','checkFinancial','finalize','startRevision','withdraw','reconfirmMrf','activateRevision','retryArchive') then raise exception 'Invalid financial action' using errcode='23514'; end if;
+  if operation is null or kind is null or kind not in('saveFinancial','checkFinancial','finalize','startRevision','withdraw','reconfirmMrf','activateRevision','retryArchive') then raise exception 'Invalid financial action' using errcode='23514'; end if;
   insert into private.quotation_operations(id,actor_id,payload) values(operation,caller,command) on conflict do nothing;
   select * into receipt from private.quotation_operations where id=operation for update;
   if receipt.actor_id<>caller or receipt.payload<>command then raise exception 'Retry identity reused' using errcode='P4503'; end if;
@@ -444,7 +444,8 @@ begin
       insert into private.quotation_archives(revision_id,folder_mapping_id,file_id,sha256,size,manifest)
         values(r.id,j.folder_mapping_id,new_checkpoint->>'pdfFileId',new_checkpoint->>'pdfSha256',(new_checkpoint->>'pdfSize')::bigint,new_checkpoint->'manifest');
       update private.quotation_archive_jobs set state='complete',lease=null,lease_until=null where id=job_id;
-      perform private.quotation_try_activate(r.id,j.actor);
+      perform private.quotation_audit(j.actor,'quotation.archiveComplete',r.quote_id,j.id,jsonb_build_object('revisionId',r.id,'originalActor',j.original_actor,'retryingActor',j.actor));
+      perform private.quotation_try_activate(r.id,j.actor,j.id);
       perform private.quotation_notify(); return null;
     else raise exception 'Invalid archive worker action' using errcode='23514'; end if;
   end if;
@@ -471,7 +472,7 @@ begin
   perform private.quotation_actor(actor,true);
   select request_id into parent from private.quotation_drafts where id=quote_id;
   if parent is null then raise exception 'Quotation unavailable' using errcode='P4501'; end if;
-  return private.quotations_read(actor,parent);
+  return jsonb_build_object('request',null,'suppliers','[]'::jsonb,'quotes',jsonb_build_array(private.quotation_view(quote_id)),'history','[]'::jsonb);
 end $$;
 create function public.quotation_financial_source(actor jsonb,quote_id uuid) returns jsonb language sql security invoker set search_path='' as $$ select private.quotation_financial_source(actor,quote_id); $$;
 create function public.quotation_archive_dispatch() returns jsonb language sql security invoker set search_path='' as $$ select private.quotation_archive_dispatch(); $$;
