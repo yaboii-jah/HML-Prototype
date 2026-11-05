@@ -649,6 +649,10 @@ async function checkFinalization({
   );
   await confirmSource(browser);
   await click(browser, "Confirm saved financial review and PHP");
+  await until(
+    async () => (await current(pending)).financial.checked,
+    "fresh financial confirmation for the race fixture",
+  );
   const pendingSaved = await current(pending);
   assert.equal(pendingSaved.financial.checked, true);
   await browser.run(
