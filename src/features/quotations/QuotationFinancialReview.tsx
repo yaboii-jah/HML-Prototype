@@ -752,6 +752,7 @@ export function QuotationFinancialReview({
           finalizing. Saving financial settings preserves captured source text
           and supplier originals.
         </p>
+        <p>Offer validity: {quote.body.validUntil || "Not recorded"}.</p>
         {quote.state === "draft" && view.role === "Procurement" ? (
           <>
             {(stale || operation.conflict) && (
