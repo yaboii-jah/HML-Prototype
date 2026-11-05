@@ -411,6 +411,13 @@ async function checkFinalization({
   );
   assert.equal(
     await browser.run(
+      "return document.querySelector('.quotation-originals').textContent.includes('Uploads transferred')",
+    ),
+    false,
+    "Completed originals do not retain an in-progress transfer message",
+  );
+  assert.equal(
+    await browser.run(
       "return document.querySelector('input[name=ref]').disabled",
     ),
     true,

@@ -378,7 +378,7 @@ export function QuotationOriginals({
             )}
         </div>
       ))}
-      {progress && <p role="status">{progress}</p>}
+      {progress && (busy || pending) && <p role="status">{progress}</p>}
       <InlineError message={error} />
     </section>
   );
