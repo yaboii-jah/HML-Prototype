@@ -89,6 +89,16 @@ begin
   if public.quotation_financial_command(buyer,command,calculation)<>result then raise exception 'Finalize retry changed outcome'; end if;
   revision:=(result->'quote'->'revision'->>'id')::uuid;
   if result->'quote'->'revision'->>'eligible' is distinct from 'false' or result->'quote'->'revision'->>'current' is distinct from 'false' then raise exception 'Pending archive became eligible or omitted its boolean state'; end if;
+  -- Revert this alternate branch after proving that withdrawing the first pending
+  -- offer cannot bypass the reasoned revision action through ordinary create.
+  begin
+    perform pg_temp.quotation_test_action(buyer,quote,'withdraw',jsonb_build_object('reason','Supplier withdrew before archive completion'));
+    begin
+      perform public.quotation_command(buyer,jsonb_build_object('type','create','requestId',gen_random_uuid(),'mrfId',mrf,'supplierId',supplier,'body',body));
+      raise exception 'Finalized family accepted an unreasoned new offer';
+    exception when unique_violation then null; end;
+    raise exception 'Revert alternate withdrawal fixture' using errcode='P9999';
+  exception when sqlstate 'P9999' then null; end;
   select snapshot into frozen from private.quotation_revisions where id=revision;
   begin update private.quotation_revisions set snapshot='{}' where id=revision; raise exception 'Snapshot changed'; exception when check_violation then null; end;
   begin update private.quotation_drafts set body='{}' where id=quote; raise exception 'Finalized source changed'; exception when check_violation then null; end;

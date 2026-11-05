@@ -60,13 +60,11 @@ async function checkFinalization({
       await client.auth.admin.createUser({ ...account, email_confirm: true }),
     ).user.id;
     ok(
-      await client
-        .from("profiles")
-        .insert({
-          user_id: account.id,
-          display_name: "Financial " + role,
-          is_active: true,
-        }),
+      await client.from("profiles").insert({
+        user_id: account.id,
+        display_name: "Financial " + role,
+        is_active: true,
+      }),
     );
     ok(await client.from("role_grants").insert({ user_id: account.id, role }));
     accounts.push(account);
@@ -108,6 +106,9 @@ async function checkFinalization({
   const confirmSource = async (page) => {
     await click(page, "Line details");
     await click(page, "Confirm material match");
+    await page.wait(
+      "return document.querySelector('.quotation-source-table')?.textContent.includes('Confirmed')",
+    );
     await click(page, "Close line details");
     await click(page, "Entered data checked against originals");
     await page.wait(
@@ -407,12 +408,42 @@ async function checkFinalization({
     60000,
   );
   assert.equal((await current(quote)).revision.eligible, false);
-  await reasonAction(
-    browser,
-    "Review corrected MRF",
-    "Supplier offer still applies to reviewed corrected plans",
-    "Reconfirm current MRF",
+  await click(browser, "Review corrected MRF");
+  const applicabilityReason =
+    "Supplier offer still applies to reviewed corrected plans";
+  await browser.fill("textarea[name=revisionReason]", applicabilityReason);
+  const concurrent = await current(quote);
+  ok(
+    await client.rpc("quotation_financial_command", {
+      actor: colleague,
+      command: {
+        type: "reconfirmMrf",
+        requestId: randomUUID(),
+        quoteId: quote,
+        expectedVersion: concurrent.version,
+        expectedFamily: concurrent.family.version,
+        expectedMrf: concurrent.family.currentMrfArchiveId,
+        reason: "Colleague checked the same corrected plans",
+      },
+    }),
   );
+  await browser.wait(
+    "return document.querySelector('.record-dialog')?.textContent.includes('Saved revision information changed')",
+  );
+  assert.equal(
+    await browser.run(
+      "return document.querySelector('textarea[name=revisionReason]').value",
+    ),
+    applicabilityReason,
+  );
+  assert.equal(
+    await browser.run(
+      "return [...document.querySelectorAll('.record-dialog button')].find(b=>b.textContent==='Reconfirm current MRF').disabled",
+    ),
+    true,
+  );
+  await click(browser, "I reviewed the latest revision and MRF");
+  await click(browser, "Reconfirm current MRF");
   await browser.wait(
     "return document.querySelector('.quotation-revision')?.textContent.includes('Current and eligible')",
   );

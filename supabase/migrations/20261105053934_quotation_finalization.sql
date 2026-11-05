@@ -99,7 +99,7 @@ declare f private.quotation_families; supplied uuid:=new.family_id;
 begin
   insert into private.quotation_families(request_id,supplier_id) values(new.request_id,new.supplier_id) on conflict do nothing;
   select * into f from private.quotation_families where request_id=new.request_id and supplier_id=new.supplier_id for update;
-  if f.pending_quote_id is not null or (f.current_quote_id is not null and supplied is null)
+  if f.pending_quote_id is not null or (supplied is null and (f.current_quote_id is not null or exists(select 1 from private.quotation_revisions r where r.family_id=f.id)))
     or (supplied is not null and supplied<>f.id) then raise exception 'Use the current family revision; one replacement only' using errcode='23505'; end if;
   new.family_id:=f.id;
   update private.quotation_families set pending_quote_id=new.id,version=version+1 where id=f.id;

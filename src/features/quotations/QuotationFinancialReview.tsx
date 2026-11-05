@@ -354,9 +354,20 @@ function RevisionActions({
     "startRevision" | "withdraw" | "reconfirmMrf" | "activateRevision" | null
   >(null);
   const [reason, setReason] = useState("");
+  const [actionBasis, setActionBasis] = useState(quote);
   const revision = quote.revision,
     family = quote.family;
   if (!revision || !family) return null;
+  const actionStale =
+    actionBasis.version !== quote.version ||
+    actionBasis.family?.version !== family.version ||
+    actionBasis.family?.currentMrfArchiveId !== family.currentMrfArchiveId;
+  const openAction = (next: NonNullable<typeof action>) => {
+    setActionBasis(quote);
+    setAction(next);
+    setReason("");
+    operation.reviewed();
+  };
   const writer = view.role === "Procurement";
   const labels = {
     startRevision: "Start quotation revision",
@@ -426,10 +437,7 @@ function RevisionActions({
             <button
               className="button secondary"
               disabled={operation.busy}
-              onClick={() => {
-                setAction("startRevision");
-                setReason("");
-              }}
+              onClick={() => openAction("startRevision")}
             >
               Start revision
             </button>
@@ -438,10 +446,7 @@ function RevisionActions({
             <button
               className="button secondary"
               disabled={operation.busy}
-              onClick={() => {
-                setAction("withdraw");
-                setReason("");
-              }}
+              onClick={() => openAction("withdraw")}
             >
               Withdraw revision
             </button>
@@ -454,10 +459,7 @@ function RevisionActions({
               <button
                 className="button secondary"
                 disabled={operation.busy}
-                onClick={() => {
-                  setAction("reconfirmMrf");
-                  setReason("");
-                }}
+                onClick={() => openAction("reconfirmMrf")}
               >
                 Review corrected MRF
               </button>
@@ -469,10 +471,7 @@ function RevisionActions({
               <button
                 className="button primary"
                 disabled={operation.busy}
-                onClick={() => {
-                  setAction("activateRevision");
-                  setReason("");
-                }}
+                onClick={() => openAction("activateRevision")}
               >
                 Recheck and activate
               </button>
@@ -519,10 +518,11 @@ function RevisionActions({
             className="form-stack"
             onSubmit={async (event) => {
               event.preventDefault();
+              if (actionStale) return;
               const base = {
                 quoteId: quote.id,
-                expectedVersion: quote.version,
-                expectedFamily: family.version,
+                expectedVersion: actionBasis.version,
+                expectedFamily: actionBasis.family!.version,
                 reason,
               };
               const result = await operation.run(
@@ -530,7 +530,8 @@ function RevisionActions({
                   ? {
                       ...base,
                       type: action,
-                      expectedMrf: family.currentMrfArchiveId || "",
+                      expectedMrf:
+                        actionBasis.family?.currentMrfArchiveId || "",
                     }
                   : { ...base, type: action },
               );
@@ -570,6 +571,42 @@ function RevisionActions({
                 Open current MRF and approved documents
               </Link>
             )}
+            {(actionStale || operation.conflict) && (
+              <div className="quotation-conflict" role="status">
+                <p>
+                  Saved revision information changed while this review was open.
+                  Review the latest quotation status and current approved MRF
+                  before continuing. Your reason is preserved.
+                </p>
+                <p>
+                  Latest status:{" "}
+                  {revision.withdrawn
+                    ? "Withdrawn permanently"
+                    : revision.eligible
+                      ? "Current and eligible"
+                      : "Use paused or replacement pending"}
+                  .
+                </p>
+                {revision.blockers.length > 0 && (
+                  <ul>
+                    {revision.blockers.map((blocker) => (
+                      <li key={blocker}>{blocker}</li>
+                    ))}
+                  </ul>
+                )}
+                <button
+                  type="button"
+                  className="button secondary"
+                  disabled={operation.busy}
+                  onClick={() => {
+                    setActionBasis(quote);
+                    operation.reviewed();
+                  }}
+                >
+                  I reviewed the latest revision and MRF
+                </button>
+              </div>
+            )}
             <Field
               label={
                 action === "reconfirmMrf" || action === "activateRevision"
@@ -588,7 +625,10 @@ function RevisionActions({
               />
             </Field>
             <InlineError message={operation.error} />
-            <button className="button primary" disabled={operation.busy}>
+            <button
+              className="button primary"
+              disabled={operation.busy || actionStale || operation.conflict}
+            >
               {operation.busy ? "Saving…" : labels[action]}
             </button>
           </form>
