@@ -1,3 +1,5 @@
+import { checkSupplierRaces } from './check-supplier-races.mjs';
+import { checkQuotationRaces } from './check-quotation-races.mjs';
 import { checkRequestRaces } from './check-request-races.mjs';
 import { checkDocumentRaces } from './check-document-races.mjs';
 import assert from 'node:assert/strict';
@@ -88,6 +90,10 @@ try {
   await sql(await readFile('supabase/checks/requests.sql', 'utf8'));
   await sql(await readFile('supabase/checks/documents.sql', 'utf8'));
   await sql(await readFile('supabase/checks/mrf-review.sql', 'utf8'));
+  await sql(await readFile('supabase/checks/suppliers.sql', 'utf8'));
+  await sql(await readFile('supabase/checks/quotations.sql', 'utf8'));
+  checks.push('quotation-sql');
+  checks.push('supplier-sql');
   checks.push('rollback-sql', 'request-sql', 'document-sql', 'mrf-review-sql');
 
   // Hold the parent lock in one connection; the second must observe committed allocation.
@@ -241,10 +247,14 @@ try {
   try { expected = await readFile('src/server/database/database.types.ts', 'utf8'); } catch (error) { if (error.code !== 'ENOENT') throw error; }
   typeMatch = generated === normalizeDatabaseTypes(expected);
   if (typeMatch) checks.push('types');
-  await checkAuthFoundation({ api, anon, secret,
+  const quotationFixture = await checkAuthFoundation({ api, anon, secret,
     mailpit: requireLoopback(status.INBUCKET_URL ?? status.MAILPIT_URL ?? status.inbucket_url).origin,
     sql, environment });
   checks.push('auth-browser-email');
+  await checkQuotationRaces({ sql, database, environment, fixture: quotationFixture });
+  checks.push('quotation-races');
+  await checkSupplierRaces({ sql, database, environment });
+  checks.push('supplier-races');
   await checkProjectRaces({ sql, database, environment });
   checks.push('project-races');
   await checkRequestRaces({ sql, database, environment });

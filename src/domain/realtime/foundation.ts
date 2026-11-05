@@ -2,11 +2,16 @@ import { parseSessionContext, isAuthRole, UUID_PATTERN, type WorkspaceSession } 
 import { parseDirectory, object, type AccountDirectory } from "../accounts/accounts.ts";
 import { parseProject, parseProjectHistory, type ProjectSummary, type ProjectDetail, type ProjectHistory } from "../projects/projects.ts";
 import { parseRequestView, type RequestView } from "../requests/drafts.ts";
+import { parseSupplierView, type SupplierView } from "../suppliers/suppliers.ts";
 
 export type DirectoryView = { role: WorkspaceSession["activeRole"]; projects: ProjectSummary[]; history: ProjectHistory[] };
 export type DetailView = { role: WorkspaceSession["activeRole"]; project: ProjectDetail | null; history: ProjectHistory[] };
 export type AccountsView = AccountDirectory & { actorId: string; emailEnabled: boolean };
+import { parseQuotationsView, type QuotationsView } from "../quotations/drafts.ts";
+
 export type FoundationView =
+  | { kind: "quotations"; data: QuotationsView }
+  | { kind: "suppliers"; data: SupplierView }
   | { kind: "requests"; data: RequestView }
   | { kind: "projects"; data: DirectoryView }
   | { kind: "project"; data: DetailView }
@@ -29,6 +34,14 @@ export function parseRealtimeSession(value: unknown): RealtimeSession | null {
 export function parseFoundationView(value: unknown): FoundationView | null {
   const raw = object(value), data = object(raw?.data);
   if (!raw || !data) return null;
+  if (raw.kind === "quotations") {
+    const parsed = parseQuotationsView(data);
+    return parsed ? { kind: "quotations", data: parsed } : null;
+  }
+  if (raw.kind === "suppliers") {
+    const parsed = parseSupplierView(data);
+    return parsed ? { kind: "suppliers", data: parsed } : null;
+  }
   if (raw.kind === "requests") {
     const parsed = parseRequestView(data);
     return parsed ? { kind: "requests", data: parsed } : null;
@@ -55,6 +68,11 @@ export function parseFoundationView(value: unknown): FoundationView | null {
   return null;
 }
 export function foundationViewQuery(pathname: string): string | null {
+  const quote = /^\/requests\/([^/]+)\/quotes(?:\/[^/]+)?$/.exec(pathname);
+  if (quote && UUID_PATTERN.test(quote[1])) return `view=quotations&mrfId=${quote[1]}`;
+  if (pathname === "/suppliers") return "view=suppliers";
+  const supplier = /^\/suppliers\/([^/]+)$/.exec(pathname);
+  if (supplier && UUID_PATTERN.test(supplier[1])) return `view=suppliers&supplierId=${supplier[1]}`;
   if (pathname === "/requests" || pathname === "/requests/new") return "view=requests";
   const request = /^\/requests\/([^/]+)(?:\/edit)?$/.exec(pathname);
   if (request && UUID_PATTERN.test(request[1])) return `view=requests&requestId=${request[1]}`;

@@ -8,7 +8,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { browserCallTimeout, configureBrowserChecks, navigateDocument } from './browser-environment.mjs';
 import { disposableHttpOrigin, browserRequestAllowed, realtimeSocketAllowed } from './disposable-endpoints.mjs';
 
-export async function authBrowser(base, { startupTimeoutMs = 30000, onLaunch, supabaseOrigin } = {}) {
+export async function authBrowser(base, { startupTimeoutMs = 30000, onLaunch, discoveryReady = () => true, supabaseOrigin } = {}) {
   if (!Number.isInteger(startupTimeoutMs) || startupTimeoutMs < 1000 || startupTimeoutMs > 30000) throw Error('Invalid bounded browser startup deadline');
   const appOrigin = disposableHttpOrigin(base);
   const apiOrigin = supabaseOrigin ? disposableHttpOrigin(supabaseOrigin) : null;
@@ -59,6 +59,7 @@ export async function authBrowser(base, { startupTimeoutMs = 30000, onLaunch, su
     let lastProbe = '';
     while (Date.now() - startupStarted < startupTimeoutMs && !target) {
       if (failedStart || child.exitCode !== null) throw Error('Browser could not start');
+      if (!discoveryReady()) { await delay(100); continue; }
       try {
         const port = Number((await readFile(join(profile, 'DevToolsActivePort'), 'utf8')).split('\n')[0]);
         if (!Number.isInteger(port) || port < 1 || port > 65535) throw Error('Invalid run-owned debugging port');
@@ -67,6 +68,7 @@ export async function authBrowser(base, { startupTimeoutMs = 30000, onLaunch, su
       if (!target) await delay(100);
     }
     assert.ok(target, `Isolated browser started (${Date.now() - startupStarted}ms; ${lastProbe}; ${startupDiagnostics})`);
+    const discoveryMs = Date.now() - startupStarted;
     discoveryComplete = true;
     socket = new WebSocket(target.webSocketDebuggerUrl);
     await new Promise((done, reject) => {
@@ -135,7 +137,7 @@ export async function authBrowser(base, { startupTimeoutMs = 30000, onLaunch, su
     const navigate = async route => { await navigateDocument(call, base + route); await wait("return !!document.querySelector('h1,h2')"); };
     const fill = async (selector, value) => run(`const el=document.querySelector(${JSON.stringify(selector)});if(!el)throw Error('Input missing');const prototype=el instanceof HTMLTextAreaElement?HTMLTextAreaElement.prototype:HTMLInputElement.prototype;Object.getOwnPropertyDescriptor(prototype,'value').set.call(el,${JSON.stringify(value)});el.dispatchEvent(new Event('input',{bubbles:true}));`);
     const click = async selector => run(`const el=document.querySelector(${JSON.stringify(selector)});if(!el)throw Error('Control missing');el.click();`);
-    return { run, wait, navigate, fill, click, call, close, discoveryMs: Date.now() - startupStarted,
+    return { run, wait, navigate, fill, click, call, close, discoveryMs,
       assertIsolated: () => assert.deepEqual(violations, [], 'Browser made no external HTTP/WebSocket requests') };
   } catch (error) { await close(); throw error; }
 }

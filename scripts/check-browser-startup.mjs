@@ -4,19 +4,17 @@ import assert from 'node:assert/strict';
 
 await mkdir('.verification', { recursive: true });
 const results = [];
-if (process.platform === 'linux' && process.env.GITHUB_ACTIONS === 'true') {
-  // A stopped real Chrome process gives deterministic cold-readiness delay.
-  // The previous ten-second allowance fails; the bounded default must succeed.
+const args = process.argv.slice(2);
+if (args.length > 1 || args.length === 1 && args[0] !== '--delayed') throw Error('Use only the optional --delayed startup control.');
+if (args[0] === '--delayed' || process.platform === 'linux' && process.env.GITHUB_ACTIONS === 'true') {
+  // Delay discovery of a real Chrome endpoint without stopping one process in
+  // Chrome's multi-process startup. Preserve the ten/ thirty-second deadlines.
   const delayed = async startupTimeoutMs => {
-    let child;
-    let resume;
-    try {
-      return await authBrowser('http://127.0.0.1:3198', { startupTimeoutMs, onLaunch(browserProcess) {
-        child = browserProcess;
-        assert.ok(child.kill('SIGSTOP'), 'Pause only the run-owned browser process');
-        resume = setTimeout(() => child.kill('SIGCONT'), 11000);
-      } });
-    } finally { clearTimeout(resume); child?.kill('SIGCONT'); }
+    let readyAt;
+    return authBrowser('http://127.0.0.1:3198', { startupTimeoutMs,
+      onLaunch() { readyAt = Date.now() + 11000; },
+      discoveryReady: () => Date.now() >= readyAt,
+    });
   };
   await assert.rejects(delayed(10000), /Isolated browser started/, 'Ten-second control catches delayed Chrome readiness');
   const recovered = await delayed(30000);

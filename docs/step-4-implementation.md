@@ -7,7 +7,7 @@ Agreed 2026-11-03. This active companion owns the operational migration sequence
 Read the five core documents required by [AGENTS.md](../AGENTS.md), the checklist and this guide before planning, implementing, reviewing or resuming step 4.
 
 1. Reconcile Git status, the tracker and the actual implementation. Preserve unrelated pending work and the completed foundation planning retirement.
-2. Check the user's latest instruction before starting a unit. **The user finalized the 4.3 interview plan and authorized implementation. Later units, merging and production remain separate.**
+2. Check the user's latest instruction before starting a unit. **The user finalized the 4.5a interview plan and authorized implementation on 2026-11-04. Financial finalization (4.5b), later units, merging and production remain separate.**
 3. Use the sequence below as the roadmap. Units 4.1-4.3 have detailed scopes; later units require scoped planning and acceptance criteria before implementation.
 4. Verify a unit within its boundary, record actual results in the tracker, then check its completion box. A documentation checkpoint does not complete an operational workflow or checklist step 4.
 5. Retire this companion after the milestone is complete, preserving durable contracts in the core documents and completion evidence in the tracker.
@@ -33,8 +33,10 @@ The listed order is the default. Record any agreed scope/order revision here and
 | **4.1 Shared MRF drafts** | [x] | Restore register, draft editor and detail views with authoritative storage and transactional numbering; depends on the completed foundation and 4.0. |
 | **4.2 Required MRF documents** | [x] | Protected supporting-PDF handling, required project-folder operations and retryable archive processing for migrated MRFs. |
 | **4.3 MRF submission and review** | [x] | Submission, PM approval/return/rejection, corrections and permanent-identity self-approval prevention; requires verified document gates from 4.2. |
-| **4.4 Supplier directory** | [ ] | Shared supplier records and authorized maintenance. |
-| **4.5 Manual quotations** | [ ] | Capture, review, version and archive supplier quotations; financial finalization requires applicable policy confirmation and supplier-original archives. |
+| **4.4 Supplier directory** | [x] | Completed 2026-11-04 at `480311b`: shared records/maintenance pass automated, staging, all three manual groups and combined acceptance. |
+| **4.5 Manual quotations** | [ ] | Split into 4.5a capture/source review/originals and 4.5b policy-dependent financial finalization/formal business revisions. Parent remains open until both pass. |
+| **4.5a Capture and originals** | [x] | Completed 2026-11-05 at `26305c3`: automated/staging checks, all three explicit manual confirmations and source-bound combined acceptance pass. |
+| **4.5b Financial finalization** | [ ] | Requires applicable company-policy decisions before calculations, finalization and immutable business revisions; not authorized by 4.5a. |
 | **4.6 Shared demand allocation** | [ ] | One authoritative demand limit shared by purchases, suitability holds and transfer allocations; based on approved MRF requirements. |
 | **4.7 Stock ledger and reservations** | [ ] | Shared stock availability and reservation rules before enabling competing inventory consumers. |
 | **4.8 Awards and PO drafts** | [ ] | Supplier awards, split purchasing and PO preparation using verified quotation archives and the shared demand rules. |
@@ -154,6 +156,53 @@ The earlier **Not tested yet** response on 2026-11-03 is superseded by the user�
 1. **Submission/review (`mrf-submission-review`):** save a complete MRF with a funded scope and verified PDF. Confirm incomplete requirements or unfinished uploads prevent submission. Keep unsaved text in a second Site editor, submit from the first, and confirm the second retains its text but cannot save. As PM return with a reason; reconcile and resubmit as assigned Site staff. Saving returned work must retain Returned. Reject a separate submitted QA MRF and confirm it cannot be edited or reopened.
 2. **Approved archives (`mrf-approved-archives`):** as a different PM, approve a submitted MRF. Confirm approval is visible while archiving remains pending; after completion, preview/download both the approved company form and supporting PDF. Verify visible failure/retry if encountered, and confirm Site cannot perform PM archive retries. The generated form must match the submitted project labels.
 3. **Corrections/history (`mrf-corrections-history`):** as Procurement reopen a fully archived approval with a reason. Confirm assigned Site staff can prepare a full correction, procurement readiness pauses, and PM can return or approve the correction without rejecting it. After reapproval/archive completion, both earlier and current approved document versions and the complete actor/reason timeline remain available. Automated disposable fixtures additionally cover document-only restrictions after downstream references and every submitter's self-approval restriction after role changes; these are not claimed as human tests.
+
+## 4.4 Supplier Directory — Complete
+
+**Authorized 2026-11-04:** the user confirmed the complete interview scope and requested implementation. Procurement alone maintains one company-wide supplier record per business; all non-Site roles read profiles/history. Site Personnel have no supplier access. Preserve existing styling and project-style register/detail routes with add/edit dialogs.
+
+- Require name only. Address, TIN, contact person, email, phone and informational accreditation note are optional. Validate supplied email syntax; phone/TIN remain text without verification or financial interpretation.
+- Names are unique across active/inactive suppliers after trimming, collapsing whitespace and ignoring case. Duplicate feedback links to the existing record. No deletion, merging, bank details, imports, uploads or accreditation approval workflow.
+- New suppliers start active; Procurement can edit inactive profiles. Deactivate/reactivate requires at least five trimmed characters of reason. Later writers must disallow new inactive supplier selections while preserving existing linked work and frozen quotation/PO details.
+- Search the register, default its Active/Inactive/All filter to Active, and order alphabetically. Show the latest 30 relevant changes with permanent actor identity, frozen name/role/time, field differences and status reasons; retain the full protected audit.
+- Use grouped domain/server/feature modules, service-only checked RPCs, transactional records/audits/retry receipts, opaque expected versions and no-op saves. Reuse exact-session private realtime and authorized refetches; preserve filters/dirty input, require repeated conflict review, and clear protected state on confirmed access loss.
+- Keep quotation counts/history and all purchasing workflows unavailable until their corresponding units. No prototype-data import.
+
+**Done when:** focused unit/API, rollback SQL, observed-lock duplicate/edit/status/retry races and real-account browser/Realtime/access checks pass alongside local standard/public-browser, four-job CI, full disposable integration and retained-state-safe staging parity. Generated types must match the owning generator. Obtain the three manual confirmations below before checking 4.4. Earlier attestations retain their original dates/provenance. Supplier-only work does not require repeating live Drive smoke absent integration changes.
+
+### 4.4 Targeted Manual Review — Complete
+
+Automated local/four-job CI/disposable/staging checks pass at `480311b`; the migration is applied with retained state preserved. The earlier **Not tested yet** response is superseded by explicit **All three passed** confirmation on 2026-11-04. All three groups below are accepted and source-bound combined acceptance passes. Unit 4.4 is complete. Earlier MRF/recovery attestations retain their original dates/provenance. Unit 4.5 requires separate scoped planning and implementation authorization.
+
+Use retained QA records and separately provisioned Procurement/read-only accounts; do not reset staging or repurpose retained identities. Suppliers have no deletion, so manually saved QA records and their audits remain retained.
+
+1. **Sharing/permissions (`supplier-sharing-permissions`):** create a name-only supplier as Procurement; reopen it in another session, search it and review its optional fields. A non-Site reader sees details/history without maintenance controls; Site cannot access supplier data.
+2. **Conflict recovery (`supplier-conflict-recovery`):** edit the same supplier in two Procurement sessions. Save in one while the other retains unsaved input; verify saved differences and explicit review before replacement. Repeat an intervening change. Verify access revocation denies reads/saves and clears protected input.
+3. **Status/history (`supplier-status-history`):** deactivate with a reason; verify the default active register excludes it and the inactive filter finds it. A duplicate name remains blocked with an existing-record link. Edit/reactivate it and verify reasons, actor/role/time and field differences remain visible.
+
+## 4.5a Manual Quotation Capture and Originals - Complete
+
+Authorized 2026-11-04 after the user locked all interview decisions. Overall 4.5 stays open; 4.5b requires applicable company-policy confirmation before financial calculations/finalization and formal business revisions. AI remains step 5; comparisons, awards and POs remain later units.
+
+Completed 2026-11-05 at implementation `26305c3`. Automated local/four-job CI/disposable/live-Drive/staging checks pass; the user explicitly confirmed all three targeted manual groups passed without skips, and matching combined acceptance passes. Detailed evidence is in the tracker.
+
+- Procurement alone maintains drafts/files and retries jobs. All non-Site roles read quotations/originals/history; Site is denied. Create only from a currently approved, fully archived MRF and active supplier. First save fixes both identities and permanently registers the downstream MRF reference, including when later cancelled.
+- One active draft per MRF/supplier. Require only those identities for first save; allow incomplete source fields, no lines and no files. Explicit Save, stable row identities, safe retries, no-op saves, immutable audits and repeated conflict review preserve input. Cancel/reopen with a reason of at least five trimmed characters; retain history and current files. Existing work may continue after supplier deactivation.
+- Capture full supplier/header/terms, offered lines, matches/conversions, printed amounts and source tax/discount/charge fields as exact decimal strings; blank is distinct from zero. Preserve signed financial values, nonnegative quantities and positive conversion factors. No rounding, formulas, default VAT/rate/currency, financial approval or normalized generated quotation PDF. Quote details never update supplier master data.
+- Source-check attestation plus line-match confirmations bind saved content/file versions. Require verified originals and no unfinished group change for checking. Content edits expire the quote check; changed lines/files expire relevant matches. Drafts remain editable; reviewed does not mean finalized.
+- Originals support readable unencrypted PDF and decodable JPEG/PNG/WebP, up to 12 files, 20 MiB each and 45 MiB total. Atomic group changes retain previous originals until all selected changes validate. File saves/progress are independent of text. Reuse protected chunk/hash/provider/Range/Workflow foundations with explicit quotation metadata and MIME-aware validation.
+- Resume after matching local-file reselection; retain frozen destinations and durable jobs. Recheck authority and MRF eligibility; pause writes during correction/revocation. Clean obsolete draft bytes only after current/candidate/protected reference checks; retain metadata. Current files on cancelled drafts remain retained. Future 4.5b must transactionally protect finalized file references before enabling finalization.
+- Preserve worksheet structure with focused authoritative modules; no prototype dispatcher, Number-based financial helpers or unsupported workflow tabs. Missing suppliers open the directory in another tab; refresh options without replacing input.
+
+**Done when:** local, four-job CI, disposable SQL/Auth/browser/Realtime/type/race, scoped live-Drive and retained-state-safe staging checks pass, then explicit human confirmation of shared capture/access, source review/conflicts, and originals/recovery/cancellation. Unit 4.5a meets these criteria on 2026-11-05; parent 4.5 remains unchecked until 4.5b also passes. Current evidence/blockers belong in the tracker.
+
+### 4.5a Targeted Manual Review - Complete
+
+All three groups below are accepted after the user's explicit **All three passed** confirmation on 2026-11-05, with no skipped checks. This supersedes the earlier **Not tested yet** response. Source-bound combined acceptance passes at `26305c3`; earlier units retain their own attestation dates and provenance. The steps remain below for reference.
+
+1. **Capture and access:** Procurement opens an approved archived MRF, creates a draft from an active supplier and saves incomplete and full source data. Refresh and another permitted session show the same values, including exact decimals, blank/zero and quoted supplier details. Non-Site readers cannot edit; Site cannot open quotations or originals. Verify the first-save warning and permanent document-only MRF correction restriction.
+2. **Source review and conflicts:** Attach originals, save material links/conversions and explicitly confirm matches and the overall source check. Change headers, lines and originals and verify the corresponding checks expire. Use two Procurement sessions for repeated conflicting edits; review the latest values while preserving input. Change access during editing and confirm writes stop.
+3. **Originals and recovery:** Save PDF/image groups, preview/download them, replace/remove files and verify the previous group remains until every new file validates. Interrupt and reload an upload, reselect matching local files and resume; exercise invalid-file/job recovery. Cancel/reopen with reasons, confirm one active draft per supplier, retained current originals and readable history. Existing work remains editable after supplier deactivation.
 
 ## Milestone Completion and Documentation Ownership
 

@@ -1,6 +1,8 @@
 import { checkRequestDrafts } from './check-request-drafts.mjs';
 import { checkMrfDocuments } from './check-mrf-documents.mjs';
+import { checkSupplierDirectory } from './check-supplier-directory.mjs';
 import { checkMrfReview } from './check-mrf-review.mjs';
+import { checkQuotationDrafts } from './check-quotation-drafts.mjs';
 import { fakeDrive } from './helpers/fake-drive.mjs';
 import assert from 'node:assert/strict';
 import { randomUUID, randomBytes } from 'node:crypto';
@@ -112,6 +114,7 @@ export async function checkAuthFoundation({ api, anon, secret, mailpit, sql, env
   server.stderr.on('data', chunk => { serverLog = (serverLog + chunk).slice(-16000); });
   const stopped = new Promise(done => server.once('close', done));
   const browsers = [];
+  let quotationFixture;
   try {
     let ready = false;
     for (let i = 0; i < 100 && !ready; i++) {
@@ -281,8 +284,12 @@ export async function checkAuthFoundation({ api, anon, secret, mailpit, sql, env
     checks.push('request-browser');
     const documents = await checkMrfDocuments({ browser, second, client, login, logout, sql, administrator: bootstrapInputs[winner], base, drive });
     checks.push('document-browser-workflow');
-    await checkMrfReview({ browser, second, client, login, logout, sql, base, drive, ...documents });
+    const reviewed = await checkMrfReview({ browser, second, client, login, logout, sql, base, drive, ...documents });
     checks.push('mrf-review-browser-workflow');
+    quotationFixture = await checkQuotationDrafts({ browser, second, client, login, logout, sql, base, drive, ...reviewed });
+    checks.push('quotation-browser-workflow');
+    await checkSupplierDirectory({ browser, second, client, login, logout, sessionCookie, sql });
+    checks.push('supplier-browser');
     for (const browser of browsers) browser.assertIsolated();
     checks.push('isolation');
     console.log('Real-account browser, session revocation, role, bootstrap and captured-email checks passed.');
@@ -295,4 +302,5 @@ export async function checkAuthFoundation({ api, anon, secret, mailpit, sql, env
   }
   await writeFile('.verification/auth-foundation.json', JSON.stringify({ ...source, at: new Date().toISOString(),
     passed: true, complete: true, checks, isolated: true, cleaned: true }, null, 2));
+  return quotationFixture;
 }
