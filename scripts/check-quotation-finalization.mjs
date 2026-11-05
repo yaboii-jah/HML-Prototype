@@ -499,7 +499,7 @@ async function checkFinalization({
   await click(browser, "I reviewed the latest revision and MRF");
   await click(browser, "Reconfirm current MRF");
   await browser.wait(
-    "return document.querySelector('.quotation-revision')?.textContent.includes('Current and eligible')",
+    `return document.querySelector('.quotation-revision')?.textContent.includes('Current and eligible')&&document.querySelector('.project-history')?.textContent.includes(${JSON.stringify(applicabilityReason)})`,
   );
   assert.equal(
     (
@@ -534,7 +534,7 @@ async function checkFinalization({
   );
   await click(browser, "Save quotation");
   await browser.wait(
-    "return !document.body.innerText.includes('Save or discard your text changes')",
+    "return !document.body.innerText.includes('Save or discard your text changes')&&document.querySelector('.project-history')?.textContent.includes('Correction to captured quotation notes')",
   );
   await confirmSource(browser);
   await click(browser, "Keep my classifications with reviewed source");
