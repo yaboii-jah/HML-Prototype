@@ -424,6 +424,20 @@ export function calculateQuotation(
         serviceLines.push({ source, config, input });
         continue;
       }
+      const statedLineTax = source.taxLabel
+        .trim()
+        .toUpperCase()
+        .replace(/[\s-]/g, "");
+      if (
+        (statedLineTax === "VAT" && !vat) ||
+        (["NONVAT", "VATEXEMPT", "EXEMPT"].includes(statedLineTax) && vat) ||
+        (["ZERORATED", "ZERORATE", "0%VAT"].includes(statedLineTax) &&
+          vat &&
+          compare(rate) > 0)
+      )
+        throw Error(
+          "Mixed material tax classifications are unsupported; reconcile the source treatment.",
+        );
       if (
         source.taxRate &&
         compare(decimal(source.taxRate), vat ? rate : ZERO) !== 0

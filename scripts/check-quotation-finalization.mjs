@@ -285,6 +285,38 @@ async function checkFinalization({
   assert.equal(saved.financial.calculation.net, "332.00");
   assert.equal(saved.body.currency, "");
   assert.deepEqual(saved.financial.calculation.issues, []);
+  for (const width of [1440, 375]) {
+    await browser.call("Emulation.setDeviceMetricsOverride", {
+      width,
+      height: 1000,
+      deviceScaleFactor: 1,
+      mobile: width === 375,
+    });
+    await browser.run(
+      "document.querySelector('.mobile-scrim')?.click();document.querySelector('.quotation-financial-review').scrollIntoView();window.scrollBy(0,-88)",
+    );
+    if (width === 375)
+      await browser.wait(
+        "return !document.querySelector('.mobile-scrim')&&document.querySelector('.side-nav').getBoundingClientRect().right<=1",
+      );
+    await browser.run(
+      "await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));return true",
+    );
+    assert.equal(
+      await browser.run(
+        "return document.documentElement.scrollWidth<=innerWidth",
+      ),
+      true,
+    );
+    const shot = await browser.call("Page.captureScreenshot", {
+      format: "png",
+    });
+    await writeFile(
+      `.verification/quotation-review-editor-${width}.png`,
+      Buffer.from(shot.data, "base64"),
+    );
+  }
+  await browser.call("Emulation.clearDeviceMetricsOverride");
   // Repeated two-session financial conflicts preserve input and require renewed review.
   await second.navigate(path);
   await second.wait(
@@ -495,7 +527,7 @@ async function checkFinalization({
       mobile: width === 375,
     });
     await browser.run(
-      "document.querySelector('.mobile-scrim')?.click();document.querySelector('#financial-review-heading').scrollIntoView()",
+      "document.querySelector('.mobile-scrim')?.click();document.querySelector('#financial-review-heading').scrollIntoView();window.scrollBy(0,-88)",
     );
     if (width === 375)
       await browser.wait(
@@ -515,7 +547,7 @@ async function checkFinalization({
       Buffer.from(shot.data, "base64"),
     );
     await browser.run(
-      "document.querySelector('.quotation-revision').scrollIntoView()",
+      "document.querySelector('.quotation-revision').scrollIntoView();window.scrollBy(0,-88)",
     );
     const revisionShot = await browser.call("Page.captureScreenshot", {
       format: "png",

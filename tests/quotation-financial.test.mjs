@@ -265,6 +265,19 @@ test("header readiness requires reference/date/terms and rejects foreign, expire
 
 test("reviewed tax settings cannot contradict explicit captured classifications or price basis", () => {
   const { body, review } = quote();
+  body.lines[0].taxLabel = "NON-VAT";
+  assert.ok(
+    calculateQuotation(body, review).issues.some((issue) =>
+      issue.includes("Mixed material tax classifications"),
+    ),
+  );
+  body.lines[0].taxLabel = "VAT exempt";
+  assert.ok(
+    calculateQuotation(body, review).issues.some((issue) =>
+      issue.includes("Mixed material tax classifications"),
+    ),
+  );
+  body.lines[0].taxLabel = "";
   body.taxStatus = "NON VAT";
   assert.ok(
     calculateQuotation(body, review).issues.some((issue) =>
