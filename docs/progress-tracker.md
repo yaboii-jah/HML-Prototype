@@ -1,19 +1,21 @@
 # Progress Tracker
 
-Update this file after every meaningful implementation or documentation change and consequential decision. Keep completed work, active work and plans distinct. **Last reviewed: 2026-11-04.**
+Update this file after every meaningful implementation or documentation change and consequential decision. Keep completed work, active work and plans distinct. **Last reviewed: 2026-11-05.**
 
 ## Current Phase
 
-- Runtime/CI milestone 2 and foundation units 3.1-3.6 are verified. The account/project foundation includes sessions, accounts, shared projects/scopes and protected realtime, with complete local/CI/staging acceptance. The operational roadmap and 4.0 are verified; 4.1 shared MRF drafts, 4.2 required documents and 4.3 submission/review are verified complete, including user-confirmed manual acceptance.
+- Runtime/CI milestone 2 and foundation units 3.1-3.6 are verified. The account/project foundation includes sessions, accounts, shared projects/scopes and protected realtime, with complete local/CI/staging acceptance. Operational units 4.0-4.4 and 4.5a are verified complete, including applicable user-confirmed manual acceptance. Parent 4.5 remains open for 4.5b.
 - The supported runtime no longer starts the global demo workspace or trusts browser-selected accounts. Projects/MRFs and the supplier directory use protected shared records; supporting-PDF upload/preview/download and required folder operations are implemented. Unmigrated provider endpoints remain disabled. The committed prototype and isolated regression fixtures remain recoverable.
 - Production configuration/deployment, verified real email, company-owned services, backup/restore and operational acceptance remain release work. Checklist step 3 is complete; operational and release milestones remain open.
 
 ## Current Goal
 
-- **4.5a manual quotation capture/source review/originals is implemented and automated/staging verification passes at `26305c3` on `feat/step-4-quotation-drafts` (2026-11-04).** The local review app is running at `http://127.0.0.1:3000`; open an approved archived MRF and choose Supplier quotations. The three new human-review groups are pending, so 4.5a and parent 4.5 remain unchecked. Financial finalization/formal business revisions remain policy-gated 4.5b work. Preserve accepted 4.4 evidence and retained QA records/files. No merge or production action is authorized.
+- **4.5a manual quotation capture/source review/originals is complete on 2026-11-05 at implementation `26305c3` on `feat/step-4-quotation-drafts`.** The user explicitly confirmed all three manual groups passed with no skipped checks, and source-bound combined acceptance passes. This closes 4.5a only; parent 4.5 remains open for policy-dependent financial finalization/formal business revisions in 4.5b. Await separate direction for that unit's planning. Preserve earlier evidence and retained QA records/files. No merge or production action is authorized.
 
 
 ## Completed
+
+- **Unit 4.5a, 2026-11-05:** shared quotation capture, exact source values, source checks/material matches, protected originals, recovery/cancellation, access and conflict handling are verified at `26305c3`. The user explicitly confirmed all three manual groups passed without skips; matching combined acceptance passes. Earlier manual dates/provenance remain preserved. Parent 4.5 and checklist step 4 stay open. [Draft PR #33](https://github.com/yaboii-jah/HML-Prototype/pull/33) remains unmerged.
 
 - **Unit 4.4, 2026-11-04:** supplier directory, Procurement maintenance, non-Site reads, unique names across inactive records, reasoned status changes, protected history and realtime conflict handling are verified at `480311b`. The user explicitly confirmed all three manual groups passed. Combined acceptance passes; step 4 remains open and 4.5 is next for planning. Draft PR #32 remains unmerged.
 
@@ -57,7 +59,7 @@ Update this file after every meaningful implementation or documentation change a
 
 ## In Progress
 
-- Unit 4.5a is ready for human acceptance in [draft PR #33](https://github.com/yaboii-jah/HML-Prototype/pull/33), stacked on the supplier branch. Final implementation `26305c3` passes local lint/types, 410 tests, production build, public browser, all four standard CI jobs, complete disposable SQL/Auth/application/Workflow/Realtime/race/type checks, owned live Drive and retained-state staging parity. The migration is applied to staging; all pre-existing records, profiles/access revisions, bindings, Auth counts and the guard are preserved. The combined gate awaits explicit new confirmation of capture/access, review/conflicts and originals/recovery/cancellation. Earlier failures remain recorded below. The private untracked account note remains unrelated and excluded.
+- No implementation unit is active. Unit 4.5a is accepted in [draft PR #33](https://github.com/yaboii-jah/HML-Prototype/pull/33), stacked on the supplier branch and unmerged. Financial finalization/formal business revisions remain unimplemented and need separate 4.5b scoping, applicable policy confirmation and authorization. Earlier failures/evidence remain recorded below; unrelated pending files remain excluded.
 
 
 
@@ -72,7 +74,7 @@ Update this file after every meaningful implementation or documentation change a
 
 Use the [production checklist](checklist.md#steps) for the ordered milestones and their completion conditions.
 
-- **Exact next action:** receive the user's three 4.5a targeted manual confirmations, record their current-source evidence while preserving earlier attestations/dates, then run combined milestone acceptance. Keep 4.5a/4.5 unchecked until their own criteria pass; do not begin 4.5b without its policy decisions and authorization. Merging and production remain separate.
+- **Exact next action:** await the user's direction for 4.5b planning, then settle its applicable accounting policies and detailed scope before implementation. Parent 4.5 and checklist step 4 remain open. Merging and production remain separate.
 - Follow the guide's dependencies and completion criteria. The prototype role switch/approval commands are not production authority. Migrated MRF review now enforces permanent-user self-approval prevention; prepared-PO enforcement remains part of its later workflow unit.
 - Retain local Node 26.12.1, the Vercel Node 24.x target, CI baseline 24.22.1 and npm 11.20.0 across environments. Hosted deployment verification belongs to the later protected rehearsal.
 - Work foundations first: individual identity, shared records and server authorization before business-workflow migration. Tailwind remains a separate track.
@@ -125,6 +127,8 @@ The [architecture document](architecture.md) is the detailed source of truth. Ke
 | Private realtime signals and current authorized reads | Open permitted views update automatically; access-revision topics and session checks keep notifications independent from authority. |
 
 ## Session Notes
+
+- **4.5a closeout, 2026-11-05:** the user reported that the overall test plan works, then explicitly selected **All three passed** with no skipped checks for capture/access, source review/conflicts and originals/recovery/cancellation. Recorded current-source manual evidence for `26305c3`, retaining the entire earlier supplier/MRF attestation chain, original dates, an unchanged recovery-file hash and a byte-identical backup of the preceding manual report. `npm run verify:foundation -- milestone` passes using matching local/four-job CI/disposable/staging/Drive evidence. The earlier **Not tested yet** response remains historical and is superseded by this confirmation. Updated the guide, tracker, checklist, overview and README; architecture, workflow rules and code standards require no changes because this closeout changes no application contract or verification process. No application tests, migrations or live integrations were repeated solely for documentation. Preserve the user's pre-existing guide whitespace and private account file. No merge, production promotion or 4.5b work.
 
 - **4.5a automated/staging verification, 2026-11-04, implementation `26305c3`:** local lint/type generation/TypeScript/**410 tests**/Webpack build/public-browser and source-bound local acceptance pass. [All four standard jobs](https://github.com/yaboii-jah/HML-Prototype/actions/runs/41852245869) and [complete disposable acceptance](https://github.com/yaboii-jah/HML-Prototype/actions/runs/41852245822) pass with matching source/migration fingerprints and generated types. Coverage includes full source capture, first-save downstream restrictions, active supplier/draft uniqueness, persistent review-stamp invalidation (including restored values), repeated conflicts, atomic mixed originals, real decode failure/reselection/recovery, closed-group cancellation, role denial/revocation and observed acknowledgement/correction races. Inspected desktop/375px capture, originals and filename/hash history; the stale failed-job retry is resolved. The owned live-Drive PDF/JPEG/PNG/WebP hash/identity/decode/Range smoke passes with verified cleanup. Migration `20261104122448_quotation_drafts.sql` is applied to **staging only** after exact passing CI evidence. Before/after pre-existing state hashes and whole staging parity pass; no retained QA record/file was cleaned and no email was sent. Imported five matching CI reports plus local evidence. The app is running for review at `http://127.0.0.1:3000/requests`; all three new human groups remain pending, so combined acceptance and the unit checkbox remain open.
 - **4.5a human-review response, 2026-11-04:** the user explicitly answered **Not tested yet** to the three new quotation groups. Do not treat earlier overall-success or 4.4 confirmations as 4.5a acceptance. The combined runner correctly reports incomplete targeted manual evidence after accepting all automated/staging/Drive inputs. Earlier manual evidence remains unchanged; wait for new review results before closing 4.5a. The running local server is the handoff surface.
