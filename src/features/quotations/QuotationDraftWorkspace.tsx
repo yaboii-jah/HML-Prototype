@@ -4,12 +4,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   useEffect,
-  useRef,
   useState,
   useSyncExternalStore,
   type FormEvent,
 } from "react";
-import { quotationCommandAction } from "@/app/(workspace)/requests/[id]/quotes/actions";
 import { useFoundationRealtime } from "@/src/app-state/FoundationRealtime";
 import { Field, InlineError, PageHeader } from "@/src/components/ui/Primitives";
 import { RecordModal } from "@/src/components/ui/RecordModal";
@@ -30,6 +28,8 @@ import {
 } from "@/src/domain/quotations/drafts";
 import { record } from "@/src/domain/projects/projects";
 import { QuotationOriginals } from "./QuotationOriginals";
+import { QuotationFinancialReview } from "./QuotationFinancialReview";
+import { useQuoteOperation } from "./use-quotation-operation";
 
 const subscribe = () => () => {};
 type HeaderKey = keyof typeof HEADER_FIELDS;
@@ -133,6 +133,14 @@ const historyActions: Record<string, string> = {
   "quotation.beginGroup": "Started original-file changes",
   "quotation.cancelGroup": "Cancelled original-file changes",
   "quotation.retryJob": "Retried file processing",
+  "quotation.saveFinancial": "Saved financial review",
+  "quotation.checkFinancial": "Confirmed financial inputs and PHP",
+  "quotation.finalize": "Finalized quotation revision",
+  "quotation.startRevision": "Started replacement revision",
+  "quotation.withdraw": "Withdrew revision permanently",
+  "quotation.reconfirmMrf": "Reconfirmed corrected MRF applicability",
+  "quotation.activateRevision": "Activated archived revision",
+  "quotation.retryArchive": "Retried quotation archive",
 };
 function OriginalHistory({ value, label }: { value: unknown; label: string }) {
   if (!Array.isArray(value)) return null;
@@ -215,56 +223,6 @@ function HistoryDetails({
   );
 }
 
-function useQuoteOperation() {
-  const { refresh } = useFoundationRealtime();
-  const [busy, setBusy] = useState(false),
-    [error, setError] = useState(""),
-    [conflict, setConflict] = useState(false),
-    [notice, setNotice] = useState("");
-  const running = useRef(false),
-    retry = useRef<{ key: string; id: string } | null>(null);
-  const run = async (input: QuoteInput) => {
-    if (running.current) return null;
-    const key = JSON.stringify(input);
-    if (retry.current?.key !== key)
-      retry.current = { key, id: crypto.randomUUID() };
-    running.current = true;
-    setBusy(true);
-    setError("");
-    setConflict(false);
-    setNotice("");
-    try {
-      const result = await quotationCommandAction({
-        ...input,
-        requestId: retry.current.id,
-      });
-      if (result.ok) {
-        retry.current = null;
-        setNotice(result.message);
-      } else {
-        setError(result.message);
-        setConflict(!!result.conflict);
-      }
-      return result;
-    } catch {
-      setError(
-        "The response was interrupted. Retry the same request to check its saved outcome.",
-      );
-      return null;
-    } finally {
-      running.current = false;
-      setBusy(false);
-      refresh();
-    }
-  };
-  const reviewed = () => {
-    setConflict(false);
-    setError("");
-    retry.current = null;
-  };
-  return { busy, error, conflict, notice, run, reviewed };
-}
-
 function NewQuotation({
   view,
   close,
@@ -328,14 +286,18 @@ function NewQuotation({
                 key={s.id}
                 value={s.id}
                 disabled={view.quotes.some(
-                  (q) => q.supplierId === s.id && q.state === "draft",
+                  (q) =>
+                    q.supplierId === s.id &&
+                    (q.state === "draft" || q.state === "finalized"),
                 )}
               >
                 {s.name}
                 {view.quotes.some(
-                  (q) => q.supplierId === s.id && q.state === "draft",
+                  (q) =>
+                    q.supplierId === s.id &&
+                    (q.state === "draft" || q.state === "finalized"),
                 )
-                  ? " — active draft already exists"
+                  ? " — open the existing quotation to revise"
                   : ""}
               </option>
             ))}
@@ -374,27 +336,38 @@ function NewQuotation({
 function SourceEditor({
   quote,
   view,
+  onDirtyChange,
 }: {
   quote: QuotationDraft;
   view: QuotationsView;
+  onDirtyChange: (dirty: boolean) => void;
 }) {
   const [body, setBody] = useState<QuoteBody>(quote.body);
   const [basis, setBasis] = useState({
     body: quote.body,
     version: quote.version,
+    contentVersion: quote.contentVersion,
+    state: quote.state,
   });
   const [lineId, setLineId] = useState<string | null>(null);
   const [statusOpen, setStatusOpen] = useState(false),
     [reason, setReason] = useState("");
   const operation = useQuoteOperation();
   const dirty = JSON.stringify(body) !== JSON.stringify(basis.body);
-  const stale = basis.version !== quote.version;
+  const stale =
+    basis.contentVersion !== undefined
+      ? basis.contentVersion !== quote.contentVersion ||
+        basis.state !== quote.state
+      : basis.version !== quote.version;
+  useEffect(() => onDirtyChange(dirty), [dirty, onDirtyChange]);
   const editable =
     view.role === "Procurement" &&
     quote.state === "draft" &&
     !!view.request?.procurementReady;
   const canStatus =
-    view.role === "Procurement" && !!view.request?.procurementReady;
+    view.role === "Procurement" &&
+    quote.state !== "finalized" &&
+    !!view.request?.procurementReady;
   const busy = operation.busy;
   const selectedLine = body.lines.find((line) => line.id === lineId);
   useEffect(() => {
@@ -408,7 +381,12 @@ function SourceEditor({
   }, [dirty]);
   const adopt = (saved: QuotationDraft) => {
     setBody(saved.body);
-    setBasis({ body: saved.body, version: saved.version });
+    setBasis({
+      body: saved.body,
+      version: saved.version,
+      contentVersion: saved.contentVersion,
+      state: saved.state,
+    });
   };
   const run = async (command: QuoteInput) => {
     const result = await operation.run(command);
@@ -430,7 +408,7 @@ function SourceEditor({
     await run({
       type: "save",
       quoteId: quote.id,
-      expectedVersion: basis.version,
+      expectedVersion: quote.version,
       body,
     });
   };
@@ -477,7 +455,9 @@ function SourceEditor({
         <strong>
           {quote.state === "cancelled"
             ? "Cancelled quotation"
-            : "Editable quotation draft"}
+            : quote.state === "finalized"
+              ? "Finalized quotation source"
+              : "Editable quotation draft"}
         </strong>
         <p>
           {quote.checked && !dirty
@@ -487,11 +467,19 @@ function SourceEditor({
         </p>
         <p>
           Created by {quote.creatorName}. Business identity and MRF are fixed.
-          Financial finalization and purchasing are not available yet.
+          Complete the financial review below before finalizing. Purchasing
+          remains unavailable until its later workflow units.
         </p>
         <Link href={`/suppliers/${quote.supplierId}`}>
           View the linked supplier directory profile
         </Link>
+        {quote.financial && (
+          <p>
+            <a className="text-link" href="#financial-review-heading">
+              Review calculations and quotation revisions
+            </a>
+          </p>
+        )}
         {canStatus && (
           <div className="form-actions">
             <button
@@ -530,7 +518,12 @@ function SourceEditor({
             className="button secondary"
             disabled={busy}
             onClick={() => {
-              setBasis({ body: quote.body, version: quote.version });
+              setBasis({
+                body: quote.body,
+                version: quote.version,
+                contentVersion: quote.contentVersion,
+                state: quote.state,
+              });
               operation.reviewed();
             }}
           >
@@ -767,7 +760,7 @@ function SourceEditor({
                 void run({
                   type: "checkSource",
                   quoteId: quote.id,
-                  expectedVersion: basis.version,
+                  expectedVersion: quote.version,
                   expectedFiles: quote.fileVersion,
                 })
               }
@@ -866,7 +859,7 @@ function SourceEditor({
                   void run({
                     type: "confirmMatch",
                     quoteId: quote.id,
-                    expectedVersion: basis.version,
+                    expectedVersion: quote.version,
                     expectedFiles: quote.fileVersion,
                     lineId: selectedLine.id,
                   })
@@ -902,7 +895,7 @@ function SourceEditor({
               const result = await run({
                 type: "status",
                 quoteId: quote.id,
-                expectedVersion: basis.version,
+                expectedVersion: quote.version,
                 state: quote.state === "draft" ? "cancelled" : "draft",
                 reason,
               });
@@ -948,6 +941,7 @@ export function QuotationDraftWorkspace({
   const data = view?.kind === "quotations" ? view.data : initial;
   const [create, setCreate] = useState(false),
     [search, setSearch] = useState("");
+  const [sourceDirty, setSourceDirty] = useState(false);
   const hydrated = useSyncExternalStore(
     subscribe,
     () => true,
@@ -975,7 +969,7 @@ export function QuotationDraftWorkspace({
         title={
           quoteId ? quote?.body.ref || "Quotation draft" : "Supplier quotations"
         }
-        description={`${data.request?.ref || "Material request"}. Capture and check supplier source information. Financial finalization is not available yet.`}
+        description={`${data.request?.ref || "Material request"}. Capture supplier offers, review calculations and follow quotation revisions and archives.`}
         actions={
           data.role === "Procurement" &&
           !quoteId && (
@@ -997,7 +991,20 @@ export function QuotationDraftWorkspace({
       )}
       {quoteId ? (
         quote ? (
-          <SourceEditor key={quote.id} quote={quote} view={data} />
+          <>
+            <SourceEditor
+              key={quote.id}
+              quote={quote}
+              view={data}
+              onDirtyChange={setSourceDirty}
+            />
+            <QuotationFinancialReview
+              key={`financial-${quote.id}`}
+              quote={quote}
+              view={data}
+              sourceDirty={sourceDirty}
+            />
+          </>
         ) : (
           <p>Quotation unavailable.</p>
         )
@@ -1029,7 +1036,11 @@ export function QuotationDraftWorkspace({
             <tr key={q.id} data-quotation-id={q.id}>
               <td>{q.body.supplierName || "Name not recorded"}</td>
               <td>{q.body.ref || "Reference not recorded"}</td>
-              <td>{q.state}</td>
+              <td>
+                {q.revision
+                  ? `Revision ${q.revision.number} · ${q.revision.withdrawn ? "Withdrawn" : q.revision.eligible ? "Current / eligible" : q.revision.current ? "Current / paused" : q.family?.pendingQuoteId === q.id ? "Replacement pending" : "Historical"}`
+                  : q.state}
+              </td>
               <td>{q.checked ? "Entered data checked" : "Unchecked"}</td>
               <td>
                 {q.files.length} saved

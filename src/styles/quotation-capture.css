@@ -58,7 +58,78 @@
   white-space: pre-wrap;
   min-width: 0;
 }
+.quotation-financial-review fieldset {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.quotation-financial-review legend {
+  font-weight: 700;
+  margin-bottom: 16px;
+}
+.quotation-financial-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin: 16px 0;
+}
+.quotation-financial-row {
+  padding: 16px 0;
+  border-top: 1px solid var(--line);
+}
+.quotation-financial-row > summary {
+  cursor: pointer;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.quotation-free-confirmation {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.quotation-free-confirmation input {
+  width: auto;
+}
+.quotation-calculation-totals {
+  max-width: 650px;
+  font-variant-numeric: tabular-nums;
+}
+.quotation-calculation-totals > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+}
+.quotation-calculation-totals dd {
+  margin: 0;
+  text-align: right;
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+.quotation-calculation-totals > div:last-child {
+  font-weight: 700;
+}
+.quotation-conflict,
+.quotation-readiness {
+  margin: 24px 0;
+  padding: 16px 0;
+  border-block: 1px solid var(--line);
+}
+.quotation-conflict li,
+.quotation-revision li,
+.quotation-readiness li {
+  margin-bottom: 8px;
+  overflow-wrap: anywhere;
+}
+.quotation-financial-review .quotation-source-table table {
+  min-width: 650px;
+}
 @media (max-width: 600px) {
+  .quotation-financial-fields {
+    grid-template-columns: 1fr;
+  }
   .quotation-saved-source dl > div {
     grid-template-columns: 1fr;
     gap: 4px;

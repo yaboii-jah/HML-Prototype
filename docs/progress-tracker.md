@@ -10,7 +10,7 @@ Update this file after every meaningful implementation or documentation change a
 
 ## Current Goal
 
-- **4.5a manual quotation capture/source review/originals is complete on 2026-11-05 at implementation `26305c3` on `feat/step-4-quotation-drafts`.** The user explicitly confirmed all three manual groups passed with no skipped checks, and source-bound combined acceptance passes. This closes 4.5a only; parent 4.5 remains open for policy-dependent financial finalization/formal business revisions in 4.5b. Await separate direction for that unit's planning. Preserve earlier evidence and retained QA records/files. No merge or production action is authorized.
+- **Implement authorized unit 4.5b on `feat/step-4-quotation-finalization`.** On 2026-11-05 the user locked the complete interview scope, confirmed the existing quotation calculation rules, and requested implementation. The [active guide](step-4-implementation.md#45b-financial-finalization-and-revisions) records the agreed behavior and acceptance gates. Preserve accepted 4.5a evidence at `26305c3`, retained QA records/files, the user's guide whitespace and private account note. Parent 4.5 stays open until new automated/staging/manual acceptance passes; merging and production remain separate.
 
 
 ## Completed
@@ -59,7 +59,9 @@ Update this file after every meaningful implementation or documentation change a
 
 ## In Progress
 
-- No implementation unit is active. Unit 4.5a is accepted in [draft PR #33](https://github.com/yaboii-jah/HML-Prototype/pull/33), stacked on the supplier branch and unmerged. Financial finalization/formal business revisions remain unimplemented and need separate 4.5b scoping, applicable policy confirmation and authorization. Earlier failures/evidence remain recorded below; unrelated pending files remain excluded.
+- Unit 4.5b implementation is active after explicit authorization on 2026-11-05. Build exact reviewed calculations, immutable revisions, protected originals/internal review PDF archives, guarded replacement activation, withdrawal and MRF reconfirmation. Unit 4.5a remains accepted; read-only GitHub inspection shows [PR #33](https://github.com/yaboii-jah/HML-Prototype/pull/33) was merged into `feat/step-4-suppliers` on 2026-11-05 while this isolated implementation was running. This does not authorize merging 4.5b. Preserve the unrelated checklist line split that appeared during this task, alongside the original guide whitespace and private account note.
+- Initial 4.5b code now includes the pure exact rational calculator, reviewed classifications/validation, command/view types, SQL families/immutable revisions/retained originals, archive jobs/internal PDF generation and review/revision UI. The 15 calculation/capture tests and two revision-input/multipage-PDF tests pass; TypeScript passes and lint has zero errors (existing warnings remain). Migration replay, new SQL/race/browser integration, PDF visual inspection, full verification, CI, generated types, live Drive, staging and human acceptance are still pending. No hosted DDL has run.
+- Initial full local verification passes lint/type generation/TypeScript/**423 tests**/production build, and `foundation-public` passes. Reviewed the rendered four-page internal PDF, including first/last page layout and exact text/provenance; its repeatable-byte and pagination tests pass. The first full run correctly failed because the disabled-endpoint regression still classified the new protected PDF route as disabled; the corrected registry and focused route authorization/Range checks pass. Added disposable SQL/browser/observed-lock acceptance; CI replay, generated types, current-source final evidence, live Drive, staging and human acceptance remain pending.
 
 
 
@@ -74,7 +76,7 @@ Update this file after every meaningful implementation or documentation change a
 
 Use the [production checklist](checklist.md#steps) for the ordered milestones and their completion conditions.
 
-- **Exact next action:** await the user's direction for 4.5b planning, then settle its applicable accounting policies and detailed scope before implementation. Parent 4.5 and checklist step 4 remain open. Merging and production remain separate.
+- **Exact next action:** implement the recorded 4.5b contract, then run focused calculation/lifecycle checks and the full local/CI/disposable/Drive/staging acceptance sequence before obtaining the three new human confirmations. Parent 4.5 and checklist step 4 remain open.
 - Follow the guide's dependencies and completion criteria. The prototype role switch/approval commands are not production authority. Migrated MRF review now enforces permanent-user self-approval prevention; prepared-PO enforcement remains part of its later workflow unit.
 - Retain local Node 26.12.1, the Vercel Node 24.x target, CI baseline 24.22.1 and npm 11.20.0 across environments. Hosted deployment verification belongs to the later protected rehearsal.
 - Work foundations first: individual identity, shared records and server authorization before business-workflow migration. Tailwind remains a separate track.
@@ -87,16 +89,16 @@ Use the [production checklist](checklist.md#steps) for the ordered milestones an
 
 ### Company Accounting Policy
 
-The legacy company discussion records **goods and services EWT computations as confirmed**. The remaining policies below await company confirmation; implemented formulas are not evidence of approval.
+The user explicitly confirmed the **existing quotation calculation rules** on 2026-11-05 during the 4.5b interview, superseding the earlier quotation-policy blocker. The agreed contract includes exact half-up cents at existing stages, independent adjustments, existing goods/services EWT bases, aggregate included VAT and exact printed-amount reconciliation. This confirmation is scoped to quotations; it does not resolve partial-order, budget-charging, settlement or correction policy for later units. Earlier legacy goods/services EWT confirmation remains historical evidence.
 
 | Topic | Decision or evidence still needed |
 | --- | --- |
-| VAT | Whether prices are inclusive/exclusive, permitted variations and applicable rates. |
-| Charges | Fixed/percentage bases for delivery, freight, handling, installation and other fees; which receive VAT. |
-| Discounts | Line versus whole-document discounts, percentage bases and ordering relative to VAT. |
-| Multiple adjustments | Independent versus sequential application of discounts/charges and their calculation order. |
+| VAT | Quotation baseline confirmed: one VAT/NON-VAT status, inclusive/exclusive basis and explicit rate. Mixed material tax treatments remain unsupported. Later PO variations need their own scope. |
+| Charges | Quotation baseline confirmed: fixed/percentage adjustments, existing material-subtotal basis and explicit taxable flag; the non-taxable service flag excludes added VAT and services EWT. |
+| Discounts | Quotation baseline confirmed: line discounts precede document adjustments; document discounts reduce gross/net but do not reduce EWT bases. |
+| Multiple adjustments | Quotation baseline confirmed: percentage adjustments independently use the material subtotal after line discounts. |
 | Partial orders | Whether discounts and delivery/service charges are retained, prorated, recalculated or requoted. |
-| Rounding | Line/tax/final-total rounding, precision, method and treatment of small differences. |
+| Rounding | Quotation baseline confirmed: exact half-up cents at existing stages, source precision retained, aggregate included VAT and no unexplained cent differences. Later workflows must state any additional policy. |
 | Budget charging | Gross purchase value, net supplier payment after EWT or another basis; treatment of VAT and withheld tax. The current app uses net payable after EWT for project/scope commitments and spending and does not separately track EWT remittance as a tax liability. This is unconfirmed company policy. |
 | Settlement | Reconciliation among PO, invoice, supplier payment and withholding; other deductions, retention or previous advances. |
 | Corrections | Effects of shortages, rejection, returns and credit notes on payable amounts and project budgets, including approvals and supporting records. |
@@ -127,6 +129,8 @@ The [architecture document](architecture.md) is the detailed source of truth. Ke
 | Private realtime signals and current authorized reads | Open permitted views update automatically; access-revision topics and session checks keep notifications independent from authority. |
 
 ## Session Notes
+
+- **4.5b authorization, 2026-11-05:** all 24 interview decisions are locked and the user requested implementation. Procurement finalizes; PHP only; exact existing formulas with half-up rounding, aggregate included VAT and explicit gross/net source basis; required supplier reference/date/payment/delivery terms; reviewed classified rows, free items and at least one confirmed MRF match; positive gross/nonnegative net. Inactive/expired offers cannot finalize. One unfinished replacement; reuse originals with fresh reviews; retain immutable snapshots and originals plus an internal PDF. Activate only after archive and live gates, withdraw permanently with a reason, and require Procurement reconfirmation after MRF document correction. Added the detailed guide scope before code. Created the isolated branch and CLI-owned migration file; no DDL or provider changes have run. Earlier 4.5a acceptance remains historical for the new implementation.
 
 - **4.5a closeout, 2026-11-05:** the user reported that the overall test plan works, then explicitly selected **All three passed** with no skipped checks for capture/access, source review/conflicts and originals/recovery/cancellation. Recorded current-source manual evidence for `26305c3`, retaining the entire earlier supplier/MRF attestation chain, original dates, an unchanged recovery-file hash and a byte-identical backup of the preceding manual report. `npm run verify:foundation -- milestone` passes using matching local/four-job CI/disposable/staging/Drive evidence. The earlier **Not tested yet** response remains historical and is superseded by this confirmation. Updated the guide, tracker, checklist, overview and README; architecture, workflow rules and code standards require no changes because this closeout changes no application contract or verification process. No application tests, migrations or live integrations were repeated solely for documentation. Preserve the user's pre-existing guide whitespace and private account file. No merge, production promotion or 4.5b work.
 
