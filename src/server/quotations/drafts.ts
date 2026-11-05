@@ -115,7 +115,9 @@ export async function runQuotationCommand(
         P4503:
           "This retry identity was used for different input. Reopen and review your changes.",
         P4504:
-          "Resolve the displayed readiness issues and confirm the current source, material matches and financial review before this action.",
+          command?.type === "retryArchive"
+            ? "The archive is already processing or complete. Refresh its status before retrying."
+            : "Resolve the displayed readiness issues and confirm the current source, material matches and financial review before this action.",
         P4201:
           "Set up or repair the project document folder before archiving this revision.",
       };

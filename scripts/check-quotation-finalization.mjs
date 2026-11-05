@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { randomUUID, createHash } from "node:crypto";
 import { writeFile } from "node:fs/promises";
+import { setTimeout as delay } from "node:timers/promises";
 import {
   emptyQuoteBody,
   emptyQuoteLine,
@@ -49,6 +50,14 @@ async function checkFinalization({
   const ok = (result) => {
     assert.equal(result.error, null);
     return result.data;
+  };
+  const until = async (check, label) => {
+    const deadline = Date.now() + 60000;
+    while (Date.now() < deadline) {
+      if (await check()) return;
+      await delay(150);
+    }
+    throw Error("Financial workflow timed out: " + label);
   };
   const accounts = [];
   for (const role of ["Procurement", "Procurement", "Accounting"]) {
@@ -380,10 +389,16 @@ async function checkFinalization({
   drive.files.get(mapping.folder_id).trashed = false;
   drive.faults.loseFinalResponse = true;
   await click(browser, "Retry quotation archive");
-  await browser.wait(
-    "return document.querySelector('.quotation-revision')?.textContent.includes('Archive: failed')",
-    60000,
-  );
+  await until(async () => {
+    const attempt = JSON.parse(
+      (
+        await sql(
+          `select jsonb_build_object('state',state,'attempts',jsonb_array_length(attempts)) from private.quotation_archive_jobs where revision_id='${revision}';`,
+        )
+      ).output.trim(),
+    );
+    return attempt.attempts === 1 && attempt.state === "failed";
+  }, "new retry attempt failed after losing the provider acknowledgement");
   await click(browser, "Retry quotation archive");
   await browser.wait(
     "return document.querySelector('.quotation-revision')?.textContent.includes('Current and eligible')",
