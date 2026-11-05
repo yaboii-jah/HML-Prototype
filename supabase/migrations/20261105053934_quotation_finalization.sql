@@ -185,6 +185,7 @@ $$;
 -- and lock finalized sources without changing the public capture contract.
 alter function private.quotation_command(jsonb,jsonb) rename to quotation_capture_command;
 create function private.quotation_command(actor jsonb,command jsonb) returns jsonb language plpgsql security definer set search_path='' as $$
+<<capture_guard>>
 declare result jsonb; q private.quotation_drafts; f private.quotation_families; before_state text;
 begin
   perform set_config('lock_timeout','5s',true); update private.account_guard set revision=revision+1 where id;
@@ -207,7 +208,7 @@ begin
       update private.quotation_financial_reviews set checked=null,version=version+1 where quote_id=q.id;
     end if;
     result:=result||jsonb_build_object('quote',private.quotation_view(q.id));
-    update private.quotation_operations set result=quotation_command.result where id=(command->>'requestId')::uuid;
+    update private.quotation_operations set result=capture_guard.result where id=(command->>'requestId')::uuid;
   end if;
   return result;
 end $$;
