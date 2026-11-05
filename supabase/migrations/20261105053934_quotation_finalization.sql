@@ -172,7 +172,7 @@ create function private.quotation_view(target uuid) returns jsonb language sql s
         'checked',coalesce(v.source_version=q.content_version and v.file_version=q.file_version and v.checked->>'version'=v.version::text and v.checked->>'sourceVersion'=q.content_version::text and v.checked->>'filesVersion'=q.file_version::text,false)) end,
     'revision',case when r.id is null then null else jsonb_build_object('id',r.id,'number',r.number::text,'finalizedBy',r.finalized_name,'finalizedAt',r.finalized_at,'mrfArchiveId',r.mrf_archive_id,
       'withdrawn',exists(select 1 from private.quotation_revision_events e where e.revision_id=r.id and e.kind='withdraw'),
-      'current',f.current_quote_id=q.id,'eligible',f.current_quote_id=q.id and private.quotation_revision_blockers(r.id)='[]'::jsonb,
+      'current',coalesce(f.current_quote_id=q.id,false),'eligible',coalesce(f.current_quote_id=q.id and private.quotation_revision_blockers(r.id)='[]'::jsonb,false),
       'blockers',private.quotation_revision_blockers(r.id),'archiveState',coalesce(j.state,'pending'),'archiveMessage',j.message,
       'pdfAvailable',exists(select 1 from private.quotation_archives a where a.revision_id=r.id)) end)
   from private.quotation_drafts q join private.quotation_families f on f.id=q.family_id
@@ -317,14 +317,14 @@ begin
     if r.id is null then raise exception 'Finalized revision required' using errcode='P4504'; end if;
     if kind='withdraw' then
       if length(reason) not between 5 and 2000 then raise exception 'Withdrawal reason required' using errcode='23514'; end if;
-      if exists(select 1 from private.quotation_revision_events where revision_id=r.id and kind='withdraw') then changed:=false;
+      if exists(select 1 from private.quotation_revision_events e where e.revision_id=r.id and e.kind='withdraw') then changed:=false;
       else
         insert into private.quotation_revision_events(revision_id,kind,actor,reason) values(r.id,'withdraw',actor_snapshot,reason);
         update private.quotation_families set pending_quote_id=case when pending_quote_id=q.id then null else pending_quote_id end,version=version+1 where id=f.id;
       end if;
     elsif kind in('reconfirmMrf','activateRevision') then
       if current_mrf is null or current_mrf::text is distinct from command->>'expectedMrf' or length(reason) not between 5 and 2000 then raise exception 'Review the exact current MRF archive' using errcode='40001'; end if;
-      if exists(select 1 from private.quotation_revision_events where revision_id=r.id and kind='withdraw') then raise exception 'Withdrawn revisions cannot be restored' using errcode='P4504'; end if;
+      if exists(select 1 from private.quotation_revision_events e where e.revision_id=r.id and e.kind='withdraw') then raise exception 'Withdrawn revisions cannot be restored' using errcode='P4504'; end if;
       if kind='reconfirmMrf' then
         insert into private.quotation_revision_events(revision_id,kind,mrf_archive_id,actor,reason) values(r.id,'reconfirmMrf',current_mrf,actor_snapshot,reason);
         update private.quotation_families set version=version+1 where id=f.id;
@@ -336,10 +336,10 @@ begin
     elsif kind='retryArchive' then
       select d.id into mapping from private.project_document_folders d join public.material_requests m on m.project_id=d.project_id where m.id=q.request_id and d.current;
       if mapping is null then raise exception 'Project document folder required' using errcode='P4201'; end if;
-      update private.quotation_archive_jobs set state='pending',actor=actor_snapshot,lease=null,lease_until=null,dispatched_at=null,message=null,
-        attempts=attempts||jsonb_build_array(jsonb_build_object('folderMappingId',folder_mapping_id,'checkpoint',checkpoint,'actor',actor,'retriedBy',actor_snapshot,'state',state,'message',message,'retriedAt',clock_timestamp())),
-        checkpoint=case when folder_mapping_id=mapping then checkpoint else '{}'::jsonb end,folder_mapping_id=mapping
-        where revision_id=r.id and state in('failed','paused');
+      update private.quotation_archive_jobs j set state='pending',actor=actor_snapshot,lease=null,lease_until=null,dispatched_at=null,message=null,
+        attempts=j.attempts||jsonb_build_array(jsonb_build_object('folderMappingId',j.folder_mapping_id,'checkpoint',j.checkpoint,'actor',j.actor,'retriedBy',actor_snapshot,'state',j.state,'message',j.message,'retriedAt',clock_timestamp())),
+        checkpoint=case when j.folder_mapping_id=mapping then j.checkpoint else '{}'::jsonb end,folder_mapping_id=mapping
+        where j.revision_id=r.id and j.state in('failed','paused');
       if not found then raise exception 'Choose a failed archive' using errcode='P4504'; end if;
     end if;
   end if;

@@ -98,6 +98,41 @@ export function CalculationSummary({
 }) {
   return (
     <>
+      <details>
+        <summary>Reviewed row calculations</summary>
+        <div className="quotation-source-table">
+          <table>
+            <caption>
+              Source rows and their contribution to the quotation
+            </caption>
+            <thead>
+              <tr>
+                <th>Source row</th>
+                <th>Classification</th>
+                <th>Before added VAT</th>
+                <th>Contribution</th>
+                <th>Review</th>
+              </tr>
+            </thead>
+            <tbody>
+              {[...calculation.rows, ...calculation.adjustments].map((row) => (
+                <tr key={row.id}>
+                  <td>{row.label}</td>
+                  <td>{row.role}</td>
+                  <td>{row.excluded ? "Excluded" : php(row.input)}</td>
+                  <td>{row.excluded ? "Excluded" : php(row.contribution)}</td>
+                  <td>
+                    {row.reason ||
+                      (row.taxable
+                        ? "Uses quotation tax basis"
+                        : "Non-taxable adjustment")}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </details>
       <dl className="quotation-calculation-totals">
         <div>
           <dt>Materials after line discounts</dt>

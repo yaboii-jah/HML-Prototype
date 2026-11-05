@@ -88,7 +88,7 @@ begin
   result:=public.quotation_financial_command(buyer,command,calculation);
   if public.quotation_financial_command(buyer,command,calculation)<>result then raise exception 'Finalize retry changed outcome'; end if;
   revision:=(result->'quote'->'revision'->>'id')::uuid;
-  if result->'quote'->'revision'->>'eligible'<>'false' then raise exception 'Pending archive became eligible'; end if;
+  if result->'quote'->'revision'->>'eligible' is distinct from 'false' or result->'quote'->'revision'->>'current' is distinct from 'false' then raise exception 'Pending archive became eligible or omitted its boolean state'; end if;
   select snapshot into frozen from private.quotation_revisions where id=revision;
   begin update private.quotation_revisions set snapshot='{}' where id=revision; raise exception 'Snapshot changed'; exception when check_violation then null; end;
   begin update private.quotation_drafts set body='{}' where id=quote; raise exception 'Finalized source changed'; exception when check_violation then null; end;

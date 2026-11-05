@@ -262,3 +262,32 @@ test("header readiness requires reference/date/terms and rejects foreign, expire
   body.validUntil = "2026-11-04";
   assert.equal(quotationHeaderIssues(body, "2026-11-05").length, 4);
 });
+
+test("reviewed tax settings cannot contradict explicit captured classifications or price basis", () => {
+  const { body, review } = quote();
+  body.taxStatus = "NON VAT";
+  assert.ok(
+    calculateQuotation(body, review).issues.some((issue) =>
+      issue.includes("classification contradicts"),
+    ),
+  );
+  body.taxStatus = "VAT";
+  body.priceBasis = "exclusive";
+  assert.ok(
+    calculateQuotation(body, review).issues.some((issue) =>
+      issue.includes("price basis contradicts"),
+    ),
+  );
+  body.taxStatus = "NON-VAT";
+  review.vatStatus = "NON-VAT";
+  review.priceBasis = "exclusive";
+  body.vatRate = "12";
+  const result = calculateQuotation(body, review);
+  assert.deepEqual(result.issues, []);
+  assert.equal(result.net, "112.00");
+  assert.equal(
+    body.vatRate,
+    "12",
+    "NON-VAT retains the captured rate without applying it",
+  );
+});
