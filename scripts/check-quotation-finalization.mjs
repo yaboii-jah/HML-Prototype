@@ -93,6 +93,14 @@ async function checkFinalization({
         `input.value=${JSON.stringify(value)};input.dispatchEvent(new Event('change',{bubbles:true}));`,
     );
   };
+  const readyQuotationEditor = async (page) => {
+    // Opening a harmless details dialog proves this client boundary is hydrated
+    // before assigning a synthetic file selection or dispatching form input.
+    await page.wait(
+      "if(!document.querySelector('.record-dialog'))[...document.querySelectorAll('button')].find(b=>b.textContent==='Line details'&&!b.disabled)?.click();return !!document.querySelector('.record-dialog input[name=line-description]')",
+    );
+    await click(page, "Close line details");
+  };
   const current = (quote) =>
     sql(`select private.quotation_view('${quote}');`).then((result) =>
       JSON.parse(result.output.trim()),
@@ -234,6 +242,7 @@ async function checkFinalization({
   await browser.wait(
     "return !!document.querySelector('.quotation-originals input[type=file]')",
   );
+  await readyQuotationEditor(browser);
   await browser.run(
     `const data=new DataTransfer();data.items.add(new File([Uint8Array.from(atob('${bytes.toString("base64")}'),c=>c.charCodeAt(0))],'financial-original.pdf',{type:'application/pdf'}));const input=document.querySelector('.quotation-originals input[type=file]');input.files=data.files;input.dispatchEvent(new Event('change',{bubbles:true}));`,
   );
@@ -322,6 +331,7 @@ async function checkFinalization({
   await second.wait(
     "return !!document.querySelector('input[name=reviewVatRate]')",
   );
+  await readyQuotationEditor(second);
   const alternateNote = `[data-financial-row="${alternative.id}"] textarea`;
   for (const page of [browser, second])
     await page.run(
@@ -418,10 +428,12 @@ async function checkFinalization({
   assert.equal(await range.text(), "%PDF-");
   // Actual MRF correction/reapproval/Workflow must not silently revalidate the offer.
   await second.navigate(`/requests/${mrf}`);
-  await second.fill(
-    "#mrf-review-heading ~ .field textarea",
-    "Check corrected supporting plans",
+  await second.run(
+    "const input=document.querySelector('#mrf-review-heading ~ .field textarea');input.focus();input.select()",
   );
+  await second.call("Input.insertText", {
+    text: "Check corrected supporting plans",
+  });
   await click(second, "Open correction");
   await browser.wait(
     "return document.querySelector('.quotation-revision')?.textContent.includes('Current MRF approval/archive is unavailable')",
@@ -447,6 +459,7 @@ async function checkFinalization({
   await logout(second);
   await login(second, accounts[1]);
   await second.navigate(path);
+  await readyQuotationEditor(second);
   await reasonAction(
     second,
     "Review corrected MRF",
