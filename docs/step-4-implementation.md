@@ -7,7 +7,7 @@ Agreed 2026-11-03. This active companion owns the operational migration sequence
 Read the five core documents required by [AGENTS.md](../AGENTS.md), the checklist and this guide before planning, implementing, reviewing or resuming step 4.
 
 1. Reconcile Git status, the tracker and the actual implementation. Preserve unrelated pending work and the completed foundation planning retirement.
-2. Check the user's latest instruction before starting a unit. **The user locked the complete 4.5b interview plan and requested implementation on 2026-11-05. Later units, merging and production remain separate.**
+2. Check the user's latest instruction before starting a unit. **Unit 4.5b and parent 4.5 are complete after explicit three-group manual acceptance and passing combined acceptance on 2026-11-06. Unit 4.6 requires scoped planning and separate implementation authorization; merging and production remain separate.**
 3. Use the sequence below as the roadmap. Units through 4.5b have detailed scopes; later units require scoped planning and acceptance criteria before implementation.
 4. Verify a unit within its boundary, record actual results in the tracker, then check its completion box. A documentation checkpoint does not complete an operational workflow or checklist step 4.
 5. Retire this companion after the milestone is complete, preserving durable contracts in the core documents and completion evidence in the tracker.
@@ -34,9 +34,9 @@ The listed order is the default. Record any agreed scope/order revision here and
 | **4.2 Required MRF documents** | [x] | Protected supporting-PDF handling, required project-folder operations and retryable archive processing for migrated MRFs. |
 | **4.3 MRF submission and review** | [x] | Submission, PM approval/return/rejection, corrections and permanent-identity self-approval prevention; requires verified document gates from 4.2. |
 | **4.4 Supplier directory** | [x] | Completed 2026-11-04 at `480311b`: shared records/maintenance pass automated, staging, all three manual groups and combined acceptance. |
-| **4.5 Manual quotations** | [ ] | Split into 4.5a capture/source review/originals and 4.5b policy-dependent financial finalization/formal business revisions. Parent remains open until both pass. |
+| **4.5 Manual quotations** | [x] | Completed 2026-11-06: 4.5a capture/originals and 4.5b reviewed finalization/revisions both pass their automated, staging, explicit human and combined acceptance gates. |
 | **4.5a Capture and originals** | [x] | Completed 2026-11-05 at `26305c3`: automated/staging checks, all three explicit manual confirmations and source-bound combined acceptance pass. |
-| **4.5b Financial finalization** | [ ] | Authorized 2026-11-05 with confirmed quotation calculations, immutable revisions, protected originals/internal PDF archives and guarded activation; acceptance remains pending. |
+| **4.5b Financial finalization** | [x] | Completed 2026-11-06 at `8b8f32a`: local/four-job CI/disposable/live-Drive/staging checks, all three manual groups with no skips and matching combined acceptance pass. |
 | **4.6 Shared demand allocation** | [ ] | One authoritative demand limit shared by purchases, suitability holds and transfer allocations; based on approved MRF requirements. |
 | **4.7 Stock ledger and reservations** | [ ] | Shared stock availability and reservation rules before enabling competing inventory consumers. |
 | **4.8 Awards and PO drafts** | [ ] | Supplier awards, split purchasing and PO preparation using verified quotation archives and the shared demand rules. |
@@ -182,7 +182,7 @@ Use retained QA records and separately provisioned Procurement/read-only account
 
 ## 4.5a Manual Quotation Capture and Originals - Complete
 
-Authorized 2026-11-04 after the user locked all interview decisions. Overall 4.5 stays open; 4.5b requires applicable company-policy confirmation before financial calculations/finalization and formal business revisions. AI remains step 5; comparisons, awards and POs remain later units.
+Authorized 2026-11-04 after the user locked all interview decisions. Unit 4.5 was split so applicable company-policy confirmation preceded 4.5b financial calculations/finalization and formal business revisions. Parent completion is recorded with 4.5b below. AI remains step 5; comparisons, awards and POs remain later units.
 
 Completed 2026-11-05 at implementation `26305c3`. Automated local/four-job CI/disposable/live-Drive/staging checks pass; the user explicitly confirmed all three targeted manual groups passed without skips, and matching combined acceptance passes. Detailed evidence is in the tracker.
 
@@ -191,10 +191,10 @@ Completed 2026-11-05 at implementation `26305c3`. Automated local/four-job CI/di
 - Capture full supplier/header/terms, offered lines, matches/conversions, printed amounts and source tax/discount/charge fields as exact decimal strings; blank is distinct from zero. Preserve signed financial values, nonnegative quantities and positive conversion factors. No rounding, formulas, default VAT/rate/currency, financial approval or normalized generated quotation PDF. Quote details never update supplier master data.
 - Source-check attestation plus line-match confirmations bind saved content/file versions. Require verified originals and no unfinished group change for checking. Content edits expire the quote check; changed lines/files expire relevant matches. Drafts remain editable; reviewed does not mean finalized.
 - Originals support readable unencrypted PDF and decodable JPEG/PNG/WebP, up to 12 files, 20 MiB each and 45 MiB total. Atomic group changes retain previous originals until all selected changes validate. File saves/progress are independent of text. Reuse protected chunk/hash/provider/Range/Workflow foundations with explicit quotation metadata and MIME-aware validation.
-- Resume after matching local-file reselection; retain frozen destinations and durable jobs. Recheck authority and MRF eligibility; pause writes during correction/revocation. Clean obsolete draft bytes only after current/candidate/protected reference checks; retain metadata. Current files on cancelled drafts remain retained. Future 4.5b must transactionally protect finalized file references before enabling finalization.
+- Resume after matching local-file reselection; retain frozen destinations and durable jobs. Recheck authority and MRF eligibility; pause writes during correction/revocation. Clean obsolete draft bytes only after current/candidate/protected reference checks; retain metadata. Current files on cancelled drafts remain retained. Unit 4.5b now transactionally protects finalized file references before enabling finalization.
 - Preserve worksheet structure with focused authoritative modules; no prototype dispatcher, Number-based financial helpers or unsupported workflow tabs. Missing suppliers open the directory in another tab; refresh options without replacing input.
 
-**Done when:** local, four-job CI, disposable SQL/Auth/browser/Realtime/type/race, scoped live-Drive and retained-state-safe staging checks pass, then explicit human confirmation of shared capture/access, source review/conflicts, and originals/recovery/cancellation. Unit 4.5a meets these criteria on 2026-11-05; parent 4.5 remains unchecked until 4.5b also passes. Current evidence/blockers belong in the tracker.
+**Done when:** local, four-job CI, disposable SQL/Auth/browser/Realtime/type/race, scoped live-Drive and retained-state-safe staging checks pass, then explicit human confirmation of shared capture/access, source review/conflicts, and originals/recovery/cancellation. Unit 4.5a meets these criteria on 2026-11-05; parent 4.5 completion is recorded with the accepted 4.5b unit below. Current evidence/blockers belong in the tracker.
 
 ### 4.5a Targeted Manual Review - Complete
 
@@ -205,6 +205,8 @@ All three groups below are accepted after the user's explicit **All three passed
 3. **Originals and recovery:** Save PDF/image groups, preview/download them, replace/remove files and verify the previous group remains until every new file validates. Interrupt and reload an upload, reselect matching local files and resume; exercise invalid-file/job recovery. Cancel/reopen with reasons, confirm one active draft per supplier, retained current originals and readable history. Existing work remains editable after supplier deactivation.
 
 ## 4.5b Financial Finalization and Revisions
+
+**Completed 2026-11-06 at `8b8f32a`:** automated/staging verification, all three explicit human confirmations with no skipped checks and matching combined acceptance pass. Parent 4.5 is complete; checklist step 4 remains open for later units.
 
 **Authorized 2026-11-05:** the user locked every interview decision and requested implementation. Existing quotation business formulas are confirmed for this unit; keep later partial-order, PO, budget-charging, settlement and correction policies separate. Procurement alone maintains financial review, finalizes, revises, withdraws, reconfirms MRF applicability and retries archives. All non-Site roles read; Site remains denied. Preserve the worksheet, styling, explicit saves and repeated conflict review.
 
@@ -233,9 +235,9 @@ Cover company examples, all existing formula cases, exact ties/high precision, a
 
 Run local standard/public-browser checks, four-job CI and full disposable SQL/Auth/browser/Realtime/Workflow/type/race acceptance. Apply only CI-verified migration SQL to staging with retained-state preservation, then scoped live-Drive and staging parity checks. No retained QA records/files are disposable. Record actual evidence in the tracker and extend scenario mapping without treating earlier attestations as new tests.
 
-**Three new human groups:** (1) financial review/reconciliation/PHP/readiness; (2) immutable revisions/replacement/withdrawal/MRF reconfirmation/conflicts; (3) originals/internal PDF archives/history/recovery/access. Obtain explicit results and matching combined acceptance before checking 4.5b and parent 4.5. Step 4 remains open for later units.
+**Three human groups accepted:** (1) financial review/reconciliation/PHP/readiness; (2) immutable revisions/replacement/withdrawal/MRF reconfirmation/conflicts; (3) originals/internal PDF archives/history/recovery/access. All three were explicitly confirmed passed with no skipped checks on 2026-11-06. Matching combined acceptance passes; 4.5b and parent 4.5 are complete. Step 4 remains open for later units.
 
-**Review status, 2026-11-06:** local/four-job CI/disposable/live-Drive/final staging checks pass at source `8b8f32a`, with retained staging state unchanged. The user explicitly answered **Not tested yet** for all three new groups. They remain pending; prior 4.5a acceptance does not cover them. Combined acceptance stops only at the missing manual evidence, and both 4.5b and parent 4.5 stay unchecked. Detailed evidence is in the tracker.
+**Review status, 2026-11-06:** local/four-job CI/disposable/live-Drive/final staging checks pass at source `8b8f32a`, with retained staging state unchanged. The earlier **Not tested yet** response is superseded by explicit confirmation that all three new groups passed with no skipped checks. Matching combined acceptance passes. Earlier attestations retain their original dates and provenance. Detailed evidence is in the tracker; the review steps below remain for reference.
 
 For the targeted review, open an approved archived MRF through **Material requests → Supplier quotations** with Procurement active. Retain the QA records and originals after review.
 
