@@ -232,8 +232,12 @@ function SavedClassifications({
           <li key={row.id}>
             {quote.body.lines.find((line) => line.id === row.id)?.description ||
               "Removed source row"}
-            : {roleLabels[row.role]}; line discount {row.discountType};{" "}
-            {row.free ? "free item confirmed; " : ""}
+            : {roleLabels[row.role]};{" "}
+            {row.role === "summary"
+              ? `reconciled against ${basisLabels[row.summaryBasis] || "unrecorded summary basis"}; excluded from totals; `
+              : row.role === "reference"
+                ? "excluded from totals; "
+                : `line discount ${row.discountType}; ${row.free ? "free item confirmed; " : ""}`}
             {row.reason}
           </li>
         ))}
@@ -244,12 +248,11 @@ function SavedClassifications({
             {quote.body.adjustments.find((source) => source.id === row.id)
               ?.label || "Removed source adjustment"}
             : {row.kind || "unclassified"};{" "}
-            {row.calculation || "basis unrecorded"};{" "}
-            {row.taxable === null
-              ? "tax treatment unrecorded"
-              : row.taxable
-                ? "taxable"
-                : "non-taxable"}
+            {row.kind === "summary"
+              ? `reconciled against ${basisLabels[row.summaryBasis] || "unrecorded summary basis"}; excluded from totals`
+              : row.kind === "reference"
+                ? "excluded from totals"
+                : `${row.calculation || "basis unrecorded"}; ${row.taxable === null ? "tax treatment unrecorded" : row.taxable ? "taxable" : "non-taxable"}`}
             . {row.reason}
           </li>
         ))}

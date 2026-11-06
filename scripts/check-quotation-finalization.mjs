@@ -554,6 +554,12 @@ async function checkFinalization({
   assert.equal((await current(quote)).revision.current, false);
   replacementSaved = await current(replacement);
   assert.equal(replacementSaved.revision.number, "2");
+  assert.match(
+    await browser.run(
+      "return document.querySelector('.quotation-financial-review').textContent",
+    ),
+    /VAT included summary: summary; reconciled against VAT; excluded from totals/,
+  );
   for (const width of [1440, 375]) {
     await browser.call("Emulation.setDeviceMetricsOverride", {
       width,
