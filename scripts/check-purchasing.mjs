@@ -331,6 +331,21 @@ export async function checkPurchasing({
       bytes,
     );
   }
+  await second.run(
+    "document.querySelectorAll('details.purchasing-source').forEach(el=>{el.open=true});",
+  );
+  assert.match(
+    await second.run(
+      "return document.querySelector('details.purchasing-source')?.textContent",
+    ),
+    /EWT goods PHP.*EWT services PHP/s,
+  );
+  assert.match(
+    await second.run(
+      "return document.querySelector('details.purchasing-source')?.textContent",
+    ),
+    /Quoted document adjustments before applicable tax/,
+  );
   await capture(second);
   await browser.navigate(`/requests/${mrf}/quotes/${quote}`);
   await second.navigate(`/requests/${mrf}/quotes/${quote}`);
