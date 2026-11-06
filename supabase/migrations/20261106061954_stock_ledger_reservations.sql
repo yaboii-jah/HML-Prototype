@@ -138,7 +138,8 @@ begin
   end if;
   for entry in select * from jsonb_array_elements(accounts) loop
     account:=(entry->>'accountId')::uuid; project:=(entry->>'projectId')::uuid; expected:=entry->>'expectedVersion';
-    if account is null or project is null or account=any(ids) or expected is null or expected !~ '^(0|[1-9][0-9]{0,18})$'
+    if account is null or project is null or account=any(ids) or jsonb_typeof(entry->'expectedVersion') is distinct from 'string'
+      or expected is null or expected !~ '^(0|[1-9][0-9]{0,18})$'
       or jsonb_typeof(entry->'description') is distinct from 'string' or length(btrim(entry->>'description')) not between 1 and 4000
       or jsonb_typeof(entry->'unit') is distinct from 'string' or length(btrim(entry->>'unit')) not between 1 and 4000 then
       raise exception 'Invalid stock account' using errcode='23514';
@@ -153,7 +154,8 @@ begin
   end loop;
   perform 1 from private.stock_accounts a where a.id=any(ids) order by a.id for update;
   payload:=jsonb_build_object('accounts',accounts,'postings',postings,'reservations',reservations,'reason',btrim(reason),'role',actor->>'activeRole');
-  effect:=payload||jsonb_build_object('accounts',(select jsonb_agg(e-'expectedVersion') from jsonb_array_elements(accounts) e));
+  effect:=payload||jsonb_build_object('accounts',(select jsonb_agg(e.value-'expectedVersion' order by e.position)
+    from jsonb_array_elements(accounts) with ordinality e(value,position)));
   select * into receipt from private.stock_operations o where o.id=operation;
   if found then
     if receipt.actor_id<>caller or receipt.payload<>payload then raise exception 'Stock retry identity reused' using errcode='23514'; end if;

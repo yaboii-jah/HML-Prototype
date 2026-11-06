@@ -41,6 +41,7 @@ declare f jsonb:=pg_temp.stock_fixture(); actor jsonb:=f->'actor'; project uuid:
   reservation uuid:=gen_random_uuid(); count_before bigint; stamp timestamptz; candidate jsonb;
 begin
   a:=jsonb_build_array(pg_temp.stock_account(account,project)); posting:=pg_temp.stock_posting(account,'18');
+  begin perform pg_temp.stock_action(actor,jsonb_build_array((a->0)||'{"expectedVersion":0}'),jsonb_build_array(posting)); raise exception 'Numeric version accepted'; exception when check_violation then null; end;
   result:=pg_temp.stock_action(actor,a,jsonb_build_array(posting),'[]',operation);
   if result->'accounts'->0->>'onHand'<>'18' then raise exception 'Receipt not posted'; end if;
   select posted_at into stamp from private.stock_movements where operation_id=operation;

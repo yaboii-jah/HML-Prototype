@@ -97,22 +97,22 @@ export async function checkStockRaces({ sql, database, environment }) {
   // Joint atomicity uses a genuinely authorized Procurement actor. Source-Site
   // access to destination demand remains the future 4.14 checked adapter.
   for (const isolation of ['read committed', 'repeatable read']) {
-  const demandDefinition = (await readFile('supabase/checks/demand.sql', 'utf8')).split('-- Assertions')[0];
-  const d = JSON.parse((await sql(demandDefinition + 'select pg_temp.demand_fixture(); commit;')).output.split('\n').find(line => line.startsWith('{')));
-  const f = await fixture(); f.actor = d.actor;
-  const reservation = hold(f, '6');
-  const demandClaim = { claimId: randomUUID(), itemId: d.item, ownerKind: 'transfer', ownerId: reservation.ownerId, ownerLineId: reservation.ownerLineId, quantity: '6' };
-  const demand = quantity => `select private.demand_apply(${json(d.actor)},'${randomUUID()}','${d.request}','0',${json([{ ...demandClaim, quantity }])},'Joint sourcing transition');`;
-  const lock = `update private.account_guard set revision=revision+1 where id; select private.project_actor(${json(d.actor)},false); select id from auth.sessions where id='${d.actor.sessionId}' for share; select id from public.projects where id in('${f.project}',(select project_id from public.material_requests where id='${d.request}')) order by id for update; select id from public.material_requests where id='${d.request}' for update;`;
-  for (const stockFails of [true, false]) {
-    const stock = apply(f, '1', [], [{ ...reservation, quantity: stockFails ? '11' : '6' }]);
-    const failed = await sql(`begin isolation level ${isolation}; ${lock} ${stockFails ? demand('6') + stock : stock + demand('19')} commit;`, { allowFailure: true });
-    assert.notEqual(failed.code, 0); assert.match(failed.diagnostics, /below reservations|exceed requested/);
-    assert.equal((await balance(f)).reserved, '0');
-    assert.equal((await sql(`select private.demand_snapshot('${d.request}')->>'version';`)).output.trim(), '0');
-  }
-  await sql(`begin isolation level ${isolation}; ${lock} ${demand('6')} ${apply(f, '1', [], [reservation])} commit;`);
-  assert.equal((await balance(f)).reserved, '6');
-  assert.equal((await sql(`select private.demand_snapshot('${d.request}')->>'version';`)).output.trim(), '1');
+    const demandDefinition = (await readFile('supabase/checks/demand.sql', 'utf8')).split('-- Assertions')[0];
+    const d = JSON.parse((await sql(demandDefinition + 'select pg_temp.demand_fixture(); commit;')).output.split('\n').find(line => line.startsWith('{')));
+    const f = await fixture(); f.actor = d.actor;
+    const reservation = hold(f, '6');
+    const demandClaim = { claimId: randomUUID(), itemId: d.item, ownerKind: 'transfer', ownerId: reservation.ownerId, ownerLineId: reservation.ownerLineId, quantity: '6' };
+    const demand = quantity => `select private.demand_apply(${json(d.actor)},'${randomUUID()}','${d.request}','0',${json([{ ...demandClaim, quantity }])},'Joint sourcing transition');`;
+    const lock = `update private.account_guard set revision=revision+1 where id; select private.project_actor(${json(d.actor)},false); select id from auth.sessions where id='${d.actor.sessionId}' for share; select id from public.projects where id in('${f.project}',(select project_id from public.material_requests where id='${d.request}')) order by id for update; select id from public.material_requests where id='${d.request}' for update;`;
+    for (const stockFails of [true, false]) {
+      const stock = apply(f, '1', [], [{ ...reservation, quantity: stockFails ? '11' : '6' }]);
+      const failed = await sql(`begin isolation level ${isolation}; ${lock} ${stockFails ? demand('6') + stock : stock + demand('19')} commit;`, { allowFailure: true });
+      assert.notEqual(failed.code, 0); assert.match(failed.diagnostics, /below reservations|exceed requested/);
+      assert.equal((await balance(f)).reserved, '0');
+      assert.equal((await sql(`select private.demand_snapshot('${d.request}')->>'version';`)).output.trim(), '0');
+    }
+    await sql(`begin isolation level ${isolation}; ${lock} ${demand('6')} ${apply(f, '1', [], [reservation])} commit;`);
+    assert.equal((await balance(f)).reserved, '6');
+    assert.equal((await sql(`select private.demand_snapshot('${d.request}')->>'version';`)).output.trim(), '1');
   }
 }
