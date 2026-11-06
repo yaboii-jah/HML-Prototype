@@ -167,9 +167,11 @@ export async function checkAuthFoundation({ api, anon, secret, mailpit, sql, env
     await second.navigate('/projects');
     assert.equal(await second.run('return location.pathname'), '/sign-in', 'Another browser does not inherit the session');
     await browser.navigate('/requests/new');
+    await browser.wait("return document.body.innerText.includes('Read-only access')");
     assert.match(await browser.run('return document.body.innerText'), /Read-only access/);
     for (const route of ['/admin/maintenance', '/demo-files/forged']) {
       await browser.navigate(route);
+      await browser.wait("return document.body.innerText.includes('temporarily unavailable')");
       assert.match(await browser.run('return document.body.innerText'), /temporarily unavailable/);
     }
     await logout(browser);
