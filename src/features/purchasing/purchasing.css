@@ -1,0 +1,32 @@
+.purchasing-workspace {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.purchasing-workspace fieldset.subform {
+  min-width: 0;
+  margin-inline: 0;
+  padding-inline: 0;
+  border: 0;
+  border-top: 1px solid var(--line);
+}
+.purchasing-workspace legend {
+  max-width: 100%;
+  font-weight: 700;
+  padding-block: 8px;
+}
+.purchasing-workspace .field input[type="checkbox"] {
+  width: auto;
+  min-height: auto;
+  margin-right: 6px;
+  vertical-align: middle;
+  accent-color: var(--teal);
+}
+.purchasing-workspace .table-frame th {
+  white-space: normal;
+}
+.purchasing-workspace .table-frame :is(th, td) {
+  max-width: 28rem;
+}
+.purchasing-workspace :is(td, dd) {
+  font-variant-numeric: tabular-nums;
+}

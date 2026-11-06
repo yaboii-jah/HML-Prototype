@@ -15,6 +15,7 @@ create table private.purchasing_records (
   check(jsonb_typeof(body)='object'), check(kind='po' or ref is null), check(kind='award' or state<>'converted')
 );
 create unique index purchasing_one_active_supplier on private.purchasing_records(request_id,supplier_id) where state='active';
+create index purchasing_records_request on private.purchasing_records(request_id);
 create index purchasing_records_project on private.purchasing_records(project_id);
 create index purchasing_records_supplier on private.purchasing_records(supplier_id);
 create index purchasing_records_quote on private.purchasing_records(quote_id);
@@ -79,7 +80,8 @@ end $$;
 create function private.purchasing_record_view(target uuid) returns jsonb language sql stable security definer set search_path='' as $$
   select jsonb_build_object('id',r.id,'kind',r.kind,'mrfId',r.request_id,'supplierId',r.supplier_id,'quoteId',r.quote_id,'revisionId',r.revision_id,
     'version',r.version::text,'state',r.state,'ref',r.ref,'body',r.body,'calculation',r.calculation,'updatedAt',r.updated_at,
-    'checked',coalesce(r.checked->>'version'=r.version::text and r.checked->>'archiveId'=private.quotation_mrf_archive(r.request_id)::text and private.purchasing_blockers(r.id)='[]'::jsonb,false),
+    'checked',coalesce(r.checked->>'version'=r.version::text and r.checked->>'archiveId'=private.quotation_mrf_archive(r.request_id)::text
+      and r.checked->>'supplierVersion'=(select version::text from private.suppliers where id=r.supplier_id) and private.purchasing_blockers(r.id)='[]'::jsonb,false),
     'blockers',private.purchasing_blockers(r.id)) from private.purchasing_records r where r.id=target;
 $$;
 create function private.purchasing_read(actor jsonb,target_request uuid default null) returns jsonb language plpgsql security definer set search_path='' as $$
@@ -132,13 +134,15 @@ end $$;
 -- against the last saved payload, and validate every source/demand/capacity identity.
 create function private.purchasing_validate_body(target uuid,quote uuid,body jsonb,previous jsonb default null) returns jsonb
 language plpgsql security definer set search_path='' as $$
-declare q private.quotation_drafts; revision private.quotation_revisions; line jsonb; source jsonb; config jsonb; prior jsonb; adjusted jsonb:='[]'; ids text[]:='{}'; expected_adjustments bigint;
+declare q private.quotation_drafts; revision private.quotation_revisions; line jsonb; source jsonb; config jsonb; prior jsonb; adjusted jsonb:='[]'; ids text[]:='{}'; expected_adjustments bigint; basis_changed boolean;
 begin
   select * into q from private.quotation_drafts where id=quote and request_id=target;
   select * into revision from private.quotation_revisions where quote_id=q.id;
   if revision.id is null or jsonb_typeof(body->'lines') is distinct from 'array' or jsonb_array_length(body->'lines') not between 1 and 1000
     or jsonb_typeof(body->'fields') is distinct from 'object' or jsonb_typeof(body->'adjustments') is distinct from 'array'
     or length(btrim(body->>'reason')) not between 5 and 2000 then raise exception 'Review the supplier reason and order fields' using errcode='23514'; end if;
+  basis_changed:=coalesce((select jsonb_agg(l-array['discountReason','discountConfirmed'] order by l->>'id') from jsonb_array_elements(coalesce(previous->'lines','[]')) l),'[]')
+    is distinct from coalesce((select jsonb_agg(l-array['discountReason','discountConfirmed'] order by l->>'id') from jsonb_array_elements(body->'lines') l),'[]');
   for line in select * from jsonb_array_elements(body->'lines') loop
     if line->>'id'=any(ids) or line->>'sourceLineId'=any(ids) then raise exception 'Duplicate order row' using errcode='23514'; end if;
     ids:=ids||array[line->>'id',line->>'sourceLineId'];
@@ -164,8 +168,8 @@ begin
   if jsonb_array_length(body->'adjustments')<>expected_adjustments then raise exception 'Review every quoted adjustment; no invented charges' using errcode='23514'; end if;
   ids:='{}';
   for line in select * from jsonb_array_elements(body->'adjustments') loop
-    if line->>'id'=any(ids) or line->>'sourceKind' not in('line','adjustment') then raise exception 'Invalid adjustment identity' using errcode='23514'; end if;
-    ids:=array_append(ids,line->>'id');
+    if (line->>'sourceKind')||':'||(line->>'id')=any(ids) or line->>'sourceKind' not in('line','adjustment') then raise exception 'Invalid adjustment identity' using errcode='23514'; end if;
+    ids:=array_append(ids,(line->>'sourceKind')||':'||(line->>'id'));
     if line->>'sourceKind'='line' then
       select c into config from jsonb_array_elements(revision.snapshot->'review'->'rows') c where c->>'id'=line->>'id' and c->>'role' in('shipping','other','discount');
     else
@@ -177,10 +181,33 @@ begin
     end if;
     if config is null then raise exception 'Unquoted adjustment cannot be added' using errcode='23514'; end if;
     select p into prior from jsonb_array_elements(coalesce(previous->'adjustments','[]')) p where p->>'id'=line->>'id' and p->>'sourceKind'=line->>'sourceKind';
-    if prior is null or (prior-array['confirmed','reason']) is distinct from (line-array['confirmed','reason']) then line:=line||'{"confirmed":false}'; end if;
+    if basis_changed or prior is null or (prior-array['confirmed','reason']) is distinct from (line-array['confirmed','reason']) then line:=line||'{"confirmed":false}'; end if;
     adjusted:=adjusted||jsonb_build_array(line);
   end loop;
   return jsonb_set(body,'{adjustments}',adjusted);
+end $$;
+
+-- Conversion defaults come from the immutable source, never award-side reviews.
+create function private.purchasing_po_body(target uuid,quote uuid,body jsonb) returns jsonb
+language plpgsql security definer set search_path='' as $$
+declare revision private.quotation_revisions; line jsonb; source jsonb; config jsonb; value text; lines jsonb:='[]'; adjustments jsonb:='[]';
+begin
+  select * into revision from private.quotation_revisions where quote_id=quote;
+  for line in select * from jsonb_array_elements(body->'lines') loop
+    select s into source from jsonb_array_elements(revision.snapshot->'source'->'lines') s where s->>'id'=line->>'sourceLineId';
+    select c into config from jsonb_array_elements(revision.snapshot->'review'->'rows') c where c->>'id'=line->>'sourceLineId';
+    value:=case when config->>'discountType'='fixed' and (line->>'offeredQuantity')::numeric=(source->>'quantity')::numeric then regexp_replace(source->>'discountValue','^-','') else '' end;
+    lines:=lines||jsonb_build_array(line||jsonb_build_object('fixedDiscount',value,'discountReason','','discountConfirmed',false));
+  end loop;
+  for config in select * from jsonb_array_elements(revision.snapshot->'review'->'rows') c where c->>'role' in('shipping','other','discount') loop
+    select c->>'input' into value from jsonb_array_elements(revision.snapshot->'calculation'->'rows') c where c->>'id'=config->>'id';
+    adjustments:=adjustments||jsonb_build_array(jsonb_build_object('id',config->>'id','sourceKind','line','include',true,'amount',regexp_replace(value,'^-',''),'reason','','confirmed',false));
+  end loop;
+  for config in select * from jsonb_array_elements(revision.snapshot->'review'->'adjustments') c where c->>'kind' in('shipping','other','discount') loop
+    select s->>'value' into value from jsonb_array_elements(revision.snapshot->'source'->'adjustments') s where s->>'id'=config->>'id';
+    adjustments:=adjustments||jsonb_build_array(jsonb_build_object('id',config->>'id','sourceKind','adjustment','include',true,'amount',regexp_replace(value,'^-',''),'reason','','confirmed',false));
+  end loop;
+  return private.purchasing_validate_body(target,quote,body||jsonb_build_object('lines',lines,'adjustments',adjustments),null);
 end $$;
 
 create function private.purchasing_command(actor jsonb,command jsonb,calculation jsonb default null,snapshot jsonb default null) returns jsonb
@@ -220,6 +247,11 @@ begin
   if kind='saveComparison' then
     if not private.mrf_ready(target) or snapshot is null or snapshot->>'mrfId'<>target::text or jsonb_typeof(command->'sources') is distinct from 'array'
       or jsonb_array_length(command->'sources')=0 then raise exception 'Eligible archived sources required' using errcode='P4802'; end if;
+    if snapshot->>'mrfArchiveId' is distinct from private.quotation_mrf_archive(target)::text
+      or snapshot->>'demandVersion' is distinct from command->>'expectedDemand'
+      or jsonb_array_length(command->'sources')<>(select count(*) from private.quotation_families f join private.quotation_revisions v on v.quote_id=f.current_quote_id
+        where f.request_id=target and private.quotation_revision_blockers(v.id)='[]'::jsonb)
+      then raise exception 'Comparison basis changed' using errcode='40001'; end if;
     for row in select * from jsonb_array_elements(command->'sources') loop
       select * into q from private.quotation_drafts where id=(row->>'quoteId')::uuid and request_id=target;
       select * into family from private.quotation_families where id=q.family_id for update;
@@ -251,11 +283,15 @@ begin
     if r.id is not null and (r.supplier_id<>q.supplier_id or (kind='saveAward' and r.kind<>'award') or (kind='savePo' and r.kind<>'po') or r.state='converted' or (r.state='cancelled' and kind<>'rebind')) then raise exception 'Invalid purchasing transition' using errcode='23514'; end if;
     if kind<>'rebind' and r.id is not null and r.quote_id<>q.id then raise exception 'Explicit source rebinding required' using errcode='23514'; end if;
     if not eligible then
-      if r.id is null or kind='rebind' or command->'body'->'fields' is distinct from r.body->'fields' or command->'body'->'adjustments' is distinct from r.body->'adjustments' then raise exception 'Current eligible quotation required' using errcode='P4802'; end if;
+      if r.id is null or kind='rebind' or command->'body'->'fields' is distinct from r.body->'fields'
+        or (select jsonb_agg(a-'confirmed' order by a->>'sourceKind',a->>'id') from jsonb_array_elements(command->'body'->'adjustments') a)
+          is distinct from (select jsonb_agg(a-'confirmed' order by a->>'sourceKind',a->>'id') from jsonb_array_elements(r.body->'adjustments') a) then raise exception 'Current eligible quotation required' using errcode='P4802'; end if;
       for row in select * from jsonb_array_elements(command->'body'->'lines') loop
         select l into oldrow from jsonb_array_elements(r.body->'lines') l where l->>'id'=row->>'id';
         if oldrow is null or (oldrow-array['quantity','offeredQuantity','discountConfirmed']) is distinct from (row-array['quantity','offeredQuantity','discountConfirmed']) or (row->>'quantity')::numeric>(oldrow->>'quantity')::numeric then raise exception 'Blocked work permits reductions or cancellation only' using errcode='P4802'; end if;
+        if row->>'discountConfirmed'='true' and oldrow->>'discountConfirmed' is distinct from 'true' then raise exception 'Blocked work cannot establish a pricing review' using errcode='P4802'; end if;
       end loop;
+      if exists(select 1 from jsonb_array_elements(command->'body'->'adjustments') a where a->>'confirmed'='true' and not exists(select 1 from jsonb_array_elements(r.body->'adjustments') old where old->>'id'=a->>'id' and old->>'sourceKind'=a->>'sourceKind' and old->>'confirmed'='true')) then raise exception 'Blocked work cannot establish an adjustment review' using errcode='P4802'; end if;
     end if;
     body:=private.purchasing_validate_body(target,q.id,command->'body',case when kind='rebind' then null else r.body end);
     if r.id is null then
@@ -281,7 +317,7 @@ begin
       insert into private.document_counters(project_id,series,last_value) values(parent.project_id,'PO',1)
         on conflict on constraint document_counters_pkey do update set last_value=private.document_counters.last_value+1 returning last_value into number;
       update private.purchasing_records set state='converted',version=version+1,updated_at=created where id=selected;
-      body:=r.body;
+      body:=private.purchasing_po_body(target,q.id,r.body);
       body:=jsonb_set(body,'{fields,date}',to_jsonb((now() at time zone 'Asia/Manila')::date::text));
       body:=jsonb_set(body,'{fields,shipTo}',to_jsonb(project.name));
       body:=jsonb_set(body,'{fields,shipAddress}',to_jsonb(project.location));
@@ -297,8 +333,8 @@ begin
       if exists(select 1 from jsonb_array_elements(r.body->'lines') l join private.quotation_revisions rv on rv.id=r.revision_id
         cross join lateral jsonb_array_elements(rv.snapshot->'review'->'rows') config where config->>'id'=l->>'sourceLineId' and config->>'discountType'='fixed' and l->>'discountConfirmed' is distinct from 'true')
         or exists(select 1 from jsonb_array_elements(r.body->'adjustments') a where a->>'confirmed' is distinct from 'true') then raise exception 'Confirm saved line discounts and adjustments' using errcode='P4804'; end if;
-      changed:=not coalesce(r.checked->>'version'=r.version::text and r.checked->>'archiveId'=private.quotation_mrf_archive(target)::text,false);
-      if changed then update private.purchasing_records set calculation=calculation,checked=jsonb_build_object('version',r.version::text,'archiveId',private.quotation_mrf_archive(target),'actor',actor_snapshot) where id=selected; end if;
+      changed:=not coalesce(r.checked->>'version'=r.version::text and r.checked->>'archiveId'=private.quotation_mrf_archive(target)::text and r.checked->>'supplierVersion'=(select version::text from private.suppliers where id=r.supplier_id),false);
+      if changed then update private.purchasing_records set calculation=calculation,checked=jsonb_build_object('version',r.version::text,'archiveId',private.quotation_mrf_archive(target),'supplierVersion',(select version::text from private.suppliers where id=r.supplier_id),'actor',actor_snapshot) where id=selected; end if;
       reason:=r.body->>'reason';
     end if;
   else raise exception 'Unsupported purchasing action' using errcode='23514'; end if;
@@ -329,7 +365,7 @@ end $$;
 
 create function public.purchasing_read(actor jsonb,target_request uuid default null) returns jsonb language sql security invoker set search_path='' as $$ select private.purchasing_read(actor,target_request); $$;
 create function public.purchasing_command(actor jsonb,command jsonb,calculation jsonb default null,snapshot jsonb default null) returns jsonb language sql security invoker set search_path='' as $$ select private.purchasing_command(actor,command,calculation,snapshot); $$;
-revoke all on function private.purchasing_blockers(uuid),private.purchasing_record_view(uuid),private.purchasing_read(jsonb,uuid),private.purchasing_apply_claims(jsonb,uuid,uuid,text,text),private.purchasing_validate_body(uuid,uuid,jsonb,jsonb),private.purchasing_command(jsonb,jsonb,jsonb,jsonb),public.purchasing_read(jsonb,uuid),public.purchasing_command(jsonb,jsonb,jsonb,jsonb) from public,anon,authenticated,service_role;
+revoke all on function private.purchasing_blockers(uuid),private.purchasing_record_view(uuid),private.purchasing_read(jsonb,uuid),private.purchasing_apply_claims(jsonb,uuid,uuid,text,text),private.purchasing_validate_body(uuid,uuid,jsonb,jsonb),private.purchasing_po_body(uuid,uuid,jsonb),private.purchasing_command(jsonb,jsonb,jsonb,jsonb),public.purchasing_read(jsonb,uuid),public.purchasing_command(jsonb,jsonb,jsonb,jsonb) from public,anon,authenticated,service_role;
 grant execute on function private.purchasing_read(jsonb,uuid),private.purchasing_command(jsonb,jsonb,jsonb,jsonb),public.purchasing_read(jsonb,uuid),public.purchasing_command(jsonb,jsonb,jsonb,jsonb) to service_role;
 
 create function private.purchasing_retained_identity() returns trigger language plpgsql set search_path='' as $$

@@ -46,6 +46,72 @@ export type Database = {
                   Relationships: [
 
                   ]
+                },"comparison_archives": {
+                  Row: {
+                    "artifact_id": string,"completed_at": string,"file_id": string,"folder_mapping_id": string,"sha256": string,"size": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "artifact_id": string,"completed_at"?: string,"file_id": string,"folder_mapping_id": string,"sha256": string,"size": number
+                  }
+                  Update: {
+                    "artifact_id"?: string,"completed_at"?: string,"file_id"?: string,"folder_mapping_id"?: string,"sha256"?: string,"size"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "comparison_archives_artifact_id_fkey"
+      columns: ["artifact_id"]
+isOneToOne: true
+      referencedRelation: "comparison_artifacts"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "comparison_archives_folder_mapping_id_fkey"
+      columns: ["folder_mapping_id"]
+isOneToOne: false
+      referencedRelation: "project_document_folders"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"comparison_artifacts": {
+                  Row: {
+                    "actor": NonNullable<Json>,"attempts": NonNullable<Json>,"checkpoint": NonNullable<Json>,"dispatched_at": string | null,"folder_mapping_id": string,"format": string,"id": string,"lease": string | null,"lease_until": string | null,"message": string | null,"original_actor": NonNullable<Json>,"report_id": string,"state": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "actor": NonNullable<Json>,"attempts"?: NonNullable<Json>,"checkpoint"?: NonNullable<Json>,"dispatched_at"?: string | null,"folder_mapping_id": string,"format": string,"id"?: string,"lease"?: string | null,"lease_until"?: string | null,"message"?: string | null,"original_actor": NonNullable<Json>,"report_id": string,"state"?: string
+                  }
+                  Update: {
+                    "actor"?: NonNullable<Json>,"attempts"?: NonNullable<Json>,"checkpoint"?: NonNullable<Json>,"dispatched_at"?: string | null,"folder_mapping_id"?: string,"format"?: string,"id"?: string,"lease"?: string | null,"lease_until"?: string | null,"message"?: string | null,"original_actor"?: NonNullable<Json>,"report_id"?: string,"state"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "comparison_artifacts_folder_mapping_id_fkey"
+      columns: ["folder_mapping_id"]
+isOneToOne: false
+      referencedRelation: "project_document_folders"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "comparison_artifacts_report_id_fkey"
+      columns: ["report_id"]
+isOneToOne: false
+      referencedRelation: "comparison_reports"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"comparison_reports": {
+                  Row: {
+                    "actor": NonNullable<Json>,"created_at": string,"id": string,"request_id": string,"snapshot": NonNullable<Json>,"version": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "actor": NonNullable<Json>,"created_at"?: string,"id": string,"request_id": string,"snapshot": NonNullable<Json>,"version": number
+                  }
+                  Update: {
+                    "actor"?: NonNullable<Json>,"created_at"?: string,"id"?: string,"request_id"?: string,"snapshot"?: NonNullable<Json>,"version"?: number
+                  }
+                  Relationships: [
+
+                  ]
                 },"demand_claims": {
                   Row: {
                     "id": string,"item_id": string,"owner_id": string,"owner_kind": string,"owner_line_id": string,"quantity": number,"request_id": string
@@ -336,6 +402,26 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"po_preparers": {
+                  Row: {
+                    "actor": NonNullable<Json>,"actor_id": string,"first_prepared_at": string,"po_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "actor": NonNullable<Json>,"actor_id": string,"first_prepared_at"?: string,"po_id": string
+                  }
+                  Update: {
+                    "actor"?: NonNullable<Json>,"actor_id"?: string,"first_prepared_at"?: string,"po_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "po_preparers_po_id_fkey"
+      columns: ["po_id"]
+isOneToOne: false
+      referencedRelation: "purchasing_records"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"project_document_folders": {
                   Row: {
                     "created_at": string,"current": boolean,"folder_id": string,"id": string,"name": string,"project_id": string,"root_id": string
@@ -363,6 +449,92 @@ isOneToOne: false
                   }
                   Relationships: [
 
+                  ]
+                },"purchasing_claims": {
+                  Row: {
+                    "id": string,"item_id": string,"line_id": string,"record_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "id": string,"item_id": string,"line_id": string,"record_id": string
+                  }
+                  Update: {
+                    "id"?: string,"item_id"?: string,"line_id"?: string,"record_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "purchasing_claims_id_fkey"
+      columns: ["id"]
+isOneToOne: true
+      referencedRelation: "demand_claims"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "purchasing_claims_record_id_fkey"
+      columns: ["record_id"]
+isOneToOne: false
+      referencedRelation: "purchasing_records"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"purchasing_heads": {
+                  Row: {
+                    "request_id": string,"version": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "request_id": string,"version"?: number
+                  }
+                  Update: {
+                    "request_id"?: string,"version"?: number
+                  }
+                  Relationships: [
+
+                  ]
+                },"purchasing_operations": {
+                  Row: {
+                    "actor_id": string,"id": string,"payload": NonNullable<Json>,"request_id": string,"result": NonNullable<Json>
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "actor_id": string,"id": string,"payload": NonNullable<Json>,"request_id": string,"result": NonNullable<Json>
+                  }
+                  Update: {
+                    "actor_id"?: string,"id"?: string,"payload"?: NonNullable<Json>,"request_id"?: string,"result"?: NonNullable<Json>
+                  }
+                  Relationships: [
+
+                  ]
+                },"purchasing_records": {
+                  Row: {
+                    "body": NonNullable<Json>,"calculation": Json | null,"checked": Json | null,"id": string,"kind": string,"project_id": string,"quote_id": string,"ref": string | null,"request_id": string,"revision_id": string,"state": string,"supplier_id": string,"updated_at": string,"version": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "body": NonNullable<Json>,"calculation"?: Json | null,"checked"?: Json | null,"id": string,"kind": string,"project_id": string,"quote_id": string,"ref"?: string | null,"request_id": string,"revision_id": string,"state"?: string,"supplier_id": string,"updated_at"?: string,"version"?: number
+                  }
+                  Update: {
+                    "body"?: NonNullable<Json>,"calculation"?: Json | null,"checked"?: Json | null,"id"?: string,"kind"?: string,"project_id"?: string,"quote_id"?: string,"ref"?: string | null,"request_id"?: string,"revision_id"?: string,"state"?: string,"supplier_id"?: string,"updated_at"?: string,"version"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "purchasing_records_quote_id_fkey"
+      columns: ["quote_id"]
+isOneToOne: false
+      referencedRelation: "quotation_drafts"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "purchasing_records_revision_id_fkey"
+      columns: ["revision_id"]
+isOneToOne: false
+      referencedRelation: "quotation_revisions"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "purchasing_records_supplier_id_fkey"
+      columns: ["supplier_id"]
+isOneToOne: false
+      referencedRelation: "suppliers"
+      referencedColumns: ["id"]
+    }
                   ]
                 },"quotation_archive_jobs": {
                   Row: {
@@ -917,6 +1089,12 @@ isOneToOne: false
 "can_read_project":
 { Args: { "target_project": string }; Returns: boolean
                            },
+"comparison_dispatch":
+{ Args: Record<PropertyKey, never>; Returns: Json
+                           },
+"comparison_worker":
+{ Args: { "action": string,"job_id": string,"lease_id"?: string,"patch"?: Json }; Returns: Json
+                           },
 "current_user_authorized":
 { Args: Record<PropertyKey, never>; Returns: boolean
                            },
@@ -1000,6 +1178,24 @@ isOneToOne: false
                            },
 "projects_read":
 { Args: { "actor": Json,"target_project"?: string }; Returns: Json
+                           },
+"purchasing_apply_claims":
+{ Args: { "actor": Json,"expected": string,"operation": string,"reason": string,"target": string }; Returns: Json
+                           },
+"purchasing_blockers":
+{ Args: { "target": string }; Returns: Json
+                           },
+"purchasing_command":
+{ Args: { "actor": Json,"calculation"?: Json,"command": Json,"snapshot"?: Json }; Returns: Json
+                           },
+"purchasing_read":
+{ Args: { "actor": Json,"target_request"?: string }; Returns: Json
+                           },
+"purchasing_record_view":
+{ Args: { "target": string }; Returns: Json
+                           },
+"purchasing_validate_body":
+{ Args: { "body": Json,"previous"?: Json,"quote": string,"target": string }; Returns: Json
                            },
 "quotation_actor":
 { Args: { "actor": Json,"writing"?: boolean }; Returns: string
@@ -1401,6 +1597,15 @@ isOneToOne: false
 "auth_unbind_session":
 { Args: { "target_session": string,"target_user": string }; Returns: undefined
                            },
+"comparison_dispatch":
+{ Args: Record<PropertyKey, never>; Returns: Json
+                           },
+"comparison_document":
+{ Args: { "actor": Json,"artifact_id": string }; Returns: Json
+                           },
+"comparison_worker":
+{ Args: { "action": string,"job_id": string,"lease_id"?: string,"patch"?: Json }; Returns: Json
+                           },
 "document_command":
 { Args: { "actor": Json,"command": Json }; Returns: Json
                            },
@@ -1427,6 +1632,15 @@ isOneToOne: false
                            },
 "projects_read":
 { Args: { "actor": Json,"target_project"?: string }; Returns: Json
+                           },
+"purchasing_command":
+{ Args: { "actor": Json,"calculation"?: Json,"command": Json,"snapshot"?: Json }; Returns: Json
+                           },
+"purchasing_po_request":
+{ Args: { "actor": Json,"po_id": string }; Returns: string
+                           },
+"purchasing_read":
+{ Args: { "actor": Json,"target_request"?: string }; Returns: Json
                            },
 "quotation_archive_dispatch":
 { Args: Record<PropertyKey, never>; Returns: Json
