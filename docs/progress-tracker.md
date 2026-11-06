@@ -10,7 +10,7 @@ Update this file after every meaningful implementation or documentation change a
 
 ## Current Goal
 
-- **4.7 complete, 2026-11-06, source `e749844`:** private project-stock ledger/reservations pass local/four-job CI/full disposable/types/staging and scoped combined internal-stock acceptance. [Draft review](https://github.com/yaboii-jah/HML-Prototype/pull/39) targets merged staging and remains unmerged. No inventory UI, opening-stock or warehouse-pool workflow is enabled. Next is **4.8 Awards and PO drafts**, requiring scoped planning, applicable company-policy decisions and separate implementation authorization. Preserve earlier human/Drive provenance, retained QA data and the user's pending checklist/guide edits/private account note. Production is unchanged.
+- **4.8 in implementation, authorized 2026-11-06:** all twenty interview decisions and the shared-understanding check are locked. Comparisons/artifacts, split awards and numbered PO drafts are being migrated on `feat/step-4-awards-po-drafts`, based on completed 4.7. Initial local standard verification passes 447 tests/build; new SQL, browser/Workflow/race, CI, staging, live artifact and three human groups remain pending. Preserve earlier human/Drive provenance, retained QA data and the user's pending checklist/guide edits/private account note. Merging and production remain separate.
 
 ## Completed
 
@@ -64,7 +64,7 @@ Update this file after every meaningful implementation or documentation change a
 
 ## In Progress
 
-- No operational unit is currently in implementation. Unit 4.7 is closed; 4.8 requires scoped planning and separate authorization. Preserve unrelated pending edits and retained QA records/files. Merging remains separate.
+- **4.8 authorized and in implementation, 2026-11-06:** all twenty interview decisions and shared understanding are locked; the user requested implementation of comparisons/artifacts, split awards and numbered PO drafts. The active guide records the contract. Preserve unrelated pending edits and retained QA records/files. Accounting/commitments/issuance, merging and production remain separate. Next action: implement authoritative purchasing records/commands and exact partial pricing, then UI/artifacts and source-bound acceptance.
 - Source `8b8f32a` passes local lint/types/**425 tests**/build/public-browser/local acceptance, [all four standard CI jobs](https://github.com/yaboii-jah/HML-Prototype/actions/runs/42145280317), [complete disposable SQL/Auth/browser/Workflow/Realtime/type/race acceptance](https://github.com/yaboii-jah/HML-Prototype/actions/runs/42145280308) and the owned live-Drive check with verified cleanup. Imported all five CI reports plus matching local acceptance. Its exact SQL is applied to staging with retained state preserved. Pinned generated types match.
 - Final staging acceptance passes at source `8b8f32a` on 2026-11-06 with the renewed scoped token, including migration/Auth/type/rollback/private-channel checks, owned Auth recovery/replay/revocation and identical retained state; no email was sent. Independent finish review's only material fix is resolved in fresh desktop/375px captures; its verdict is **ship for the scored fix**. The documenter confirms incumbent Geist/tokens/shared components are preserved and no new design documents are needed. The user's later explicit **All three passed** confirmation with no skipped checks supersedes **Not tested yet**; matching combined acceptance now passes, with earlier attestations unchanged.
 
@@ -81,7 +81,7 @@ Update this file after every meaningful implementation or documentation change a
 
 Use the [production checklist](checklist.md#steps) for the ordered milestones and their completion conditions.
 
-- **Exact next action:** scope 4.8 Awards and PO drafts when requested, resolving applicable partial-order/company policy before dependent pricing, then obtain its separate implementation authorization. Preserve completed evidence and retained QA records/files. Step 4 stays open; later implementation, merging and production remain separate.
+- **Exact next action:** finish and verify the authorized 4.8 implementation, including disposable SQL/application/Workflow/races and source-current local/four-job CI/type evidence before applying exact verified SQL to staging. Then complete preserved-state parity, live artifact verification and targeted human review. Partial-order preparation policy is confirmed; budget charging, settlement and corrections remain later policy decisions. Step 4 stays open.
 - Follow the guide's dependencies and completion criteria. The prototype role switch/approval commands are not production authority. Migrated MRF review now enforces permanent-user self-approval prevention; prepared-PO enforcement remains part of its later workflow unit.
 - Retain local Node 26.12.1, the Vercel Node 24.x target, CI baseline 24.22.1 and npm 11.20.0 across environments. Hosted deployment verification belongs to the later protected rehearsal.
 - Work foundations first: individual identity, shared records and server authorization before business-workflow migration. Tailwind remains a separate track.
@@ -102,7 +102,7 @@ The user explicitly confirmed the **existing quotation calculation rules** on 20
 | Charges | Quotation baseline confirmed: fixed/percentage adjustments, existing material-subtotal basis and explicit taxable flag; the non-taxable service flag excludes added VAT and services EWT. |
 | Discounts | Quotation baseline confirmed: line discounts precede document adjustments; document discounts reduce gross/net but do not reduce EWT bases. |
 | Multiple adjustments | Quotation baseline confirmed: percentage adjustments independently use the material subtotal after line discounts. |
-| Partial orders | Whether discounts and delivery/service charges are retained, prorated, recalculated or requoted. |
+| Partial orders | Confirmed for 4.8 preparation on 2026-11-06: quoted prices/percentage rates/tax treatment stay fixed, percentages recalculate on selected quantities, and Procurement explicitly reviews fixed discounts/charges and inclusion with reasons for changes. No invented charges. Zero-value drafts retain an unresolved Accounting submission-policy blocker. |
 | Rounding | Quotation baseline confirmed: exact half-up cents at existing stages, source precision retained, aggregate included VAT and no unexplained cent differences. Later workflows must state any additional policy. |
 | Budget charging | Gross purchase value, net supplier payment after EWT or another basis; treatment of VAT and withheld tax. The current app uses net payable after EWT for project/scope commitments and spending and does not separately track EWT remittance as a tax liability. This is unconfirmed company policy. |
 | Settlement | Reconciliation among PO, invoice, supplier payment and withholding; other deductions, retention or previous advances. |

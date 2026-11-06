@@ -291,6 +291,7 @@ export async function checkAuthFoundation({ api, anon, secret, mailpit, sql, env
     checks.push('quotation-browser-workflow');
     quotationFixture.financial = await checkQuotationFinalization({ browser, second, client, login, logout, sql, base, drive, ...reviewed });
     checks.push('quotation-finalization-browser');
+    checks.push('purchasing-browser-workflow');
     await checkSupplierDirectory({ browser, second, client, login, logout, sessionCookie, sql });
     checks.push('supplier-browser');
     for (const browser of browsers) browser.assertIsolated();

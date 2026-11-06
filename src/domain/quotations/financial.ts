@@ -258,6 +258,17 @@ export function calculateQuotation(
   body: QuoteBody,
   review: FinancialReview,
 ): QuotationCalculation {
+  return calculateFinancialInputs(body, review, {
+    reconcile: true, allowZero: false, ruleVersion: QUOTATION_RULE_VERSION,
+  });
+}
+
+/** Shared calculation stages; callers supply their own source/review adapter. */
+export function calculateFinancialInputs(
+  body: QuoteBody,
+  review: FinancialReview,
+  policy: { reconcile: boolean; allowZero: boolean; ruleVersion: string },
+): QuotationCalculation {
   const issues: string[] = [];
   const rows: CalculatedRow[] = [],
     adjustments: CalculatedRow[] = [],
@@ -332,7 +343,7 @@ export function calculateQuotation(
     printed: string,
     calculated: Decimal,
   ) => {
-    if (!printed) return;
+    if (!policy.reconcile || !printed) return;
     try {
       const printedMoney = money(decimal(printed)),
         calculatedMoney = money(calculated);
@@ -630,14 +641,14 @@ export function calculateQuotation(
         summary.value,
         bases[summary.basis],
       );
-  if (compare(gross) <= 0)
-    issues.push("The quotation gross total must be positive.");
+  if (compare(gross) < 0 || (!policy.allowZero && compare(gross) === 0))
+    issues.push(policy.allowZero ? "The order gross total cannot be negative." : "The quotation gross total must be positive.");
   if (compare(net) < 0)
     issues.push(
       "EWT cannot exceed gross; reconcile the document discounts and source.",
     );
   return {
-    ruleVersion: QUOTATION_RULE_VERSION,
+    ruleVersion: policy.ruleVersion,
     materials: money(materials),
     subtotal: money(subtotal),
     vat: money(includedVat),
