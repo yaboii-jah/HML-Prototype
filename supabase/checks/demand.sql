@@ -25,6 +25,8 @@ begin
     values(document,request,mapping,'demand-'||document,'fixture.pdf',10,repeat('a',64),person,'Demand fixture');
   insert into private.mrf_archive_snapshots(id,request_id,version,source_document,request_version,attachment_revision,snapshot,approved_by,approved_name,approved_at)
     values(archive,request,1,document,1,1,jsonb_build_object('draft',form),person,'Demand fixture',now());
+  insert into private.document_jobs(kind,project_id,request_id,resource_id,actor,original_actor,state,checkpoint)
+    values('archive',project,request,archive,'{}','{}','complete','{"formSize":10,"supportingSize":10}');
   insert into private.mrf_archives(snapshot_id,folder_mapping_id,form_file_id,form_sha256,supporting_file_id,supporting_sha256)
     values(archive,mapping,'demand-form-'||archive,repeat('a',64),'demand-support-'||archive,repeat('a',64));
   return jsonb_build_object('actor',jsonb_build_object('userId',person,'sessionId',session,'revision',proof->>'revision','activeRole','Procurement'),
