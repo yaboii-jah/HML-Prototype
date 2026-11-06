@@ -62,6 +62,48 @@ export async function checkPurchasing({
       .filter((c) => c.domain === "127.0.0.1")
       .map((c) => `${c.name}=${c.value}`)
       .join("; ");
+  const capture = async (page, name = "", modal = false) => {
+    for (const width of [1440, 375]) {
+      await page.call("Emulation.setDeviceMetricsOverride", {
+        width,
+        height: 1000,
+        deviceScaleFactor: 1,
+        mobile: width < 600,
+      });
+      await page.run(
+        "window.scrollTo(0,0); await document.fonts.ready; document.getAnimations().filter(a=>Number.isFinite(a.effect?.getComputedTiming().endTime)).forEach(a=>a.finish());",
+      );
+      if (width < 600) {
+        await page.run("document.querySelector('.mobile-scrim')?.click();");
+        await page.wait(
+          "return !document.querySelector('.mobile-scrim')&&document.querySelector('.side-nav').getBoundingClientRect().right<=1",
+        );
+      }
+      assert.equal(
+        await page.run(
+          "return document.documentElement.scrollWidth<=innerWidth",
+        ),
+        true,
+      );
+      const { cssContentSize } = await page.call("Page.getLayoutMetrics");
+      const shot = await page.call("Page.captureScreenshot", {
+        format: "png",
+        captureBeyondViewport: !modal,
+        clip: {
+          x: 0,
+          y: 0,
+          width,
+          height: modal ? 1000 : cssContentSize.height,
+          scale: 1,
+        },
+      });
+      await writeFile(
+        `.verification/purchasing-${name ? name + "-" : ""}${width}.png`,
+        Buffer.from(shot.data, "base64"),
+      );
+    }
+    await page.call("Emulation.clearDeviceMetricsOverride");
+  };
   const parentQuantity = (await view()).quotations.request.items.find(
     (i) => i.id === material.requestItemId,
   ).quantity;
@@ -183,6 +225,11 @@ export async function checkPurchasing({
   const previewBytes = Buffer.from(await preview.arrayBuffer());
   assert.equal(previewBytes.subarray(0, 5).toString(), "%PDF-");
   await writeFile(".verification/purchasing-po-preview.pdf", previewBytes);
+  await capture(second, "po");
+  await openEditor(second);
+  await capture(second, "editor", true);
+  await click(second, "Save preparation");
+  await second.wait("return !document.querySelector('dialog[open]')");
   assert.equal(
     (
       await fetch(
@@ -281,33 +328,7 @@ export async function checkPurchasing({
       bytes,
     );
   }
-  for (const width of [1440, 375]) {
-    await second.call("Emulation.setDeviceMetricsOverride", {
-      width,
-      height: 1000,
-      deviceScaleFactor: 1,
-      mobile: width < 600,
-    });
-    await second.run("window.scrollTo(0,0); await document.fonts.ready;");
-    if (width < 600) {
-      await second.run("document.querySelector('.mobile-scrim')?.click();");
-      await second.wait(
-        "return !document.querySelector('.mobile-scrim')&&document.querySelector('.side-nav').getBoundingClientRect().right<=1",
-      );
-    }
-    assert.equal(
-      await second.run(
-        "return document.documentElement.scrollWidth<=innerWidth",
-      ),
-      true,
-    );
-    const shot = await second.call("Page.captureScreenshot", { format: "png" });
-    await writeFile(
-      `.verification/purchasing-${width}.png`,
-      Buffer.from(shot.data, "base64"),
-    );
-  }
-  await second.call("Emulation.clearDeviceMetricsOverride");
+  await capture(second);
   await browser.navigate(`/requests/${mrf}/quotes/${quote}`);
   await second.navigate(`/requests/${mrf}/quotes/${quote}`);
   await browser.wait("return !!document.querySelector('.quotation-revision')");
