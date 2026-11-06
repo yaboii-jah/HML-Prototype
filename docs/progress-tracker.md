@@ -10,6 +10,8 @@ Update this file after every meaningful implementation or documentation change a
 
 ## Current Goal
 
+- **4.7 implementation authorized, 2026-11-06:** the user locked all six decisions and requested implementation of the internal project-stock ledger/reservation foundation. Branch `feat/step-4-stock-foundation` starts from reconciled GitHub staging `9fd860d`, which contains merged 4.6. Preserve the user's pending checklist split, guide whitespace and private account note. No new UI/public mutations/opening-stock/warehouse pool; later workflows, merging and production remain separate. Verification is pending and 4.7 stays unchecked.
+
 - [Draft PR #36](https://github.com/yaboii-jah/HML-Prototype/pull/36) contains verified 4.6 on parent `feat/step-4-quotation-finalization`; it remains unmerged. Implementation acceptance uses `7e9b3a0`; documentation-only closeout does not change that source revision.
 
 - **4.6 complete, 2026-11-06, source `7e9b3a0`:** the authorized internal shared-demand foundation passes local/four-job CI/full disposable/staging and scoped combined acceptance. Saved awards count immediately; blocked work retains claims; first claims permanently restrict MRF corrections. No staff UI or public mutation endpoint is enabled. Next is **4.7 Stock ledger and reservations**, requiring scoped planning and separate implementation authorization. Preserve retained QA data, earlier human/Drive provenance and the user's checklist/guide edits/private account note. Branch `feat/step-4-demand-allocation` is published; merging and production remain separate.

@@ -3,6 +3,7 @@ import { checkQuotationRaces } from './check-quotation-races.mjs';
 import { checkQuotationFinalizationRaces } from './check-quotation-finalization-races.mjs';
 import { checkRequestRaces } from './check-request-races.mjs';
 import { checkDemandRaces } from './check-demand-races.mjs';
+import { checkStockRaces } from './check-stock-races.mjs';
 import { checkDocumentRaces } from './check-document-races.mjs';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
@@ -97,6 +98,8 @@ try {
   await sql(await readFile('supabase/checks/quotation-finalization.sql', 'utf8'));
   await sql(await readFile('supabase/checks/demand.sql', 'utf8'));
   checks.push('demand-sql');
+  await sql(await readFile('supabase/checks/stock.sql', 'utf8'));
+  checks.push('stock-sql');
   checks.push('quotation-finalization-sql');
   checks.push('quotation-sql');
   checks.push('supplier-sql');
@@ -259,6 +262,8 @@ try {
   checks.push('auth-browser-email');
   await checkDemandRaces({ sql, database, environment });
   checks.push('demand-races');
+  await checkStockRaces({ sql, database, environment });
+  checks.push('stock-races');
   await checkQuotationFinalizationRaces({ sql, database, environment, fixture: quotationFixture.financial });
   checks.push('quotation-finalization-races');
   await checkQuotationRaces({ sql, database, environment, fixture: quotationFixture });

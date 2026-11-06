@@ -2,7 +2,7 @@ import { requireStaging, STAGING_REF } from './supabase-target.mjs';
 
 /** Read-only retained-state evidence. No Auth passwords, tokens or raw business
  * rows are returned. Application rows are compared using deterministic hashes. */
-export async function stagingSnapshot({ includeProjectOperations = true, includeDocuments = true, includeReview = true, includeSuppliers = true, includeQuotations = true, includeQuotationFinalization = true, includeDemand = true } = {}) {
+export async function stagingSnapshot({ includeProjectOperations = true, includeDocuments = true, includeReview = true, includeSuppliers = true, includeQuotations = true, includeQuotationFinalization = true, includeDemand = true, includeStock = true } = {}) {
   requireStaging(process.env);
   const tables = [
     ['profiles', 'public.profiles', 'user_id'], ['grants', 'public.role_grants', 'user_id,role'],
@@ -13,6 +13,11 @@ export async function stagingSnapshot({ includeProjectOperations = true, include
     ['audits', 'private.audit_events', 'id'], ['accountOperations', 'private.account_operations', 'id'],
   ];
   // During the 4.2 migration, compare all pre-existing rows before/after DDL.
+  if (includeStock) tables.push(
+    ['stockAccounts', 'private.stock_accounts', 'id'], ['stockMovements', 'private.stock_movements', 'id'],
+    ['stockReservations', 'private.stock_reservations', 'id'], ['stockOperations', 'private.stock_operations', 'id'],
+    ['stockEvents', 'private.stock_events', 'operation_id'],
+  );
   if (includeDemand) tables.push(
     ['demandHeads', 'private.demand_heads', 'request_id'], ['demandRequirements', 'private.demand_requirements', 'item_id'],
     ['demandClaims', 'private.demand_claims', 'id'], ['demandOperations', 'private.demand_operations', 'id'],

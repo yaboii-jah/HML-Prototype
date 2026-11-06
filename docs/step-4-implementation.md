@@ -259,6 +259,18 @@ The user locked all six interview decisions and requested implementation on 2026
 
 **Done when:** exact-quantity/domain, rollback SQL and observed-lock contention/conversion/retry/correction checks pass at both isolation levels; standard local/public-browser, four-job CI, full disposable integration/types and retained-state-safe staging parity pass. Synthetic owning transactions verify the internal boundary; no new staff workflow exists to manually attest. Preserve earlier human attestations and their provenance. No new live provider capability is introduced. Record evidence in the tracker before checking 4.6.
 
+## 4.7 Stock Ledger and Reservations — Authorized
+
+Authorized 2026-11-06 after all six interview decisions were locked. Implement only the internal project-stock foundation, with no inventory UI, public mutation endpoint, opening-stock entry, warehouse pool or later owning workflow.
+
+- Use UUID stock accounts unique by project and trimmed/case-insensitive description/unit. Preserve internal spaces and distinct unit labels. Preserve initial display labels; retain zero-balance identities/history and restrictive project references.
+- Immutable signed movements receive server posting timestamps. Exact decimal-string quantities produce on-hand, reserved and available balances; require on-hand >= reserved >= 0. Corrections add reasoned movements; no backdating/edit/delete interface.
+- Source-release requests reserve stock; suitability and usage drafts do not. Reservations persist through pauses/revocation until explicit release/reduction/consumption. Dispatch consumes its own reservation with its debit atomically; trip cancellation alone does not release an allocation.
+- Private grouped operations carry expected account versions, stable transport/source identities, retry receipts and permanent actor history. A business source cannot post twice under a new operation UUID. Future checked owning commands validate business authority/source eligibility and commit their rows plus demand/stock changes together.
+- Follow guard/actor/session/project/MRF/account lock ordering. Joint synthetic Procurement transactions verify 4.6 atomicity. The narrow source-Site-to-destination-demand authorization adapter remains a 4.14 dependency; grant no destination access or impersonated actor.
+
+**Done when:** exact-quantity/domain, rollback SQL, source-identity/no-op/rollback/security and observed-lock reservation/usage/dispatch/access/project races pass at both isolation levels, alongside local/public-browser/four-job CI/full disposable/types and retained-state-safe staging parity. Extend scoped internal acceptance; preserve earlier human/Drive evidence without inventing new attestations. Record actual evidence before checking 4.7.
+
 ## Milestone Completion and Documentation Ownership
 
 Keep permanent product responsibilities in the [overview](project-overview.md), system contracts in [architecture](architecture.md), conventions in [code standards](code-standards.md) and execution/verification policy in [workflow rules](ai-workflow-rules.md). Keep current work, dependencies, dated evidence and deferred-suite restoration in the tracker rather than duplicating logs here.
