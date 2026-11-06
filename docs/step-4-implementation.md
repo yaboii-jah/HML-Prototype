@@ -7,8 +7,8 @@ Agreed 2026-11-03. This active companion owns the operational migration sequence
 Read the five core documents required by [AGENTS.md](../AGENTS.md), the checklist and this guide before planning, implementing, reviewing or resuming step 4.
 
 1. Reconcile Git status, the tracker and the actual implementation. Preserve unrelated pending work and the completed foundation planning retirement.
-2. Check the user's latest instruction before starting a unit. **Unit 4.6 is verified complete at `7e9b3a0` on 2026-11-06, within its internal foundation boundary. Unit 4.7 needs scoped planning and separate implementation authorization; merging and production remain separate.**
-3. Use the sequence below as the roadmap. Units through 4.6 have detailed scopes; later units require scoped planning and acceptance criteria before implementation.
+2. Check the user's latest instruction before starting a unit. **Unit 4.6 is verified complete at `7e9b3a0`. The user locked all 4.7 decisions and authorized the internal stock foundation on 2026-11-06. Later units, merging and production remain separate.**
+3. Use the sequence below as the roadmap. Units through 4.7 have detailed scopes; later units require scoped planning and acceptance criteria before implementation.
 4. Verify a unit within its boundary, record actual results in the tracker, then check its completion box. A documentation checkpoint does not complete an operational workflow or checklist step 4.
 5. Retire this companion after the milestone is complete, preserving durable contracts in the core documents and completion evidence in the tracker.
 
