@@ -46,6 +46,100 @@ export type Database = {
                   Relationships: [
 
                   ]
+                },"demand_claims": {
+                  Row: {
+                    "id": string,"item_id": string,"owner_id": string,"owner_kind": string,"owner_line_id": string,"quantity": number,"request_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "id": string,"item_id": string,"owner_id": string,"owner_kind": string,"owner_line_id": string,"quantity": number,"request_id": string
+                  }
+                  Update: {
+                    "id"?: string,"item_id"?: string,"owner_id"?: string,"owner_kind"?: string,"owner_line_id"?: string,"quantity"?: number,"request_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "demand_claims_item_id_request_id_fkey"
+      columns: ["item_id","request_id"]
+isOneToOne: false
+      referencedRelation: "demand_requirements"
+      referencedColumns: ["item_id","request_id"]
+    }
+                  ]
+                },"demand_events": {
+                  Row: {
+                    "actor_id": string,"actor_name": string,"actor_role": string,"after_state": NonNullable<Json>,"before_state": NonNullable<Json>,"occurred_at": string,"operation_id": string,"reason": string,"request_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "actor_id": string,"actor_name": string,"actor_role": string,"after_state": NonNullable<Json>,"before_state": NonNullable<Json>,"occurred_at"?: string,"operation_id": string,"reason": string,"request_id": string
+                  }
+                  Update: {
+                    "actor_id"?: string,"actor_name"?: string,"actor_role"?: string,"after_state"?: NonNullable<Json>,"before_state"?: NonNullable<Json>,"occurred_at"?: string,"operation_id"?: string,"reason"?: string,"request_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "demand_events_operation_id_fkey"
+      columns: ["operation_id"]
+isOneToOne: true
+      referencedRelation: "demand_operations"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"demand_heads": {
+                  Row: {
+                    "request_id": string,"version": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "request_id": string,"version"?: number
+                  }
+                  Update: {
+                    "request_id"?: string,"version"?: number
+                  }
+                  Relationships: [
+
+                  ]
+                },"demand_operations": {
+                  Row: {
+                    "actor_id": string,"id": string,"payload": NonNullable<Json>,"request_id": string,"result": NonNullable<Json>
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "actor_id": string,"id": string,"payload": NonNullable<Json>,"request_id": string,"result": NonNullable<Json>
+                  }
+                  Update: {
+                    "actor_id"?: string,"id"?: string,"payload"?: NonNullable<Json>,"request_id"?: string,"result"?: NonNullable<Json>
+                  }
+                  Relationships: [
+
+                  ]
+                },"demand_requirements": {
+                  Row: {
+                    "archive_id": string,"item_id": string,"quantity": number,"request_id": string,"unit": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "archive_id": string,"item_id": string,"quantity": number,"request_id": string,"unit": string
+                  }
+                  Update: {
+                    "archive_id"?: string,"item_id"?: string,"quantity"?: number,"request_id"?: string,"unit"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "demand_requirements_archive_id_fkey"
+      columns: ["archive_id"]
+isOneToOne: false
+      referencedRelation: "mrf_archive_snapshots"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "demand_requirements_request_id_fkey"
+      columns: ["request_id"]
+isOneToOne: false
+      referencedRelation: "demand_heads"
+      referencedColumns: ["request_id"]
+    }
+                  ]
                 },"document_counters": {
                   Row: {
                     "last_value": number,"project_id": string,"series": string
@@ -725,6 +819,12 @@ isOneToOne: false
                            },
 "current_user_authorized":
 { Args: Record<PropertyKey, never>; Returns: boolean
+                           },
+"demand_apply":
+{ Args: { "actor": Json,"changes": Json,"expected_version": string,"operation": string,"reason": string,"target": string }; Returns: Json
+                           },
+"demand_snapshot":
+{ Args: { "target": string }; Returns: Json
                            },
 "document_actor_snapshot":
 { Args: { "actor": Json }; Returns: Json
