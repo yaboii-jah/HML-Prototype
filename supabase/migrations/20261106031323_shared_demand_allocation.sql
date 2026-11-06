@@ -104,6 +104,10 @@ begin
   perform set_config('lock_timeout','5s',true);
   update private.account_guard g set revision=g.revision+1 where g.id;
   caller:=private.project_actor(actor,false);
+  -- No realtime publisher exists in this internal unit to take the usual
+  -- recipient-session locks. Order native session deletion here instead.
+  perform 1 from auth.sessions s where s.id=(actor->>'sessionId')::uuid and s.user_id=caller for share;
+  if not found then raise exception 'Current workspace access required' using errcode='42501'; end if;
   perform 1 from public.material_requests r where r.id=target for update;
   if not found or not private.request_project_allowed(actor,(select project_id from public.material_requests where id=target)) then
     raise exception 'Current MRF access required' using errcode='42501';

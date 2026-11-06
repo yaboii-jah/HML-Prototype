@@ -97,8 +97,6 @@ try {
   await sql(await readFile('supabase/checks/quotation-finalization.sql', 'utf8'));
   await sql(await readFile('supabase/checks/demand.sql', 'utf8'));
   checks.push('demand-sql');
-  await checkDemandRaces({ sql, database, environment });
-  checks.push('demand-races');
   checks.push('quotation-finalization-sql');
   checks.push('quotation-sql');
   checks.push('supplier-sql');
@@ -259,6 +257,8 @@ try {
     mailpit: requireLoopback(status.INBUCKET_URL ?? status.MAILPIT_URL ?? status.inbucket_url).origin,
     sql, environment });
   checks.push('auth-browser-email');
+  await checkDemandRaces({ sql, database, environment });
+  checks.push('demand-races');
   await checkQuotationFinalizationRaces({ sql, database, environment, fixture: quotationFixture.financial });
   checks.push('quotation-finalization-races');
   await checkQuotationRaces({ sql, database, environment, fixture: quotationFixture });

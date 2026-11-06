@@ -79,10 +79,11 @@ export async function checkDemandRaces({ sql, database, environment }) {
         assert.equal((await snapshot(c)).version, '0');
       }
     }
-    for (const revokeFirst of [true, false]) {
+    for (const revokeKind of ['profile', 'session']) for (const revokeFirst of [true, false]) {
       const c = await fixture();
       const acquisition = apply(c, '0', [claim(c, 'transfer', '1')]);
-      const revocation = `update private.account_guard set revision=revision+1 where id; update public.profiles set is_active=false where user_id='${c.actor.userId}';`;
+      const revocation = revokeKind === 'session' ? `delete from auth.sessions where id='${c.actor.sessionId}';`
+        : `update private.account_guard set revision=revision+1 where id; update public.profiles set is_active=false where user_id='${c.actor.userId}';`;
       const result = await race(revokeFirst ? revocation : acquisition, revokeFirst ? acquisition : revocation, isolation);
       if (revokeFirst) {
         assert.notEqual(result.code, 0);
