@@ -1,5 +1,16 @@
 import { UUID_PATTERN, isAuthRole, type AuthRole } from "../auth/session.ts";
 import { record } from "../projects/projects.ts";
+import type { FinancialState } from "./financial.ts";
+import {
+  FINANCIAL_COMMANDS,
+  parseFinancialCommand,
+  parseFinancialState,
+  parseQuotationFamily,
+  parseQuotationRevision,
+  type FinancialCommand,
+  type QuotationFamily,
+  type QuotationRevision,
+} from "./revisions.ts";
 
 export const HEADER_FIELDS = {
   supplierName: "Supplier name as quoted",
@@ -102,7 +113,11 @@ export type QuotationDraft = {
   mrfId: string;
   supplierId: string;
   body: QuoteBody;
-  state: "draft" | "cancelled";
+  state: "draft" | "cancelled" | "finalized";
+  contentVersion?: string;
+  financial?: FinancialState;
+  family?: QuotationFamily;
+  revision?: QuotationRevision | null;
   version: string;
   fileVersion: string;
   creatorName: string;
@@ -147,30 +162,37 @@ export type QuotationsView = {
   quotes: QuotationDraft[];
   history: QuoteHistory[];
 };
-export type QuoteCommand = (
-  | { type: "create"; mrfId: string; supplierId: string; body: QuoteBody }
-  | { type: "save"; quoteId: string; expectedVersion: string; body: QuoteBody }
-  | {
-      type: "status";
-      quoteId: string;
-      expectedVersion: string;
-      state: "draft" | "cancelled";
-      reason: string;
-    }
-  | {
-      type: "checkSource";
-      quoteId: string;
-      expectedVersion: string;
-      expectedFiles: string;
-    }
-  | {
-      type: "confirmMatch";
-      quoteId: string;
-      expectedVersion: string;
-      expectedFiles: string;
-      lineId: string;
-    }
-) & { requestId: string };
+export type QuoteCommand =
+  | FinancialCommand
+  | ((
+      | { type: "create"; mrfId: string; supplierId: string; body: QuoteBody }
+      | {
+          type: "save";
+          quoteId: string;
+          expectedVersion: string;
+          body: QuoteBody;
+        }
+      | {
+          type: "status";
+          quoteId: string;
+          expectedVersion: string;
+          state: "draft" | "cancelled";
+          reason: string;
+        }
+      | {
+          type: "checkSource";
+          quoteId: string;
+          expectedVersion: string;
+          expectedFiles: string;
+        }
+      | {
+          type: "confirmMatch";
+          quoteId: string;
+          expectedVersion: string;
+          expectedFiles: string;
+          lineId: string;
+        }
+    ) & { requestId: string });
 type WithoutRequest<T> = T extends unknown ? Omit<T, "requestId"> : never;
 export type QuoteInput = WithoutRequest<QuoteCommand>;
 export type QuoteResult = {
@@ -331,6 +353,8 @@ export function emptyQuoteLine(): QuoteLine {
 export function parseQuoteCommand(value: unknown): QuoteCommand | null {
   const raw = record(value);
   if (!raw || !quoteUuid(raw.requestId)) return null;
+  if (FINANCIAL_COMMANDS.includes(String(raw.type)))
+    return parseFinancialCommand(raw);
   if (raw.type === "create") {
     const body = parseQuoteBody(raw.body);
     return body && quoteUuid(raw.mrfId) && quoteUuid(raw.supplierId)
@@ -478,7 +502,7 @@ export function parseQuotationsView(value: unknown): QuotationsView | null {
       !quoteUuid(q.supplierId) ||
       !version(q.version) ||
       !version(q.fileVersion) ||
-      !["draft", "cancelled"].includes(String(q.state)) ||
+      !["draft", "cancelled", "finalized"].includes(String(q.state)) ||
       typeof q.creatorName !== "string" ||
       typeof q.createdAt !== "string" ||
       !Array.isArray(q.matches) ||
@@ -553,6 +577,19 @@ export function parseQuotationsView(value: unknown): QuotationsView | null {
         return null;
       jobs.push({ id: j.id, kind: j.kind, state: j.state, message: j.message });
     }
+    const financial =
+      q.financial === undefined ? undefined : parseFinancialState(q.financial);
+    const family =
+      q.family === undefined ? undefined : parseQuotationFamily(q.family);
+    const revision =
+      q.revision == null ? q.revision : parseQuotationRevision(q.revision);
+    if (
+      financial === null ||
+      family === null ||
+      (q.revision != null && !revision) ||
+      (q.contentVersion !== undefined && !version(q.contentVersion))
+    )
+      return null;
     quotes.push({
       id: q.id,
       mrfId: q.mrfId,
@@ -561,6 +598,10 @@ export function parseQuotationsView(value: unknown): QuotationsView | null {
       fileVersion: q.fileVersion,
       body,
       state: q.state as QuotationDraft["state"],
+      contentVersion: q.contentVersion as string | undefined,
+      financial,
+      family,
+      revision,
       creatorName: q.creatorName,
       createdAt: q.createdAt,
       checked: q.checked === true,
