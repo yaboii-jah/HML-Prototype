@@ -46,6 +46,100 @@ export type Database = {
                   Relationships: [
 
                   ]
+                },"demand_claims": {
+                  Row: {
+                    "id": string,"item_id": string,"owner_id": string,"owner_kind": string,"owner_line_id": string,"quantity": number,"request_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "id": string,"item_id": string,"owner_id": string,"owner_kind": string,"owner_line_id": string,"quantity": number,"request_id": string
+                  }
+                  Update: {
+                    "id"?: string,"item_id"?: string,"owner_id"?: string,"owner_kind"?: string,"owner_line_id"?: string,"quantity"?: number,"request_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "demand_claims_item_id_request_id_fkey"
+      columns: ["item_id","request_id"]
+isOneToOne: false
+      referencedRelation: "demand_requirements"
+      referencedColumns: ["item_id","request_id"]
+    }
+                  ]
+                },"demand_events": {
+                  Row: {
+                    "actor_id": string,"actor_name": string,"actor_role": string,"after_state": NonNullable<Json>,"before_state": NonNullable<Json>,"occurred_at": string,"operation_id": string,"reason": string,"request_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "actor_id": string,"actor_name": string,"actor_role": string,"after_state": NonNullable<Json>,"before_state": NonNullable<Json>,"occurred_at"?: string,"operation_id": string,"reason": string,"request_id": string
+                  }
+                  Update: {
+                    "actor_id"?: string,"actor_name"?: string,"actor_role"?: string,"after_state"?: NonNullable<Json>,"before_state"?: NonNullable<Json>,"occurred_at"?: string,"operation_id"?: string,"reason"?: string,"request_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "demand_events_operation_id_fkey"
+      columns: ["operation_id"]
+isOneToOne: true
+      referencedRelation: "demand_operations"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"demand_heads": {
+                  Row: {
+                    "request_id": string,"version": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "request_id": string,"version"?: number
+                  }
+                  Update: {
+                    "request_id"?: string,"version"?: number
+                  }
+                  Relationships: [
+
+                  ]
+                },"demand_operations": {
+                  Row: {
+                    "actor_id": string,"id": string,"payload": NonNullable<Json>,"request_id": string,"result": NonNullable<Json>
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "actor_id": string,"id": string,"payload": NonNullable<Json>,"request_id": string,"result": NonNullable<Json>
+                  }
+                  Update: {
+                    "actor_id"?: string,"id"?: string,"payload"?: NonNullable<Json>,"request_id"?: string,"result"?: NonNullable<Json>
+                  }
+                  Relationships: [
+
+                  ]
+                },"demand_requirements": {
+                  Row: {
+                    "archive_id": string,"item_id": string,"quantity": number,"request_id": string,"unit": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "archive_id": string,"item_id": string,"quantity": number,"request_id": string,"unit": string
+                  }
+                  Update: {
+                    "archive_id"?: string,"item_id"?: string,"quantity"?: number,"request_id"?: string,"unit"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "demand_requirements_archive_id_fkey"
+      columns: ["archive_id"]
+isOneToOne: false
+      referencedRelation: "mrf_archive_snapshots"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "demand_requirements_request_id_fkey"
+      columns: ["request_id"]
+isOneToOne: false
+      referencedRelation: "demand_heads"
+      referencedColumns: ["request_id"]
+    }
+                  ]
                 },"document_counters": {
                   Row: {
                     "last_value": number,"project_id": string,"series": string
@@ -270,20 +364,116 @@ isOneToOne: false
                   Relationships: [
 
                   ]
-                },"quotation_drafts": {
+                },"quotation_archive_jobs": {
                   Row: {
-                    "body": NonNullable<Json>,"checked": Json | null,"content_version": number,"created_at": string,"creator_id": string,"creator_name": string,"current_files": (string)[],"file_version": number,"id": string,"matches": NonNullable<Json>,"request_id": string,"state": string,"supplier_id": string,"version": number,"quotation_ready_files": boolean | null
+                    "actor": NonNullable<Json>,"attempts": NonNullable<Json>,"checkpoint": NonNullable<Json>,"dispatched_at": string | null,"folder_mapping_id": string,"id": string,"lease": string | null,"lease_until": string | null,"message": string | null,"original_actor": NonNullable<Json>,"revision_id": string,"state": string
                   }
-                  ComputedFields: "quotation_ready_files"
+                  ComputedFields: never
                   Insert: {
-                    "body": NonNullable<Json>,"checked"?: Json | null,"content_version"?: number,"created_at"?: string,"creator_id": string,"creator_name": string,"current_files"?: (string)[],"file_version"?: number,"id": string,"matches"?: NonNullable<Json>,"request_id": string,"state"?: string,"supplier_id": string,"version"?: number
+                    "actor": NonNullable<Json>,"attempts"?: NonNullable<Json>,"checkpoint"?: NonNullable<Json>,"dispatched_at"?: string | null,"folder_mapping_id": string,"id"?: string,"lease"?: string | null,"lease_until"?: string | null,"message"?: string | null,"original_actor": NonNullable<Json>,"revision_id": string,"state"?: string
                   }
                   Update: {
-                    "body"?: NonNullable<Json>,"checked"?: Json | null,"content_version"?: number,"created_at"?: string,"creator_id"?: string,"creator_name"?: string,"current_files"?: (string)[],"file_version"?: number,"id"?: string,"matches"?: NonNullable<Json>,"request_id"?: string,"state"?: string,"supplier_id"?: string,"version"?: number
+                    "actor"?: NonNullable<Json>,"attempts"?: NonNullable<Json>,"checkpoint"?: NonNullable<Json>,"dispatched_at"?: string | null,"folder_mapping_id"?: string,"id"?: string,"lease"?: string | null,"lease_until"?: string | null,"message"?: string | null,"original_actor"?: NonNullable<Json>,"revision_id"?: string,"state"?: string
                   }
                   Relationships: [
                     {
+      foreignKeyName: "quotation_archive_jobs_folder_mapping_id_fkey"
+      columns: ["folder_mapping_id"]
+isOneToOne: false
+      referencedRelation: "project_document_folders"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "quotation_archive_jobs_revision_id_fkey"
+      columns: ["revision_id"]
+isOneToOne: true
+      referencedRelation: "quotation_revisions"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"quotation_archives": {
+                  Row: {
+                    "completed_at": string,"file_id": string,"folder_mapping_id": string,"manifest": NonNullable<Json>,"revision_id": string,"sha256": string,"size": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "completed_at"?: string,"file_id": string,"folder_mapping_id": string,"manifest": NonNullable<Json>,"revision_id": string,"sha256": string,"size": number
+                  }
+                  Update: {
+                    "completed_at"?: string,"file_id"?: string,"folder_mapping_id"?: string,"manifest"?: NonNullable<Json>,"revision_id"?: string,"sha256"?: string,"size"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "quotation_archives_folder_mapping_id_fkey"
+      columns: ["folder_mapping_id"]
+isOneToOne: false
+      referencedRelation: "project_document_folders"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "quotation_archives_revision_id_fkey"
+      columns: ["revision_id"]
+isOneToOne: true
+      referencedRelation: "quotation_revisions"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"quotation_drafts": {
+                  Row: {
+                    "body": NonNullable<Json>,"checked": Json | null,"content_version": number,"copied_from_revision": string | null,"created_at": string,"creator_id": string,"creator_name": string,"current_files": (string)[],"family_id": string,"file_version": number,"id": string,"matches": NonNullable<Json>,"request_id": string,"state": string,"supplier_id": string,"version": number,"quotation_ready_files": boolean | null
+                  }
+                  ComputedFields: "quotation_ready_files"
+                  Insert: {
+                    "body": NonNullable<Json>,"checked"?: Json | null,"content_version"?: number,"copied_from_revision"?: string | null,"created_at"?: string,"creator_id": string,"creator_name": string,"current_files"?: (string)[],"family_id": string,"file_version"?: number,"id": string,"matches"?: NonNullable<Json>,"request_id": string,"state"?: string,"supplier_id": string,"version"?: number
+                  }
+                  Update: {
+                    "body"?: NonNullable<Json>,"checked"?: Json | null,"content_version"?: number,"copied_from_revision"?: string | null,"created_at"?: string,"creator_id"?: string,"creator_name"?: string,"current_files"?: (string)[],"family_id"?: string,"file_version"?: number,"id"?: string,"matches"?: NonNullable<Json>,"request_id"?: string,"state"?: string,"supplier_id"?: string,"version"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "quotation_drafts_copied_from_revision_fkey"
+      columns: ["copied_from_revision"]
+isOneToOne: false
+      referencedRelation: "quotation_revisions"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "quotation_drafts_family_id_fkey"
+      columns: ["family_id"]
+isOneToOne: false
+      referencedRelation: "quotation_families"
+      referencedColumns: ["id"]
+    },{
       foreignKeyName: "quotation_drafts_supplier_id_fkey"
+      columns: ["supplier_id"]
+isOneToOne: false
+      referencedRelation: "suppliers"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"quotation_families": {
+                  Row: {
+                    "current_quote_id": string | null,"id": string,"pending_quote_id": string | null,"request_id": string,"supplier_id": string,"version": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "current_quote_id"?: string | null,"id"?: string,"pending_quote_id"?: string | null,"request_id": string,"supplier_id": string,"version"?: number
+                  }
+                  Update: {
+                    "current_quote_id"?: string | null,"id"?: string,"pending_quote_id"?: string | null,"request_id"?: string,"supplier_id"?: string,"version"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "quotation_families_current_quote_id_fkey"
+      columns: ["current_quote_id"]
+isOneToOne: false
+      referencedRelation: "quotation_drafts"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "quotation_families_pending_quote_id_fkey"
+      columns: ["pending_quote_id"]
+isOneToOne: false
+      referencedRelation: "quotation_drafts"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "quotation_families_supplier_id_fkey"
       columns: ["supplier_id"]
 isOneToOne: false
       referencedRelation: "suppliers"
@@ -318,6 +508,26 @@ isOneToOne: false
       foreignKeyName: "quotation_files_quote_id_fkey"
       columns: ["quote_id"]
 isOneToOne: false
+      referencedRelation: "quotation_drafts"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"quotation_financial_reviews": {
+                  Row: {
+                    "calculation": NonNullable<Json>,"checked": Json | null,"file_version": number,"quote_id": string,"review": NonNullable<Json>,"source_version": number,"version": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "calculation": NonNullable<Json>,"checked"?: Json | null,"file_version": number,"quote_id": string,"review": NonNullable<Json>,"source_version": number,"version"?: number
+                  }
+                  Update: {
+                    "calculation"?: NonNullable<Json>,"checked"?: Json | null,"file_version"?: number,"quote_id"?: string,"review"?: NonNullable<Json>,"source_version"?: number,"version"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "quotation_financial_reviews_quote_id_fkey"
+      columns: ["quote_id"]
+isOneToOne: true
       referencedRelation: "quotation_drafts"
       referencedColumns: ["id"]
     }
@@ -375,6 +585,90 @@ isOneToOne: false
                   }
                   Relationships: [
 
+                  ]
+                },"quotation_revision_events": {
+                  Row: {
+                    "actor": NonNullable<Json>,"created_at": string,"id": string,"kind": string,"mrf_archive_id": string | null,"reason": string,"revision_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "actor": NonNullable<Json>,"created_at"?: string,"id"?: string,"kind": string,"mrf_archive_id"?: string | null,"reason"?: string,"revision_id": string
+                  }
+                  Update: {
+                    "actor"?: NonNullable<Json>,"created_at"?: string,"id"?: string,"kind"?: string,"mrf_archive_id"?: string | null,"reason"?: string,"revision_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "quotation_revision_events_mrf_archive_id_fkey"
+      columns: ["mrf_archive_id"]
+isOneToOne: false
+      referencedRelation: "mrf_archive_snapshots"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "quotation_revision_events_revision_id_fkey"
+      columns: ["revision_id"]
+isOneToOne: false
+      referencedRelation: "quotation_revisions"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"quotation_revision_files": {
+                  Row: {
+                    "file_id": string,"metadata": NonNullable<Json>,"revision_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "file_id": string,"metadata": NonNullable<Json>,"revision_id": string
+                  }
+                  Update: {
+                    "file_id"?: string,"metadata"?: NonNullable<Json>,"revision_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "quotation_revision_files_file_id_fkey"
+      columns: ["file_id"]
+isOneToOne: false
+      referencedRelation: "quotation_files"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "quotation_revision_files_revision_id_fkey"
+      columns: ["revision_id"]
+isOneToOne: false
+      referencedRelation: "quotation_revisions"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"quotation_revisions": {
+                  Row: {
+                    "family_id": string,"file_version": number,"finalized_at": string,"finalized_by": string,"finalized_name": string,"financial_version": number,"id": string,"mrf_archive_id": string,"number": number,"quote_id": string,"snapshot": NonNullable<Json>,"source_version": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "family_id": string,"file_version": number,"finalized_at"?: string,"finalized_by": string,"finalized_name": string,"financial_version": number,"id"?: string,"mrf_archive_id": string,"number": number,"quote_id": string,"snapshot": NonNullable<Json>,"source_version": number
+                  }
+                  Update: {
+                    "family_id"?: string,"file_version"?: number,"finalized_at"?: string,"finalized_by"?: string,"finalized_name"?: string,"financial_version"?: number,"id"?: string,"mrf_archive_id"?: string,"number"?: number,"quote_id"?: string,"snapshot"?: NonNullable<Json>,"source_version"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "quotation_revisions_family_id_fkey"
+      columns: ["family_id"]
+isOneToOne: false
+      referencedRelation: "quotation_families"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "quotation_revisions_mrf_archive_id_fkey"
+      columns: ["mrf_archive_id"]
+isOneToOne: false
+      referencedRelation: "mrf_archive_snapshots"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "quotation_revisions_quote_id_fkey"
+      columns: ["quote_id"]
+isOneToOne: true
+      referencedRelation: "quotation_drafts"
+      referencedColumns: ["id"]
+    }
                   ]
                 },"request_document_state": {
                   Row: {
@@ -526,6 +820,12 @@ isOneToOne: false
 "current_user_authorized":
 { Args: Record<PropertyKey, never>; Returns: boolean
                            },
+"demand_apply":
+{ Args: { "actor": Json,"changes": Json,"expected_version": string,"operation": string,"reason": string,"target": string }; Returns: Json
+                           },
+"demand_snapshot":
+{ Args: { "target": string }; Returns: Json
+                           },
 "document_actor_snapshot":
 { Args: { "actor": Json }; Returns: Json
                            },
@@ -604,11 +904,26 @@ isOneToOne: false
 "quotation_actor":
 { Args: { "actor": Json,"writing"?: boolean }; Returns: string
                            },
+"quotation_archive_allowed":
+{ Args: { "actor": Json }; Returns: boolean
+                           },
+"quotation_archive_dispatch":
+{ Args: Record<PropertyKey, never>; Returns: Json
+                           },
+"quotation_archive_worker":
+{ Args: { "action": string,"job_id": string,"lease_id"?: string,"patch"?: Json }; Returns: Json
+                           },
 "quotation_audit":
 { Args: { "actor": Json,"details": Json,"kind": string,"operation": string,"target": string }; Returns: undefined
                            },
 "quotation_body":
 { Args: { "parent": string,"value": Json }; Returns: Json
+                           },
+"quotation_capture_command":
+{ Args: { "actor": Json,"command": Json }; Returns: Json
+                           },
+"quotation_capture_view":
+{ Args: { "target": string }; Returns: Json
                            },
 "quotation_command":
 { Args: { "actor": Json,"command": Json }; Returns: Json
@@ -631,6 +946,12 @@ isOneToOne: false
 "quotation_files_command":
 { Args: { "actor": Json,"command": Json }; Returns: Json
                            },
+"quotation_financial_command":
+{ Args: { "actor": Json,"calculation"?: Json,"command": Json }; Returns: Json
+                           },
+"quotation_financial_source":
+{ Args: { "actor": Json,"quote_id": string }; Returns: Json
+                           },
 "quotation_job_allowed":
 { Args: { "actor": Json,"target": string }; Returns: boolean
                            },
@@ -639,10 +960,12 @@ isOneToOne: false
               "body": NonNullable<Json>,
 "checked": Json | null,
 "content_version": number,
+"copied_from_revision": string | null,
 "created_at": string,
 "creator_id": string,
 "creator_name": string,
 "current_files": (string)[],
+"family_id": string,
 "file_version": number,
 "id": string,
 "matches": NonNullable<Json>,
@@ -657,14 +980,26 @@ isOneToOne: false
         isOneToOne: true
         isSetofReturn: false
       } },
+"quotation_mrf_archive":
+{ Args: { "target": string }; Returns: string
+                           },
 "quotation_notify":
 { Args: Record<PropertyKey, never>; Returns: undefined
                            },
 "quotation_ready_files":
 { Args: { "q": Omit<Database["private"]['Tables']["quotation_drafts"]['Row'], Database["private"]['Tables']["quotation_drafts"]['ComputedFields']> }; Returns: boolean
                            },
+"quotation_review_pdf":
+{ Args: { "actor": Json,"revision_id": string }; Returns: Json
+                           },
+"quotation_revision_blockers":
+{ Args: { "target": string }; Returns: Json
+                           },
 "quotation_transfer":
 { Args: { "action": string,"actor": Json,"file_id": string,"lease_id"?: string,"patch"?: Json }; Returns: Json
+                           },
+"quotation_try_activate":
+{ Args: { "actor": Json,"reason"?: string,"target": string }; Returns: boolean
                            },
 "quotation_view":
 { Args: { "target": string }; Returns: Json
@@ -987,6 +1322,12 @@ isOneToOne: false
 "projects_read":
 { Args: { "actor": Json,"target_project"?: string }; Returns: Json
                            },
+"quotation_archive_dispatch":
+{ Args: Record<PropertyKey, never>; Returns: Json
+                           },
+"quotation_archive_worker":
+{ Args: { "action": string,"job_id": string,"lease_id"?: string,"patch"?: Json }; Returns: Json
+                           },
 "quotation_command":
 { Args: { "actor": Json,"command": Json }; Returns: Json
                            },
@@ -998,6 +1339,15 @@ isOneToOne: false
                            },
 "quotation_files_command":
 { Args: { "actor": Json,"command": Json }; Returns: Json
+                           },
+"quotation_financial_command":
+{ Args: { "actor": Json,"calculation"?: Json,"command": Json }; Returns: Json
+                           },
+"quotation_financial_source":
+{ Args: { "actor": Json,"quote_id": string }; Returns: Json
+                           },
+"quotation_review_pdf":
+{ Args: { "actor": Json,"revision_id": string }; Returns: Json
                            },
 "quotation_transfer":
 { Args: { "action": string,"actor": Json,"file_id": string,"lease_id"?: string,"patch"?: Json }; Returns: Json

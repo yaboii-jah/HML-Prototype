@@ -8,3 +8,14 @@ async function processStep(jobId: string) {
   const { processQuotationFileJob } = await import("../quotations/files");
   await processQuotationFileJob(jobId);
 }
+
+export async function quotationArchiveWorkflow(jobId: string) {
+  "use workflow";
+  await archiveStep(jobId);
+}
+async function archiveStep(jobId: string) {
+  "use step";
+  const { processQuotationArchive } =
+    await import("../quotations/revision-archives");
+  await processQuotationArchive(jobId);
+}

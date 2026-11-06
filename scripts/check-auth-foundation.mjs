@@ -3,6 +3,7 @@ import { checkMrfDocuments } from './check-mrf-documents.mjs';
 import { checkSupplierDirectory } from './check-supplier-directory.mjs';
 import { checkMrfReview } from './check-mrf-review.mjs';
 import { checkQuotationDrafts } from './check-quotation-drafts.mjs';
+import { checkQuotationFinalization } from './check-quotation-finalization.mjs';
 import { fakeDrive } from './helpers/fake-drive.mjs';
 import assert from 'node:assert/strict';
 import { randomUUID, randomBytes } from 'node:crypto';
@@ -288,6 +289,8 @@ export async function checkAuthFoundation({ api, anon, secret, mailpit, sql, env
     checks.push('mrf-review-browser-workflow');
     quotationFixture = await checkQuotationDrafts({ browser, second, client, login, logout, sql, base, drive, ...reviewed });
     checks.push('quotation-browser-workflow');
+    quotationFixture.financial = await checkQuotationFinalization({ browser, second, client, login, logout, sql, base, drive, ...reviewed });
+    checks.push('quotation-finalization-browser');
     await checkSupplierDirectory({ browser, second, client, login, logout, sessionCookie, sql });
     checks.push('supplier-browser');
     for (const browser of browsers) browser.assertIsolated();
