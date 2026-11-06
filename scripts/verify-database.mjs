@@ -4,6 +4,7 @@ import { checkQuotationFinalizationRaces } from './check-quotation-finalization-
 import { checkRequestRaces } from './check-request-races.mjs';
 import { checkDemandRaces } from './check-demand-races.mjs';
 import { checkStockRaces } from './check-stock-races.mjs';
+import { retainedStateQuery } from './helpers/staging-snapshot.mjs';
 import { checkDocumentRaces } from './check-document-races.mjs';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
@@ -85,6 +86,12 @@ try {
   await configureDisposableRealtime(project, network, tenants[0]);
   assert.equal((await sql("select bool_and(private_only) from _realtime.tenants;", { user: 'supabase_admin' })).output.trim(), 't');
   console.log('Checking SQL constraints, permissions and session revocation.');
+  const retained = JSON.parse((await sql(retainedStateQuery())).output.trim());
+  assert.ok(Object.keys(retained.records).length > 50, 'Full snapshot crosses the former function-argument limit');
+  for (const name of ['stockAccounts', 'stockMovements', 'stockReservations', 'stockOperations', 'stockEvents']) {
+    assert.equal(retained.records[name].count, 0, 'Snapshot includes empty new stock table: ' + name);
+  }
+  checks.push('retained-snapshot-sql');
   await sql(await readFile('supabase/checks/staging.sql', 'utf8'));
   await sql(await readFile('supabase/checks/sessions.sql', 'utf8'));
   await sql(await readFile('supabase/checks/accounts.sql', 'utf8'));

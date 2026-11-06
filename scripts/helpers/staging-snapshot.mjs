@@ -2,8 +2,7 @@ import { requireStaging, STAGING_REF } from './supabase-target.mjs';
 
 /** Read-only retained-state evidence. No Auth passwords, tokens or raw business
  * rows are returned. Application rows are compared using deterministic hashes. */
-export async function stagingSnapshot({ includeProjectOperations = true, includeDocuments = true, includeReview = true, includeSuppliers = true, includeQuotations = true, includeQuotationFinalization = true, includeDemand = true, includeStock = true } = {}) {
-  requireStaging(process.env);
+export function retainedStateQuery({ includeProjectOperations = true, includeDocuments = true, includeReview = true, includeSuppliers = true, includeQuotations = true, includeQuotationFinalization = true, includeDemand = true, includeStock = true } = {}) {
   const tables = [
     ['profiles', 'public.profiles', 'user_id'], ['grants', 'public.role_grants', 'user_id,role'],
     ['assignments', 'public.project_assignments', 'user_id,project_id'], ['projects', 'public.projects', 'id'],
@@ -50,11 +49,22 @@ export async function stagingSnapshot({ includeProjectOperations = true, include
     const row = name === 'requests' && !includeReview ? "to_jsonb(t)-'status'-'correction_kind'-'correction_state'-'submission_id'"
       : name === 'quotationDrafts' && !includeQuotationFinalization ? "to_jsonb(t)-'family_id'-'copied_from_revision'" : 'to_jsonb(t)';
     return `'${name}',(select jsonb_build_object('count',count(*),'digest',md5(coalesce(jsonb_agg(${row} order by ${order})::text,'[]'))) from ${table} t)`;
-  }).join(',');
-  const query = `select jsonb_build_object('records',jsonb_build_object(${hashes}),
+  });
+  // Postgres limits function calls to 100 arguments. Keep each object under
+  // that bound while retaining every table in the same read-only statement.
+  const chunks = [];
+  for (let offset = 0; offset < hashes.length; offset += 40) {
+    chunks.push(`jsonb_build_object(${hashes.slice(offset, offset + 40).join(',')})`);
+  }
+  return `select jsonb_build_object('records',(${chunks.join(' || ')}),
     'authCounts',jsonb_build_array((select count(*) from auth.users),(select count(*) from auth.sessions)),
     'profiles',(select coalesce(jsonb_agg(jsonb_build_array(user_id,version::text,access_revision::text,is_active) order by user_id),'[]'::jsonb) from public.profiles),
     'guard',(select revision::text from private.account_guard where id)) as snapshot;`;
+}
+
+export async function stagingSnapshot(options = {}) {
+  requireStaging(process.env);
+  const query = retainedStateQuery(options);
   const response = await fetch(`https://api.supabase.com/v1/projects/${STAGING_REF}/database/query`, {
     method: 'POST', headers: { Authorization: `Bearer ${process.env.SUPABASE_ACCESS_TOKEN}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ query, read_only: true }), signal: AbortSignal.timeout(30000),
