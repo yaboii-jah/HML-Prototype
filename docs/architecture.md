@@ -123,7 +123,7 @@ The first claim permanently registers downstream MRF use, including suitability 
 
 ### Stock Ledger and Reservations Foundation
 
-Unit 4.7 implements a private project-stock foundation; verification status is in the tracker. UUID accounts group exact trimmed/case-insensitive descriptions and units within a project, preserving internal spaces, unit labels and initial display labels. A bounded hash index narrows identity lookup, while a serialized database trigger compares full normalized text, so hashes never establish identity. Zero-balance accounts and all history remain; stock references prevent project deletion.
+Unit 4.7 is verified complete at `e749844` on 2026-11-06 as a private project-stock foundation; evidence is in the tracker. UUID accounts group exact trimmed/case-insensitive descriptions and units within a project, preserving internal spaces, unit labels and initial display labels. A bounded hash index narrows identity lookup, while a serialized database trigger compares full normalized text, so hashes never establish identity. Zero-balance accounts and all history remain; stock references prevent project deletion.
 
 Immutable signed movements and retained transfer reservations produce exact on-hand, reserved and available quantities. On-hand must cover reservations, with no rounding/tolerance/clamping. Dispatch consumes its own existing reservation and debits stock in one batch; explicit reductions may accompany negative corrections. Pauses, revocation and trip cancellation do not themselves release stock. Warehouse custody stays receipt-bound in later workflows, not pooled project stock. Posting timestamps are server-owned; corrections append new reasoned movements.
 
