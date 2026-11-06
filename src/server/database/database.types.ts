@@ -1188,6 +1188,9 @@ isOneToOne: false
 "purchasing_command":
 { Args: { "actor": Json,"calculation"?: Json,"command": Json,"snapshot"?: Json }; Returns: Json
                            },
+"purchasing_po_body":
+{ Args: { "body": Json,"quote": string,"target": string }; Returns: Json
+                           },
 "purchasing_read":
 { Args: { "actor": Json,"target_request"?: string }; Returns: Json
                            },

@@ -216,7 +216,7 @@ export async function checkPurchasing({
     "saved PO preparation confirmation",
   );
   await second.wait(
-    "return !document.querySelector('dialog[open]')&&document.body.textContent.includes('Saved preparation confirmed.')",
+    "return !document.querySelector('dialog[open]')&&document.body.textContent.includes('Saved preparation confirmed. Accounting submission is not yet available.')",
   );
   let po = (await view()).records.find((r) => r.id === poId);
   const preview = await fetch(
