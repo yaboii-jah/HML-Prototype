@@ -738,6 +738,106 @@ isOneToOne: false
                   Relationships: [
 
                   ]
+                },"stock_accounts": {
+                  Row: {
+                    "description": string,"description_key": string | null,"id": string,"project_id": string,"unit": string,"unit_key": string | null,"version": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "description": string,"description_key"?: never,"id": string,"project_id": string,"unit": string,"unit_key"?: never,"version"?: number
+                  }
+                  Update: {
+                    "description"?: string,"description_key"?: never,"id"?: string,"project_id"?: string,"unit"?: string,"unit_key"?: never,"version"?: number
+                  }
+                  Relationships: [
+
+                  ]
+                },"stock_events": {
+                  Row: {
+                    "actor_id": string,"actor_name": string,"actor_role": string,"after_state": NonNullable<Json>,"before_state": NonNullable<Json>,"occurred_at": string,"operation_id": string,"reason": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "actor_id": string,"actor_name": string,"actor_role": string,"after_state": NonNullable<Json>,"before_state": NonNullable<Json>,"occurred_at"?: string,"operation_id": string,"reason": string
+                  }
+                  Update: {
+                    "actor_id"?: string,"actor_name"?: string,"actor_role"?: string,"after_state"?: NonNullable<Json>,"before_state"?: NonNullable<Json>,"occurred_at"?: string,"operation_id"?: string,"reason"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "stock_events_operation_id_fkey"
+      columns: ["operation_id"]
+isOneToOne: true
+      referencedRelation: "stock_operations"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"stock_movements": {
+                  Row: {
+                    "account_id": string,"id": string,"operation_id": string,"posted_at": string,"posting_kind": string,"quantity": number,"reservation_id": string | null,"source_id": string,"source_kind": string,"source_line_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "account_id": string,"id"?: string,"operation_id": string,"posted_at"?: string,"posting_kind": string,"quantity": number,"reservation_id"?: string | null,"source_id": string,"source_kind": string,"source_line_id": string
+                  }
+                  Update: {
+                    "account_id"?: string,"id"?: string,"operation_id"?: string,"posted_at"?: string,"posting_kind"?: string,"quantity"?: number,"reservation_id"?: string | null,"source_id"?: string,"source_kind"?: string,"source_line_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "stock_movements_account_id_fkey"
+      columns: ["account_id"]
+isOneToOne: false
+      referencedRelation: "stock_accounts"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "stock_movements_operation_id_fkey"
+      columns: ["operation_id"]
+isOneToOne: false
+      referencedRelation: "stock_operations"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "stock_movements_reservation_id_fkey"
+      columns: ["reservation_id"]
+isOneToOne: false
+      referencedRelation: "stock_reservations"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"stock_operations": {
+                  Row: {
+                    "actor_id": string,"effect": NonNullable<Json>,"id": string,"payload": NonNullable<Json>,"result": NonNullable<Json>
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "actor_id": string,"effect": NonNullable<Json>,"id": string,"payload": NonNullable<Json>,"result": NonNullable<Json>
+                  }
+                  Update: {
+                    "actor_id"?: string,"effect"?: NonNullable<Json>,"id"?: string,"payload"?: NonNullable<Json>,"result"?: NonNullable<Json>
+                  }
+                  Relationships: [
+
+                  ]
+                },"stock_reservations": {
+                  Row: {
+                    "account_id": string,"id": string,"owner_id": string,"owner_kind": string,"owner_line_id": string,"quantity": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "account_id": string,"id": string,"owner_id": string,"owner_kind": string,"owner_line_id": string,"quantity": number
+                  }
+                  Update: {
+                    "account_id"?: string,"id"?: string,"owner_id"?: string,"owner_kind"?: string,"owner_line_id"?: string,"quantity"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "stock_reservations_account_id_fkey"
+      columns: ["account_id"]
+isOneToOne: false
+      referencedRelation: "stock_accounts"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"supplier_operations": {
                   Row: {
                     "actor_id": string,"id": string,"payload": NonNullable<Json>,"result": Json | null,"supplier_id": string
@@ -1039,6 +1139,12 @@ isOneToOne: false
                            },
 "session_context":
 { Args: Record<PropertyKey, never>; Returns: Json
+                           },
+"stock_apply":
+{ Args: { "accounts": Json,"actor": Json,"operation": string,"postings": Json,"reason": string,"reservations": Json }; Returns: Json
+                           },
+"stock_snapshot":
+{ Args: { "ids": (string)[] }; Returns: Json
                            },
 "supplier_command":
 { Args: { "actor": Json,"command": Json }; Returns: Json

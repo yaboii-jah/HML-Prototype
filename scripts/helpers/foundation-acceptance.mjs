@@ -1,10 +1,11 @@
 import { requireCurrentEvidence } from './verification-evidence.mjs';
 
 export const standardChecks = ['toolchain', 'lint', 'typegen', 'typecheck', 'unit', 'build'];
-export const databaseChecks = ['demand-sql', 'demand-races', 'quotation-finalization-sql', 'quotation-finalization-races', 'quotation-sql', 'quotation-races', 'rollback-sql', 'constraints-auth-data-api', 'types', 'auth-browser-email',
+export const databaseChecks = ['retained-snapshot-sql', 'stock-sql', 'stock-races', 'demand-sql', 'demand-races', 'quotation-finalization-sql', 'quotation-finalization-races', 'quotation-sql', 'quotation-races', 'rollback-sql', 'constraints-auth-data-api', 'types', 'auth-browser-email',
   'supplier-sql', 'supplier-races', 'request-sql', 'request-races', 'mrf-review-sql', 'document-sql', 'document-races', 'project-races', 'account-races', 'realtime-protocol', 'realtime-races'];
 export const authChecks = ['quotation-finalization-browser', 'quotation-browser-workflow', 'supplier-browser', 'sessions', 'captured-email', 'accounts', 'projects', 'realtime-browser', 'shell-loading', 'http-roles-renewal', 'request-browser', 'document-browser-workflow', 'mrf-review-browser-workflow', 'isolation'];
 export const acceptanceRequirements = {
+  'stock-ledger-reservations': ['stock-sql', 'stock-races', 'retained-snapshot-sql'],
   'shared-demand-allocation': ['demand-sql', 'demand-races'],
   'quotation-finalization-revisions': ['quotation-finalization-sql', 'quotation-finalization-races', 'quotation-finalization-browser'],
   'quotation-capture-originals': ['quotation-sql', 'quotation-races', 'quotation-browser-workflow'],

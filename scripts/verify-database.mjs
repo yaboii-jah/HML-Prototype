@@ -3,6 +3,8 @@ import { checkQuotationRaces } from './check-quotation-races.mjs';
 import { checkQuotationFinalizationRaces } from './check-quotation-finalization-races.mjs';
 import { checkRequestRaces } from './check-request-races.mjs';
 import { checkDemandRaces } from './check-demand-races.mjs';
+import { checkStockRaces } from './check-stock-races.mjs';
+import { retainedStateQuery } from './helpers/staging-snapshot.mjs';
 import { checkDocumentRaces } from './check-document-races.mjs';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
@@ -84,6 +86,12 @@ try {
   await configureDisposableRealtime(project, network, tenants[0]);
   assert.equal((await sql("select bool_and(private_only) from _realtime.tenants;", { user: 'supabase_admin' })).output.trim(), 't');
   console.log('Checking SQL constraints, permissions and session revocation.');
+  const retained = JSON.parse((await sql(retainedStateQuery())).output.trim());
+  assert.ok(Object.keys(retained.records).length > 50, 'Full snapshot crosses the former function-argument limit');
+  for (const name of ['stockAccounts', 'stockMovements', 'stockReservations', 'stockOperations', 'stockEvents']) {
+    assert.equal(retained.records[name].count, 0, 'Snapshot includes empty new stock table: ' + name);
+  }
+  checks.push('retained-snapshot-sql');
   await sql(await readFile('supabase/checks/staging.sql', 'utf8'));
   await sql(await readFile('supabase/checks/sessions.sql', 'utf8'));
   await sql(await readFile('supabase/checks/accounts.sql', 'utf8'));
@@ -97,6 +105,8 @@ try {
   await sql(await readFile('supabase/checks/quotation-finalization.sql', 'utf8'));
   await sql(await readFile('supabase/checks/demand.sql', 'utf8'));
   checks.push('demand-sql');
+  await sql(await readFile('supabase/checks/stock.sql', 'utf8'));
+  checks.push('stock-sql');
   checks.push('quotation-finalization-sql');
   checks.push('quotation-sql');
   checks.push('supplier-sql');
@@ -259,6 +269,8 @@ try {
   checks.push('auth-browser-email');
   await checkDemandRaces({ sql, database, environment });
   checks.push('demand-races');
+  await checkStockRaces({ sql, database, environment });
+  checks.push('stock-races');
   await checkQuotationFinalizationRaces({ sql, database, environment, fixture: quotationFixture.financial });
   checks.push('quotation-finalization-races');
   await checkQuotationRaces({ sql, database, environment, fixture: quotationFixture });

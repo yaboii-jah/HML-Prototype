@@ -7,8 +7,8 @@ Agreed 2026-11-03. This active companion owns the operational migration sequence
 Read the five core documents required by [AGENTS.md](../AGENTS.md), the checklist and this guide before planning, implementing, reviewing or resuming step 4.
 
 1. Reconcile Git status, the tracker and the actual implementation. Preserve unrelated pending work and the completed foundation planning retirement.
-2. Check the user's latest instruction before starting a unit. **Unit 4.6 is verified complete at `7e9b3a0` on 2026-11-06, within its internal foundation boundary. Unit 4.7 needs scoped planning and separate implementation authorization; merging and production remain separate.**
-3. Use the sequence below as the roadmap. Units through 4.6 have detailed scopes; later units require scoped planning and acceptance criteria before implementation.
+2. Check the user's latest instruction before starting a unit. **Unit 4.7 is verified complete at `e749844` on 2026-11-06 within its internal foundation boundary. Unit 4.8 needs scoped planning, applicable company-policy decisions and separate implementation authorization; merging and production remain separate.**
+3. Use the sequence below as the roadmap. Units through 4.7 have detailed scopes; later units require scoped planning and acceptance criteria before implementation.
 4. Verify a unit within its boundary, record actual results in the tracker, then check its completion box. A documentation checkpoint does not complete an operational workflow or checklist step 4.
 5. Retire this companion after the milestone is complete, preserving durable contracts in the core documents and completion evidence in the tracker.
 
@@ -38,7 +38,7 @@ The listed order is the default. Record any agreed scope/order revision here and
 | **4.5a Capture and originals** | [x] | Completed 2026-11-05 at `26305c3`: automated/staging checks, all three explicit manual confirmations and source-bound combined acceptance pass. |
 | **4.5b Financial finalization** | [x] | Completed 2026-11-06 at `8b8f32a`: local/four-job CI/disposable/live-Drive/staging checks, all three manual groups with no skips and matching combined acceptance pass. |
 | **4.6 Shared demand allocation** | [x] | Completed 2026-11-06 at `7e9b3a0`: private exact demand/claim contract passes local/four-job CI/full disposable/staging checks and scoped combined internal-demand acceptance. No staff allocation workflow is enabled. |
-| **4.7 Stock ledger and reservations** | [ ] | Shared stock availability and reservation rules before enabling competing inventory consumers. |
+| **4.7 Stock ledger and reservations** | [x] | Completed 2026-11-06 at `e749844`: exact private project-stock ledger/reservations pass local/four-job CI/full disposable/types/staging and scoped combined internal-stock acceptance. No staff stock workflow is enabled. |
 | **4.8 Awards and PO drafts** | [ ] | Supplier awards, split purchasing and PO preparation using verified quotation archives and the shared demand rules. |
 | **4.9 Accounting approval and commitments** | [ ] | PO review/returns, payment terms and transactional budget commitments under confirmed company policy. |
 | **4.10 Supplier issuance** | [ ] | Protected issuance after approval and completion of the required MRF/PO archives. |
@@ -258,6 +258,20 @@ The user locked all six interview decisions and requested implementation on 2026
 - Preserve foundation-guard/MRF lock order, opaque versions, stable retries, atomic immutable actor history and rollback safety. Exact quantities remain strings at internal interfaces.
 
 **Done when:** exact-quantity/domain, rollback SQL and observed-lock contention/conversion/retry/correction checks pass at both isolation levels; standard local/public-browser, four-job CI, full disposable integration/types and retained-state-safe staging parity pass. Synthetic owning transactions verify the internal boundary; no new staff workflow exists to manually attest. Preserve earlier human attestations and their provenance. No new live provider capability is introduced. Record evidence in the tracker before checking 4.6.
+
+## 4.7 Stock Ledger and Reservations — Complete
+
+Completed 2026-11-06 at `e749844`: local lint/types/431 tests/build/public-browser, all four standard jobs, full disposable SQL/Auth/browser/Workflow/Realtime/type/race checks and staging parity pass. Exact CI-verified SQL is applied only to staging; retained state matches and new stock tables remain empty. `verify:foundation -- stock` passes. This accepts only the internal foundation; earlier staff/Drive attestations retain their provenance, and no new staff/provider attestation is claimed. Step 4 remains open; 4.8 needs separate scoped planning.
+
+Authorized 2026-11-06 after all six interview decisions were locked. Implement only the internal project-stock foundation, with no inventory UI, public mutation endpoint, opening-stock entry, warehouse pool or later owning workflow.
+
+- Use UUID stock accounts unique by project and trimmed/case-insensitive description/unit. Preserve internal spaces and distinct unit labels. Preserve initial display labels; retain zero-balance identities/history and restrictive project references.
+- Immutable signed movements receive server posting timestamps. Exact decimal-string quantities produce on-hand, reserved and available balances; require on-hand >= reserved >= 0. Corrections add reasoned movements; no backdating/edit/delete interface.
+- Source-release requests reserve stock; suitability and usage drafts do not. Reservations persist through pauses/revocation until explicit release/reduction/consumption. Dispatch consumes its own reservation with its debit atomically; trip cancellation alone does not release an allocation.
+- Private grouped operations carry expected account versions, stable transport/source identities, retry receipts and permanent actor history. A business source cannot post twice under a new operation UUID. Future checked owning commands validate business authority/source eligibility and commit their rows plus demand/stock changes together.
+- Follow guard/actor/session/project/MRF/account lock ordering. Joint synthetic Procurement transactions verify 4.6 atomicity. The narrow source-Site-to-destination-demand authorization adapter remains a 4.14 dependency; grant no destination access or impersonated actor.
+
+**Done when:** exact-quantity/domain, rollback SQL, source-identity/no-op/rollback/security and observed-lock reservation/usage/dispatch/access/project races pass at both isolation levels, alongside local/public-browser/four-job CI/full disposable/types and retained-state-safe staging parity. Extend scoped internal acceptance; preserve earlier human/Drive evidence without inventing new attestations. Record actual evidence before checking 4.7.
 
 ## Milestone Completion and Documentation Ownership
 

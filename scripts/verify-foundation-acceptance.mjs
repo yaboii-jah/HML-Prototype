@@ -3,14 +3,14 @@ import { verificationSource, requireCurrentEvidence } from './helpers/verificati
 import { standardAcceptance, databaseAcceptance, acceptanceRequirements } from './helpers/foundation-acceptance.mjs';
 
 const profile = process.argv[2] ?? 'local';
-if (!['local', 'standard', 'database', 'milestone', 'demand'].includes(profile) || process.argv.length > 3) throw Error('Use local, standard, database, milestone or demand.');
+if (!['local', 'standard', 'database', 'milestone', 'demand', 'stock'].includes(profile) || process.argv.length > 3) throw Error('Use local, standard, database, milestone, demand or stock.');
 const source = await verificationSource();
 const read = path => readFile('.verification/' + path, 'utf8').then(JSON.parse);
 await mkdir('.verification', { recursive: true });
 let result = { ...source, complete: false, passed: false, scope: profile };
 try {
   if (profile === 'database') result = databaseAcceptance(source, await read('database-ci.json'), await read('auth-foundation.json'));
-  else if (profile === 'milestone' || profile === 'demand') {
+  else if (profile === 'milestone' || profile === 'demand' || profile === 'stock') {
     const local = await read('acceptance-import/local/foundation-acceptance.json');
     requireCurrentEvidence(local, source, 'local');
     if (local.scope !== 'standard' || !local.browserRequired || local.environment.ci) throw Error('Local verification profile missing');
@@ -47,8 +47,8 @@ try {
     } else {
       // Internal 4.6 boundary only. Existing UI/Workflow/browser regressions are
       // still required above; this is not whole-operational/manual acceptance.
-      result = { ...source, complete: true, passed: true, scope: 'internal-demand', scenarios: database.scenarios,
-        humanReview: 'No new staff workflow in 4.6; earlier attestations remain historical and unchanged.',
+      result = { ...source, complete: true, passed: true, scope: profile === 'stock' ? 'internal-stock' : 'internal-demand', scenarios: database.scenarios,
+        humanReview: 'Internal foundation only; earlier staff attestations remain historical and unchanged.',
         evidence: ['acceptance-import/local/foundation-acceptance.json', ...evidence,
           'acceptance-import/database/foundation-acceptance.json', 'staging-acceptance.json'] };
     }

@@ -121,6 +121,14 @@ Private helpers have no direct browser or service-role grants and no public RPC 
 
 The first claim permanently registers downstream MRF use, including suitability holds. Released claims/history remain; document-only corrections cannot reset the material basis. Correction, expiry, deactivation or dispatch/receiving progress do not automatically release capacity. Explicit owning transitions may reduce/release existing claims while the MRF is paused; new/increased claims require the current approved archive. This foundation reserves neither source stock nor money.
 
+### Stock Ledger and Reservations Foundation
+
+Unit 4.7 is verified complete at `e749844` on 2026-11-06 as a private project-stock foundation; evidence is in the tracker. UUID accounts group exact trimmed/case-insensitive descriptions and units within a project, preserving internal spaces, unit labels and initial display labels. A bounded hash index narrows identity lookup, while a serialized database trigger compares full normalized text, so hashes never establish identity. Zero-balance accounts and all history remain; stock references prevent project deletion.
+
+Immutable signed movements and retained transfer reservations produce exact on-hand, reserved and available quantities. On-hand must cover reservations, with no rounding/tolerance/clamping. Dispatch consumes its own existing reservation and debits stock in one batch; explicit reductions may accompany negative corrections. Pauses, revocation and trip cancellation do not themselves release stock. Warehouse custody stays receipt-bound in later workflows, not pooled project stock. Posting timestamps are server-owned; corrections append new reasoned movements.
+
+Private grouped helpers check current actor/session/project access, native session deletion, expected account versions, stable operation receipts and immutable actor history. A business source identity prevents duplicate posting under new operation UUIDs; an exact batch replay returns its saved outcome without repeating reservation consumption. Future checked owning commands supply action/source/matching authorization and commit their records, demand and stock together under guard → actor/session → projects → MRF → stock account locks. No public mutation endpoint, direct browser/service-role grants, inventory UI or opening-stock workflow is added. Joint tests use authorized Procurement actors; source-Site review still needs the narrow 4.14 destination-demand authorization adapter.
+
 ## Storage Model
 
 - **Postgres:** The source of truth for users' application profiles, role and project assignments, projects, MRFs, quotations, purchase orders, budgets, payments, deliveries, stock, document references, audit events and workflow/job status. Related changes such as stock, budgets and document numbering need database transactions, concurrency control and safe retries.
