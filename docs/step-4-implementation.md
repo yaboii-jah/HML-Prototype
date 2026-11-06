@@ -7,7 +7,7 @@ Agreed 2026-11-03. This active companion owns the operational migration sequence
 Read the five core documents required by [AGENTS.md](../AGENTS.md), the checklist and this guide before planning, implementing, reviewing or resuming step 4.
 
 1. Reconcile Git status, the tracker and the actual implementation. Preserve unrelated pending work and the completed foundation planning retirement.
-2. Check the user's latest instruction before starting a unit. **Unit 4.5b and parent 4.5 are complete after explicit three-group manual acceptance and passing combined acceptance on 2026-11-06. Unit 4.6 requires scoped planning and separate implementation authorization; merging and production remain separate.**
+2. Check the user's latest instruction before starting a unit. **Unit 4.5b and parent 4.5 are complete. The user locked the 4.6 interview and authorized implementation on 2026-11-06. Only the internal demand foundation is authorized; merging and production remain separate.**
 3. Use the sequence below as the roadmap. Units through 4.5b have detailed scopes; later units require scoped planning and acceptance criteria before implementation.
 4. Verify a unit within its boundary, record actual results in the tracker, then check its completion box. A documentation checkpoint does not complete an operational workflow or checklist step 4.
 5. Retire this companion after the milestone is complete, preserving durable contracts in the core documents and completion evidence in the tracker.
@@ -244,6 +244,18 @@ For the targeted review, open an approved archived MRF through **Material reques
 1. **Financial review:** save the supplier reference/date/payment/delivery terms and source amounts; classify rows and adjustments, PHP/VAT basis, free items and exclusions. Compare material amounts, adjustments, included/added VAT, goods/services EWT and net with the supplier figures. Confirm that a mismatch or missing required review blocks finalization; select gross or net according to the source, save and explicitly confirm the financial review, then finalize.
 2. **Revisions and applicability:** verify finalized source/files remain read-only. Start a reasoned revision, renew cleared source/match/financial checks, and confirm the eligible predecessor stays current until replacement archiving completes. Check permanent withdrawal without predecessor restoration. After an MRF document correction is reapproved and archived, explicitly review and reconfirm applicability. In two Procurement sessions, review newer changes while preserving input/reasons before retrying.
 3. **Archives and access:** preview/download retained originals and the internal review PDF; compare its inputs, totals, reconciliation and original-file manifest with the screen. Check readable attributed history and any available archive failure/retry state. A non-Site reader can view the evidence without maintenance controls; Site Personnel cannot open quotation data or documents. Keep all retained QA files with their records.
+
+## 4.6 Shared Demand Allocation — Authorized
+
+The user locked all six interview decisions and requested implementation on 2026-11-06. Build a private foundation with no staff UI or public allocation endpoint. Units 4.7, 4.8 and later workflows remain separate.
+
+- Bind exact demand to stable approved MRF material identities, quantities and units. Purchases, saved awards, suitability holds and transfer allocations share one cap. No floating-point tolerance or financial rounding.
+- Saved awards consume demand immediately. Replace award-to-PO and suitability-to-transfer ownership atomically. Keep remaining purchasing demand distinct from unassigned demand, which additionally excludes saved awards.
+- Private transaction helpers create/change/release/replace claims alongside the owning business record. No direct browser/service-role grants. Future checked writers own authorization, source capacity, stock and lifecycle validation; this unit does not fabricate those workflows.
+- Blocked or paused work retains claims until an explicit authorized transition changes/releases them. Receiving or dispatch does not itself release demand. The first claim, including a suitability hold, permanently registers downstream use and restricts MRF correction to documents, even after release.
+- Preserve foundation-guard/MRF lock order, opaque versions, stable retries, atomic immutable actor history and rollback safety. Exact quantities remain strings at internal interfaces.
+
+**Done when:** exact-quantity/domain, rollback SQL and observed-lock contention/conversion/retry/correction checks pass at both isolation levels; standard local/public-browser, four-job CI, full disposable integration/types and retained-state-safe staging parity pass. Synthetic owning transactions verify the internal boundary; no new staff workflow exists to manually attest. Preserve earlier human attestations and their provenance. No new live provider capability is introduced. Record evidence in the tracker before checking 4.6.
 
 ## Milestone Completion and Documentation Ownership
 
