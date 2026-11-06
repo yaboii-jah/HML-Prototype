@@ -217,7 +217,7 @@ declare caller uuid; operation uuid:=(command->>'requestId')::uuid; target uuid:
   kind text:=command->>'type'; receipt private.purchasing_operations; payload jsonb; r private.purchasing_records; before_value jsonb;
   q private.quotation_drafts; revision private.quotation_revisions; family private.quotation_families; parent public.material_requests; project public.projects;
   current_version text; body jsonb; row jsonb; oldrow jsonb; changed boolean:=true; number bigint; po uuid; reason text; eligible boolean; folder uuid;
-  result jsonb; a private.comparison_artifacts; report_number bigint; created timestamptz:=clock_timestamp(); actor_snapshot jsonb;
+  result jsonb; artifact_row private.comparison_artifacts; report_number bigint; created timestamptz:=clock_timestamp(); actor_snapshot jsonb;
 begin
   perform set_config('lock_timeout','5s',true);
   update private.account_guard g set revision=g.revision+1 where g.id;
@@ -267,12 +267,12 @@ begin
     insert into private.comparison_artifacts(report_id,format,actor,original_actor,folder_mapping_id)
       select selected,format,actor,actor,folder from unnest(array['pdf','xlsx']) format;
   elsif kind='retryArtifact' then
-    select x.* into a from private.comparison_artifacts x join private.comparison_reports rp on rp.id=x.report_id where x.id=selected and rp.request_id=target for update of x;
-    if a.id is null or a.state not in('failed','paused') then raise exception 'Artifact is processing or complete' using errcode='P4804'; end if;
+    select x.* into artifact_row from private.comparison_artifacts x join private.comparison_reports rp on rp.id=x.report_id where x.id=selected and rp.request_id=target for update of x;
+    if artifact_row.id is null or artifact_row.state not in('failed','paused') then raise exception 'Artifact is processing or complete' using errcode='P4804'; end if;
     select id into folder from private.project_document_folders where project_id=parent.project_id and current;
     if folder is null then raise exception 'Project document folder required' using errcode='P4201'; end if;
-    update private.comparison_artifacts set attempts=attempts||jsonb_build_array(jsonb_build_object('actor',a.actor,'folder',a.folder_mapping_id,'checkpoint',a.checkpoint,'state',a.state,'message',a.message,'retriedAt',created,'retriedBy',actor_snapshot)),
-      actor=actor,folder_mapping_id=folder,checkpoint=case when folder=a.folder_mapping_id then a.checkpoint else '{}' end,state='pending',lease=null,lease_until=null,dispatched_at=null,message=null where id=selected;
+    update private.comparison_artifacts set attempts=attempts||jsonb_build_array(jsonb_build_object('actor',artifact_row.actor,'folder',artifact_row.folder_mapping_id,'checkpoint',artifact_row.checkpoint,'state',artifact_row.state,'message',artifact_row.message,'retriedAt',created,'retriedBy',actor_snapshot)),
+      actor=actor,folder_mapping_id=folder,checkpoint=case when folder=artifact_row.folder_mapping_id then artifact_row.checkpoint else '{}' end,state='pending',lease=null,lease_until=null,dispatched_at=null,message=null where id=selected;
   elsif kind in('saveAward','savePo','rebind') then
     select * into q from private.quotation_drafts where id=(command->>'quoteId')::uuid and request_id=target;
     select * into family from private.quotation_families where id=q.family_id for update;
