@@ -215,6 +215,9 @@ export async function checkPurchasing({
     async () => (await view()).records.find((r) => r.id === poId)?.checked,
     "saved PO preparation confirmation",
   );
+  await second.wait(
+    "return !document.querySelector('dialog[open]')&&document.body.textContent.includes('Saved preparation confirmed.')",
+  );
   let po = (await view()).records.find((r) => r.id === poId);
   const preview = await fetch(
     base + `/api/purchase-order-drafts/${poId}/preview?version=${po.version}`,

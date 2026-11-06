@@ -96,7 +96,6 @@ export function drawPoTextLayout(template: Awaited<ReturnType<typeof documentTem
       widths.forEach((cellWidth, index) => { box(sheet, x, top, cellWidth, 14, blue); write(sheet, [labels[index]], x, top + 3, cellWidth, "center", true, true); box(sheet, x, top + 14, cellWidth, height); write(sheet, content[index], x, top + 17, cellWidth, "center"); x += cellWidth; });
       top += 14 + height + 14;
     }
-    if (input.preview) sheet.drawText("PREVIEW — NOT FOR ISSUE", { x: 135, y: 85, font: bold, size: 20, opacity: .12 });
   };
   const widths = [59, 282, 29.5, 29.5, 70, 70];
   const heading = () => {
@@ -139,5 +138,7 @@ export function drawPoTextLayout(template: Awaited<ReturnType<typeof documentTem
     write(sheet, [label], 436, top + 3, 70, "left", total, total);
     box(sheet, 506, top, 70, 14, total ? blue : undefined); write(sheet, [amount], 506, top + 3, 70, "right", total, total); top += 14;
   }
-  template.footer(); return pdf;
+  template.footer();
+  if (input.preview) pdf.getPages().forEach(page => page.drawText("PREVIEW — NOT FOR ISSUE", { x: 135, y: 38, font: bold, size: 18, opacity: .3 }));
+  return pdf;
 }

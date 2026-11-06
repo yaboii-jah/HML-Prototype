@@ -157,7 +157,14 @@ export async function generatePurchasingComparisonPdf(
     newPage();
     const draw = (row: string[], header = false) => {
       const cells = row.length === 1 ? [row[0]] : row;
-      const columnWidths = row.length === 1 ? [728] : widths;
+      const columnWidths =
+        row.length === 1
+          ? [728]
+          : row.length === 2
+            ? [150, 578]
+            : row.length === 3
+              ? [150, 200, 378]
+              : widths;
       const wrapped = cells.map((cell, i) =>
         wrapText(cell, header ? bold : regular, fontSize, columnWidths[i] - 8),
       );
