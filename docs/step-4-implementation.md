@@ -235,6 +235,12 @@ Run local standard/public-browser checks, four-job CI and full disposable SQL/Au
 
 **Three new human groups:** (1) financial review/reconciliation/PHP/readiness; (2) immutable revisions/replacement/withdrawal/MRF reconfirmation/conflicts; (3) originals/internal PDF archives/history/recovery/access. Obtain explicit results and matching combined acceptance before checking 4.5b and parent 4.5. Step 4 remains open for later units.
 
+For the targeted review, open an approved archived MRF through **Material requests → Supplier quotations** with Procurement active. Retain the QA records and originals after review.
+
+1. **Financial review:** save the supplier reference/date/payment/delivery terms and source amounts; classify rows and adjustments, PHP/VAT basis, free items and exclusions. Compare material amounts, adjustments, included/added VAT, goods/services EWT and net with the supplier figures. Confirm that a mismatch or missing required review blocks finalization; select gross or net according to the source, save and explicitly confirm the financial review, then finalize.
+2. **Revisions and applicability:** verify finalized source/files remain read-only. Start a reasoned revision, renew cleared source/match/financial checks, and confirm the eligible predecessor stays current until replacement archiving completes. Check permanent withdrawal without predecessor restoration. After an MRF document correction is reapproved and archived, explicitly review and reconfirm applicability. In two Procurement sessions, review newer changes while preserving input/reasons before retrying.
+3. **Archives and access:** preview/download retained originals and the internal review PDF; compare its inputs, totals, reconciliation and original-file manifest with the screen. Check readable attributed history and any available archive failure/retry state. A non-Site reader can view the evidence without maintenance controls; Site Personnel cannot open quotation data or documents. Keep all retained QA files with their records.
+
 ## Milestone Completion and Documentation Ownership
 
 Keep permanent product responsibilities in the [overview](project-overview.md), system contracts in [architecture](architecture.md), conventions in [code standards](code-standards.md) and execution/verification policy in [workflow rules](ai-workflow-rules.md). Keep current work, dependencies, dated evidence and deferred-suite restoration in the tracker rather than duplicating logs here.
