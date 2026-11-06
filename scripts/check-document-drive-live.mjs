@@ -9,6 +9,9 @@ import { createDriveGateway } from '../src/server/documents/drive-gateway.ts';
 import { validateSupportingPdf } from '../src/server/documents/pdf-validation.ts';
 import sharp from 'sharp';
 import { validateQuotationOriginal } from '../src/server/quotations/original-validation.ts';
+import { generatePurchasingComparisonPdf, generatePurchasingComparisonWorkbook, XLSX_MIME } from '../src/server/purchasing/documents.ts';
+import { purchasingFixture } from '../tests/helpers/purchasing.mjs';
+import { comparisonSnapshot } from '../src/domain/purchasing/pricing.ts';
 
 requireStaging(process.env);
 if (process.argv.length !== 2 || process.env.GOOGLE_DRIVE_ENABLED !== 'true' || process.env.DOCUMENT_DRIVE_TEST_ORIGIN) throw Error('Use explicitly configured staging Drive without test overrides.');
@@ -47,6 +50,22 @@ try {
     assert.deepEqual(Buffer.from(await part.arrayBuffer()), image.subarray(0, 5));
   }
   result.checks.push('quotation-mixed-originals');
+  const fixture = purchasingFixture();
+  const comparison = comparisonSnapshot(fixture.view, [], 'Synthetic gateway smoke', new Date().toISOString());
+  for (const [format, mime, content] of [
+    ['pdf', 'application/pdf', await generatePurchasingComparisonPdf(comparison, '1')],
+    ['xlsx', XLSX_MIME, await generatePurchasingComparisonWorkbook(comparison, '1')],
+  ]) {
+    const artifactId = await drive.generateId(), hash = createHash('sha256').update(content).digest('hex');
+    const session = await drive.begin(artifactId, folderId, 'synthetic-comparison.' + format, content.length, tags, mime);
+    assert.ok(session); assert.equal((await drive.transfer(session, content.length, content, 0, mime)).complete, true);
+    const actual = await drive.verifyFile(artifactId, folderId, tags, content.length, hash, mime);
+    assert.deepEqual(Buffer.from(actual), Buffer.from(content));
+    if (format === 'pdf') await validateSupportingPdf(actual);
+    const part = await drive.stream(artifactId, { start: 0, end: 4 });
+    assert.equal(part.status, 206); assert.deepEqual(Buffer.from(await part.arrayBuffer()), Buffer.from(content).subarray(0, 5));
+  }
+  result.checks.push('purchasing-comparison-artifacts');
   result.passed = true;
 } finally {
   if (folderId) {

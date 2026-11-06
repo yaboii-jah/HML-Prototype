@@ -10,6 +10,8 @@ See [architecture context](architecture.md) for the technical boundaries and pro
 
 ## Goals
 
+Unit 4.8 purchasing preparation is authorized and in implementation as of 2026-11-06. It covers comparisons and retained PDF/XLSX versions, explicit split supplier awards and numbered PO drafts with reviewed partial-order amounts. Availability and acceptance remain pending the tracker evidence; Accounting approvals, budget commitments and supplier issuance remain later units.
+
 1. Make each material request traceable to its applicable stock transfers, supplier quotations, purchase orders, verified payments, deliveries and supporting documents.
 2. Give every required departmental action an identifiable responsible role, visible prerequisites and recorded actor history.
 3. Keep project stock, scope budgets and outstanding payment balances consistent with approved and verified transactions, including partial fulfilment and split sourcing.
