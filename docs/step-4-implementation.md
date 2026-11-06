@@ -235,6 +235,8 @@ Run local standard/public-browser checks, four-job CI and full disposable SQL/Au
 
 **Three new human groups:** (1) financial review/reconciliation/PHP/readiness; (2) immutable revisions/replacement/withdrawal/MRF reconfirmation/conflicts; (3) originals/internal PDF archives/history/recovery/access. Obtain explicit results and matching combined acceptance before checking 4.5b and parent 4.5. Step 4 remains open for later units.
 
+**Review status, 2026-11-06:** local/four-job CI/disposable/live-Drive/final staging checks pass at source `8b8f32a`, with retained staging state unchanged. The user explicitly answered **Not tested yet** for all three new groups. They remain pending; prior 4.5a acceptance does not cover them. Combined acceptance stops only at the missing manual evidence, and both 4.5b and parent 4.5 stay unchecked. Detailed evidence is in the tracker.
+
 For the targeted review, open an approved archived MRF through **Material requests → Supplier quotations** with Procurement active. Retain the QA records and originals after review.
 
 1. **Financial review:** save the supplier reference/date/payment/delivery terms and source amounts; classify rows and adjustments, PHP/VAT basis, free items and exclusions. Compare material amounts, adjustments, included/added VAT, goods/services EWT and net with the supplier figures. Confirm that a mismatch or missing required review blocks finalization; select gross or net according to the source, save and explicitly confirm the financial review, then finalize.
