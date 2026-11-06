@@ -2,7 +2,7 @@ import { requireStaging, STAGING_REF } from './supabase-target.mjs';
 
 /** Read-only retained-state evidence. No Auth passwords, tokens or raw business
  * rows are returned. Application rows are compared using deterministic hashes. */
-export async function stagingSnapshot({ includeProjectOperations = true, includeDocuments = true, includeReview = true, includeSuppliers = true, includeQuotations = true, includeQuotationFinalization = true } = {}) {
+export async function stagingSnapshot({ includeProjectOperations = true, includeDocuments = true, includeReview = true, includeSuppliers = true, includeQuotations = true, includeQuotationFinalization = true, includeDemand = true } = {}) {
   requireStaging(process.env);
   const tables = [
     ['profiles', 'public.profiles', 'user_id'], ['grants', 'public.role_grants', 'user_id,role'],
@@ -13,6 +13,11 @@ export async function stagingSnapshot({ includeProjectOperations = true, include
     ['audits', 'private.audit_events', 'id'], ['accountOperations', 'private.account_operations', 'id'],
   ];
   // During the 4.2 migration, compare all pre-existing rows before/after DDL.
+  if (includeDemand) tables.push(
+    ['demandHeads', 'private.demand_heads', 'request_id'], ['demandRequirements', 'private.demand_requirements', 'item_id'],
+    ['demandClaims', 'private.demand_claims', 'id'], ['demandOperations', 'private.demand_operations', 'id'],
+    ['demandEvents', 'private.demand_events', 'operation_id'],
+  );
   // Post-migration acceptance retains its default coverage of every new table.
   if (includeSuppliers) tables.push(['suppliers', 'private.suppliers', 'id'], ['supplierOperations', 'private.supplier_operations', 'id']);
   if (includeQuotations) tables.push(

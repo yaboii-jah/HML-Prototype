@@ -10,6 +10,8 @@ Update this file after every meaningful implementation or documentation change a
 
 ## Current Goal
 
+- **4.6 implementation authorized, 2026-11-06:** the user locked all six interview decisions and requested implementation. Build only the private shared-demand foundation, with no staff UI/public mutation endpoint. Saved awards consume demand immediately; blocked work retains claims; all first claims permanently restrict MRF corrections. Verify synthetic owning transactions and concurrency at the internal boundary. Later units, merging and production remain separate. Branch `feat/step-4-demand-allocation` preserves the pending checklist/guide edits and private account note. Verification is pending; 4.6 remains unchecked.
+
 - **Unit 4.5b and parent 4.5 are complete on 2026-11-06** at implementation `8b8f32a`, after explicit confirmation that all three new human groups passed with no skipped checks and passing matching combined acceptance. The [active guide](step-4-implementation.md#45b-financial-finalization-and-revisions) retains the accepted contract and review steps. The next unit is **4.6 Shared demand allocation**, requiring separate scoped planning and implementation authorization. Preserve all earlier evidence, retained QA records/files, the user's guide whitespace and private account note. [Draft PR #35](https://github.com/yaboii-jah/HML-Prototype/pull/35) remains unmerged; production is unchanged.
 
 
@@ -61,7 +63,7 @@ Update this file after every meaningful implementation or documentation change a
 
 ## In Progress
 
-- No operational unit is currently in implementation. Unit 4.5b and parent 4.5 are closed; 4.6 needs scoped planning and separate implementation authorization. Preserve the unrelated checklist line split, original guide whitespace and private account note. Merging 4.5b remains separate.
+- Unit 4.6 is in implementation on `feat/step-4-demand-allocation` after the user locked the interview and authorized the plan. Preserve the unrelated checklist line split, original guide whitespace and private account note. Merging 4.5b remains separate.
 - Source `8b8f32a` passes local lint/types/**425 tests**/build/public-browser/local acceptance, [all four standard CI jobs](https://github.com/yaboii-jah/HML-Prototype/actions/runs/42145280317), [complete disposable SQL/Auth/browser/Workflow/Realtime/type/race acceptance](https://github.com/yaboii-jah/HML-Prototype/actions/runs/42145280308) and the owned live-Drive check with verified cleanup. Imported all five CI reports plus matching local acceptance. Its exact SQL is applied to staging with retained state preserved. Pinned generated types match.
 - Final staging acceptance passes at source `8b8f32a` on 2026-11-06 with the renewed scoped token, including migration/Auth/type/rollback/private-channel checks, owned Auth recovery/replay/revocation and identical retained state; no email was sent. Independent finish review's only material fix is resolved in fresh desktop/375px captures; its verdict is **ship for the scored fix**. The documenter confirms incumbent Geist/tokens/shared components are preserved and no new design documents are needed. The user's later explicit **All three passed** confirmation with no skipped checks supersedes **Not tested yet**; matching combined acceptance now passes, with earlier attestations unchanged.
 
@@ -78,7 +80,7 @@ Update this file after every meaningful implementation or documentation change a
 
 Use the [production checklist](checklist.md#steps) for the ordered milestones and their completion conditions.
 
-- **Exact next action:** scope and plan 4.6 Shared demand allocation when requested, then obtain its separate implementation authorization. Preserve completed 4.5 evidence and retained QA records/files. Checklist step 4 remains open; no later implementation, merge or production action is authorized by this closeout.
+- **Exact next action:** verify the authorized 4.6 private demand implementation through local checks and disposable CI, import owning generated types, then apply only verified SQL to staging and check retained-state parity. Preserve completed 4.5 evidence and retained QA records/files. Checklist step 4 remains open; later units, merging and production remain separate.
 - Follow the guide's dependencies and completion criteria. The prototype role switch/approval commands are not production authority. Migrated MRF review now enforces permanent-user self-approval prevention; prepared-PO enforcement remains part of its later workflow unit.
 - Retain local Node 26.12.1, the Vercel Node 24.x target, CI baseline 24.22.1 and npm 11.20.0 across environments. Hosted deployment verification belongs to the later protected rehearsal.
 - Work foundations first: individual identity, shared records and server authorization before business-workflow migration. Tailwind remains a separate track.

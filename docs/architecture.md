@@ -113,6 +113,14 @@ Archive jobs keep destinations, stable provider identities, expiring claims and 
 
 Current quotation selection is a checked family pointer, not maximum revision number. Archive acknowledgement promotes only the intended pending candidate when all live gates pass; blocked candidates need an explicit Procurement recheck. Withdrawal is a permanent event for that revision, releases a pending replacement slot and cannot resurrect an earlier offer. Supplier activity, offer validity and the exact current approved MRF archive govern eligibility independently of historical finalization. MRF correction pauses use; a Procurement applicability attestation to the exact corrected archive restores an unchanged offer without rewriting its financial snapshot. Later award/PO writers must enforce these gates and preserve their selected revision identities.
 
+### Shared Demand Foundation
+
+Unit 4.6 is an internal foundation; its verification status belongs in the tracker. Private demand heads carry request-wide versions, immutable requirements retain exact approved quantities/units/archive identities, and retained claims identify their owning award, PO, suitability hold or transfer line. Aggregate claims cannot exceed requested demand. Saved awards count immediately; purchase remainder and unassigned remainder stay distinct. Claim ownership conversions apply as one batch, with the cap checked on the final state.
+
+Private helpers have no direct browser or service-role grants and no public RPC wrapper. Future checked owning commands must validate their business role/action, source eligibility/capacity and stock constraints, then save the business record and demand batch in the same transaction. The helper checks current session/project access, locks the foundation guard before the MRF, enforces expected demand versions, and commits claims, immutable actor events and retry receipts atomically. Quantities cross internal interfaces as exact strings; no rounding or tolerance is used. No staff allocation workflow or realtime subscription is introduced until a real consumer migrates.
+
+The first claim permanently registers downstream MRF use, including suitability holds. Released claims/history remain; document-only corrections cannot reset the material basis. Correction, expiry, deactivation or dispatch/receiving progress do not automatically release capacity. Explicit owning transitions may reduce/release existing claims while the MRF is paused; new/increased claims require the current approved archive. This foundation reserves neither source stock nor money.
+
 ## Storage Model
 
 - **Postgres:** The source of truth for users' application profiles, role and project assignments, projects, MRFs, quotations, purchase orders, budgets, payments, deliveries, stock, document references, audit events and workflow/job status. Related changes such as stock, budgets and document numbering need database transactions, concurrency control and safe retries.

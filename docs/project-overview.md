@@ -81,6 +81,8 @@ Roles describe responsibilities; the server must still authorize each record and
 - Matching stock descriptions and units require Procurement verification. Differently named or uncertain stock requires requesting-site confirmation that it has the same requested specifications; the review does not authorize a specification change. Suitability reviews hold demand without reserving source stock or establishing Served/Delivered progress; source-release requests reserve stock, and source Site Personnel may reduce or reject release. Approved suitability still requires Procurement's explicit release request after rechecking availability. Holds require explicit cancellation rather than automatic expiry.
 - New comparison snapshots freeze the quantity remaining to purchase and its sourcing breakdown. Earlier saved versions retain their original basis.
 
+Unit 4.6 is being implemented as an internal demand foundation only. Saved supplier awards, POs, suitability holds and transfer allocations will share the requested-material cap; ownership conversions must not duplicate or temporarily free demand. Blocked work retains its claims until an explicit authorized transition changes them. A first claim permanently restricts MRF corrections to supporting documents. Staff-facing allocation, stock and PO workflows remain later units; see the tracker for actual verification status.
+
 ### Accounting and Payment Coordination
 
 - Accounting review of PO costing, applicable taxes, adjustments, scope budgets and payment arrangements.

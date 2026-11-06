@@ -2,6 +2,7 @@ import { checkSupplierRaces } from './check-supplier-races.mjs';
 import { checkQuotationRaces } from './check-quotation-races.mjs';
 import { checkQuotationFinalizationRaces } from './check-quotation-finalization-races.mjs';
 import { checkRequestRaces } from './check-request-races.mjs';
+import { checkDemandRaces } from './check-demand-races.mjs';
 import { checkDocumentRaces } from './check-document-races.mjs';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
@@ -94,6 +95,10 @@ try {
   await sql(await readFile('supabase/checks/suppliers.sql', 'utf8'));
   await sql(await readFile('supabase/checks/quotations.sql', 'utf8'));
   await sql(await readFile('supabase/checks/quotation-finalization.sql', 'utf8'));
+  await sql(await readFile('supabase/checks/demand.sql', 'utf8'));
+  checks.push('demand-sql');
+  await checkDemandRaces({ sql, database, environment });
+  checks.push('demand-races');
   checks.push('quotation-finalization-sql');
   checks.push('quotation-sql');
   checks.push('supplier-sql');
