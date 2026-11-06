@@ -122,12 +122,23 @@ function SavedRecord({
                   }
                 </td>
                 <td>
-                  {line.fixedDiscount || "Not applicable / pending review"}
-                  {line.fixedDiscount && (
-                    <small>
-                      {line.discountConfirmed ? "Confirmed" : "Unconfirmed"}
-                    </small>
-                  )}
+                  {!quote
+                    ? "Source unavailable"
+                    : quote.financial?.review?.rows.find(
+                          (row) => row.id === line.sourceLineId,
+                        )?.discountType !== "fixed"
+                      ? "No fixed discount"
+                      : line.fixedDiscount !== ""
+                        ? `PHP ${line.fixedDiscount}`
+                        : "Pending fixed discount review"}
+                  {quote?.financial?.review?.rows.find(
+                    (row) => row.id === line.sourceLineId,
+                  )?.discountType === "fixed" &&
+                    line.fixedDiscount !== "" && (
+                      <small>
+                        {line.discountConfirmed ? "Confirmed" : "Unconfirmed"}
+                      </small>
+                    )}
                 </td>
               </tr>
             ))}
@@ -516,15 +527,52 @@ export function PurchasingWorkspace({
               </table>
             </div>
             {eligible.map((quote) => (
-              <details key={quote.id}>
+              <details key={quote.id} className="purchasing-source">
                 <summary>
                   {quote.body.supplierName} · {quote.body.ref} · revision{" "}
                   {quote.revision?.number}
                 </summary>
                 <p>
-                  Full quotation: gross {quote.financial?.calculation?.gross},
-                  net {quote.financial?.calculation?.net} PHP. Actual
-                  partial-order charges require separate review.
+                  Full quotation: gross PHP{" "}
+                  {quote.financial?.calculation?.gross}; EWT goods PHP{" "}
+                  {quote.financial?.calculation?.ewtGoods}; EWT services PHP{" "}
+                  {quote.financial?.calculation?.ewtServices}; net PHP{" "}
+                  {quote.financial?.calculation?.net}.
+                </p>
+                <p>Quoted document adjustments before applicable tax:</p>
+                {initialAdjustments(quote).length ? (
+                  <ul>
+                    {initialAdjustments(quote).map((adjustment) => {
+                      const source =
+                        adjustment.sourceKind === "line"
+                          ? quote.body.lines.find(
+                              (line) => line.id === adjustment.id,
+                            )?.description
+                          : quote.body.adjustments.find(
+                              (row) => row.id === adjustment.id,
+                            )?.label;
+                      const percentage =
+                        adjustment.sourceKind === "adjustment" &&
+                        quote.financial?.review?.adjustments.find(
+                          (row) => row.id === adjustment.id,
+                        )?.calculation === "percentage";
+                      return (
+                        <li key={`${adjustment.sourceKind}-${adjustment.id}`}>
+                          {source}:{" "}
+                          {percentage
+                            ? `${adjustment.amount}% of material subtotal`
+                            : `PHP ${adjustment.amount}`}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                ) : (
+                  <p>No quoted document adjustments.</p>
+                )}
+                <p>
+                  These full-source totals and adjustments are separate from
+                  material-price ranking. Review actual partial-order discounts
+                  and charges in the PO draft.
                 </p>
                 {request.items.map((item) => {
                   const matches = quote.body.lines.filter(
