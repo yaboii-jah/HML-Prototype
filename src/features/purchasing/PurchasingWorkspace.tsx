@@ -539,7 +539,7 @@ export function PurchasingWorkspace({
                   {quote.financial?.calculation?.ewtServices}; net PHP{" "}
                   {quote.financial?.calculation?.net}.
                 </p>
-                <p>Quoted document adjustments before applicable tax:</p>
+                <p>Quoted document adjustments (source amounts):</p>
                 {initialAdjustments(quote).length ? (
                   <ul>
                     {initialAdjustments(quote).map((adjustment) => {

@@ -418,7 +418,7 @@ export function OrderEditor({
                   Source: {original?.amount}
                   {percentage
                     ? "% of selected material subtotal"
-                    : " PHP before applicable tax"}
+                    : " PHP on the quotation's tax basis"}
                   .
                 </p>
                 <label className="field">

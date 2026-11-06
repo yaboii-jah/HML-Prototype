@@ -344,7 +344,7 @@ export async function checkPurchasing({
     await second.run(
       "return document.querySelector('details.purchasing-source')?.textContent",
     ),
-    /Quoted document adjustments before applicable tax/,
+    /Quoted document adjustments \(source amounts\)/,
   );
   await capture(second);
   await browser.navigate(`/requests/${mrf}/quotes/${quote}`);
