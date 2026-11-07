@@ -144,6 +144,8 @@ The [architecture document](architecture.md) is the detailed source of truth. Ke
 
 ## Session Notes
 
+- **PR #44 conflict resolution, 2026-11-08:** fetched its current stock-foundation base `a7efbd1`. Rewritten Accounting commit identities caused 21 content/add-add conflicts even though the base tree is byte-identical to original feature starting point `76e01fd`. Reconciled the base into the feature branch while preserving the tested 4.10 tree exactly; only this tracker note is new. No application/schema/provider change, PR merge or production action. Existing source-bound acceptance is rechecked after the history reconciliation; private account note remains excluded.
+
 Historical checkpoints below are superseded by the completed 4.10 record above.
 
 - **4.10 publication authorized, 2026-11-08:** after explicitly confirming all three human groups, including every assisted check with no skips/issues, the user requested proceeding with commit/push, draft PR, hosted CI, passing-only staging migration and owned Drive verification. Preserve earlier reports and private account note. No merge or production authorization. Human acceptance is confirmed; CI/staging/Drive and matching combined acceptance still gate completion.
