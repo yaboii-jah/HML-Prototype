@@ -38,6 +38,10 @@ try {
     const manual = await read('foundation-manual.json');
     requireCurrentEvidence(manual, source, 'targeted manual review');
     if (!manual.confirmedByUser || !manual.reviewedBehavior?.includes('error-retry')) throw Error('Targeted recovery review pending');
+    if (!drive.checks?.includes('approved-po-pdf')) throw Error('Approved PO live-Drive verification pending');
+    for (const behavior of ['accounting-review-terms-lifecycle', 'accounting-budgets-projects', 'accounting-archives-applicability-access']) {
+      if (!manual.reviewedBehavior?.includes(behavior)) throw Error(`Targeted Accounting review pending: ${behavior}`);
+    }
     for (const behavior of ['mrf-shared-drafts', 'mrf-conflict-review', 'mrf-revocation', 'mrf-document-sharing', 'mrf-document-recovery', 'project-document-folders', 'mrf-submission-review', 'mrf-approved-archives', 'mrf-corrections-history', 'supplier-sharing-permissions', 'supplier-conflict-recovery', 'supplier-status-history', 'quotation-capture-access', 'quotation-review-conflicts', 'quotation-originals-recovery', 'quotation-financial-finalization', 'quotation-revisions-reconfirmation', 'quotation-revision-archives', 'purchasing-comparisons-artifacts', 'purchasing-awards-po-pricing', 'purchasing-lifecycle-conflicts-access']) {
       if (!manual.reviewedBehavior?.includes(behavior)) throw Error(`Targeted operational review pending: ${behavior}`);
     }

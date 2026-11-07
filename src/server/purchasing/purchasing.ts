@@ -13,6 +13,7 @@ import {
   preparePoBody,
 } from "@/src/domain/purchasing/pricing";
 import { dispatchComparisonArtifacts } from "./artifacts";
+import { dispatchApprovedPoArchives } from "./approval-archives";
 
 export async function purchasingView(mrfId: string) {
   const actor = await quotationActor();
@@ -22,7 +23,7 @@ export async function purchasingView(mrfId: string) {
   );
   if (!view) throw Error("Purchasing data could not be loaded.");
   for (const saved of view.records)
-    if (saved.kind === "po") {
+    if (saved.kind === "po" && saved.review?.status !== "approved") {
       const quote = view.quotations.quotes.find((q) => q.id === saved.quoteId);
       if (quote) {
         saved.calculation = calculatePo(quote, saved.body);
@@ -32,11 +33,12 @@ export async function purchasingView(mrfId: string) {
           !saved.blockers.some((b) => b.startsWith("Zero-value order"))
         )
           saved.blockers.push(
-            "Zero-value order: Accounting policy is required before submission",
+            "Zero-value orders cannot be submitted for Accounting approval",
           );
       }
     }
   await dispatchComparisonArtifacts().catch(() => {});
+  await dispatchApprovedPoArchives().catch(() => {});
   return view;
 }
 
@@ -157,7 +159,7 @@ export async function runPurchasingCommand(
       convert:
         "PO draft created. Its award quantities were transferred atomically.",
       checkPo:
-        "Saved preparation confirmed. Accounting submission remains unavailable.",
+        "Saved preparation confirmed. Open PO review to submit to Accounting.",
       saveComparison:
         "Comparison version saved. PDF and XLSX archiving is queued.",
       retryArtifact: "Artifact queued for retry.",
@@ -184,6 +186,8 @@ export async function runPurchasingCommand(
           "This retry identity was used for different input. Review and retry with a new operation.",
         P4804:
           "Resolve the current pricing, required details and policy blockers before confirming preparation or retrying.",
+        P4902: "This PO is locked by Accounting review. Recall it or request an Accounting return/revocation before editing.",
+        P4904: "Save and review the payment arrangement, quotation-term agreement and a valid Credit due date before confirming preparation.",
         P4201:
           "Set up or repair the project's document folder before saving comparison artifacts.",
       };

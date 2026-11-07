@@ -2,10 +2,10 @@
 -- asserted by these deliberately direct approved-record fixtures.
 begin;
 set local statement_timeout='60s';
-create function pg_temp.demand_fixture() returns jsonb language plpgsql as $$
-declare person uuid:=gen_random_uuid(); session uuid:=gen_random_uuid(); project uuid:=gen_random_uuid();
+create function pg_temp.demand_fixture(shared_project uuid default null,shared_scope uuid default null) returns jsonb language plpgsql as $$
+declare person uuid:=gen_random_uuid(); session uuid:=gen_random_uuid(); project uuid:=coalesce(shared_project,gen_random_uuid());
   request uuid:=gen_random_uuid(); item uuid:=gen_random_uuid(); other_item uuid:=gen_random_uuid();
-  archive uuid:=gen_random_uuid(); document uuid:=gen_random_uuid(); mapping uuid:=gen_random_uuid(); proof jsonb; form jsonb;
+  archive uuid:=gen_random_uuid(); document uuid:=gen_random_uuid(); mapping uuid:=gen_random_uuid(); proof jsonb; form jsonb; request_sequence bigint;
 begin
   insert into auth.users(id,email,is_anonymous,email_confirmed_at,encrypted_password) values(person,person||'@example.invalid',false,now(),'fixture');
   insert into public.profiles(user_id,display_name,is_active) values(person,'Demand fixture',true);
@@ -13,14 +13,21 @@ begin
   insert into auth.sessions(id,user_id,created_at,updated_at) values(session,person,now(),now());
   proof:=private.login_preflight(person||'@example.invalid');
   perform private.bind_session(person,session,proof->>'revision',proof->>'credential');
-  insert into public.projects(id,name,document_code) values(project,'Demand fixture '||project,'DM-'||upper(substr(project::text,1,8)));
+  if shared_project is null then
+    insert into public.projects(id,name,document_code) values(project,'Demand fixture '||project,'DM-'||upper(substr(project::text,1,8)));
+  end if;
   form:=jsonb_build_object('items',jsonb_build_array(
     jsonb_build_object('id',item,'quantity','18','unit','bag'),jsonb_build_object('id',other_item,'quantity','0.3','unit','m')));
-  insert into public.material_requests(id,project_id,ref,sequence,data,creator_id,creator_name,updater_id,updater_name,status)
-    values(request,project,'DM-'||request||'-MRF-0001',1,'{}',person,'Demand fixture',person,'Demand fixture','approved');
+  select coalesce(max(r.sequence),0)+1 into request_sequence from public.material_requests r where r.project_id=project;
+  insert into public.material_requests(id,project_id,scope_id,ref,sequence,data,creator_id,creator_name,updater_id,updater_name,status)
+    values(request,project,shared_scope,'DM-'||request||'-MRF-0001',request_sequence,'{}',person,'Demand fixture',person,'Demand fixture','approved');
   insert into public.material_request_items(id,request_id,position,data)
     values(item,request,0,form->'items'->0),(other_item,request,1,form->'items'->1);
-  insert into private.project_document_folders(id,project_id,folder_id,root_id,name) values(mapping,project,'demand-'||mapping,'fixture-root','Fixture');
+  if shared_project is null then
+    insert into private.project_document_folders(id,project_id,folder_id,root_id,name) values(mapping,project,'demand-'||mapping,'fixture-root','Fixture');
+  else
+    select d.id into mapping from private.project_document_folders d where d.project_id=project and d.current;
+  end if;
   insert into private.request_documents(id,request_id,folder_mapping_id,drive_file_id,name,size,sha256,uploader_id,uploader_name)
     values(document,request,mapping,'demand-'||document,'fixture.pdf',10,repeat('a',64),person,'Demand fixture');
   insert into private.mrf_archive_snapshots(id,request_id,version,source_document,request_version,attachment_revision,snapshot,approved_by,approved_name,approved_at)
@@ -35,8 +42,8 @@ end $$;
 
 -- Owning purchasing security/atomicity fixtures. Archive metadata below is synthetic;
 -- real bytes and Workflow integrity belong to the separate application acceptance.
-create function pg_temp.purchasing_fixture(with_charge boolean default false) returns jsonb language plpgsql as $$
-declare f jsonb:=pg_temp.demand_fixture(); target uuid:=(f->>'request')::uuid; caller uuid:=(f->'actor'->>'userId')::uuid;
+create function pg_temp.purchasing_fixture(with_charge boolean default false,shared_project uuid default null,shared_scope uuid default null) returns jsonb language plpgsql as $$
+declare f jsonb:=pg_temp.demand_fixture(shared_project,shared_scope); target uuid:=(f->>'request')::uuid; caller uuid:=(f->'actor'->>'userId')::uuid;
   supplier uuid:=gen_random_uuid(); quote uuid:=gen_random_uuid(); revision uuid:=gen_random_uuid(); line uuid:=gen_random_uuid();
   family uuid; body jsonb:='{}'; source jsonb:='{}'; review jsonb; calculation jsonb; k text; fields jsonb:='{}'; orderline uuid:=gen_random_uuid(); charge uuid:=gen_random_uuid(); order_adjustments jsonb:='[]';
 begin

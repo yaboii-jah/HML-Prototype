@@ -21,6 +21,7 @@ globalThis.__purchasingCommand = {
     return { targetId: reportId, changed: true };
   },
   dispatchComparisonArtifacts: async () => {},
+  dispatchApprovedPoArchives: async () => {},
 };
 registerHooks({
   resolve(specifier, context, nextResolve) {
@@ -30,6 +31,7 @@ registerHooks({
       "@/src/server/quotations/drafts": ["quotationActor"],
       "@/src/server/auth/service-rpc": ["serviceRpc"],
       "./artifacts": ["dispatchComparisonArtifacts"],
+      "./approval-archives": ["dispatchApprovedPoArchives"],
     }[specifier];
     if (names)
       return {
