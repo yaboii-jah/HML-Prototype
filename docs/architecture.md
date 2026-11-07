@@ -141,7 +141,7 @@ Comparison snapshots freeze current eligible offers, remaining purchasing quanti
 
 ### Accounting Review and Commitments Contract
 
-Unit 4.9 is implemented locally with acceptance pending; the tracker owns verification. Checked Procurement submission freezes a complete PO and permanently records its submitter. Submitted/Held content locks. Every historical content preparer and submitter is barred from approval and Accounting corrected-MRF reconfirmation. Recall/return retain demand; rejection is terminal and releases it. Accounting alone revokes an unissued approval, releasing its money while retaining demand and returning it for Procurement edits/cancellation.
+Unit 4.9 is implemented and staged with targeted human acceptance pending; the tracker owns verification. Checked Procurement submission freezes a complete PO and permanently records its submitter. Submitted/Held content locks. Every historical content preparer and submitter is barred from approval and Accounting corrected-MRF reconfirmation. Recall/return retain demand; rejection is terminal and releases it. Accounting alone revokes an unissued approval, releasing its money while retaining demand and returning it for Procurement edits/cancellation.
 
 Approval atomically freezes exact inputs/results/source/terms/actor, a gross-before-EWT commitment and durable approved-PDF intent. Immutable commitment/release entries serialize through actual parent-project updates with allocation edits; allocations cannot fall below active gross commitments. Submission reserves no money. Non-Site views distinguish unallocated project budget from uncommitted scope allocation. Payment/spending remain later workflows.
 
