@@ -144,6 +144,8 @@ The [architecture document](architecture.md) is the detailed source of truth. Ke
 
 ## Session Notes
 
+- **PR #44 repeated base-history reconciliation, 2026-11-08:** its stock-foundation base was force-updated from `a7efbd1` to `5aa86c0`. Those two base trees and original starting point `76e01fd` are identical. Resolved the resulting history-only conflicts while preserving the feature tree exactly, then rechecked combined acceptance. Only this tracker note changes; private account note remains excluded. No PR merge, application/schema change or production action.
+
 - **PR #44 conflict resolution, 2026-11-08:** fetched its current stock-foundation base `a7efbd1`. Rewritten Accounting commit identities caused 21 content/add-add conflicts even though the base tree is byte-identical to original feature starting point `76e01fd`. Reconciled the base into the feature branch while preserving the tested 4.10 tree exactly; only this tracker note is new. No application/schema/provider change, PR merge or production action. Existing source-bound acceptance is rechecked after the history reconciliation; private account note remains excluded.
 
 Historical checkpoints below are superseded by the completed 4.10 record above.
