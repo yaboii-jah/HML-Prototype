@@ -299,13 +299,15 @@ export async function generatePurchasingComparisonWorkbook(
 export async function generatePurchasingPoPreview(
   view: PurchasingView,
   po: PurchasingRecord,
+  approval?: { name: string; at: string; version: string },
 ): Promise<Uint8Array> {
   const quote = view.quotations.quotes.find((q) => q.id === po.quoteId),
     request = view.quotations.request;
   if (!quote || !request) throw Error("PO source unavailable.");
-  const calculation = calculatePo(quote, po.body),
+  const calculation = approval ? po.calculation : calculatePo(quote, po.body),
     fields = po.body.fields,
     template = await documentTemplate("po");
+  if (!calculation) throw Error("Frozen approved calculation unavailable.");
   const rows: string[][] = [];
   for (const [index, line] of po.body.lines.entries()) {
     const source = quote.body.lines.find((l) => l.id === line.sourceLineId),
@@ -361,19 +363,21 @@ export async function generatePurchasingPoPreview(
       shipToContact: fields.shipContact,
       shipToPhone: fields.shipPhone,
       requisitioner: fields.requisitioner,
-      terms: fields.paymentTerms,
+      terms: [fields.paymentTerms, po.body.payment?.mode === "credit" ? `Credit due: ${po.body.payment.dueDate}` : po.body.payment?.mode === "upfront" ? "Upfront" : ""].filter(Boolean).join(" / "),
       fob: fields.fob,
       shippingTerms: fields.shippingTerms,
       notes: [
         `Linked supplier: ${quote.body.supplierName}; quotation ${quote.body.ref} revision ${quote.revision?.number}.`,
         po.body.reason,
         fields.notes,
+        po.body.payment?.relation === "differs" ? `Agreed payment-term difference: ${po.body.payment.reason}` : "",
+        approval ? `Accounting approval v${approval.version}: ${approval.name}; ${approval.at}. Verified application approval. Supplier issuance is recorded separately.` : "",
         ...calculation.issues,
         ...po.blockers,
       ]
         .filter(Boolean)
         .join("\n"),
-      preview: true,
+      preview: !approval,
       grossLabel: "GROSS",
       gross: complete ? php(calculation.gross) : "Incomplete",
       ewtGoods: complete ? php(calculation.ewtGoods) : "Incomplete",
@@ -382,7 +386,7 @@ export async function generatePurchasingPoPreview(
     },
     rows,
   );
-  template.pdf.setCreationDate(new Date(po.updatedAt));
-  template.pdf.setModificationDate(new Date(po.updatedAt));
+  template.pdf.setCreationDate(new Date(approval?.at ?? po.updatedAt));
+  template.pdf.setModificationDate(new Date(approval?.at ?? po.updatedAt));
   return template.pdf.save();
 }

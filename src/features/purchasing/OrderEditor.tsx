@@ -15,6 +15,7 @@ import {
   orderPricingBasis,
 } from "@/src/domain/purchasing/pricing";
 import { decimal, divide, php } from "@/src/domain/quotations/decimal";
+import { emptyPayment, type PaymentArrangement } from "@/src/domain/purchasing/accounting";
 import type {
   QuotationDraft,
   QuotationsView,
@@ -117,6 +118,8 @@ export function OrderEditor({
     }
   };
   const calculation = po ? calculatePo(quote, body) : null;
+  const payment = body.payment ?? emptyPayment();
+  const updatePayment = (patch: Partial<PaymentArrangement>) => setBody({ ...body, payment: { ...payment, ...patch } });
   const savedMaterialBasis =
     !!saved &&
     saved.quoteId === quote.id &&
@@ -476,6 +479,22 @@ export function OrderEditor({
               </fieldset>
             );
           })}
+          <h3>Payment arrangement for Accounting</h3>
+          <p>Quoted payment terms: {quote.body.paymentTerms || "Not recorded"}. Confirm the agreed arrangement before submitting.</p>
+          <div className="form-grid">
+            <Field label="Payment arrangement">
+              <select disabled={disabled} value={payment.mode} onChange={(e) => updatePayment({ mode: e.target.value as PaymentArrangement["mode"], dueDate: e.target.value === "upfront" ? "" : payment.dueDate })}>
+                <option value="">Choose payment arrangement</option><option value="upfront">Upfront</option><option value="credit">Credit</option>
+              </select>
+            </Field>
+            {payment.mode === "credit" && <Field label="Agreed Credit due date"><input type="date" disabled={disabled} value={payment.dueDate} onChange={(e) => updatePayment({ dueDate: e.target.value })}/></Field>}
+            <Field label="Agreement against quotation">
+              <select disabled={disabled} value={payment.relation} onChange={(e) => updatePayment({ relation: e.target.value as PaymentArrangement["relation"] })}>
+                <option value="">Review quoted terms</option><option value="matches">Arrangement matches quotation</option><option value="differs">Agreed terms differ from quotation</option>
+              </select>
+            </Field>
+          </div>
+          {payment.relation === "differs" && <Field label="Agreed difference and reason"><textarea maxLength={2000} disabled={disabled} value={payment.reason} onChange={(e) => updatePayment({ reason: e.target.value })}/></Field>}
           <h3>Printed PO details</h3>
           <div className="form-grid">
             {(Object.keys(PO_FIELDS) as (keyof typeof PO_FIELDS)[]).map(

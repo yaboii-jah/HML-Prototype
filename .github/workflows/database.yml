@@ -2,7 +2,7 @@ name: Database foundation
 on:
   pull_request:
   push:
-    branches: [main, staging, 'feat/step-3-hosted-foundation', 'feat/step-3-sessions', 'feat/step-3-accounts', 'feat/step-3-projects', 'feat/step-3-realtime', 'feat/step-3-acceptance', 'feat/step-4-mrf-drafts', 'feat/step-4-mrf-documents', 'feat/step-4-mrf-review', 'feat/step-4-suppliers', 'feat/step-4-quotation-drafts', 'feat/step-4-quotation-finalization', 'feat/step-4-demand-allocation', 'feat/step-4-stock-foundation', 'feat/step-4-awards-po-drafts']
+    branches: [main, staging, 'feat/step-3-hosted-foundation', 'feat/step-3-sessions', 'feat/step-3-accounts', 'feat/step-3-projects', 'feat/step-3-realtime', 'feat/step-3-acceptance', 'feat/step-4-mrf-drafts', 'feat/step-4-mrf-documents', 'feat/step-4-mrf-review', 'feat/step-4-suppliers', 'feat/step-4-quotation-drafts', 'feat/step-4-quotation-finalization', 'feat/step-4-demand-allocation', 'feat/step-4-stock-foundation', 'feat/step-4-awards-po-drafts', 'feat/step-4-accounting-commitments']
   workflow_dispatch:
 permissions:
   contents: read
@@ -10,7 +10,7 @@ jobs:
   database:
     name: Disposable Supabase (Ubuntu, Node 24)
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7
         with:
@@ -43,6 +43,8 @@ jobs:
             .verification/quotation-*.png
             .verification/purchasing-*.png
             .verification/purchasing-*.pdf
+            .verification/accounting-*.png
+            .verification/accounting-*.pdf
             .verification/purchasing-*.xlsx
           include-hidden-files: true
           retention-days: 7

@@ -35,7 +35,7 @@ globalThis.__purchasingRoutes = {
     rpcCalls++;
     if (args.actor?.activeRole === "Site Personnel")
       throw new RpcError("42501");
-    if ((args.artifact_id ?? args.po_id) !== target)
+    if ((args.artifact_id ?? args.po_id ?? args.archive_id) !== target)
       throw new RpcError("P4801");
     return name === "purchasing_po_request"
       ? parent
@@ -186,4 +186,19 @@ test("saved PO previews require the current saved version and expose no issuance
     (await readPurchasingDocument(request("?version=4"), target, "po")).status,
     409,
   );
+});
+
+test("approved PO archives deny unauthorized reads and retain private Range behavior", async () => {
+  const before = providerCalls;
+  role = null;
+  assert.equal((await readPurchasingDocument(request(), target, "approvedPo")).status, 401);
+  role = "Site Personnel";
+  assert.equal((await readPurchasingDocument(request(), target, "approvedPo")).status, 403);
+  assert.equal(providerCalls, before);
+  role = "Finance";
+  const response = await readPurchasingDocument(request("", { range: "bytes=0-4" }), target, "approvedPo");
+  assert.equal(response.status, 206);
+  assert.equal(await response.text(), "%PDF-");
+  assert.match(response.headers.get("cache-control"), /private.*no-store/);
+  assert.equal((await readPurchasingDocument(request(), randomUUID(), "approvedPo")).status, 404);
 });

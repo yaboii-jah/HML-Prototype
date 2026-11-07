@@ -21,6 +21,7 @@ import type {
 } from "@/src/domain/purchasing/contracts";
 import { PO_FIELDS } from "@/src/domain/purchasing/contracts";
 import { OrderEditor } from "./OrderEditor";
+import { PoAccountingPanel } from "./PoAccountingPanel";
 import { usePurchasingOperation } from "./use-purchasing-operation";
 import "./purchasing.css";
 
@@ -155,10 +156,10 @@ function SavedRecord({
       {record.kind === "po" && (
         <>
           <p>
-            {record.checked
+            {record.review?.status === "approved" ? "Accounting approval retained" : record.checked
               ? "Saved preparation confirmed"
               : "Preparation needs review"}
-            . Accounting submission is not yet available.
+            .{record.review?.status !== "approved" && " Review the saved payment arrangement before submission."}
           </p>
           {record.calculation && !record.calculation.issues.length ? (
             <p>
@@ -244,6 +245,9 @@ export function PurchasingWorkspace({
   const currentEditorRecord = editor
     ? view.records.find((r) => r.id === editor.id)
     : null;
+  const editorLocked = currentEditorRecord?.kind === "po" && !["draft", "returned"].includes(currentEditorRecord.review?.status || "draft");
+  const currentDecisionRecord = decision ? view.records.find((r) => r.id === decision.record.id) : null;
+  const decisionLocked = currentDecisionRecord?.kind === "po" && !["draft", "returned"].includes(currentDecisionRecord.review?.status || "draft");
   const editorQuote = editor
     ? view.quotations.quotes.find((q) => q.id === editor.quoteId)
     : null;
@@ -294,6 +298,7 @@ export function PurchasingWorkspace({
       rebind: !!editor.saved && editor.saved.quoteId !== id,
       body: {
         ...editor.body,
+        ...(editor.body.payment ? { payment: { ...editor.body.payment, relation: "", reason: "" } as const } : {}),
         adjustments: initialAdjustments(next),
         lines: editor.body.lines.map((line) => {
           const same = next.body.lines.find(
@@ -321,7 +326,7 @@ export function PurchasingWorkspace({
     });
   };
   const saveEditor = async () => {
-    if (!editor || !editorQuote?.family) return;
+    if (!editor || !editorQuote?.family || editorLocked) return;
     const result = await operation.run({
       type: editor.rebind
         ? "rebind"
@@ -342,7 +347,7 @@ export function PurchasingWorkspace({
     setDecision({ type, record, reason: "", base: stamp(view) });
   };
   const runDecision = async () => {
-    if (!decision) return;
+    if (!decision || decisionLocked) return;
     const result = await operation.run({
       type: decision.type,
       mrfId: request.id,
@@ -377,6 +382,7 @@ export function PurchasingWorkspace({
   };
   const recordActions = (record: PurchasingRecord) =>
     editable &&
+    (record.kind !== "po" || ["draft", "returned"].includes(record.review?.status || "draft")) &&
     record.state !== "converted" && (
       <div className="button-row">
         <button
@@ -442,7 +448,7 @@ export function PurchasingWorkspace({
         title={selectedPo?.ref || `${request.ref} · Purchasing`}
         description={
           poId
-            ? "Saved PO draft preparation"
+            ? "PO preparation and Accounting review"
             : "Compare eligible offers, confirm supplier quantities and prepare PO drafts."
         }
         actions={
@@ -760,16 +766,19 @@ export function PurchasingWorkspace({
                 {record.ref ||
                   `${view.quotations.quotes.find((q) => q.id === record.quoteId)?.body.supplierName || "Supplier"} award`}
               </h2>
-              <Badge value={record.state} />
+              <Badge value={record.review?.status === "rejected" ? "rejected" : record.state === "active" ? record.review?.status || record.state : record.state} />
             </div>
             <SavedRecord record={record} view={view} />
+            {record.kind === "po" && (poId
+              ? <PoAccountingPanel po={record} view={view} />
+              : <Link className="text-link" href={`/accounting/${record.id}`}>Open PO review</Link>)}
             {record.kind === "po" && (
               <div className="button-row">
                 <Link
                   className="button secondary"
                   href={`/purchase-orders/${record.id}`}
                 >
-                  Open PO draft
+                  Open purchase order
                 </Link>
                 <a
                   className="button secondary"
@@ -873,10 +882,11 @@ export function PurchasingWorkspace({
               quotations={view.quotations}
               saved={editor.saved}
               po={editor.saved?.kind === "po"}
-              disabled={operation.busy}
+              disabled={operation.busy || editorLocked}
               setBody={(body) => setEditor({ ...editor, body })}
               setQuote={changeQuote}
             />
+            {editorLocked && <p role="status">This PO is now {currentEditorRecord?.review?.status}. Your input is preserved. Recall it or request an Accounting return or revocation before editing.</p>}
             {(stale || operation.conflict) && (
               <section className="subform">
                 <h3>Latest saved values</h3>
@@ -919,6 +929,7 @@ export function PurchasingWorkspace({
                 className="button primary"
                 disabled={
                   operation.busy ||
+                  editorLocked ||
                   stale ||
                   operation.conflict ||
                   !editor.body.lines.length ||
@@ -953,6 +964,7 @@ export function PurchasingWorkspace({
         {decision && (
           <>
             <SavedRecord record={decision.record} view={view} />
+            {decisionLocked && <p role="status">This PO is locked by Accounting review. The current action cannot proceed.</p>}
             {decision.type === "cancel" && (
               <p>
                 Cancellation releases this record&apos;s demand. A cancelled PO
@@ -1020,6 +1032,7 @@ export function PurchasingWorkspace({
                 disabled={
                   operation.busy ||
                   operation.conflict ||
+                  decisionLocked ||
                   decision.base.expectedVersion !== view.version ||
                   decision.base.expectedDemand !== view.demandVersion ||
                   (["cancel", "reopen"].includes(decision.type) &&
