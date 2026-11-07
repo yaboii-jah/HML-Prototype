@@ -4,15 +4,17 @@ Update this file after every meaningful implementation or documentation change a
 
 ## Current Phase
 
-- Runtime/CI milestone 2 and foundation units 3.1-3.6 are verified. Operational units 4.0-4.9 are verified complete, including the internal demand/stock foundations, quotation revisions, purchasing preparation and applicable user-confirmed manual acceptance. Checklist step 4 remains open for later units.
+- Runtime/CI milestone 2 and foundation units 3.1-3.6 are verified. Operational units 4.0-4.10 are verified complete, including the internal demand/stock foundations, quotation revisions, purchasing preparation and applicable user-confirmed manual acceptance. Checklist step 4 remains open for later units.
 - The supported runtime no longer starts the global demo workspace or trusts browser-selected accounts. Projects/MRFs and the supplier directory use protected shared records; supporting-PDF upload/preview/download and required folder operations are implemented. Unmigrated provider endpoints remain disabled. The committed prototype and isolated regression fixtures remain recoverable.
 - Production configuration/deployment, verified real email, company-owned services, backup/restore and operational acceptance remain release work. Checklist step 3 is complete; operational and release milestones remain open.
 
 ## Current Goal
 
-- **4.10 implemented and verified locally:** supplier issuance is reviewable on `feat/step-4-supplier-issuance`. Local standard/public-browser, SQL/races/types, real-account Workflow/Realtime/Drive-double and responsive review checks pass. Publication/four-job CI/disposable CI, staging, owned live Drive and three explicit human groups remain pending; 4.10 stays unchecked. Preserve pending 4.9 closeout, earlier evidence, retained QA records/files and the excluded private account note. Repository workflow requires separate publication/hosted-change authorization. No merge or production change; Vercel remains separate.
+- **4.10 complete:** `77e3965` passes local/four-job CI/full disposable/staging/owned Drive verification, all three explicit human groups including assisted checks, and matching combined acceptance on 2026-11-08. Next is scoped planning for 4.11; no new implementation, merge or production change is authorized.
 
 ## Completed
+
+- **Unit 4.10, 2026-11-08:** checked supplier sending, permanent locks, retained corrections and attribution are verified at `77e3965`. [Draft PR #44](https://github.com/yaboii-jah/HML-Prototype/pull/44), [four-job CI](https://github.com/yaboii-jah/HML-Prototype/actions/runs/42401750267) and [full disposable acceptance](https://github.com/yaboii-jah/HML-Prototype/actions/runs/42401754265) pass. Digest-verified artifacts match local source. Exact migration applied to staging without seeds/roles; before/after retained state matches and all five new tables were empty after DDL. Full staging acceptance and live Drive issuance-file/hash/PDF/Range/owned cleanup pass, with no email. Explicit all-three human confirmation and combined milestone acceptance pass. Earlier manual reports and 4.9 combined acceptance retain byte-identical backups/provenance. Private account note excluded. No merge or production change.
 
 - **Unit 4.9, 2026-11-08:** Accounting review, permanent-identity exclusions, gross commitments/releases, payment arrangements, project rollups and retained approved PDFs are verified at `e00f8fd`. Local/public-browser, four-job CI, full disposable SQL/Auth/application/Workflow/Realtime/type/race, owned live-Drive/cleanup and retained-state-safe staging checks, explicit confirmation of all three human groups including assisted checks with no skips/issues, and matching combined acceptance pass. Full earlier attestation chain and byte-identical preceding manual report are preserved. Checklist step 4 stays open; active 4.10 work is tracked below. Vercel runtime selection remains a separate deployment issue.
 
@@ -68,11 +70,9 @@ Update this file after every meaningful implementation or documentation change a
 
 ## In Progress
 
-- **4.10 publication authorized, 2026-11-08:** after explicitly confirming all three human groups, including every assisted check with no skips/issues, the user requested proceeding with commit/push, draft PR, hosted CI, passing-only staging migration and owned Drive verification. Preserve earlier reports and private account note. No merge or production authorization. Human acceptance is confirmed; CI/staging/Drive and matching combined acceptance still gate completion.
 
-- **4.10 local checkpoint, 2026-11-08:** checked preparation/confirmation/cancellation/corrections, exact live-file proof, retained actors/history and revocation locks pass local acceptance. Normalized working-tree source `369684fbdb037a1a446ee4860ceb08a16204ed95e9f132e28d211147824995e3` at base `76e01fd` matches standard and authenticated-browser reports. Pinned generated types match exactly. SQL transactions and observed-lock prepare/revoke, confirm/cancel, retry, source/MRF and native/profile-access races pass at both isolation levels. Publication and hosted/human acceptance remain pending; no unit completion is claimed.
 
-- Supplier issuance is the only active implementation unit. The Vercel deployment failure remains unresolved and separate from this work.
+- Supplier issuance is complete; no new operational implementation is active. The Vercel deployment failure remains unresolved and separate from this work.
 
 - Source `8b8f32a` passes local lint/types/**425 tests**/build/public-browser/local acceptance, [all four standard CI jobs](https://github.com/yaboii-jah/HML-Prototype/actions/runs/42145280317), [complete disposable SQL/Auth/browser/Workflow/Realtime/type/race acceptance](https://github.com/yaboii-jah/HML-Prototype/actions/runs/42145280308) and the owned live-Drive check with verified cleanup. Imported all five CI reports plus matching local acceptance. Its exact SQL is applied to staging with retained state preserved. Pinned generated types match.
 - Final staging acceptance passes at source `8b8f32a` on 2026-11-06 with the renewed scoped token, including migration/Auth/type/rollback/private-channel checks, owned Auth recovery/replay/revocation and identical retained state; no email was sent. Independent finish review's only material fix is resolved in fresh desktop/375px captures; its verdict is **ship for the scored fix**. The documenter confirms incumbent Geist/tokens/shared components are preserved and no new design documents are needed. The user's later explicit **All three passed** confirmation with no skipped checks supersedes **Not tested yet**; matching combined acceptance now passes, with earlier attestations unchanged.
@@ -90,7 +90,7 @@ Update this file after every meaningful implementation or documentation change a
 
 Use the [production checklist](checklist.md#steps) for the ordered milestones and their completion conditions.
 
-- **Exact next action:** obtain the separate authorization to commit/push the reviewed 4.10 branch and pending 4.9 closeout, run hosted CI, apply only passing SQL to staging and run the owned Drive checks. Then obtain the three explicit 4.10 human results and source-matched combined acceptance. Keep later units, Vercel repair, merge and production separate.
+- **Exact next action:** scope and stress-test 4.11 payment coordination and verification when requested. Do not start it from 4.10 completion alone.
 - Follow the guide's dependencies and completion criteria. The prototype role switch/approval commands are not production authority. Migrated MRF review now enforces permanent-user self-approval prevention; permanent prepared/submitted-PO exclusions are verified complete with 4.9.
 - Retain local Node 26.12.1, the Vercel Node 24.x target, CI baseline 24.22.1 and npm 11.20.0 across environments. Hosted deployment verification belongs to the later protected rehearsal.
 - Work foundations first: individual identity, shared records and server authorization before business-workflow migration. Tailwind remains a separate track.
@@ -143,6 +143,12 @@ The [architecture document](architecture.md) is the detailed source of truth. Ke
 | Private realtime signals and current authorized reads | Open permitted views update automatically; access-revision topics and session checks keep notifications independent from authority. |
 
 ## Session Notes
+
+Historical checkpoints below are superseded by the completed 4.10 record above.
+
+- **4.10 publication authorized, 2026-11-08:** after explicitly confirming all three human groups, including every assisted check with no skips/issues, the user requested proceeding with commit/push, draft PR, hosted CI, passing-only staging migration and owned Drive verification. Preserve earlier reports and private account note. No merge or production authorization. Human acceptance is confirmed; CI/staging/Drive and matching combined acceptance still gate completion.
+
+- **4.10 local checkpoint, 2026-11-08:** checked preparation/confirmation/cancellation/corrections, exact live-file proof, retained actors/history and revocation locks pass local acceptance. Normalized working-tree source `369684fbdb037a1a446ee4860ceb08a16204ed95e9f132e28d211147824995e3` at base `76e01fd` matches standard and authenticated-browser reports. Pinned generated types match exactly. SQL transactions and observed-lock prepare/revoke, confirm/cancel, retry, source/MRF and native/profile-access races pass at both isolation levels. Publication and hosted/human acceptance remain pending; no unit completion is claimed.
 
 - **4.10 design corroboration, 2026-11-08:** the independent documenter checked the four purchasing components, shared primitives/modal, purchasing/global CSS and all six current captures. The extension retains Geist, existing light/dark tokens, controls, fact rows and responsive form grid; no design-system change or new design document is needed. Existing custom CSS and legacy token aliases remain for the separate Tailwind milestone. No files or raster assets were created by the documenter.
 

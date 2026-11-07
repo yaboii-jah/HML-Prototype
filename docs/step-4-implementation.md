@@ -7,7 +7,7 @@ Agreed 2026-11-03. This active companion owns the operational migration sequence
 Read the five core documents required by [AGENTS.md](../AGENTS.md), the checklist and this guide before planning, implementing, reviewing or resuming step 4.
 
 1. Reconcile Git status, the tracker and the actual implementation. Preserve unrelated pending work and the completed foundation planning retirement.
-2. Check the user's latest instruction before starting a unit. **Unit 4.8 is verified complete at `f1248bc` on 2026-11-07 after explicit confirmation of all three human groups with no skipped checks and passing combined acceptance. Unit 4.9 is verified complete at `e00f8fd` on 2026-11-08 after explicit acceptance of all three human groups including assisted checks and passing combined acceptance. Unit 4.10 implementation was authorized on 2026-11-08 and passes local verification. Publication, hosted changes, merging and production remain separate.**
+2. Check the user's latest instruction before starting a unit. **Unit 4.8 is verified complete at `f1248bc` on 2026-11-07 after explicit confirmation of all three human groups with no skipped checks and passing combined acceptance. Unit 4.9 is verified complete at `e00f8fd` on 2026-11-08 after explicit acceptance of all three human groups including assisted checks and passing combined acceptance. Unit 4.10 is verified complete at `77e3965` on 2026-11-08. Unit 4.11 requires its own scoped planning and authorization; merge and production remain separate.**
 3. Use the sequence below as the roadmap. Units through 4.10 have detailed scopes; later units require scoped planning and acceptance criteria before implementation.
 4. Verify a unit within its boundary, record actual results in the tracker, then check its completion box. A documentation checkpoint does not complete an operational workflow or checklist step 4.
 5. Retire this companion after the milestone is complete, preserving durable contracts in the core documents and completion evidence in the tracker.
@@ -41,7 +41,7 @@ The listed order is the default. Record any agreed scope/order revision here and
 | **4.7 Stock ledger and reservations** | [x] | Completed 2026-11-06 at `e749844`: exact private project-stock ledger/reservations pass local/four-job CI/full disposable/types/staging and scoped combined internal-stock acceptance. No staff stock workflow is enabled. |
 | **4.8 Awards and PO drafts** | [x] | Completed 2026-11-07 at `f1248bc`: automated/live-artifact/staging checks, all three explicit human groups with no skips and matching combined acceptance pass. |
 | **4.9 Accounting approval and commitments** | [x] | Completed 2026-11-08 at `e00f8fd`: automated/live-Drive/staging checks, all three explicit human groups including assisted checks with no skips or issues, and matching combined acceptance pass. |
-| **4.10 Supplier issuance** | [ ] | Authorized 2026-11-08; implemented and verified locally. Checked preparation, external sending declaration, permanent issuance and retained corrections; hosted and three-group human acceptance remain pending. |
+| **4.10 Supplier issuance** | [x] | Completed 2026-11-08 at `77e3965`: automated/staging/Drive, explicit three-group human and combined acceptance pass. |
 | **4.11 Payment coordination and verification** | [ ] | Finance coordination, Accounting proof-backed verification, credit balances and delivery clearance; retain these as separate milestones. |
 | **4.12 Purchased delivery dispatch** | [ ] | Supplier/site/warehouse delivery planning, scheduling and dispatch under the applicable clearance rules. |
 | **4.13 Purchased receiving and stock posting** | [ ] | Partial receiving, shortages/damage, required evidence, warehouse forwarding and exactly-once stock posting using 4.7. |
@@ -534,6 +534,8 @@ These are three new confirmations; earlier purchasing acceptance does not cover 
 
 ## 4.10 Supplier Issuance
 
+**Completed 2026-11-08 at `77e3965`:** local, all four standard CI jobs, full disposable integration/types/races, retained-state-safe staging and owned live-Drive/cleanup pass. The user confirmed all three human groups including all assisted checks without skips/issues. Matching combined acceptance passes. Earlier local-only checkpoints below are historical; step 4 remains open.
+
 **Authorized 2026-11-08:** the user confirmed all seventeen interview decisions and the shared understanding, then requested implementation. Preserve the pending 4.9 closeout. Procurement records the initial external sending only: Prepare to send → send externally → Confirm sent. No messaging, proof uploads, retransmission log or supplier acknowledgement.
 
 - Preparation requires current approval/applicability, supplier/source readiness, valid Credit terms and live verification of the current MRF archives plus exact approved-PO PDF. Bind those versions, block revocation while prepared and never auto-expire. Any currently authorized Procurement colleague may finish or cancel; cancellation requires a reason and explicit Not sent declaration.
@@ -544,11 +546,11 @@ These are three new confirmations; earlier purchasing acceptance does not cover 
 
 **Done when:** transactional/security/retry/time/source/access and observed-lock issuance/revocation/cancellation races pass at both isolation levels; real application/Realtime/Drive verification and failure recovery, local/four-job/disposable/types, scoped live-Drive and retained-state-safe staging checks pass. Inspect desktop/mobile and complete three new explicit human groups: issuance; lifecycle/history; archive/conflict/access. Match combined acceptance before checking 4.10. Payment/delivery, Vercel repair, merge and production remain separate.
 
-**Local checkpoint 2026-11-08:** standard lint/types/471 tests/build, public browser, owned migration replay and rollback/race checks, pinned type consistency and full real-account application/Workflow/Realtime/Drive-double verification pass. Desktop/mobile review is complete. Publication/four-job CI/disposable CI, retained-state-safe staging, owned live Drive, three new human groups and matching combined acceptance remain pending. The unit stays unchecked.
+**Historical local checkpoint 2026-11-08:** standard lint/types/471 tests/build, public browser, owned migration replay and rollback/race checks, pinned type consistency and full real-account application/Workflow/Realtime/Drive-double verification pass. Desktop/mobile review is complete. Publication/four-job CI/disposable CI, retained-state-safe staging, owned live Drive, three new human groups and matching combined acceptance remain pending. The unit stays unchecked.
 
 ### 4.10 Targeted Human Review
 
-**Confirmed 2026-11-08:** the user explicitly selected All three passed, including every assisted check, with no skips or remaining issues. Hosted verification and combined acceptance still gate 4.10 completion. Earlier 4.9 acceptance does not cover these new actions. Keep all QA records and files after testing.
+**Confirmed 2026-11-08:** the user explicitly selected All three passed, including every assisted check, with no skips or remaining issues. Hosted verification and combined acceptance also pass, completing 4.10. Earlier 4.9 acceptance does not cover these new actions. Keep all QA records and files after testing.
 
 #### Before you start
 

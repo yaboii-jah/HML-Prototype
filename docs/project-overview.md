@@ -8,7 +8,7 @@ HML ConstructSync is an internal construction materials operations system for HM
 
 See [architecture context](architecture.md) for the technical boundaries and production migration responsibilities.
 
-Unit 4.8 purchasing preparation is verified complete on 2026-11-07 at `f1248bc`. Comparisons and retained PDF/XLSX versions, explicit split supplier awards and numbered PO drafts with reviewed partial-order amounts pass automated, live-artifact and staging checks, all three explicit human-review groups with no skipped checks, and matching combined acceptance. Accounting review, gross commitments and approved-PO archives are verified complete in 4.9 on 2026-11-08 at `e00f8fd`, including all three explicit human confirmations and matching combined acceptance. Supplier issuance is implemented and verified locally in 4.10; hosted and explicit human acceptance remain pending.
+Unit 4.8 purchasing preparation is verified complete on 2026-11-07 at `f1248bc`. Comparisons and retained PDF/XLSX versions, explicit split supplier awards and numbered PO drafts with reviewed partial-order amounts pass automated, live-artifact and staging checks, all three explicit human-review groups with no skipped checks, and matching combined acceptance. Accounting review, gross commitments and approved-PO archives are verified complete in 4.9 on 2026-11-08 at `e00f8fd`, including all three explicit human confirmations and matching combined acceptance. Supplier issuance is verified complete in 4.10 on 2026-11-08 at `77e3965`, with automated/staging/Drive checks, explicit confirmation of all three human groups including assisted checks without skips/issues, and matching combined acceptance.
 
 ## Goals
 
