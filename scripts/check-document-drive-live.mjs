@@ -9,9 +9,9 @@ import { createDriveGateway } from '../src/server/documents/drive-gateway.ts';
 import { validateSupportingPdf } from '../src/server/documents/pdf-validation.ts';
 import sharp from 'sharp';
 import { validateQuotationOriginal } from '../src/server/quotations/original-validation.ts';
-import { generatePurchasingComparisonPdf, generatePurchasingComparisonWorkbook, XLSX_MIME } from '../src/server/purchasing/documents.ts';
+import { generatePurchasingComparisonPdf, generatePurchasingComparisonWorkbook, generatePurchasingPoPreview, XLSX_MIME } from '../src/server/purchasing/documents.ts';
 import { purchasingFixture } from '../tests/helpers/purchasing.mjs';
-import { comparisonSnapshot } from '../src/domain/purchasing/pricing.ts';
+import { comparisonSnapshot, calculatePo } from '../src/domain/purchasing/pricing.ts';
 
 requireStaging(process.env);
 if (process.argv.length !== 2 || process.env.GOOGLE_DRIVE_ENABLED !== 'true' || process.env.DOCUMENT_DRIVE_TEST_ORIGIN) throw Error('Use explicitly configured staging Drive without test overrides.');
@@ -66,6 +66,20 @@ try {
     assert.equal(part.status, 206); assert.deepEqual(Buffer.from(await part.arrayBuffer()), Buffer.from(content).subarray(0, 5));
   }
   result.checks.push('purchasing-comparison-artifacts');
+  fixture.order.payment = { mode: 'upfront', dueDate: '', relation: 'differs', reason: 'Synthetic supplier agreed upfront payment' };
+  const po = { id: randomUUID(), kind: 'po', ref: 'SYNTHETIC-PO-0001', version: '1', quoteId: fixture.q.id,
+    mrfId: fixture.q.mrfId, body: fixture.order, updatedAt: comparison.createdAt, blockers: [], calculation: calculatePo(fixture.q, fixture.order) };
+  const approved = await generatePurchasingPoPreview(fixture.view, po, { name: 'Synthetic Accounting reviewer', at: comparison.createdAt, version: '1' });
+  const approvedId = await drive.generateId(), approvedHash = createHash('sha256').update(approved).digest('hex');
+  const approvedSession = await drive.begin(approvedId, folderId, 'synthetic-approved-po.pdf', approved.length, tags, 'application/pdf');
+  assert.ok(approvedSession);
+  assert.equal((await drive.transfer(approvedSession, approved.length, approved, 0, 'application/pdf')).complete, true);
+  const verifiedApproved = await drive.verifyPdf(approvedId, folderId, tags, approved.length, approvedHash);
+  await validateSupportingPdf(verifiedApproved);
+  assert.deepEqual(Buffer.from(verifiedApproved), Buffer.from(approved));
+  const approvedRange = await drive.stream(approvedId, { start: 0, end: 4 });
+  assert.equal(approvedRange.status, 206); assert.equal(await approvedRange.text(), '%PDF-');
+  result.checks.push('approved-po-pdf');
   result.passed = true;
 } finally {
   if (folderId) {

@@ -7,6 +7,7 @@ import {
 import { parseCalculation } from "../quotations/revisions.ts";
 import type { QuotationCalculation } from "../quotations/financial.ts";
 import type { DemandClaim } from "../demand/quantities.ts";
+import { parsePayment, parsePoReview, type PaymentArrangement, type PoReview } from "./accounting.ts";
 
 export const PO_FIELDS = {
   date: "PO date",
@@ -51,6 +52,7 @@ export type OrderBody = {
   fields: PoFields;
   lines: OrderLine[];
   adjustments: OrderAdjustment[];
+  payment?: PaymentArrangement;
 };
 export type PurchasingRecord = {
   id: string;
@@ -67,6 +69,7 @@ export type PurchasingRecord = {
   blockers: string[];
   calculation: QuotationCalculation | null;
   updatedAt: string;
+  review?: PoReview | null;
 };
 export type ComparisonArtifact = {
   id: string;
@@ -205,7 +208,9 @@ export function parseOrderBody(value: unknown): OrderBody | null {
       confirmed: r.confirmed,
     });
   }
-  return { reason: v.reason, fields: parsedFields, lines, adjustments };
+  const payment = v.payment === undefined ? undefined : parsePayment(v.payment);
+  if (payment === null) return null;
+  return { reason: v.reason, fields: parsedFields, lines, adjustments, ...(payment ? { payment } : {}) };
 }
 
 export type PurchasingCommand = {
@@ -339,6 +344,7 @@ export function parsePurchasingView(value: unknown): PurchasingView | null {
     history: PurchasingHistory[] = [];
   for (const raw of v.records) {
     const r = record(raw),
+      review = r?.review === null || r?.review === undefined ? r?.review : parsePoReview(r.review),
       body = parseOrderBody(r?.body),
       calculation =
         r?.calculation === null ? null : parseCalculation(r?.calculation);
@@ -360,7 +366,8 @@ export function parsePurchasingView(value: unknown): PurchasingView | null {
       typeof r.updatedAt !== "string" ||
       !Array.isArray(r.blockers) ||
       !r.blockers.every((b): b is string => typeof b === "string") ||
-      (r.calculation !== null && !calculation)
+      (r.calculation !== null && !calculation) ||
+      (r.review !== null && r.review !== undefined && !review)
     )
       return null;
     records.push({
@@ -378,6 +385,7 @@ export function parsePurchasingView(value: unknown): PurchasingView | null {
       blockers: r.blockers,
       calculation,
       updatedAt: r.updatedAt,
+      ...(review !== undefined ? { review } : {}),
     });
   }
   for (const raw of v.claims) {
@@ -481,4 +489,4 @@ export function parsePurchasingView(value: unknown): PurchasingView | null {
 
 export type PurchasingResult =
   | { ok: true; message: string; targetId: string }
-  | { ok: false; message: string; conflict?: boolean };
+  | { ok: false; message: string; conflict?: boolean; uncertain?: boolean };

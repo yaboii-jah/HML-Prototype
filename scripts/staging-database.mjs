@@ -6,6 +6,7 @@ import { migrationHash } from './helpers/database-migrations.mjs';
 import { generateDatabaseTypes, normalizeDatabaseTypes } from './helpers/database-types.mjs';
 import assert from 'node:assert/strict';
 import { stagingSnapshot } from './helpers/staging-snapshot.mjs';
+import { accountingCheckSql } from './helpers/accounting-check.mjs';
 
 const action = process.argv[2];
 if (!['preview', 'apply', 'types', 'types-check', 'check', 'auth-check', 'auth-apply', 'realtime-check', 'realtime-apply'].includes(action) || process.argv.length > 3) {
@@ -98,6 +99,10 @@ if (action.startsWith('realtime-')) {
   await supabase(['db', 'query', '--linked', '--project-ref', STAGING_REF, '--file', resolve('supabase/checks/demand.sql')]);
   await supabase(['db', 'query', '--linked', '--project-ref', STAGING_REF, '--file', resolve('supabase/checks/stock.sql')]);
   await supabase(['db', 'query', '--linked', '--project-ref', STAGING_REF, '--file', resolve('supabase/checks/purchasing.sql')]);
+  await mkdir('.verification', { recursive: true });
+  const accountingFile = resolve('.verification/accounting-rollback.sql');
+  await writeFile(accountingFile, await accountingCheckSql());
+  await supabase(['db', 'query', '--linked', '--project-ref', STAGING_REF, '--file', accountingFile]);
   const after = await stagingSnapshot();
   assert.deepEqual(after, before, 'Rollback checks preserve retained staging state');
   await mkdir('.verification', { recursive: true });
