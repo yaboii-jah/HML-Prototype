@@ -178,7 +178,7 @@ export async function checkPurchasing({
   await click(second, "Create PO draft");
   await click(second, "Confirm PO creation");
   await second.wait(
-    "return location.pathname.startsWith('/purchase-orders/')&&document.body.textContent.includes('Saved PO draft preparation')",
+    "return location.pathname.startsWith('/purchase-orders/')&&document.body.textContent.includes('PO preparation and Accounting review')",
   );
   const poId = await second.run("return location.pathname.split('/').at(-1)");
   const demand = JSON.parse(
@@ -202,6 +202,9 @@ export async function checkPurchasing({
   );
   await field(second, "Ship to", "Disposable purchasing QA site");
   await field(second, "Requisitioner", "Verified QA requester");
+  await field(second, "Payment arrangement", "upfront", true);
+  await field(second, "Agreement against quotation", "differs", true);
+  await field(second, "Agreed difference and reason", "Supplier agreed upfront payment for this reviewed partial order");
   await second.run(
     "for(const label of document.querySelectorAll('dialog[open] label.field')){if(label.textContent.includes('Confirm this saved inclusion and amount')){const input=label.querySelector('input[type=checkbox]');if(input&&!input.disabled&&!input.checked)input.click();}}",
   );
@@ -216,7 +219,7 @@ export async function checkPurchasing({
     "saved PO preparation confirmation",
   );
   await second.wait(
-    "return !document.querySelector('dialog[open]')&&document.body.textContent.includes('Saved preparation confirmed. Accounting submission is not yet available.')",
+    "return !document.querySelector('dialog[open]')&&document.body.textContent.includes('Saved preparation confirmed. Review the saved payment arrangement before submission.')",
   );
   let po = (await view()).records.find((r) => r.id === poId);
   const preview = await fetch(

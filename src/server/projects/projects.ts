@@ -114,6 +114,7 @@ export async function runProjectCommand(
           "Scope allocations must fit within the project budget. Reduce allocations before lowering the budget.",
         P3402:
           "This project is referenced by pending account provisioning or document use and cannot be deleted.",
+        P4901: "The scope allocation cannot fall below its active gross commitments. Accounting must revoke the relevant unissued approval before its commitment can be released.",
         P3403: "This document code is locked after use.",
         P3404:
           "Assignments changed. Review the current personnel before deleting.",

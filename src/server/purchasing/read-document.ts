@@ -16,7 +16,7 @@ import { generatePurchasingPoPreview, XLSX_MIME } from "./documents";
 export async function readPurchasingDocument(
   request: Request,
   target: string,
-  kind: "comparison" | "po",
+  kind: "comparison" | "po" | "approvedPo",
 ) {
   try {
     privateDocumentRead(request);
@@ -52,7 +52,8 @@ export async function readPurchasingDocument(
       return new Response(Buffer.from(bytes), { headers });
     }
     const file = record(
-      await serviceRpc("comparison_document", { actor, artifact_id: target }),
+      await serviceRpc(kind === "approvedPo" ? "po_archive_document" : "comparison_document",
+        kind === "approvedPo" ? { actor, archive_id: target } : { actor, artifact_id: target }),
     );
     if (
       !file ||

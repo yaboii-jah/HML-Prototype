@@ -5,6 +5,8 @@ import { checkRequestRaces } from './check-request-races.mjs';
 import { checkDemandRaces } from './check-demand-races.mjs';
 import { checkStockRaces } from './check-stock-races.mjs';
 import { checkPurchasingRaces } from './check-purchasing-races.mjs';
+import { accountingCheckSql } from './helpers/accounting-check.mjs';
+import { checkAccountingRaces } from './check-accounting-races.mjs';
 import { retainedStateQuery } from './helpers/staging-snapshot.mjs';
 import { checkDocumentRaces } from './check-document-races.mjs';
 import assert from 'node:assert/strict';
@@ -108,6 +110,8 @@ try {
   checks.push('demand-sql');
   await sql(await readFile('supabase/checks/stock.sql', 'utf8'));
   await sql(await readFile('supabase/checks/purchasing.sql', 'utf8'));
+  await sql(await accountingCheckSql());
+  checks.push('accounting-sql');
   checks.push('purchasing-sql');
   checks.push('stock-sql');
   checks.push('quotation-finalization-sql');
@@ -276,6 +280,8 @@ try {
   checks.push('stock-races');
   await checkPurchasingRaces({ sql, database, environment });
   checks.push('purchasing-races');
+  await checkAccountingRaces({ sql, database, environment });
+  checks.push('accounting-races');
   await checkQuotationFinalizationRaces({ sql, database, environment, fixture: quotationFixture.financial });
   checks.push('quotation-finalization-races');
   await checkQuotationRaces({ sql, database, environment, fixture: quotationFixture });

@@ -2,7 +2,7 @@ import { requireStaging, STAGING_REF } from './supabase-target.mjs';
 
 /** Read-only retained-state evidence. No Auth passwords, tokens or raw business
  * rows are returned. Application rows are compared using deterministic hashes. */
-export function retainedStateQuery({ includeProjectOperations = true, includeDocuments = true, includeReview = true, includeSuppliers = true, includeQuotations = true, includeQuotationFinalization = true, includeDemand = true, includeStock = true, includePurchasing = true } = {}) {
+export function retainedStateQuery({ includeProjectOperations = true, includeDocuments = true, includeReview = true, includeSuppliers = true, includeQuotations = true, includeQuotationFinalization = true, includeDemand = true, includeStock = true, includePurchasing = true, includeAccounting = true } = {}) {
   const tables = [
     ['profiles', 'public.profiles', 'user_id'], ['grants', 'public.role_grants', 'user_id,role'],
     ['assignments', 'public.project_assignments', 'user_id,project_id'], ['projects', 'public.projects', 'id'],
@@ -12,6 +12,12 @@ export function retainedStateQuery({ includeProjectOperations = true, includeDoc
     ['audits', 'private.audit_events', 'id'], ['accountOperations', 'private.account_operations', 'id'],
   ];
   // During the 4.2 migration, compare all pre-existing rows before/after DDL.
+  if (includePurchasing && includeAccounting) tables.push(
+    ['poSubmissions', 'private.po_submissions', 'id'], ['poApprovals', 'private.po_approvals', 'id'],
+    ['poReviewEvents', 'private.po_review_events', 'id'], ['budgetCommitmentEntries', 'private.budget_commitment_entries', 'id'],
+    ['accountingOperations', 'private.accounting_operations', 'id'], ['poArchiveJobs', 'private.po_archive_jobs', 'id'],
+    ['poArchives', 'private.po_archives', 'job_id'],
+  );
   if (includePurchasing) tables.push(
     ['purchasingHeads', 'private.purchasing_heads', 'request_id'], ['purchasingRecords', 'private.purchasing_records', 'id'],
     ['purchasingClaims', 'private.purchasing_claims', 'id'], ['poPreparers', 'private.po_preparers', 'po_id,actor_id'],
@@ -53,7 +59,8 @@ export function retainedStateQuery({ includeProjectOperations = true, includeDoc
   if (includeProjectOperations) tables.push(['projectOperations', 'private.project_operations', 'id']);
   const hashes = tables.map(([name, table, order]) => {
     const row = name === 'requests' && !includeReview ? "to_jsonb(t)-'status'-'correction_kind'-'correction_state'-'submission_id'"
-      : name === 'quotationDrafts' && !includeQuotationFinalization ? "to_jsonb(t)-'family_id'-'copied_from_revision'" : 'to_jsonb(t)';
+      : name === 'quotationDrafts' && !includeQuotationFinalization ? "to_jsonb(t)-'family_id'-'copied_from_revision'"
+      : name === 'purchasingRecords' && !includeAccounting ? "to_jsonb(t)-'po_status'-'submission_id'-'approval_id'" : 'to_jsonb(t)';
     return `'${name}',(select jsonb_build_object('count',count(*),'digest',md5(coalesce(jsonb_agg(${row} order by ${order})::text,'[]'))) from ${table} t)`;
   });
   // Postgres limits function calls to 100 arguments. Keep each object under

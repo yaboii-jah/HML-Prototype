@@ -26,7 +26,9 @@ export async function checkRequestDrafts({ browser, second, client, login, logou
   await browser.wait(`return document.querySelector('h1')?.textContent==='${code}-MRF-0001'`);
   const id = await browser.run("return location.pathname.split('/').at(-1)");
   await browser.navigate(`/requests/${id}/edit`);
-  await browser.run("[...document.querySelectorAll('.request-steps button')].find(el=>el.textContent.includes('Materials')).click()");
+  // Navigation can finish before React attaches the tab handlers. Selecting the
+  // same tab is harmless; wait for its working controls before the first write.
+  await browser.wait("const tab=[...document.querySelectorAll('.request-steps button')].find(el=>el.textContent.includes('Materials'));tab?.click();return [...document.querySelectorAll('button')].some(el=>el.textContent==='Add material');");
   await browser.run("[...document.querySelectorAll('button')].find(el=>el.textContent==='Add material').click()");
   await browser.wait("return !!document.querySelector('.record-dialog[open] input[name=material-name]')");
   await browser.fill('input[name=material-name]', 'Cement');

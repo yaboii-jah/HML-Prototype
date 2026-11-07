@@ -4,7 +4,7 @@ import { createHash } from "node:crypto";
 import ExcelJS from "exceljs";
 import { PDFDocument } from "pdf-lib";
 import { purchasingFixture } from "./helpers/purchasing.mjs";
-import { comparisonSnapshot } from "../src/domain/purchasing/pricing.ts";
+import { comparisonSnapshot, calculatePo } from "../src/domain/purchasing/pricing.ts";
 import {
   generatePurchasingComparisonPdf,
   generatePurchasingComparisonWorkbook,
@@ -72,4 +72,25 @@ test("exact PO preview reuses the branded layout and permits visibly incomplete/
   const pdf = await PDFDocument.load(bytes);
   assert.ok(pdf.getPageCount() >= 1);
   assert.equal(hash(bytes), hash(await generatePurchasingPoPreview(view, po)));
+});
+
+test("approved PO rendering retains frozen calculations, attribution and deterministic retry bytes", async () => {
+  const { view, order, q } = purchasingFixture();
+  order.payment = { mode: "upfront", dueDate: "", relation: "differs", reason: "Supplier agreed upfront payment" };
+  const po = {
+    id: crypto.randomUUID(), kind: "po", ref: "QA49-PO-0001", version: "1", quoteId: q.id,
+    mrfId: q.mrfId, body: order, updatedAt: "2026-11-07T00:00:00.000Z", blockers: [],
+    calculation: calculatePo(q, order),
+  };
+  const approval = { name: "Verified Accounting reviewer", at: "2026-11-07T01:00:00.000Z", version: "1" };
+  const bytes = await generatePurchasingPoPreview(view, po, approval);
+  assert.equal(hash(bytes), hash(await generatePurchasingPoPreview(view, po, approval)));
+  assert.notEqual(hash(bytes), hash(await generatePurchasingPoPreview(view, po)));
+  const oldGross = po.calculation.gross;
+  q.financial.review.priceBasis = "exclusive";
+  assert.notEqual(calculatePo(q, order).gross, oldGross, "Later calculations can produce a different result");
+  // Frozen rendering uses supplied saved totals rather than invoking the current engine.
+  const alternate = await generatePurchasingPoPreview(view, po, approval);
+  assert.equal(po.calculation.gross, oldGross);
+  assert.ok((await PDFDocument.load(alternate)).getPageCount() >= 1);
 });

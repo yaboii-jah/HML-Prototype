@@ -326,7 +326,7 @@ function ScopeEditor({
               />
             </Field>
             <p>
-              Total allocations cannot exceed the project budget. Zero is valid.
+              Total allocations must fit the project budget and cover active gross commitments. Zero is valid for an unused scope.
             </p>
           </fieldset>
           <InlineError message={operation.error} />
@@ -650,7 +650,6 @@ export function ProjectDetailScreen({
         Back to projects
       </Link>
       <PageHeader
-        eyebrow="Project setup"
         title={project.name}
         description={`${project.location || "Location not set"} · ${project.code ?? "Code not assigned"}`}
         actions={
@@ -682,6 +681,14 @@ export function ProjectDetailScreen({
             <small>Unallocated</small>
             <strong>{formatPhp(project.financial?.unallocated ?? null)}</strong>
           </div>
+          <div>
+            <small>Committed gross</small>
+            <strong>{formatPhp(project.financial?.committed ?? null)}</strong>
+          </div>
+          <div>
+            <small>Uncommitted scope allocation</small>
+            <strong>{formatPhp(project.financial?.uncommitted ?? null)}</strong>
+          </div>
         </section>
       )}
       <section className="panel project-scope-panel">
@@ -706,6 +713,7 @@ export function ProjectDetailScreen({
             <>
               <th>Scope of work</th>
               {financial && <th className="numeric">Allocated</th>}
+              {financial && <><th className="numeric">Committed gross</th><th className="numeric">Uncommitted</th></>}
               {editable && <th>Actions</th>}
             </>
           }
@@ -715,6 +723,7 @@ export function ProjectDetailScreen({
               {financial && (
                 <td className="numeric">{formatPhp(scope.budget ?? null)}</td>
               )}
+              {financial && <><td className="numeric">{formatPhp(scope.committed ?? null)}</td><td className="numeric">{formatPhp(scope.uncommitted ?? null)}</td></>}
               {editable && (
                 <td>
                   <div className="button-row">
@@ -788,7 +797,7 @@ export function ProjectDetailScreen({
       <section className="panel project-unavailable">
         <h2>Operations</h2>
         <p>
-          Purchasing, stock and operational balances are unavailable while their workflows are migrated.
+          Spending, stock and other operational balances remain unavailable while their workflows are migrated.
         </p>
       </section>
       {financial && <ChangeHistory history={history} />}

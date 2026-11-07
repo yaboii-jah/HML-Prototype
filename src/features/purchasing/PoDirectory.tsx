@@ -4,24 +4,37 @@ import { useState } from "react";
 import { useFoundationRealtime } from "@/src/app-state/FoundationRealtime";
 import { PageHeader, Badge } from "@/src/components/ui/Primitives";
 import type { PurchasingRecord } from "@/src/domain/purchasing/contracts";
-export function PoDirectory({ initial }: { initial: PurchasingRecord[] }) {
+import { PO_STATUSES } from "@/src/domain/purchasing/accounting";
+export function PoDirectory({
+  initial,
+  accounting = false,
+}: {
+  initial: PurchasingRecord[];
+  accounting?: boolean;
+}) {
   const live = useFoundationRealtime(),
     [search, setSearch] = useState(""),
-    [state, setState] = useState("active");
+    [state, setState] = useState(accounting ? "waiting" : "active");
   const records =
     live.view?.kind === "purchaseOrders" ? live.view.data.records : initial;
-  const shown = records.filter(
-    (r) =>
-      (state === "all" || r.state === state) &&
-      `${r.ref} ${r.body.fields.vendorName} ${r.body.reason}`
-        .toLowerCase()
-        .includes(search.toLowerCase()),
-  );
+  const statusOf = (record: PurchasingRecord) => {
+    if (record.review?.status === "rejected") return "rejected";
+    if (record.state === "cancelled") return "cancelled";
+    return record.review?.status || "draft";
+  };
+  const shown = records.filter((record) => {
+    const status = accounting ? statusOf(record) : record.state;
+    const matchesState = state === "all" || (state === "waiting"
+      ? ["submitted", "held"].includes(status)
+      : status === state);
+    const text = `${record.ref} ${record.body.fields.vendorName} ${record.body.reason}`;
+    return matchesState && text.toLowerCase().includes(search.toLowerCase());
+  });
   return (
     <>
       <PageHeader
-        title="Purchase orders"
-        description="Saved purchasing preparation. Accounting review and supplier issuance remain later workflows."
+        title={accounting ? "Accounting" : "Purchase orders"}
+        description={accounting ? "Review submitted purchase orders, payment arrangements and scope commitments." : "Shared purchase orders, preparation and Accounting review."}
       />
       <div className="toolbar">
         <label>
@@ -35,8 +48,19 @@ export function PoDirectory({ initial }: { initial: PurchasingRecord[] }) {
         <label>
           Status
           <select value={state} onChange={(e) => setState(e.target.value)}>
-            <option value="active">Active</option>
-            <option value="cancelled">Cancelled</option>
+            {accounting ? (
+              <>
+                <option value="waiting">Waiting for Accounting</option>
+                {[...PO_STATUSES, "cancelled"].map((status) => (
+                  <option key={status} value={status}>{status}</option>
+                ))}
+              </>
+            ) : (
+              <>
+                <option value="active">Active</option>
+                <option value="cancelled">Cancelled</option>
+              </>
+            )}
             <option value="all">All</option>
           </select>
         </label>
@@ -57,17 +81,17 @@ export function PoDirectory({ initial }: { initial: PurchasingRecord[] }) {
                 <td>
                   <Link
                     className="table-primary"
-                    href={`/purchase-orders/${r.id}`}
+                    href={`/${accounting ? "accounting" : "purchase-orders"}/${r.id}`}
                   >
                     {r.ref}
                   </Link>
                 </td>
                 <td>{r.body.fields.vendorName || "Not recorded"}</td>
                 <td>
-                  <Badge value={r.state} />
+                  <Badge value={statusOf(r)} />
                 </td>
                 <td>
-                  {r.checked ? "Confirmed" : "Needs review"}
+                  {r.review?.status === "approved" ? "Accounting approval retained" : r.checked ? "Confirmed" : "Needs review"}
                   {r.blockers.length > 0 && (
                     <small>{r.blockers.join("; ")}</small>
                   )}
@@ -78,8 +102,7 @@ export function PoDirectory({ initial }: { initial: PurchasingRecord[] }) {
         </table>
         {!shown.length && (
           <p className="empty">
-            No purchase orders match this view. Prepare supplier awards from an
-            approved material request.
+            {accounting ? "No purchase orders match this view. Submitted and Held POs appear here for Accounting review." : "No purchase orders match this view. Prepare supplier awards from an approved material request."}
           </p>
         )}
       </div>

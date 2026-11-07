@@ -30,3 +30,21 @@
 .purchasing-workspace :is(td, dd) {
   font-variant-numeric: tabular-nums;
 }
+.po-accounting-facts > div {
+  display: grid;
+  grid-template-columns: minmax(9rem, 1fr) minmax(0, 2fr);
+}
+.po-accounting-facts dd {
+  margin: 0;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 600px) {
+  .po-accounting-facts > div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
+  }
+  .po-accounting-facts dd {
+    text-align: left;
+  }
+}

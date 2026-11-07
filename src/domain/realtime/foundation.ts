@@ -79,8 +79,8 @@ export function parseFoundationView(value: unknown): FoundationView | null {
   return null;
 }
 export function foundationViewQuery(pathname: string): string | null {
-  if (pathname === "/purchase-orders") return "view=purchaseOrders";
-  const po = /^\/purchase-orders\/([^/]+)(?:\/edit)?$/.exec(pathname);
+  if (pathname === "/purchase-orders" || pathname === "/accounting") return "view=purchaseOrders";
+  const po = /^\/(?:purchase-orders|accounting)\/([^/]+)(?:\/edit)?$/.exec(pathname);
   if (po && UUID_PATTERN.test(po[1])) return `view=purchasing&poId=${po[1]}`;
   const purchasing = /^\/requests\/([^/]+)\/purchasing$/.exec(pathname);
   if (purchasing && UUID_PATTERN.test(purchasing[1])) return `view=purchasing&mrfId=${purchasing[1]}`;
