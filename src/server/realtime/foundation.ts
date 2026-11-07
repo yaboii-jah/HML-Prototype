@@ -8,6 +8,9 @@ import { requestView } from "@/src/server/requests/drafts";
 import { quotationsView } from "@/src/server/quotations/drafts";
 import { supplierView } from "@/src/server/suppliers/suppliers";
 import { sameApplicationOrigin } from "../request-origin.ts";
+import { purchasingView, purchasingDirectory } from "@/src/server/purchasing/purchasing";
+import { quotationActor } from "@/src/server/quotations/drafts";
+import { serviceRpc } from "@/src/server/auth/service-rpc";
 
 const headers = { "Cache-Control": "private, no-store, max-age=0", Vary: "Cookie", "Referrer-Policy": "no-referrer" };
 const json = (value: unknown, status = 200) => Response.json(value, { status, headers });
@@ -40,6 +43,20 @@ export async function foundationResponse(request: Request, credentials = false) 
         accessToken: token.access_token, expiresAt: token.expires_at });
     }
     const query = new URL(request.url).searchParams, view = query.get("view");
+    if (view === "purchasing" || view === "purchaseOrders") {
+      if (session.activeRole === "Site Personnel") return json({ error: "Purchasing access denied." }, 403);
+      if (view === "purchaseOrders") return json({ session, view: { kind: "purchaseOrders", data: { role: session.activeRole, records: await purchasingDirectory() } } });
+      let id = query.get("mrfId");
+      const poId = query.get("poId");
+      if (poId) {
+        if (!UUID_PATTERN.test(poId)) return json({ error: "Valid PO required." }, 400);
+        const parent = await serviceRpc("purchasing_po_request", { actor: await quotationActor(), po_id: poId });
+        if (typeof parent !== "string") return json({ error: "PO unavailable." }, 404);
+        id = parent;
+      }
+      if (!id || !UUID_PATTERN.test(id)) return json({ error: "Valid MRF required." }, 400);
+      return json({ session, view: { kind: "purchasing", data: await purchasingView(id) } });
+    }
     if (view === "quotations") {
       if (session.activeRole === "Site Personnel") return json({ error: "Quotation access denied." }, 403);
       const id = query.get("mrfId");

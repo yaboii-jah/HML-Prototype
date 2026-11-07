@@ -1,10 +1,13 @@
 import { requireCurrentEvidence } from './verification-evidence.mjs';
 
 export const standardChecks = ['toolchain', 'lint', 'typegen', 'typecheck', 'unit', 'build'];
-export const databaseChecks = ['retained-snapshot-sql', 'stock-sql', 'stock-races', 'demand-sql', 'demand-races', 'quotation-finalization-sql', 'quotation-finalization-races', 'quotation-sql', 'quotation-races', 'rollback-sql', 'constraints-auth-data-api', 'types', 'auth-browser-email',
+export const databaseChecks = ['issuance-sql', 'issuance-races', 'accounting-sql', 'accounting-races', 'purchasing-sql', 'purchasing-races', 'retained-snapshot-sql', 'stock-sql', 'stock-races', 'demand-sql', 'demand-races', 'quotation-finalization-sql', 'quotation-finalization-races', 'quotation-sql', 'quotation-races', 'rollback-sql', 'constraints-auth-data-api', 'types', 'auth-browser-email',
   'supplier-sql', 'supplier-races', 'request-sql', 'request-races', 'mrf-review-sql', 'document-sql', 'document-races', 'project-races', 'account-races', 'realtime-protocol', 'realtime-races'];
-export const authChecks = ['quotation-finalization-browser', 'quotation-browser-workflow', 'supplier-browser', 'sessions', 'captured-email', 'accounts', 'projects', 'realtime-browser', 'shell-loading', 'http-roles-renewal', 'request-browser', 'document-browser-workflow', 'mrf-review-browser-workflow', 'isolation'];
+export const authChecks = ['issuance-browser-workflow', 'accounting-browser-workflow', 'purchasing-browser-workflow', 'quotation-finalization-browser', 'quotation-browser-workflow', 'supplier-browser', 'sessions', 'captured-email', 'accounts', 'projects', 'realtime-browser', 'shell-loading', 'http-roles-renewal', 'request-browser', 'document-browser-workflow', 'mrf-review-browser-workflow', 'isolation'];
 export const acceptanceRequirements = {
+  'supplier-issuance': ['issuance-sql', 'issuance-races', 'issuance-browser-workflow'],
+  'accounting-approval-commitments': ['accounting-sql', 'accounting-races', 'accounting-browser-workflow'],
+  'purchasing-awards-po-drafts': ['purchasing-sql', 'purchasing-races', 'purchasing-browser-workflow'],
   'stock-ledger-reservations': ['stock-sql', 'stock-races', 'retained-snapshot-sql'],
   'shared-demand-allocation': ['demand-sql', 'demand-races'],
   'quotation-finalization-revisions': ['quotation-finalization-sql', 'quotation-finalization-races', 'quotation-finalization-browser'],

@@ -2,6 +2,9 @@ import assert from "node:assert/strict";
 import { randomUUID, createHash } from "node:crypto";
 import { writeFile } from "node:fs/promises";
 import { setTimeout as delay } from "node:timers/promises";
+import { checkPurchasing, checkPurchasingRebind } from "./check-purchasing.mjs";
+import { checkAccounting, reviewApprovedPo } from "./check-accounting.mjs";
+import { checkIssuance } from "./check-issuance.mjs";
 import {
   emptyQuoteBody,
   emptyQuoteLine,
@@ -71,7 +74,7 @@ async function checkFinalization({
     ok(
       await client.from("profiles").insert({
         user_id: account.id,
-        display_name: "Financial " + role,
+        display_name: "Financial " + role + (accounts.length === 1 ? " colleague" : ""),
         is_active: true,
       }),
     );
@@ -448,6 +451,9 @@ async function checkFinalization({
   );
   assert.equal(range.status, 206);
   assert.equal(await range.text(), "%PDF-");
+  const purchasing = await checkPurchasing({ browser, second, sql, base, drive, mrf, quote, material });
+  const accounting = await checkAccounting({ browser, second, sql, base, drive, mrf, quote, ...purchasing,
+    login, logout, procurement: accounts[1], preparer: accounts[0], accountant: accounts[2], manager });
   // Actual MRF correction/reapproval/Workflow must not silently revalidate the offer.
   await second.navigate(`/requests/${mrf}`);
   await second.run(
@@ -517,6 +523,7 @@ async function checkFinalization({
     frozen,
   );
   // Fresh replacement review reuses original ownership, then replaces the prior head.
+  await reviewApprovedPo({ second, login, logout, sql, poId: purchasing.poId, accountant: accounts[2], procurement: accounts[1], mrf, quote, action: "reconfirmPo" });
   await reasonAction(
     browser,
     "Start revision",
@@ -554,6 +561,10 @@ async function checkFinalization({
   assert.equal((await current(quote)).revision.current, false);
   replacementSaved = await current(replacement);
   assert.equal(replacementSaved.revision.number, "2");
+  await reviewApprovedPo({ second, login, logout, sql, poId: purchasing.poId, accountant: accounts[2], procurement: accounts[1], mrf, quote: replacement, action: "revokePo" });
+  await checkPurchasingRebind({ browser, sql, mrf, quote: replacement, ...purchasing });
+  const issuance = await checkIssuance({ browser, second, sql, drive, login, logout, poId: purchasing.poId, mrf, quote: replacement,
+    procurement: accounts[0], colleague: accounts[1], accountant: accounts[2] });
   assert.match(
     await browser.run(
       "return document.querySelector('.quotation-financial-review').textContent",
@@ -646,6 +657,8 @@ async function checkFinalization({
     ),
     403,
   );
+  assert.equal(await second.run(`return (await fetch('/api/foundation/view?view=purchasing&mrfId=${mrf}')).status`), 403);
+  assert.equal(await second.run(`return (await fetch('/api/purchase-order-drafts/${purchasing.poId}/preview?version=1')).status`), 403);
   await logout(second);
   // Leave a freshly reviewed owned draft for observed-lock finalization races.
   await reasonAction(
@@ -693,5 +706,7 @@ async function checkFinalization({
     review: pendingSaved.financial.review,
     body: pendingSaved.body,
     previous: replacement,
+    accounting,
+    issuance,
   };
 }

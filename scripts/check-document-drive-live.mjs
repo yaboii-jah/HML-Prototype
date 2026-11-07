@@ -9,6 +9,10 @@ import { createDriveGateway } from '../src/server/documents/drive-gateway.ts';
 import { validateSupportingPdf } from '../src/server/documents/pdf-validation.ts';
 import sharp from 'sharp';
 import { validateQuotationOriginal } from '../src/server/quotations/original-validation.ts';
+import { generatePurchasingComparisonPdf, generatePurchasingComparisonWorkbook, generatePurchasingPoPreview, XLSX_MIME } from '../src/server/purchasing/documents.ts';
+import { purchasingFixture } from '../tests/helpers/purchasing.mjs';
+import { verifySendingFiles } from '../src/server/purchasing/issuance-files.ts';
+import { comparisonSnapshot, calculatePo } from '../src/domain/purchasing/pricing.ts';
 
 requireStaging(process.env);
 if (process.argv.length !== 2 || process.env.GOOGLE_DRIVE_ENABLED !== 'true' || process.env.DOCUMENT_DRIVE_TEST_ORIGIN) throw Error('Use explicitly configured staging Drive without test overrides.');
@@ -47,6 +51,51 @@ try {
     assert.deepEqual(Buffer.from(await part.arrayBuffer()), image.subarray(0, 5));
   }
   result.checks.push('quotation-mixed-originals');
+  const fixture = purchasingFixture();
+  const comparison = comparisonSnapshot(fixture.view, [], 'Synthetic gateway smoke', new Date().toISOString());
+  for (const [format, mime, content] of [
+    ['pdf', 'application/pdf', await generatePurchasingComparisonPdf(comparison, '1')],
+    ['xlsx', XLSX_MIME, await generatePurchasingComparisonWorkbook(comparison, '1')],
+  ]) {
+    const artifactId = await drive.generateId(), hash = createHash('sha256').update(content).digest('hex');
+    const session = await drive.begin(artifactId, folderId, 'synthetic-comparison.' + format, content.length, tags, mime);
+    assert.ok(session); assert.equal((await drive.transfer(session, content.length, content, 0, mime)).complete, true);
+    const actual = await drive.verifyFile(artifactId, folderId, tags, content.length, hash, mime);
+    assert.deepEqual(Buffer.from(actual), Buffer.from(content));
+    if (format === 'pdf') await validateSupportingPdf(actual);
+    const part = await drive.stream(artifactId, { start: 0, end: 4 });
+    assert.equal(part.status, 206); assert.deepEqual(Buffer.from(await part.arrayBuffer()), Buffer.from(content).subarray(0, 5));
+  }
+  result.checks.push('purchasing-comparison-artifacts');
+  fixture.order.payment = { mode: 'upfront', dueDate: '', relation: 'differs', reason: 'Synthetic supplier agreed upfront payment' };
+  const po = { id: randomUUID(), kind: 'po', ref: 'SYNTHETIC-PO-0001', version: '1', quoteId: fixture.q.id,
+    mrfId: fixture.q.mrfId, body: fixture.order, updatedAt: comparison.createdAt, blockers: [], calculation: calculatePo(fixture.q, fixture.order) };
+  const approved = await generatePurchasingPoPreview(fixture.view, po, { name: 'Synthetic Accounting reviewer', at: comparison.createdAt, version: '1' });
+  const approvedId = await drive.generateId(), approvedHash = createHash('sha256').update(approved).digest('hex');
+  const approvedSession = await drive.begin(approvedId, folderId, 'synthetic-approved-po.pdf', approved.length, tags, 'application/pdf');
+  assert.ok(approvedSession);
+  assert.equal((await drive.transfer(approvedSession, approved.length, approved, 0, 'application/pdf')).complete, true);
+  const verifiedApproved = await drive.verifyPdf(approvedId, folderId, tags, approved.length, approvedHash);
+  await validateSupportingPdf(verifiedApproved);
+  assert.deepEqual(Buffer.from(verifiedApproved), Buffer.from(approved));
+  const approvedRange = await drive.stream(approvedId, { start: 0, end: 4 });
+  assert.equal(approvedRange.status, 206); assert.equal(await approvedRange.text(), '%PDF-');
+  result.checks.push('approved-po-pdf');
+  const issuanceFiles = [];
+  const archiveId = randomUUID(), approvalId = randomUUID();
+  for (const kind of ['approved-mrf', 'approved-support', 'approved-po']) {
+    const fileId = await drive.generateId();
+    const fileTags = { ...tags, hmlKind: kind, ...(kind === 'approved-po'
+      ? { hmlPoArchive: archiveId, hmlPoApproval: approvalId } : { hmlSnapshotId: archiveId }) };
+    const session = await drive.begin(fileId, folderId, 'synthetic-issuance-' + kind + '.pdf', approved.length, fileTags);
+    assert.ok(session); assert.equal((await drive.transfer(session, approved.length, approved)).complete, true);
+    issuanceFiles.push({ id: fileId, tags: fileTags, size: String(approved.length), sha256: approvedHash,
+      ...(kind === 'approved-po' ? { parent: folderId } : {}) });
+  }
+  const issuanceProof = { approvalId, mrfArchiveId: archiveId, poArchiveId: archiveId, files: issuanceFiles };
+  await verifySendingFiles(issuanceProof, drive);
+  await assert.rejects(verifySendingFiles({ ...issuanceProof, files: issuanceFiles.map((f, i) => i === 2 ? { ...f, sha256: '0'.repeat(64) } : f) }, drive));
+  result.checks.push('supplier-issuance-files');
   result.passed = true;
 } finally {
   if (folderId) {

@@ -3,6 +3,7 @@ import { parseDirectory, object, type AccountDirectory } from "../accounts/accou
 import { parseProject, parseProjectHistory, type ProjectSummary, type ProjectDetail, type ProjectHistory } from "../projects/projects.ts";
 import { parseRequestView, type RequestView } from "../requests/drafts.ts";
 import { parseSupplierView, type SupplierView } from "../suppliers/suppliers.ts";
+import { parsePurchasingView, type PurchasingView, type PurchasingRecord } from "../purchasing/contracts.ts";
 
 export type DirectoryView = { role: WorkspaceSession["activeRole"]; projects: ProjectSummary[]; history: ProjectHistory[] };
 export type DetailView = { role: WorkspaceSession["activeRole"]; project: ProjectDetail | null; history: ProjectHistory[] };
@@ -10,6 +11,8 @@ export type AccountsView = AccountDirectory & { actorId: string; emailEnabled: b
 import { parseQuotationsView, type QuotationsView } from "../quotations/drafts.ts";
 
 export type FoundationView =
+  | { kind: "purchasing"; data: PurchasingView }
+  | { kind: "purchaseOrders"; data: { records: PurchasingRecord[] } }
   | { kind: "quotations"; data: QuotationsView }
   | { kind: "suppliers"; data: SupplierView }
   | { kind: "requests"; data: RequestView }
@@ -34,6 +37,14 @@ export function parseRealtimeSession(value: unknown): RealtimeSession | null {
 export function parseFoundationView(value: unknown): FoundationView | null {
   const raw = object(value), data = object(raw?.data);
   if (!raw || !data) return null;
+  if (raw.kind === "purchasing") {
+    const parsed = parsePurchasingView(data);
+    return parsed ? { kind: "purchasing", data: parsed } : null;
+  }
+  if (raw.kind === "purchaseOrders") {
+    const parsed = parsePurchasingView({ ...data, version: "0", demandVersion: "0", quotations: { role: data.role, request: null, suppliers: [], quotes: [], history: [] }, reports: [], claims: [], history: [] });
+    return parsed ? { kind: "purchaseOrders", data: { records: parsed.records } } : null;
+  }
   if (raw.kind === "quotations") {
     const parsed = parseQuotationsView(data);
     return parsed ? { kind: "quotations", data: parsed } : null;
@@ -68,6 +79,11 @@ export function parseFoundationView(value: unknown): FoundationView | null {
   return null;
 }
 export function foundationViewQuery(pathname: string): string | null {
+  if (pathname === "/purchase-orders" || pathname === "/accounting") return "view=purchaseOrders";
+  const po = /^\/(?:purchase-orders|accounting)\/([^/]+)(?:\/edit)?$/.exec(pathname);
+  if (po && UUID_PATTERN.test(po[1])) return `view=purchasing&poId=${po[1]}`;
+  const purchasing = /^\/requests\/([^/]+)\/purchasing$/.exec(pathname);
+  if (purchasing && UUID_PATTERN.test(purchasing[1])) return `view=purchasing&mrfId=${purchasing[1]}`;
   const quote = /^\/requests\/([^/]+)\/quotes(?:\/[^/]+)?$/.exec(pathname);
   if (quote && UUID_PATTERN.test(quote[1])) return `view=quotations&mrfId=${quote[1]}`;
   if (pathname === "/suppliers") return "view=suppliers";

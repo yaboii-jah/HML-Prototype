@@ -32,6 +32,20 @@ export type Database = {
                   Relationships: [
 
                   ]
+                },"accounting_operations": {
+                  Row: {
+                    "actor_id": string,"id": string,"payload": NonNullable<Json>,"request_id": string,"result": NonNullable<Json>
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "actor_id": string,"id": string,"payload": NonNullable<Json>,"request_id": string,"result": NonNullable<Json>
+                  }
+                  Update: {
+                    "actor_id"?: string,"id"?: string,"payload"?: NonNullable<Json>,"request_id"?: string,"result"?: NonNullable<Json>
+                  }
+                  Relationships: [
+
+                  ]
                 },"audit_events": {
                   Row: {
                     "action": string,"actor_name": string,"actor_role": string,"actor_user_id": string,"details": NonNullable<Json>,"entity_id": string,"entity_type": string,"id": string,"occurred_at": string,"request_id": string
@@ -42,6 +56,92 @@ export type Database = {
                   }
                   Update: {
                     "action"?: string,"actor_name"?: string,"actor_role"?: string,"actor_user_id"?: string,"details"?: NonNullable<Json>,"entity_id"?: string,"entity_type"?: string,"id"?: string,"occurred_at"?: string,"request_id"?: string
+                  }
+                  Relationships: [
+
+                  ]
+                },"budget_commitment_entries": {
+                  Row: {
+                    "actor": NonNullable<Json>,"amount": number,"approval_id": string,"created_at": string,"id": string,"kind": string,"project_id": string,"scope_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "actor": NonNullable<Json>,"amount": number,"approval_id": string,"created_at"?: string,"id"?: string,"kind": string,"project_id": string,"scope_id": string
+                  }
+                  Update: {
+                    "actor"?: NonNullable<Json>,"amount"?: number,"approval_id"?: string,"created_at"?: string,"id"?: string,"kind"?: string,"project_id"?: string,"scope_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "budget_commitment_entries_approval_id_fkey"
+      columns: ["approval_id"]
+isOneToOne: false
+      referencedRelation: "po_approvals"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"comparison_archives": {
+                  Row: {
+                    "artifact_id": string,"completed_at": string,"file_id": string,"folder_mapping_id": string,"sha256": string,"size": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "artifact_id": string,"completed_at"?: string,"file_id": string,"folder_mapping_id": string,"sha256": string,"size": number
+                  }
+                  Update: {
+                    "artifact_id"?: string,"completed_at"?: string,"file_id"?: string,"folder_mapping_id"?: string,"sha256"?: string,"size"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "comparison_archives_artifact_id_fkey"
+      columns: ["artifact_id"]
+isOneToOne: true
+      referencedRelation: "comparison_artifacts"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "comparison_archives_folder_mapping_id_fkey"
+      columns: ["folder_mapping_id"]
+isOneToOne: false
+      referencedRelation: "project_document_folders"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"comparison_artifacts": {
+                  Row: {
+                    "actor": NonNullable<Json>,"attempts": NonNullable<Json>,"checkpoint": NonNullable<Json>,"dispatched_at": string | null,"folder_mapping_id": string,"format": string,"id": string,"lease": string | null,"lease_until": string | null,"message": string | null,"original_actor": NonNullable<Json>,"report_id": string,"state": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "actor": NonNullable<Json>,"attempts"?: NonNullable<Json>,"checkpoint"?: NonNullable<Json>,"dispatched_at"?: string | null,"folder_mapping_id": string,"format": string,"id"?: string,"lease"?: string | null,"lease_until"?: string | null,"message"?: string | null,"original_actor": NonNullable<Json>,"report_id": string,"state"?: string
+                  }
+                  Update: {
+                    "actor"?: NonNullable<Json>,"attempts"?: NonNullable<Json>,"checkpoint"?: NonNullable<Json>,"dispatched_at"?: string | null,"folder_mapping_id"?: string,"format"?: string,"id"?: string,"lease"?: string | null,"lease_until"?: string | null,"message"?: string | null,"original_actor"?: NonNullable<Json>,"report_id"?: string,"state"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "comparison_artifacts_folder_mapping_id_fkey"
+      columns: ["folder_mapping_id"]
+isOneToOne: false
+      referencedRelation: "project_document_folders"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "comparison_artifacts_report_id_fkey"
+      columns: ["report_id"]
+isOneToOne: false
+      referencedRelation: "comparison_reports"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"comparison_reports": {
+                  Row: {
+                    "actor": NonNullable<Json>,"created_at": string,"id": string,"request_id": string,"snapshot": NonNullable<Json>,"version": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "actor": NonNullable<Json>,"created_at"?: string,"id": string,"request_id": string,"snapshot": NonNullable<Json>,"version": number
+                  }
+                  Update: {
+                    "actor"?: NonNullable<Json>,"created_at"?: string,"id"?: string,"request_id"?: string,"snapshot"?: NonNullable<Json>,"version"?: number
                   }
                   Relationships: [
 
@@ -216,6 +316,26 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"issuance_operations": {
+                  Row: {
+                    "actor_id": string,"id": string,"payload": NonNullable<Json>,"po_id": string,"result": NonNullable<Json>
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "actor_id": string,"id": string,"payload": NonNullable<Json>,"po_id": string,"result": NonNullable<Json>
+                  }
+                  Update: {
+                    "actor_id"?: string,"id"?: string,"payload"?: NonNullable<Json>,"po_id"?: string,"result"?: NonNullable<Json>
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "issuance_operations_po_id_fkey"
+      columns: ["po_id"]
+isOneToOne: false
+      referencedRelation: "purchasing_records"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"mrf_archive_files": {
                   Row: {
                     "id": string,"kind": string,"size": number,"snapshot_id": string
@@ -336,6 +456,266 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"po_approvals": {
+                  Row: {
+                    "actor": NonNullable<Json>,"approved_at": string,"id": string,"po_id": string,"project_id": string,"request_id": string,"scope_id": string,"snapshot": NonNullable<Json>,"submission_id": string,"version": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "actor": NonNullable<Json>,"approved_at"?: string,"id"?: string,"po_id": string,"project_id": string,"request_id": string,"scope_id": string,"snapshot": NonNullable<Json>,"submission_id": string,"version": number
+                  }
+                  Update: {
+                    "actor"?: NonNullable<Json>,"approved_at"?: string,"id"?: string,"po_id"?: string,"project_id"?: string,"request_id"?: string,"scope_id"?: string,"snapshot"?: NonNullable<Json>,"submission_id"?: string,"version"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "po_approvals_po_id_fkey"
+      columns: ["po_id"]
+isOneToOne: false
+      referencedRelation: "purchasing_records"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "po_approvals_submission_id_fkey"
+      columns: ["submission_id"]
+isOneToOne: false
+      referencedRelation: "po_submissions"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"po_archive_jobs": {
+                  Row: {
+                    "actor": NonNullable<Json>,"approval_id": string,"attempts": NonNullable<Json>,"checkpoint": NonNullable<Json>,"dispatched_at": string | null,"folder_mapping_id": string,"id": string,"lease": string | null,"lease_until": string | null,"message": string | null,"original_actor": NonNullable<Json>,"state": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "actor": NonNullable<Json>,"approval_id": string,"attempts"?: NonNullable<Json>,"checkpoint"?: NonNullable<Json>,"dispatched_at"?: string | null,"folder_mapping_id": string,"id"?: string,"lease"?: string | null,"lease_until"?: string | null,"message"?: string | null,"original_actor": NonNullable<Json>,"state"?: string
+                  }
+                  Update: {
+                    "actor"?: NonNullable<Json>,"approval_id"?: string,"attempts"?: NonNullable<Json>,"checkpoint"?: NonNullable<Json>,"dispatched_at"?: string | null,"folder_mapping_id"?: string,"id"?: string,"lease"?: string | null,"lease_until"?: string | null,"message"?: string | null,"original_actor"?: NonNullable<Json>,"state"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "po_archive_jobs_approval_id_fkey"
+      columns: ["approval_id"]
+isOneToOne: true
+      referencedRelation: "po_approvals"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "po_archive_jobs_folder_mapping_id_fkey"
+      columns: ["folder_mapping_id"]
+isOneToOne: false
+      referencedRelation: "project_document_folders"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"po_archives": {
+                  Row: {
+                    "completed_at": string,"file_id": string,"folder_mapping_id": string,"job_id": string,"sha256": string,"size": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "completed_at"?: string,"file_id": string,"folder_mapping_id": string,"job_id": string,"sha256": string,"size": number
+                  }
+                  Update: {
+                    "completed_at"?: string,"file_id"?: string,"folder_mapping_id"?: string,"job_id"?: string,"sha256"?: string,"size"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "po_archives_folder_mapping_id_fkey"
+      columns: ["folder_mapping_id"]
+isOneToOne: false
+      referencedRelation: "project_document_folders"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "po_archives_job_id_fkey"
+      columns: ["job_id"]
+isOneToOne: true
+      referencedRelation: "po_archive_jobs"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"po_issuance_corrections": {
+                  Row: {
+                    "actor": NonNullable<Json>,"before_details": NonNullable<Json>,"details": NonNullable<Json>,"id": string,"issuance_id": string,"reason": string,"recorded_at": string,"version": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "actor": NonNullable<Json>,"before_details": NonNullable<Json>,"details": NonNullable<Json>,"id"?: string,"issuance_id": string,"reason": string,"recorded_at"?: string,"version": number
+                  }
+                  Update: {
+                    "actor"?: NonNullable<Json>,"before_details"?: NonNullable<Json>,"details"?: NonNullable<Json>,"id"?: string,"issuance_id"?: string,"reason"?: string,"recorded_at"?: string,"version"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "po_issuance_corrections_issuance_id_fkey"
+      columns: ["issuance_id"]
+isOneToOne: false
+      referencedRelation: "po_issuances"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"po_issuances": {
+                  Row: {
+                    "actor": NonNullable<Json>,"blockers": NonNullable<Json>,"details": NonNullable<Json>,"id": string,"po_id": string,"preparation_id": string,"recorded_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "actor": NonNullable<Json>,"blockers": NonNullable<Json>,"details": NonNullable<Json>,"id"?: string,"po_id": string,"preparation_id": string,"recorded_at"?: string
+                  }
+                  Update: {
+                    "actor"?: NonNullable<Json>,"blockers"?: NonNullable<Json>,"details"?: NonNullable<Json>,"id"?: string,"po_id"?: string,"preparation_id"?: string,"recorded_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "po_issuances_po_id_fkey"
+      columns: ["po_id"]
+isOneToOne: true
+      referencedRelation: "purchasing_records"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "po_issuances_preparation_id_fkey"
+      columns: ["preparation_id"]
+isOneToOne: true
+      referencedRelation: "po_send_preparations"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"po_preparers": {
+                  Row: {
+                    "actor": NonNullable<Json>,"actor_id": string,"first_prepared_at": string,"po_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "actor": NonNullable<Json>,"actor_id": string,"first_prepared_at"?: string,"po_id": string
+                  }
+                  Update: {
+                    "actor"?: NonNullable<Json>,"actor_id"?: string,"first_prepared_at"?: string,"po_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "po_preparers_po_id_fkey"
+      columns: ["po_id"]
+isOneToOne: false
+      referencedRelation: "purchasing_records"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"po_review_events": {
+                  Row: {
+                    "action": string,"actor": NonNullable<Json>,"approval_id": string | null,"created_at": string,"id": string,"mrf_archive_id": string | null,"po_id": string,"reason": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "action": string,"actor": NonNullable<Json>,"approval_id"?: string | null,"created_at"?: string,"id"?: string,"mrf_archive_id"?: string | null,"po_id": string,"reason": string
+                  }
+                  Update: {
+                    "action"?: string,"actor"?: NonNullable<Json>,"approval_id"?: string | null,"created_at"?: string,"id"?: string,"mrf_archive_id"?: string | null,"po_id"?: string,"reason"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "po_review_events_approval_id_fkey"
+      columns: ["approval_id"]
+isOneToOne: false
+      referencedRelation: "po_approvals"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "po_review_events_mrf_archive_id_fkey"
+      columns: ["mrf_archive_id"]
+isOneToOne: false
+      referencedRelation: "mrf_archive_snapshots"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "po_review_events_po_id_fkey"
+      columns: ["po_id"]
+isOneToOne: false
+      referencedRelation: "purchasing_records"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"po_send_cancellations": {
+                  Row: {
+                    "actor": NonNullable<Json>,"preparation_id": string,"reason": string,"recorded_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "actor": NonNullable<Json>,"preparation_id": string,"reason": string,"recorded_at"?: string
+                  }
+                  Update: {
+                    "actor"?: NonNullable<Json>,"preparation_id"?: string,"reason"?: string,"recorded_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "po_send_cancellations_preparation_id_fkey"
+      columns: ["preparation_id"]
+isOneToOne: true
+      referencedRelation: "po_send_preparations"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"po_send_preparations": {
+                  Row: {
+                    "actor": NonNullable<Json>,"approval_id": string,"files": NonNullable<Json>,"id": string,"mrf_archive_id": string,"po_archive_id": string,"po_id": string,"prepared_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "actor": NonNullable<Json>,"approval_id": string,"files": NonNullable<Json>,"id"?: string,"mrf_archive_id": string,"po_archive_id": string,"po_id": string,"prepared_at"?: string
+                  }
+                  Update: {
+                    "actor"?: NonNullable<Json>,"approval_id"?: string,"files"?: NonNullable<Json>,"id"?: string,"mrf_archive_id"?: string,"po_archive_id"?: string,"po_id"?: string,"prepared_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "po_send_preparations_approval_id_fkey"
+      columns: ["approval_id"]
+isOneToOne: false
+      referencedRelation: "po_approvals"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "po_send_preparations_mrf_archive_id_fkey"
+      columns: ["mrf_archive_id"]
+isOneToOne: false
+      referencedRelation: "mrf_archive_snapshots"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "po_send_preparations_po_archive_id_fkey"
+      columns: ["po_archive_id"]
+isOneToOne: false
+      referencedRelation: "po_archives"
+      referencedColumns: ["job_id"]
+    },{
+      foreignKeyName: "po_send_preparations_po_id_fkey"
+      columns: ["po_id"]
+isOneToOne: false
+      referencedRelation: "purchasing_records"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"po_submissions": {
+                  Row: {
+                    "actor": NonNullable<Json>,"actor_id": string,"created_at": string,"id": string,"mrf_archive_id": string,"po_id": string,"request_id": string,"snapshot": NonNullable<Json>
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "actor": NonNullable<Json>,"actor_id": string,"created_at"?: string,"id"?: string,"mrf_archive_id": string,"po_id": string,"request_id": string,"snapshot": NonNullable<Json>
+                  }
+                  Update: {
+                    "actor"?: NonNullable<Json>,"actor_id"?: string,"created_at"?: string,"id"?: string,"mrf_archive_id"?: string,"po_id"?: string,"request_id"?: string,"snapshot"?: NonNullable<Json>
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "po_submissions_mrf_archive_id_fkey"
+      columns: ["mrf_archive_id"]
+isOneToOne: false
+      referencedRelation: "mrf_archive_snapshots"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "po_submissions_po_id_fkey"
+      columns: ["po_id"]
+isOneToOne: false
+      referencedRelation: "purchasing_records"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"project_document_folders": {
                   Row: {
                     "created_at": string,"current": boolean,"folder_id": string,"id": string,"name": string,"project_id": string,"root_id": string
@@ -363,6 +743,104 @@ isOneToOne: false
                   }
                   Relationships: [
 
+                  ]
+                },"purchasing_claims": {
+                  Row: {
+                    "id": string,"item_id": string,"line_id": string,"record_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "id": string,"item_id": string,"line_id": string,"record_id": string
+                  }
+                  Update: {
+                    "id"?: string,"item_id"?: string,"line_id"?: string,"record_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "purchasing_claims_id_fkey"
+      columns: ["id"]
+isOneToOne: true
+      referencedRelation: "demand_claims"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "purchasing_claims_record_id_fkey"
+      columns: ["record_id"]
+isOneToOne: false
+      referencedRelation: "purchasing_records"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"purchasing_heads": {
+                  Row: {
+                    "request_id": string,"version": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "request_id": string,"version"?: number
+                  }
+                  Update: {
+                    "request_id"?: string,"version"?: number
+                  }
+                  Relationships: [
+
+                  ]
+                },"purchasing_operations": {
+                  Row: {
+                    "actor_id": string,"id": string,"payload": NonNullable<Json>,"request_id": string,"result": NonNullable<Json>
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "actor_id": string,"id": string,"payload": NonNullable<Json>,"request_id": string,"result": NonNullable<Json>
+                  }
+                  Update: {
+                    "actor_id"?: string,"id"?: string,"payload"?: NonNullable<Json>,"request_id"?: string,"result"?: NonNullable<Json>
+                  }
+                  Relationships: [
+
+                  ]
+                },"purchasing_records": {
+                  Row: {
+                    "approval_id": string | null,"body": NonNullable<Json>,"calculation": Json | null,"checked": Json | null,"id": string,"kind": string,"po_status": string,"project_id": string,"quote_id": string,"ref": string | null,"request_id": string,"revision_id": string,"state": string,"submission_id": string | null,"supplier_id": string,"updated_at": string,"version": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "approval_id"?: string | null,"body": NonNullable<Json>,"calculation"?: Json | null,"checked"?: Json | null,"id": string,"kind": string,"po_status"?: string,"project_id": string,"quote_id": string,"ref"?: string | null,"request_id": string,"revision_id": string,"state"?: string,"submission_id"?: string | null,"supplier_id": string,"updated_at"?: string,"version"?: number
+                  }
+                  Update: {
+                    "approval_id"?: string | null,"body"?: NonNullable<Json>,"calculation"?: Json | null,"checked"?: Json | null,"id"?: string,"kind"?: string,"po_status"?: string,"project_id"?: string,"quote_id"?: string,"ref"?: string | null,"request_id"?: string,"revision_id"?: string,"state"?: string,"submission_id"?: string | null,"supplier_id"?: string,"updated_at"?: string,"version"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "purchasing_records_approval_id_fkey"
+      columns: ["approval_id"]
+isOneToOne: false
+      referencedRelation: "po_approvals"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "purchasing_records_quote_id_fkey"
+      columns: ["quote_id"]
+isOneToOne: false
+      referencedRelation: "quotation_drafts"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "purchasing_records_revision_id_fkey"
+      columns: ["revision_id"]
+isOneToOne: false
+      referencedRelation: "quotation_revisions"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "purchasing_records_submission_id_fkey"
+      columns: ["submission_id"]
+isOneToOne: false
+      referencedRelation: "po_submissions"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "purchasing_records_supplier_id_fkey"
+      columns: ["supplier_id"]
+isOneToOne: false
+      referencedRelation: "suppliers"
+      referencedColumns: ["id"]
+    }
                   ]
                 },"quotation_archive_jobs": {
                   Row: {
@@ -902,8 +1380,14 @@ isOneToOne: false
 "account_view":
 { Args: { "target": string }; Returns: Json
                            },
+"accounting_command":
+{ Args: { "actor": Json,"command": Json,"snapshot"?: Json }; Returns: Json
+                           },
 "accounts_directory":
 { Args: { "actor": Json }; Returns: Json
+                           },
+"approved_po_blockers":
+{ Args: { "target": string }; Returns: Json
                            },
 "bind_session":
 { Args: { "expected_credential": string,"expected_revision": string,"target_session": string,"target_user": string }; Returns: boolean
@@ -916,6 +1400,12 @@ isOneToOne: false
                            },
 "can_read_project":
 { Args: { "target_project": string }; Returns: boolean
+                           },
+"comparison_dispatch":
+{ Args: Record<PropertyKey, never>; Returns: Json
+                           },
+"comparison_worker":
+{ Args: { "action": string,"job_id": string,"lease_id"?: string,"patch"?: Json }; Returns: Json
                            },
 "current_user_authorized":
 { Args: Record<PropertyKey, never>; Returns: boolean
@@ -965,6 +1455,15 @@ isOneToOne: false
 "has_role":
 { Args: { "required_role": string }; Returns: boolean
                            },
+"issuance_actor":
+{ Args: { "actor": Json }; Returns: string
+                           },
+"issuance_details":
+{ Args: { "preparation": Omit<Database["private"]['Tables']["po_send_preparations"]['Row'], Database["private"]['Tables']["po_send_preparations"]['ComputedFields']>,"value": Json }; Returns: Json
+                           },
+"issuance_files":
+{ Args: { "target": string }; Returns: Json
+                           },
 "login_preflight":
 { Args: { "login_email": string }; Returns: Json
                            },
@@ -977,8 +1476,38 @@ isOneToOne: false
 "mrf_register_downstream":
 { Args: { "kind": string,"record_id": string,"target": string }; Returns: undefined
                            },
+"po_active_preparation":
+{ Args: { "target": string }; Returns: string
+                           },
+"po_archive_allowed":
+{ Args: { "actor": Json }; Returns: boolean
+                           },
+"po_archive_dispatch":
+{ Args: Record<PropertyKey, never>; Returns: Json
+                           },
+"po_archive_worker":
+{ Args: { "action": string,"job_id": string,"lease_id"?: string,"patch"?: Json }; Returns: Json
+                           },
+"po_budget_position":
+{ Args: { "target": string }; Returns: Json
+                           },
+"po_cannot_approve":
+{ Args: { "caller": string,"target": string }; Returns: boolean
+                           },
+"po_issuance_view":
+{ Args: { "target": string }; Returns: Json
+                           },
+"po_review_view":
+{ Args: { "target": string }; Returns: Json
+                           },
+"po_terms_ready":
+{ Args: { "body": Json }; Returns: boolean
+                           },
 "project_actor":
 { Args: { "actor": Json,"writing"?: boolean }; Returns: string
+                           },
+"project_allocation_summary":
+{ Args: { "financial": boolean,"target": string }; Returns: Json
                            },
 "project_command":
 { Args: { "actor": Json,"command": Json }; Returns: Json
@@ -998,8 +1527,44 @@ isOneToOne: false
 "project_summary":
 { Args: { "financial": boolean,"target": string }; Returns: Json
                            },
+"projects_allocation_read":
+{ Args: { "actor": Json,"target_project"?: string }; Returns: Json
+                           },
 "projects_read":
 { Args: { "actor": Json,"target_project"?: string }; Returns: Json
+                           },
+"purchasing_apply_claims":
+{ Args: { "actor": Json,"expected": string,"operation": string,"reason": string,"target": string }; Returns: Json
+                           },
+"purchasing_before_issuance_view":
+{ Args: { "target": string }; Returns: Json
+                           },
+"purchasing_blockers":
+{ Args: { "target": string }; Returns: Json
+                           },
+"purchasing_command":
+{ Args: { "actor": Json,"calculation"?: Json,"command": Json,"snapshot"?: Json }; Returns: Json
+                           },
+"purchasing_po_body":
+{ Args: { "body": Json,"quote": string,"target": string }; Returns: Json
+                           },
+"purchasing_preparation_command":
+{ Args: { "actor": Json,"calculation"?: Json,"command": Json,"snapshot"?: Json }; Returns: Json
+                           },
+"purchasing_preparation_view":
+{ Args: { "target": string }; Returns: Json
+                           },
+"purchasing_read":
+{ Args: { "actor": Json,"target_request"?: string }; Returns: Json
+                           },
+"purchasing_record_view":
+{ Args: { "target": string }; Returns: Json
+                           },
+"purchasing_validate_body":
+{ Args: { "body": Json,"previous"?: Json,"quote": string,"target": string }; Returns: Json
+                           },
+"purchasing_without_payment_review_body":
+{ Args: { "body": Json,"previous"?: Json,"quote": string,"target": string }; Returns: Json
                            },
 "quotation_actor":
 { Args: { "actor": Json,"writing"?: boolean }; Returns: string
@@ -1131,11 +1696,20 @@ isOneToOne: false
 "request_snapshot":
 { Args: { "target": string }; Returns: Json
                            },
+"request_without_commitments_command":
+{ Args: { "actor": Json,"command": Json }; Returns: Json
+                           },
 "requests_read":
 { Args: { "actor": Json,"target_request"?: string }; Returns: Json
                            },
+"scope_committed":
+{ Args: { "target": string }; Returns: number
+                           },
 "scope_snapshot":
 { Args: { "target": string }; Returns: Json
+                           },
+"scope_uncommitted":
+{ Args: { "target": string }; Returns: number
                            },
 "session_context":
 { Args: Record<PropertyKey, never>; Returns: Json
@@ -1383,6 +1957,9 @@ isOneToOne: false
 "account_save":
 { Args: { "actor": Json,"draft": Json,"expected_version": string,"operation": string,"target": string }; Returns: Json
                            },
+"accounting_command":
+{ Args: { "actor": Json,"command": Json,"snapshot"?: Json }; Returns: Json
+                           },
 "accounts_directory":
 { Args: { "actor": Json }; Returns: Json
                            },
@@ -1400,6 +1977,15 @@ isOneToOne: false
                            },
 "auth_unbind_session":
 { Args: { "target_session": string,"target_user": string }; Returns: undefined
+                           },
+"comparison_dispatch":
+{ Args: Record<PropertyKey, never>; Returns: Json
+                           },
+"comparison_document":
+{ Args: { "actor": Json,"artifact_id": string }; Returns: Json
+                           },
+"comparison_worker":
+{ Args: { "action": string,"job_id": string,"lease_id"?: string,"patch"?: Json }; Returns: Json
                            },
 "document_command":
 { Args: { "actor": Json,"command": Json }; Returns: Json
@@ -1422,11 +2008,38 @@ isOneToOne: false
 "documents_read":
 { Args: { "actor": Json,"target_project"?: string,"target_request"?: string }; Returns: Json
                            },
+"issuance_command":
+{ Args: { "actor": Json,"command": Json,"proof"?: Json }; Returns: Json
+                           },
+"issuance_prepare_files":
+{ Args: { "actor": Json,"target": string }; Returns: Json
+                           },
+"issuance_receipt":
+{ Args: { "actor": Json,"command": Json }; Returns: Json
+                           },
+"po_archive_dispatch":
+{ Args: Record<PropertyKey, never>; Returns: Json
+                           },
+"po_archive_document":
+{ Args: { "actor": Json,"archive_id": string }; Returns: Json
+                           },
+"po_archive_worker":
+{ Args: { "action": string,"job_id": string,"lease_id"?: string,"patch"?: Json }; Returns: Json
+                           },
 "project_command":
 { Args: { "actor": Json,"command": Json }; Returns: Json
                            },
 "projects_read":
 { Args: { "actor": Json,"target_project"?: string }; Returns: Json
+                           },
+"purchasing_command":
+{ Args: { "actor": Json,"calculation"?: Json,"command": Json,"snapshot"?: Json }; Returns: Json
+                           },
+"purchasing_po_request":
+{ Args: { "actor": Json,"po_id": string }; Returns: string
+                           },
+"purchasing_read":
+{ Args: { "actor": Json,"target_request"?: string }; Returns: Json
                            },
 "quotation_archive_dispatch":
 { Args: Record<PropertyKey, never>; Returns: Json
