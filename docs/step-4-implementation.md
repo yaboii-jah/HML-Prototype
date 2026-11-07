@@ -315,13 +315,220 @@ All three results are recorded explicitly with no skipped checks or remaining is
 
 **Reported 2026-11-07:** the user selected **Not tested yet / checks remain**. No 4.9 human group is confirmed passed.
 
-Use retained QA MRFs, quotations and POs in the current staging-backed application. Retain these records and their files. Use separate Procurement and Accounting identities, plus PM and Site sessions for the relevant checks. These are three new confirmations; earlier purchasing acceptance does not cover them.
+Follow the steps in order. Each step names the account to use and the result to look for. The group numbers let you report the same three acceptance results at the end.
 
-1. **Review, terms and lifecycle:** prepare explicit Upfront and Credit arrangements, review quotation matches/differences and check the Credit-date boundary. Submit a saved, confirmed PO; verify locked content and independent Accounting approval. Exercise Hold, reasoned return and Procurement recall, then correction/resubmission. Confirm historical preparers/submitters cannot approve after role changes. On an additional QA order, check terminal rejection, retained numbering/history and released demand.
-2. **Budgets and project visibility:** compare PO gross before EWT with supplier net, approve within the scope allocation and check the exact committed/uncommitted figures in Accounting and Projects. Check insufficient-budget approval and allocation-reduction prevention. Revoke an unissued approval, verify money is released while demand stays, and reapprove the same numbered PO as a retained new approval version. Check permitted non-Site reads and Site financial denial.
-3. **Archives, applicability, conflicts and access:** open the retained approved PDF and compare amounts, payment arrangement and approval attribution; it has no preview watermark. Check a failed archive/retry scenario without losing approval or money. Correct an MRF's supporting documents and complete Procurement quotation reconfirmation plus independent Accounting PO applicability; the approval, commitment and PDF stay frozen. Check approved historical source retention and withdrawal/inactive-supplier blockers. Use two sessions for repeated stale-decision review with preserved reasons, and verify changed access clears protected work and denies document access.
+#### Before you start
 
-Record each group's explicit result, including skipped checks or issues. Only confirmation that all three groups passed without skips, together with matching automated acceptance, closes 4.9.
+Open the [review app](http://127.0.0.1:3000). Use QA records in the staging-backed app and keep their records and files after testing.
+
+Have these accounts ready. Separate browser profiles or a normal window and a private window make switching between people easier.
+
+| Name used below | Account needed |
+| --- | --- |
+| **Preparer** | A QA person with Procurement and Accounting roles. Use Procurement to prepare the Main PO; switch to Accounting only for the self-approval check. |
+| **Reviewer** | A different Accounting person who has never prepared, edited or submitted the Main PO. |
+| **PM** | A Project Manager who can change the QA scope allocation and review its MRF. |
+| **Site** | Site Personnel assigned to the QA project. |
+| **Administrator** | Available to help with the final access-change check. |
+
+Prepare these records before starting:
+
+- **Main PO:** an editable QA draft with positive gross, reviewed prices and a finalized quotation whose archives are complete. Use a PO with withholding so its supplier net is lower than its gross; this makes the budget comparison visible. For the payment examples below, use a quotation stating **30 days credit**. Its MRF must already be approved and fully archived.
+- **Rejection PO:** another QA draft, with its own MRF/supplier group and an approved, archived MRF. This keeps the permanent-rejection test separate from the Main PO.
+- **QA scope:** use a scope with no other commitments for the Main PO. The project budget must be large enough to fund the allocation changes in steps 6–7.
+- **Correction file:** a valid replacement supporting PDF for the Main PO's MRF, with the same material requirements.
+
+If an account or record is missing, report **Pending — setup needed** and ask for help preparing it. The assisted checks below also need prepared examples; they remain pending until those examples are available.
+
+Write down:
+
+```text
+Main PO number:
+Rejection PO number:
+Main MRF number:
+Project / scope:
+Main PO gross:
+Main PO supplier net payable:
+Starting Unassigned quantity for each Main PO material (MRF units):
+```
+
+**For every confirmation:** click the named action, complete the dialog and confirm it there. Give a reason of at least five characters when requested, such as `QA review check`. Wait for the dialog to close and the saved status to update before moving on.
+
+**For budget checks:** gross includes VAT before withholding tax (EWT); supplier net is the amount after withholding. Approval commits the gross. For example, a PO showing gross **₱10,000** and net **₱9,900** commits **₱10,000**. Use your own PO's displayed amounts in the steps below.
+
+#### Walkthrough
+
+**1. Check the payment fields — Preparer, Procurement role (Group 1)**
+
+1. Open **Purchase orders → Main PO → Edit saved preparation**. Set **PO date** to today in Philippine time.
+2. Set **Payment arrangement** to **Upfront**. Under **Agreement against quotation**, choose **Agreed terms differ from quotation**. Enter `QA supplier agreed upfront payment instead of 30 days credit` in **Agreed difference and reason**.
+3. Click **Save preparation**, then **Confirm saved preparation** and its confirmation button.
+4. Edit again. Choose **Credit**, set **Agreed Credit due date** to yesterday, and save. Try to confirm the saved preparation.
+5. Change the due date to today. Keep **Agreed terms differ from quotation** and change the reason to `QA supplier agreed payment due today instead of 30 days credit`. Save and confirm again.
+6. Finally, set the due date to 30 days after the PO date and choose **Arrangement matches quotation**. Save and confirm. Leave this valid Credit arrangement on the Main PO.
+
+**Expected:** yesterday's due date blocks confirmation/submission. Today is accepted when the PO date is today; a future date is accepted too. Upfront needs no Credit due date. The screen shows the saved arrangement and your explicit match or difference review.
+
+**2. Submit the PO — Preparer, Procurement role (Group 1)**
+
+1. On the Main PO, click **Submit to Accounting** and confirm it in the dialog.
+2. Check the review status and budget figures.
+
+**Expected:** status becomes **Submitted**. PO editing is locked. **Committed gross** remains zero; submission has not reserved money.
+
+**3. Check who can approve — Preparer, then Reviewer (Group 1)**
+
+1. Switch the Preparer's active role to **Accounting** and open the Main PO from **Accounting**.
+2. Check **Approve PO** and the explanation beside the review actions.
+3. Switch the Preparer back to **Procurement**. In the separate browser session, sign in as the Reviewer and open the same PO from **Accounting**.
+
+**Expected:** the Preparer cannot approve their own PO after switching roles. The Reviewer can see the costs, terms and decision controls, but cannot edit PO content. Approval may still be unavailable until the budget check in steps 6–7.
+
+**4. Try Hold, Recall and Return — Reviewer and Preparer (Group 1)**
+
+1. **Reviewer:** click **Hold PO**, enter a reason and confirm. Expect **Held**, with content still locked.
+2. **Preparer:** click **Recall PO**, enter a reason and confirm. Expect **Draft**. Edit **Notes**, save, confirm the saved preparation and submit again. Expect **Submitted**.
+3. **Reviewer:** click **Return for correction**, give a reason and confirm. Expect **Returned**.
+4. **Preparer:** edit **Notes** and save. Check that the status is still **Returned**. Confirm the saved preparation and submit again. Expect **Submitted**.
+
+**Expected throughout:** money is not committed. The requested material quantities stay allocated to this PO. To check quantities, use **Back to comparisons and awards** and compare the material's **Unassigned** quantity before and after these actions.
+
+**5. Check a decision that becomes outdated — both sessions (Group 3)**
+
+1. **Reviewer:** open **Hold PO**, type `Keep this reason while another person updates the PO`, and leave the dialog open without confirming.
+2. **Preparer:** recall the Main PO. Wait for the Reviewer's dialog to show that the PO changed.
+3. **Reviewer:** check that the typed reason is still present. Review the displayed values, then click **I reviewed the latest values**. Leave the dialog open.
+4. **Preparer:** confirm the saved preparation and submit again.
+5. **Reviewer:** wait until the page shows **Submitted** and the dialog again requires review of changed values. Check the reason, review the values and click **I reviewed the latest values** again. Now confirm **Hold PO**.
+
+**Expected:** each newer version requires another explicit review. Your reason survives both changes. You cannot confirm an outdated decision. The final status is **Held**.
+
+**6. Check insufficient budget — PM, then Reviewer (Group 2)**
+
+1. **PM:** open **Projects → QA project → Scopes of work**. On the Main PO's scope, click **Edit allocation**.
+2. Set **Scope allocation (PHP)** to one cent less than the Main PO's gross. Save and confirm **Save scope allocation**.
+3. **Reviewer:** wait for the Main PO's **Scope allocation** to show the new amount.
+
+**Expected:** **Approve PO** is unavailable, with an insufficient-budget explanation. The PO remains **Held** and committed gross remains zero.
+
+**7. Approve at the exact budget limit — PM, then Reviewer (Group 2)**
+
+1. **PM:** set the scope allocation equal to the Main PO's gross and save it.
+2. **Reviewer:** wait for that exact allocation to appear. Click **Approve PO**, review the amounts and confirm.
+3. Write down the PO number, approval version, committed gross and uncommitted allocation.
+
+**Expected:** status is **Approved**, committed gross equals the PO gross, and uncommitted allocation is **₱0.00**. Supplier net payable is shown separately. Approved-PDF archiving starts.
+
+**8. Compare Projects and check the allocation floor — PM (Group 2)**
+
+1. Open the QA project. Compare the scope's **Committed gross** and **Uncommitted** figures with Accounting.
+2. Try saving an allocation one cent below the committed gross.
+3. Check the rejection message, then cancel the unsuccessful edit.
+
+**Expected:** the two screens agree. The lower allocation is refused and the saved allocation stays unchanged. **Unallocated** project budget is shown separately from **Uncommitted scope allocation**.
+
+**9. Open the approved document — Reviewer (Group 3)**
+
+1. On the Main PO, find **Retained approval versions**. Wait for **Approved PDF: complete**.
+2. Click **Open approved PDF v1**. Compare the PO number, quantities, gross, withholding, net payable and payment terms with the saved PO.
+3. Check the approval name, time and version. Keep a copy for comparison after step 11.
+
+**Expected:** the approved PDF is readable and has no **PREVIEW — NOT FOR ISSUE** watermark. A separate draft-preview link may still produce a watermarked preview.
+
+**10. Correct the MRF's supporting PDF — Preparer, Site, PM and Reviewer (Group 3)**
+
+1. **Preparer, Procurement role:** open the Main MRF. Enter a **Correction reason** and click **Open correction**.
+2. **Site:** replace its supporting PDF using **Upload replacement**. Wait for validation, then **Save and submit**.
+3. **PM:** open the corrected MRF, click **Approve MRF**, and wait for its new approved archives to complete.
+4. **Preparer:** open the quotation linked to the Main PO. Click **Review corrected MRF**, inspect the new MRF documents, enter a review reason and confirm **Reconfirm current MRF**.
+5. **Reviewer:** open the Main MRF's new approved documents and review them. Return to the Main PO, click **Confirm corrected MRF applicability**, enter a reason and confirm.
+
+**Expected:** the MRF correction changes supporting documents only. Procurement and Accounting each have a review to complete. The PO stays **Approved**; its commitment, approval version and existing PDF stay unchanged. This correction works even with zero uncommitted allocation.
+
+**11. Revoke and approve again — Reviewer and Preparer (Groups 1 and 2)**
+
+1. **Reviewer:** click **Revoke approval**, enter a reason and confirm.
+2. Check that the PO is **Returned**, committed gross is zero and the scope allocation is available again. Check that **Unassigned** material quantities have not increased: the PO still holds those quantities.
+3. **Preparer:** edit **Notes**, save, confirm the saved preparation and submit again.
+4. **Reviewer:** approve again and wait for its approved PDF to complete. Open both retained approval PDFs.
+
+**Expected:** the PO keeps its original number. **Approval v2** is added and v1 remains available and unchanged. The gross is committed once for the current approval.
+
+**12. Check permanent rejection and Site visibility — Rejection PO, then Site (Groups 1 and 2)**
+
+1. **Preparer:** note the separate Rejection PO's requested quantities and each material's current **Unassigned** quantity, using MRF units. Save, confirm and submit that PO.
+2. **Reviewer:** use **Reject PO permanently**, enter a reason and confirm.
+3. **Preparer:** reopen its detail page and check its history and the material's **Unassigned** quantity on the comparisons/awards page.
+4. **Site:** open the QA project. Also try the Main PO's Accounting URL and approved-PDF URL copied from the Reviewer's session.
+
+**Expected:** the rejected PO keeps its number/history and has no reopening action. Each material's **Unassigned** quantity increases by the rejected PO's requested quantity. The released supplier group can be used for a new award without reusing the rejected PO number. Site can read its assigned project but receives no budget figures, Accounting PO content or approved PDF.
+
+#### Assisted checks — continue when the examples are ready
+
+These checks are required too. Ask for the prepared QA example or account described below. Until it is available, record **Pending — assistance needed** for the check and its group.
+
+**A. Approved PDF failure and retry — Reviewer (Group 3)**
+
+Use a prepared QA PO whose approved-PDF archive has failed in an isolated test setup.
+
+1. Check that the PO is still **Approved** and its gross is still committed.
+2. Under **Retained approval versions**, click **Retry approved PDF v1**, enter a reason and confirm **Retry approved PDF archive**.
+3. Wait for **complete**, then open the approved PDF.
+
+**Expected:** retry succeeds using the same approval and committed amount. There is one retained PDF entry for that approval; the person preparing the isolated test also confirms that the retry created no duplicate file. Preparing this failure uses an isolated QA setup; shared Drive configuration stays unchanged.
+
+**B. Approved source changes — Preparer and Reviewer (Group 3)**
+
+Use a separate approved QA PO for these checks, with prepared expired/replaced-source examples and a QA-only supplier.
+
+1. Open the examples whose approved quotation has expired or has been replaced by a newer revision. Compare the bound quotation, approval, PDF and commitment with their recorded values.
+2. **Preparer:** open **Suppliers**, find the QA supplier and use **Deactivate supplier** with a reason. Check the approved PO, then reactivate the supplier.
+3. Finally, open the quotation revision actually linked to this separate QA PO and use **Withdraw revision** with a reason. Withdrawal is permanent, so use this separate source-test record.
+
+**Expected:** expiry/replacement retains the approved historical source without rewriting the approval or PDF. Supplier inactivity and withdrawal show blockers while retaining approval, money and material quantities. Reactivation clears the inactivity blocker. Withdrawal requires revocation/correction before further progress.
+
+**C. Former preparers and submitters — prepared QA accounts (Group 1)**
+
+Use prepared PO/account examples for a former creator, content editor and submitter who now has Accounting access. Sign in as each person, use Accounting and open the relevant submitted PO.
+
+**Expected:** **Approve PO** is blocked for each historical identity, even after their role changes. Another eligible Accounting person is needed. Record which prepared examples you checked.
+
+**D. Changed access — Reviewer and Administrator (Group 3)**
+
+For this check, have the Administrator prepare a QA reader with both **Accounting** and **Finance** roles. Use that account as the Reviewer below; removing Accounting leaves a valid Finance grant while testing whether the old session is rejected.
+
+1. **Reviewer:** open the Main PO and an approved-PDF link. Keep the PO screen open.
+2. **Administrator:** remove Accounting access from this QA Reviewer account.
+3. **Reviewer:** before signing in again, check that the protected app content clears and that reopening the approved-PDF URL with the old session is denied.
+4. **Administrator:** restore the QA access after the test. Sign in afresh as the Reviewer.
+
+**Expected:** the old session no longer grants access. Restoring the role requires a new sign-in; it does not restore the old session. Existing approval history and commitments remain intact.
+
+#### Report your results
+
+Use **Passed** only when every listed check for that group was completed successfully. Use **Pending** for an untested/skipped check or missing setup, and **Issue** when actual behavior differs from the expected result.
+
+```text
+Group 1 — Review, terms and lifecycle:
+Passed / Pending / Issue
+(Steps 1–4, 11–12 and assisted check C)
+
+Group 2 — Budgets and project visibility:
+Passed / Pending / Issue
+(Steps 6–8 and 11–12)
+
+Group 3 — Archives, applicability, conflicts and access:
+Passed / Pending / Issue
+(Steps 5, 9–10 and assisted checks A, B and D)
+
+For each Pending or Issue:
+Step/check:
+PO number:
+Expected result:
+Actual result or setup needed:
+```
+
+These are three new confirmations; earlier purchasing acceptance does not cover them. Only confirmation that all three groups passed without skips, together with matching automated acceptance, closes 4.9.
 
 ## Milestone Completion and Documentation Ownership
 
