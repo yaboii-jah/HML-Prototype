@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { randomUUID, createHash } from "node:crypto";
 import { writeFile } from "node:fs/promises";
 import { setTimeout as delay } from "node:timers/promises";
+import { checkPurchasing, checkPurchasingRebind } from "./check-purchasing.mjs";
 import {
   emptyQuoteBody,
   emptyQuoteLine,
@@ -448,6 +449,7 @@ async function checkFinalization({
   );
   assert.equal(range.status, 206);
   assert.equal(await range.text(), "%PDF-");
+  const purchasing = await checkPurchasing({ browser, second, sql, base, drive, mrf, quote, material });
   // Actual MRF correction/reapproval/Workflow must not silently revalidate the offer.
   await second.navigate(`/requests/${mrf}`);
   await second.run(
@@ -554,6 +556,7 @@ async function checkFinalization({
   assert.equal((await current(quote)).revision.current, false);
   replacementSaved = await current(replacement);
   assert.equal(replacementSaved.revision.number, "2");
+  await checkPurchasingRebind({ browser, sql, mrf, quote: replacement, ...purchasing });
   assert.match(
     await browser.run(
       "return document.querySelector('.quotation-financial-review').textContent",
@@ -646,6 +649,8 @@ async function checkFinalization({
     ),
     403,
   );
+  assert.equal(await second.run(`return (await fetch('/api/foundation/view?view=purchasing&mrfId=${mrf}')).status`), 403);
+  assert.equal(await second.run(`return (await fetch('/api/purchase-order-drafts/${purchasing.poId}/preview?version=1')).status`), 403);
   await logout(second);
   // Leave a freshly reviewed owned draft for observed-lock finalization races.
   await reasonAction(

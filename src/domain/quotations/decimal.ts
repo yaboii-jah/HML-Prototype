@@ -19,8 +19,8 @@ export const ZERO = fraction(BIG_ZERO);
 export const ONE = fraction(BIG_ONE);
 export const HUNDRED = fraction(BIG_HUNDRED);
 
-export function decimal(value: string): Decimal {
-  if (value.length > 80 || !/^-?\d+(?:\.\d+)?$/.test(value)) {
+export function decimal(value: string, maxLength = 80): Decimal {
+  if (value.length > maxLength || !/^-?\d+(?:\.\d+)?$/.test(value)) {
     throw Error("Enter an exact decimal value.");
   }
   const [whole, places = ""] = value.split(".");

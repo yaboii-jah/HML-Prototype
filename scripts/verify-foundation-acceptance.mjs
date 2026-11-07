@@ -33,12 +33,12 @@ try {
     if (profile === 'milestone') {
     const drive = await read('document-drive-live.json');
     requireCurrentEvidence(drive, source, 'quotation original live Drive');
-    if (!drive.cleaned || !drive.checks?.includes('quotation-mixed-originals')) throw Error('Live quotation originals/owned cleanup incomplete');
+    if (!drive.cleaned || !drive.checks?.includes('quotation-mixed-originals') || !drive.checks?.includes('purchasing-comparison-artifacts')) throw Error('Live originals/comparison artifacts/owned cleanup incomplete');
     // Manual review is deliberately explicit, never inferred from green CI.
     const manual = await read('foundation-manual.json');
     requireCurrentEvidence(manual, source, 'targeted manual review');
     if (!manual.confirmedByUser || !manual.reviewedBehavior?.includes('error-retry')) throw Error('Targeted recovery review pending');
-    for (const behavior of ['mrf-shared-drafts', 'mrf-conflict-review', 'mrf-revocation', 'mrf-document-sharing', 'mrf-document-recovery', 'project-document-folders', 'mrf-submission-review', 'mrf-approved-archives', 'mrf-corrections-history', 'supplier-sharing-permissions', 'supplier-conflict-recovery', 'supplier-status-history', 'quotation-capture-access', 'quotation-review-conflicts', 'quotation-originals-recovery', 'quotation-financial-finalization', 'quotation-revisions-reconfirmation', 'quotation-revision-archives']) {
+    for (const behavior of ['mrf-shared-drafts', 'mrf-conflict-review', 'mrf-revocation', 'mrf-document-sharing', 'mrf-document-recovery', 'project-document-folders', 'mrf-submission-review', 'mrf-approved-archives', 'mrf-corrections-history', 'supplier-sharing-permissions', 'supplier-conflict-recovery', 'supplier-status-history', 'quotation-capture-access', 'quotation-review-conflicts', 'quotation-originals-recovery', 'quotation-financial-finalization', 'quotation-revisions-reconfirmation', 'quotation-revision-archives', 'purchasing-comparisons-artifacts', 'purchasing-awards-po-pricing', 'purchasing-lifecycle-conflicts-access']) {
       if (!manual.reviewedBehavior?.includes(behavior)) throw Error(`Targeted operational review pending: ${behavior}`);
     }
     result = { ...source, complete: true, passed: true, scope: 'milestone', scenarios: database.scenarios,

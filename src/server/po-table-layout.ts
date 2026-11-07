@@ -3,12 +3,32 @@ import type { MRF, PO, Quote } from "../domain/types.ts";
 import { documentDate, documentMoney, documentTemplate, wrapText } from "./document-template.ts";
 import type { poFinancialBreakdown } from "../domain/pricing.ts";
 
+export type PoTextLayout = {
+  date: string; ref: string; mrfRef: string; mrfUrl?: string; vatStatus: string;
+  vendorName: string; vendorAddress: string; vendorContact: string; vendorPhone: string;
+  bankName: string; bankAccountName: string; bankAccountNumber: string;
+  shipToName: string; shipToAddress: string; shipToContact: string; shipToPhone: string;
+  requisitioner: string; terms: string; fob: string; shippingTerms: string; notes: string;
+  preview: boolean; gross: string; grossLabel?: string; ewtGoods: string; ewtServices: string; net: string;
+};
 export function drawPoLayout(template: Awaited<ReturnType<typeof documentTemplate>>, po: PO, request: MRF, quote: Quote, projectName: string, rows: string[][], financial: ReturnType<typeof poFinancialBreakdown>) {
+  const info = po.document, supplier = !po.supplierId || po.supplierId === quote.supplierId ? quote.supplierDetails : undefined;
+  return drawPoTextLayout(template, {
+    date: documentDate(info?.date || po.createdAt), ref: po.ref, mrfRef: request.ref, mrfUrl: request.archive?.versions.at(-1)?.formUrl,
+    vatStatus: po.financial?.vatStatus || "", vendorName: info?.vendorName || supplier?.name || "", vendorAddress: info?.vendorAddress || supplier?.address || "",
+    vendorContact: info?.vendorContact || supplier?.contactName || "", vendorPhone: info?.vendorPhone || supplier?.phone || "",
+    bankName: info?.bankName || "", bankAccountName: info?.bankAccountName || "", bankAccountNumber: info?.bankAccountNumber || "",
+    shipToName: info?.shipToName || projectName, shipToAddress: info?.shipToAddress || "", shipToContact: info?.shipToContact || "", shipToPhone: info?.shipToPhone || "",
+    requisitioner: info?.requisitioner || request.requestedBy, terms: [info?.terms || quote.terms, po.paymentDueDate ? `Payment due: ${po.paymentDueDate}` : ""].filter(Boolean).join(" / "),
+    fob: info?.fob || "", shippingTerms: info?.shippingTerms || quote.deliveryTerms || "", notes: po.notes,
+    preview: !["approved", "released"].includes(po.status), gross: documentMoney(financial.gross, true), ewtGoods: documentMoney(financial.ewtGoods, true), ewtServices: documentMoney(financial.ewtServices, true), net: documentMoney(financial.net, true),
+  }, rows);
+}
+/** Shared branded form layout accepts already formatted exact values. */
+export function drawPoTextLayout(template: Awaited<ReturnType<typeof documentTemplate>>, input: PoTextLayout, rows: string[][]) {
   const { regular, bold, pdf, geometry } = template;
   const blue = rgb(0, .36, .68), grey = rgb(.88, .89, .94), edge = rgb(.75, .75, .75);
   const left = 36, size = 7.5, leading = 10;
-  const info = po.document;
-  const supplierDetails = !po.supplierId || po.supplierId === quote.supplierId ? quote.supplierDetails : undefined;
   const extra: string[][] = [];
   const lines = (value: unknown, cellWidth: number, strong = false) => wrapText(value, strong ? bold : regular, size, cellWidth - 6);
   const write = (page: PDFPage, value: string[], x: number, top: number, cellWidth: number, align: "left" | "center" | "right" = "left", strong = false, white = false) => value.forEach((text, index) => {
@@ -27,15 +47,15 @@ export function drawPoLayout(template: Awaited<ReturnType<typeof documentTemplat
     const headerX = 453, headerWidth = 123;
     sheet.drawRectangle({ x: headerX - 24, y: 792 - bodyTop, width: 147, height: bodyTop - 60, color: rgb(1, 1, 1) });
     let headerTop = 64;
-    for (const [label, value] of [["DATE", documentDate(info?.date || po.createdAt)], ["P.O. #", po.ref], ["MRF #", request.ref], ["MRF LINK", "MATERIAL REQUEST FORM"]]) {
+    for (const [label, value] of [["DATE", input.date], ["P.O. #", input.ref], ["MRF #", input.mrfRef], ["MRF LINK", "MATERIAL REQUEST FORM"]]) {
       const content = lines(value, headerWidth), height = Math.max(14, content.length * leading + 4);
       write(sheet, [label], headerX - 52, headerTop + 2, 51, "right", true);
       box(sheet, headerX, headerTop, headerWidth, height, label === "DATE" ? grey : undefined);
       write(sheet, content, headerX, headerTop + 2, headerWidth, "center");
-      if (label === "MRF LINK") template.link(sheet, request.archive?.versions.at(-1)?.formUrl, (headerX - geometry.left) / geometry.scale, (headerTop - geometry.top) / geometry.scale, headerWidth / geometry.scale, height / geometry.scale);
+      if (label === "MRF LINK") template.link(sheet, input.mrfUrl, (headerX - geometry.left) / geometry.scale, (headerTop - geometry.top) / geometry.scale, headerWidth / geometry.scale, height / geometry.scale);
       headerTop += height;
     }
-    for (const [label, checked] of [["VAT", po.financial?.vatStatus === "VAT"], ["NON-VAT", po.financial?.vatStatus === "NON-VAT"]] as const) {
+    for (const [label, checked] of [["VAT", input.vatStatus === "VAT"], ["NON-VAT", input.vatStatus === "NON-VAT"]] as const) {
       box(sheet, headerX, headerTop + 3, 8, 8, checked ? rgb(0, 0, 0) : undefined);
       if (checked) {
         const base = 792 - headerTop - 11;
@@ -47,9 +67,9 @@ export function drawPoLayout(template: Awaited<ReturnType<typeof documentTemplat
     top = Math.max(bodyTop + 8, headerTop + 12);
     if (first) {
       const blocks = [
-        ["VENDOR", [info?.vendorName || supplierDetails?.name || "", info?.vendorAddress || supplierDetails?.address || "", info?.vendorContact || supplierDetails?.contactName || "", info?.vendorPhone || supplierDetails?.phone || ""]],
-        ["VENDOR BANK DETAILS", [info?.bankName || "", info?.bankAccountName || "", info?.bankAccountNumber || ""]],
-        ["SHIP TO", [info?.shipToName || projectName, info?.shipToAddress || "", info?.shipToContact || "", info?.shipToPhone || ""]],
+        ["VENDOR", [input.vendorName, input.vendorAddress, input.vendorContact, input.vendorPhone]],
+        ["VENDOR BANK DETAILS", [input.bankName, input.bankAccountName, input.bankAccountNumber]],
+        ["SHIP TO", [input.shipToName, input.shipToAddress, input.shipToContact, input.shipToPhone]],
       ] as const;
       let blockBottom = top;
       blocks.forEach(([label, values], index) => {
@@ -66,7 +86,7 @@ export function drawPoLayout(template: Awaited<ReturnType<typeof documentTemplat
       });
       top = blockBottom + 10;
       const widths = [184, 157, 59, 140], labels = ["REQUISITIONER", "TERMS", "F.O.B.", "SHIPPING TERMS"];
-      const content = [info?.requisitioner || request.requestedBy, [info?.terms || quote.terms, po.paymentDueDate ? `Payment due: ${po.paymentDueDate}` : ""].filter(Boolean).join(" / "), info?.fob || "", info?.shippingTerms || quote.deliveryTerms || ""].map((value, index) => {
+      const content = [input.requisitioner, input.terms, input.fob, input.shippingTerms].map((value, index) => {
         const wrapped = lines(value, widths[index]);
         if (wrapped.length > 8) extra.push(["", `${labels[index]}: ${value}`, "", "", "", ""]);
         return wrapped.slice(0, 8);
@@ -76,7 +96,6 @@ export function drawPoLayout(template: Awaited<ReturnType<typeof documentTemplat
       widths.forEach((cellWidth, index) => { box(sheet, x, top, cellWidth, 14, blue); write(sheet, [labels[index]], x, top + 3, cellWidth, "center", true, true); box(sheet, x, top + 14, cellWidth, height); write(sheet, content[index], x, top + 17, cellWidth, "center"); x += cellWidth; });
       top += 14 + height + 14;
     }
-    if (!["approved", "released"].includes(po.status)) sheet.drawText("PREVIEW — NOT FOR ISSUE", { x: 135, y: 85, font: bold, size: 20, opacity: .12 });
   };
   const widths = [59, 282, 29.5, 29.5, 70, 70];
   const heading = () => {
@@ -86,9 +105,9 @@ export function drawPoLayout(template: Awaited<ReturnType<typeof documentTemplat
   newPage(true);
   if (top > 570) { newPage(false); }
   heading();
-  const comments = lines(po.notes, 260);
+  const comments = lines(input.notes, 260);
   const longComments = comments.length > 8;
-  const contentRows = [...extra, ...rows, ...(longComments ? [["", `Other Comments or Special Instructions: ${po.notes}`, "", "", "", ""]] : [])];
+  const contentRows = [...extra, ...rows, ...(longComments ? [["", `Other Comments or Special Instructions: ${input.notes}`, "", "", "", ""]] : [])];
   const visibleComments = longComments ? ["Comments continued in the content grid above."] : comments;
   const footerHeight = Math.max(56, visibleComments.length * leading + 22);
   const bottom = Math.min(680, 746 - footerHeight - 10);
@@ -113,11 +132,13 @@ export function drawPoLayout(template: Awaited<ReturnType<typeof documentTemplat
   write(sheet, ["Other Comments or Special Instructions"], left, top + 17, 260, "left", true);
   box(sheet, left, top + 28, 260, Math.max(28, visibleComments.length * leading + 6));
   write(sheet, visibleComments, left, top + 31, 260);
-  for (const [label, amount] of [["SUBTOTAL", financial.gross], ["EWT (GOODS)", financial.ewtGoods], ["EWT (SERVICES)", financial.ewtServices], ["TOTAL", financial.net]] as const) {
+  for (const [label, amount] of [[input.grossLabel || "SUBTOTAL", input.gross], ["EWT (GOODS)", input.ewtGoods], ["EWT (SERVICES)", input.ewtServices], ["TOTAL", input.net]] as const) {
     const total = label === "TOTAL";
     if (total) box(sheet, 436, top, 140, 14, blue);
     write(sheet, [label], 436, top + 3, 70, "left", total, total);
-    box(sheet, 506, top, 70, 14, total ? blue : undefined); write(sheet, [documentMoney(amount, true)], 506, top + 3, 70, "right", total, total); top += 14;
+    box(sheet, 506, top, 70, 14, total ? blue : undefined); write(sheet, [amount], 506, top + 3, 70, "right", total, total); top += 14;
   }
-  template.footer(); return pdf;
+  template.footer();
+  if (input.preview) pdf.getPages().forEach(page => page.drawText("PREVIEW — NOT FOR ISSUE", { x: 135, y: 38, font: bold, size: 18, opacity: .3 }));
+  return pdf;
 }

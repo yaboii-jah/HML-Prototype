@@ -65,6 +65,7 @@ function RequestDetail({ saved, data }: { saved: SavedMrf; data: RequestView }) 
     <MrfDocuments mrfId={saved.id} editable={data.role === "Site Personnel" && mrfEditable(saved)} archiveManager={data.role === "Project Manager"} onPendingFile={setFilePending} />
     <MrfReview saved={saved} role={data.role} disabled={filePending} />
     {data.role !== "Site Personnel" && <Link className="button secondary" href={`/requests/${saved.id}/quotes`}>Supplier quotations</Link>}
+    {data.role !== "Site Personnel" && <Link className="button secondary" href={`/requests/${saved.id}/purchasing`}>Comparisons and purchasing</Link>}
     <p className="muted">{availability}</p></>;
 }
 

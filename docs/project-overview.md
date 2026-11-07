@@ -8,6 +8,8 @@ HML ConstructSync is an internal construction materials operations system for HM
 
 See [architecture context](architecture.md) for the technical boundaries and production migration responsibilities.
 
+Unit 4.8 purchasing preparation is implemented for staging review at `f1248bc`. Comparisons and retained PDF/XLSX versions, explicit split supplier awards and numbered PO drafts with reviewed partial-order amounts pass automated, live-artifact and staging checks. The three new human-review groups remain untested as of 2026-11-07, so unit acceptance remains open in the tracker. Accounting approvals, budget commitments and supplier issuance remain later units.
+
 ## Goals
 
 1. Make each material request traceable to its applicable stock transfers, supplier quotations, purchase orders, verified payments, deliveries and supporting documents.
