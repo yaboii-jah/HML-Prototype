@@ -313,6 +313,8 @@ All three results are recorded explicitly with no skipped checks or remaining is
 
 ### 4.9 Targeted Human Review — Pending
 
+**Reported 2026-11-07:** the user selected **Not tested yet / checks remain**. No 4.9 human group is confirmed passed.
+
 Use retained QA MRFs, quotations and POs in the current staging-backed application. Retain these records and their files. Use separate Procurement and Accounting identities, plus PM and Site sessions for the relevant checks. These are three new confirmations; earlier purchasing acceptance does not cover them.
 
 1. **Review, terms and lifecycle:** prepare explicit Upfront and Credit arrangements, review quotation matches/differences and check the Credit-date boundary. Submit a saved, confirmed PO; verify locked content and independent Accounting approval. Exercise Hold, reasoned return and Procurement recall, then correction/resubmission. Confirm historical preparers/submitters cannot approve after role changes. On an additional QA order, check terminal rejection, retained numbering/history and released demand.
