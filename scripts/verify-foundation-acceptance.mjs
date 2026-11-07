@@ -39,6 +39,10 @@ try {
     requireCurrentEvidence(manual, source, 'targeted manual review');
     if (!manual.confirmedByUser || !manual.reviewedBehavior?.includes('error-retry')) throw Error('Targeted recovery review pending');
     if (!drive.checks?.includes('approved-po-pdf')) throw Error('Approved PO live-Drive verification pending');
+    if (!drive.checks?.includes('supplier-issuance-files')) throw Error('Supplier issuance live-file verification pending');
+    for (const behavior of ['supplier-issuance-sending', 'supplier-issuance-lifecycle-history', 'supplier-issuance-archives-conflicts-access']) {
+      if (!manual.reviewedBehavior?.includes(behavior)) throw Error(`Targeted supplier issuance review pending: ${behavior}`);
+    }
     for (const behavior of ['accounting-review-terms-lifecycle', 'accounting-budgets-projects', 'accounting-archives-applicability-access']) {
       if (!manual.reviewedBehavior?.includes(behavior)) throw Error(`Targeted Accounting review pending: ${behavior}`);
     }

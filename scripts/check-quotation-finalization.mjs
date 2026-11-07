@@ -4,6 +4,7 @@ import { writeFile } from "node:fs/promises";
 import { setTimeout as delay } from "node:timers/promises";
 import { checkPurchasing, checkPurchasingRebind } from "./check-purchasing.mjs";
 import { checkAccounting, reviewApprovedPo } from "./check-accounting.mjs";
+import { checkIssuance } from "./check-issuance.mjs";
 import {
   emptyQuoteBody,
   emptyQuoteLine,
@@ -73,7 +74,7 @@ async function checkFinalization({
     ok(
       await client.from("profiles").insert({
         user_id: account.id,
-        display_name: "Financial " + role,
+        display_name: "Financial " + role + (accounts.length === 1 ? " colleague" : ""),
         is_active: true,
       }),
     );
@@ -562,6 +563,8 @@ async function checkFinalization({
   assert.equal(replacementSaved.revision.number, "2");
   await reviewApprovedPo({ second, login, logout, sql, poId: purchasing.poId, accountant: accounts[2], procurement: accounts[1], mrf, quote: replacement, action: "revokePo" });
   await checkPurchasingRebind({ browser, sql, mrf, quote: replacement, ...purchasing });
+  const issuance = await checkIssuance({ browser, second, sql, drive, login, logout, poId: purchasing.poId, mrf, quote: replacement,
+    procurement: accounts[0], colleague: accounts[1], accountant: accounts[2] });
   assert.match(
     await browser.run(
       "return document.querySelector('.quotation-financial-review').textContent",
@@ -704,5 +707,6 @@ async function checkFinalization({
     body: pendingSaved.body,
     previous: replacement,
     accounting,
+    issuance,
   };
 }

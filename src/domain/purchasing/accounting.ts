@@ -52,7 +52,7 @@ export type PoReview = {
   approvals: PoApproval[];
   events: { id: string; action: string; reason: string; actor: ReviewActor; at: string }[];
 };
-function parseActor(value: unknown): ReviewActor | null {
+export function parseActor(value: unknown): ReviewActor | null {
   const a = record(value);
   return a && uuid(a.userId) && typeof a.name === "string" && isAuthRole(a.activeRole)
     ? { userId: a.userId, name: a.name, activeRole: a.activeRole } : null;

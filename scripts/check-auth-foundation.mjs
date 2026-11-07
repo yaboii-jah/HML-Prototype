@@ -296,6 +296,8 @@ export async function checkAuthFoundation({ api, anon, secret, mailpit, sql, env
     checks.push('purchasing-browser-workflow');
     assert.ok(quotationFixture.financial.accounting?.approvalId, 'Actual Accounting approval/archive workflow completed');
     checks.push('accounting-browser-workflow');
+    assert.ok(quotationFixture.financial.issuance?.issuanceId, 'Actual supplier issuance workflow completed');
+    checks.push('issuance-browser-workflow');
     await checkSupplierDirectory({ browser, second, client, login, logout, sessionCookie, sql });
     checks.push('supplier-browser');
     for (const browser of browsers) browser.assertIsolated();

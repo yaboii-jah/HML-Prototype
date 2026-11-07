@@ -58,6 +58,7 @@ export async function runAccountingCommand(input: unknown): Promise<PurchasingRe
         P4902: "This PO is locked or its review state changed. Refresh before continuing.",
         P4903: "Every historical PO preparer and submitter is barred from approving or reconfirming this PO.",
         P4904: "Complete the saved preparation, current source/MRF checks, payment arrangement and valid Credit date before continuing.",
+        P4101: "Procurement has prepared or issued this PO. Review its sending status; an issued PO cannot be revoked.",
         P4801: "The selected PO is unavailable.",
         P4803: "This retry identity was used for different input. Review the latest values and retry with a new operation.",
         P4201: "Set up or repair the project's document folder before approval or archive retry.",

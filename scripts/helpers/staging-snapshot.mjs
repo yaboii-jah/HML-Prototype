@@ -2,7 +2,7 @@ import { requireStaging, STAGING_REF } from './supabase-target.mjs';
 
 /** Read-only retained-state evidence. No Auth passwords, tokens or raw business
  * rows are returned. Application rows are compared using deterministic hashes. */
-export function retainedStateQuery({ includeProjectOperations = true, includeDocuments = true, includeReview = true, includeSuppliers = true, includeQuotations = true, includeQuotationFinalization = true, includeDemand = true, includeStock = true, includePurchasing = true, includeAccounting = true } = {}) {
+export function retainedStateQuery({ includeProjectOperations = true, includeDocuments = true, includeReview = true, includeSuppliers = true, includeQuotations = true, includeQuotationFinalization = true, includeDemand = true, includeStock = true, includePurchasing = true, includeAccounting = true, includeIssuance = true } = {}) {
   const tables = [
     ['profiles', 'public.profiles', 'user_id'], ['grants', 'public.role_grants', 'user_id,role'],
     ['assignments', 'public.project_assignments', 'user_id,project_id'], ['projects', 'public.projects', 'id'],
@@ -12,6 +12,11 @@ export function retainedStateQuery({ includeProjectOperations = true, includeDoc
     ['audits', 'private.audit_events', 'id'], ['accountOperations', 'private.account_operations', 'id'],
   ];
   // During the 4.2 migration, compare all pre-existing rows before/after DDL.
+  if (includePurchasing && includeAccounting && includeIssuance) tables.push(
+    ['poSendPreparations', 'private.po_send_preparations', 'id'], ['poSendCancellations', 'private.po_send_cancellations', 'preparation_id'],
+    ['poIssuances', 'private.po_issuances', 'id'], ['poIssuanceCorrections', 'private.po_issuance_corrections', 'id'],
+    ['issuanceOperations', 'private.issuance_operations', 'id'],
+  );
   if (includePurchasing && includeAccounting) tables.push(
     ['poSubmissions', 'private.po_submissions', 'id'], ['poApprovals', 'private.po_approvals', 'id'],
     ['poReviewEvents', 'private.po_review_events', 'id'], ['budgetCommitmentEntries', 'private.budget_commitment_entries', 'id'],

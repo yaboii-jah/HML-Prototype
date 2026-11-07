@@ -316,6 +316,26 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"issuance_operations": {
+                  Row: {
+                    "actor_id": string,"id": string,"payload": NonNullable<Json>,"po_id": string,"result": NonNullable<Json>
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "actor_id": string,"id": string,"payload": NonNullable<Json>,"po_id": string,"result": NonNullable<Json>
+                  }
+                  Update: {
+                    "actor_id"?: string,"id"?: string,"payload"?: NonNullable<Json>,"po_id"?: string,"result"?: NonNullable<Json>
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "issuance_operations_po_id_fkey"
+      columns: ["po_id"]
+isOneToOne: false
+      referencedRelation: "purchasing_records"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"mrf_archive_files": {
                   Row: {
                     "id": string,"kind": string,"size": number,"snapshot_id": string
@@ -514,6 +534,52 @@ isOneToOne: true
       referencedColumns: ["id"]
     }
                   ]
+                },"po_issuance_corrections": {
+                  Row: {
+                    "actor": NonNullable<Json>,"before_details": NonNullable<Json>,"details": NonNullable<Json>,"id": string,"issuance_id": string,"reason": string,"recorded_at": string,"version": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "actor": NonNullable<Json>,"before_details": NonNullable<Json>,"details": NonNullable<Json>,"id"?: string,"issuance_id": string,"reason": string,"recorded_at"?: string,"version": number
+                  }
+                  Update: {
+                    "actor"?: NonNullable<Json>,"before_details"?: NonNullable<Json>,"details"?: NonNullable<Json>,"id"?: string,"issuance_id"?: string,"reason"?: string,"recorded_at"?: string,"version"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "po_issuance_corrections_issuance_id_fkey"
+      columns: ["issuance_id"]
+isOneToOne: false
+      referencedRelation: "po_issuances"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"po_issuances": {
+                  Row: {
+                    "actor": NonNullable<Json>,"blockers": NonNullable<Json>,"details": NonNullable<Json>,"id": string,"po_id": string,"preparation_id": string,"recorded_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "actor": NonNullable<Json>,"blockers": NonNullable<Json>,"details": NonNullable<Json>,"id"?: string,"po_id": string,"preparation_id": string,"recorded_at"?: string
+                  }
+                  Update: {
+                    "actor"?: NonNullable<Json>,"blockers"?: NonNullable<Json>,"details"?: NonNullable<Json>,"id"?: string,"po_id"?: string,"preparation_id"?: string,"recorded_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "po_issuances_po_id_fkey"
+      columns: ["po_id"]
+isOneToOne: true
+      referencedRelation: "purchasing_records"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "po_issuances_preparation_id_fkey"
+      columns: ["preparation_id"]
+isOneToOne: true
+      referencedRelation: "po_send_preparations"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"po_preparers": {
                   Row: {
                     "actor": NonNullable<Json>,"actor_id": string,"first_prepared_at": string,"po_id": string
@@ -560,6 +626,64 @@ isOneToOne: false
       referencedColumns: ["id"]
     },{
       foreignKeyName: "po_review_events_po_id_fkey"
+      columns: ["po_id"]
+isOneToOne: false
+      referencedRelation: "purchasing_records"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"po_send_cancellations": {
+                  Row: {
+                    "actor": NonNullable<Json>,"preparation_id": string,"reason": string,"recorded_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "actor": NonNullable<Json>,"preparation_id": string,"reason": string,"recorded_at"?: string
+                  }
+                  Update: {
+                    "actor"?: NonNullable<Json>,"preparation_id"?: string,"reason"?: string,"recorded_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "po_send_cancellations_preparation_id_fkey"
+      columns: ["preparation_id"]
+isOneToOne: true
+      referencedRelation: "po_send_preparations"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"po_send_preparations": {
+                  Row: {
+                    "actor": NonNullable<Json>,"approval_id": string,"files": NonNullable<Json>,"id": string,"mrf_archive_id": string,"po_archive_id": string,"po_id": string,"prepared_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "actor": NonNullable<Json>,"approval_id": string,"files": NonNullable<Json>,"id"?: string,"mrf_archive_id": string,"po_archive_id": string,"po_id": string,"prepared_at"?: string
+                  }
+                  Update: {
+                    "actor"?: NonNullable<Json>,"approval_id"?: string,"files"?: NonNullable<Json>,"id"?: string,"mrf_archive_id"?: string,"po_archive_id"?: string,"po_id"?: string,"prepared_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "po_send_preparations_approval_id_fkey"
+      columns: ["approval_id"]
+isOneToOne: false
+      referencedRelation: "po_approvals"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "po_send_preparations_mrf_archive_id_fkey"
+      columns: ["mrf_archive_id"]
+isOneToOne: false
+      referencedRelation: "mrf_archive_snapshots"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "po_send_preparations_po_archive_id_fkey"
+      columns: ["po_archive_id"]
+isOneToOne: false
+      referencedRelation: "po_archives"
+      referencedColumns: ["job_id"]
+    },{
+      foreignKeyName: "po_send_preparations_po_id_fkey"
       columns: ["po_id"]
 isOneToOne: false
       referencedRelation: "purchasing_records"
@@ -1331,6 +1455,15 @@ isOneToOne: false
 "has_role":
 { Args: { "required_role": string }; Returns: boolean
                            },
+"issuance_actor":
+{ Args: { "actor": Json }; Returns: string
+                           },
+"issuance_details":
+{ Args: { "preparation": Omit<Database["private"]['Tables']["po_send_preparations"]['Row'], Database["private"]['Tables']["po_send_preparations"]['ComputedFields']>,"value": Json }; Returns: Json
+                           },
+"issuance_files":
+{ Args: { "target": string }; Returns: Json
+                           },
 "login_preflight":
 { Args: { "login_email": string }; Returns: Json
                            },
@@ -1342,6 +1475,9 @@ isOneToOne: false
                            },
 "mrf_register_downstream":
 { Args: { "kind": string,"record_id": string,"target": string }; Returns: undefined
+                           },
+"po_active_preparation":
+{ Args: { "target": string }; Returns: string
                            },
 "po_archive_allowed":
 { Args: { "actor": Json }; Returns: boolean
@@ -1357,6 +1493,9 @@ isOneToOne: false
                            },
 "po_cannot_approve":
 { Args: { "caller": string,"target": string }; Returns: boolean
+                           },
+"po_issuance_view":
+{ Args: { "target": string }; Returns: Json
                            },
 "po_review_view":
 { Args: { "target": string }; Returns: Json
@@ -1396,6 +1535,9 @@ isOneToOne: false
                            },
 "purchasing_apply_claims":
 { Args: { "actor": Json,"expected": string,"operation": string,"reason": string,"target": string }; Returns: Json
+                           },
+"purchasing_before_issuance_view":
+{ Args: { "target": string }; Returns: Json
                            },
 "purchasing_blockers":
 { Args: { "target": string }; Returns: Json
@@ -1865,6 +2007,15 @@ isOneToOne: false
                            },
 "documents_read":
 { Args: { "actor": Json,"target_project"?: string,"target_request"?: string }; Returns: Json
+                           },
+"issuance_command":
+{ Args: { "actor": Json,"command": Json,"proof"?: Json }; Returns: Json
+                           },
+"issuance_prepare_files":
+{ Args: { "actor": Json,"target": string }; Returns: Json
+                           },
+"issuance_receipt":
+{ Args: { "actor": Json,"command": Json }; Returns: Json
                            },
 "po_archive_dispatch":
 { Args: Record<PropertyKey, never>; Returns: Json

@@ -7,6 +7,8 @@ import { checkStockRaces } from './check-stock-races.mjs';
 import { checkPurchasingRaces } from './check-purchasing-races.mjs';
 import { accountingCheckSql } from './helpers/accounting-check.mjs';
 import { checkAccountingRaces } from './check-accounting-races.mjs';
+import { issuanceCheckSql } from './helpers/issuance-check.mjs';
+import { checkIssuanceRaces } from './check-issuance-races.mjs';
 import { retainedStateQuery } from './helpers/staging-snapshot.mjs';
 import { checkDocumentRaces } from './check-document-races.mjs';
 import assert from 'node:assert/strict';
@@ -94,6 +96,9 @@ try {
   for (const name of ['stockAccounts', 'stockMovements', 'stockReservations', 'stockOperations', 'stockEvents']) {
     assert.equal(retained.records[name].count, 0, 'Snapshot includes empty new stock table: ' + name);
   }
+  for (const name of ['poSendPreparations', 'poSendCancellations', 'poIssuances', 'poIssuanceCorrections', 'issuanceOperations']) {
+    assert.equal(retained.records[name].count, 0, 'Snapshot includes empty new issuance table: ' + name);
+  }
   checks.push('retained-snapshot-sql');
   await sql(await readFile('supabase/checks/staging.sql', 'utf8'));
   await sql(await readFile('supabase/checks/sessions.sql', 'utf8'));
@@ -112,6 +117,8 @@ try {
   await sql(await readFile('supabase/checks/purchasing.sql', 'utf8'));
   await sql(await accountingCheckSql());
   checks.push('accounting-sql');
+  await sql(await issuanceCheckSql());
+  checks.push('issuance-sql');
   checks.push('purchasing-sql');
   checks.push('stock-sql');
   checks.push('quotation-finalization-sql');
@@ -282,6 +289,8 @@ try {
   checks.push('purchasing-races');
   await checkAccountingRaces({ sql, database, environment });
   checks.push('accounting-races');
+  await checkIssuanceRaces({ sql, database, environment });
+  checks.push('issuance-races');
   await checkQuotationFinalizationRaces({ sql, database, environment, fixture: quotationFixture.financial });
   checks.push('quotation-finalization-races');
   await checkQuotationRaces({ sql, database, environment, fixture: quotationFixture });

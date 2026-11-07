@@ -11,6 +11,7 @@ import sharp from 'sharp';
 import { validateQuotationOriginal } from '../src/server/quotations/original-validation.ts';
 import { generatePurchasingComparisonPdf, generatePurchasingComparisonWorkbook, generatePurchasingPoPreview, XLSX_MIME } from '../src/server/purchasing/documents.ts';
 import { purchasingFixture } from '../tests/helpers/purchasing.mjs';
+import { verifySendingFiles } from '../src/server/purchasing/issuance-files.ts';
 import { comparisonSnapshot, calculatePo } from '../src/domain/purchasing/pricing.ts';
 
 requireStaging(process.env);
@@ -80,6 +81,21 @@ try {
   const approvedRange = await drive.stream(approvedId, { start: 0, end: 4 });
   assert.equal(approvedRange.status, 206); assert.equal(await approvedRange.text(), '%PDF-');
   result.checks.push('approved-po-pdf');
+  const issuanceFiles = [];
+  const archiveId = randomUUID(), approvalId = randomUUID();
+  for (const kind of ['approved-mrf', 'approved-support', 'approved-po']) {
+    const fileId = await drive.generateId();
+    const fileTags = { ...tags, hmlKind: kind, ...(kind === 'approved-po'
+      ? { hmlPoArchive: archiveId, hmlPoApproval: approvalId } : { hmlSnapshotId: archiveId }) };
+    const session = await drive.begin(fileId, folderId, 'synthetic-issuance-' + kind + '.pdf', approved.length, fileTags);
+    assert.ok(session); assert.equal((await drive.transfer(session, approved.length, approved)).complete, true);
+    issuanceFiles.push({ id: fileId, tags: fileTags, size: String(approved.length), sha256: approvedHash,
+      ...(kind === 'approved-po' ? { parent: folderId } : {}) });
+  }
+  const issuanceProof = { approvalId, mrfArchiveId: archiveId, poArchiveId: archiveId, files: issuanceFiles };
+  await verifySendingFiles(issuanceProof, drive);
+  await assert.rejects(verifySendingFiles({ ...issuanceProof, files: issuanceFiles.map((f, i) => i === 2 ? { ...f, sha256: '0'.repeat(64) } : f) }, drive));
+  result.checks.push('supplier-issuance-files');
   result.passed = true;
 } finally {
   if (folderId) {

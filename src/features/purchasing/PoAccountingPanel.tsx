@@ -43,6 +43,7 @@ export function PoAccountingPanel({ po, view }: { po: PurchasingRecord; view: Pu
   const gross = moneyCents(po.calculation?.gross), available = moneyCents(budget?.uncommitted);
   const insufficient = gross === null || available === null || gross > available;
   const approvalBlocked = barred || insufficient || !po.checked || !!po.blockers.length || !!termsIssues.length;
+  const sendingLocked = po.issuance?.status === "prepared" || po.issuance?.status === "issued";
   const values = [
     ["Payment arrangement", `${po.body.payment?.mode || "Not recorded"}${po.body.payment?.mode === "credit" ? ` · due ${po.body.payment.dueDate}` : ""}`],
     ["Quoted payment terms", quote.body.paymentTerms || "Not recorded"],
@@ -95,7 +96,7 @@ export function PoAccountingPanel({ po, view }: { po: PurchasingRecord; view: Pu
   return (
     <>
       <h3>Accounting review</h3>
-      <p>Review status: <strong>{review.status}</strong>. Supplier issuance remains unavailable.</p>
+      <p>Review status: <strong>{review.status}</strong>.</p>
       {facts}
       {notice && <p role="status">{notice}</p>}
       {review.status !== "approved" && termsIssues.length > 0 && <ul>{termsIssues.map((issue) => <li key={issue}>{issue}</li>)}</ul>}
@@ -118,7 +119,9 @@ export function PoAccountingPanel({ po, view }: { po: PurchasingRecord; view: Pu
       )}
       {view.role === "Accounting" && review.status === "approved" && (
         <div className="button-row">
-          {button("revokePo")}
+          {button("revokePo", sendingLocked)}
+          {po.issuance?.status === "prepared" && <p>Procurement has prepared this PO to send. They must confirm sending or cancel with a Not sent declaration before revocation.</p>}
+          {po.issuance?.status === "issued" && <p>This PO is issued. Approval cannot be revoked; order or financial corrections require the later workflow.</p>}
           {po.blockers.some((b) => b.includes("Accounting must reconfirm")) && button("reconfirmPo", barred || po.blockers.some((b) => b.includes("Procurement must reconfirm") || b.includes("withdrawn") || b.includes("unavailable")))}
         </div>
       )}
@@ -149,6 +152,7 @@ export function PoAccountingPanel({ po, view }: { po: PurchasingRecord; view: Pu
           </details>
           {pending.input.type === "approvePo" && <p>Approval commits gross including VAT before EWT and queues its retained PDF. Supplier issuance is recorded separately.</p>}
           {pending.input.type === "revokePo" && <p>Release the commitment and return this PO for Procurement edits or cancellation. Demand remains allocated.</p>}
+          {pending.input.type === "revokePo" && sendingLocked && <p role="status">Procurement prepared or issued this PO while the dialog was open. Revocation is unavailable. Review the Supplier issuance section.</p>}
           {pending.input.type === "rejectPo" && <p>This rejection is permanent. The numbered PO and history remain; its demand becomes available for sourcing.</p>}
           <Field label={["approvePo", "submitPo"].includes(pending.input.type) ? "Review note (optional)" : "Reason (at least five characters)"}>
             <textarea maxLength={2000} disabled={busy || uncertain} value={pending.input.reason} onChange={(e) => setPending({ ...pending, input: { ...pending.input, reason: e.target.value } })}/>
@@ -159,7 +163,7 @@ export function PoAccountingPanel({ po, view }: { po: PurchasingRecord; view: Pu
           {error && <p className="field-error" role="alert">{error}</p>}
           {uncertain && <button type="button" className="button secondary" disabled={busy} onClick={() => void act(true)}>Check saved outcome</button>}
           <div className="button-row"><button type="button" className="button primary"
-            disabled={busy || uncertain || stale || (pending.input.type === "approvePo" && approvalBlocked) || (!["submitPo", "approvePo"].includes(pending.input.type) && pending.input.reason.trim().length < 5)}
+            disabled={busy || uncertain || stale || (pending.input.type === "approvePo" && approvalBlocked) || (pending.input.type === "revokePo" && sendingLocked) || (!["submitPo", "approvePo"].includes(pending.input.type) && pending.input.reason.trim().length < 5)}
             onClick={() => void act()}>{busy ? "Saving…" : labels[pending.input.type]}</button></div>
         </>}
       </RecordModal>

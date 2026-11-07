@@ -34,7 +34,7 @@ export function PoDirectory({
     <>
       <PageHeader
         title={accounting ? "Accounting" : "Purchase orders"}
-        description={accounting ? "Review submitted purchase orders, payment arrangements and scope commitments." : "Shared purchase orders, preparation and Accounting review."}
+        description={accounting ? "Review submitted purchase orders, payment arrangements and scope commitments." : "Shared purchase orders, Accounting review and supplier sending."}
       />
       <div className="toolbar">
         <label>
@@ -73,6 +73,7 @@ export function PoDirectory({
               <th>Printed vendor</th>
               <th>Status</th>
               <th>Preparation</th>
+              <th>Supplier sending</th>
             </tr>
           </thead>
           <tbody>
@@ -96,6 +97,7 @@ export function PoDirectory({
                     <small>{r.blockers.join("; ")}</small>
                   )}
                 </td>
+                <td>{r.issuance?.status === "issued" ? "Issued" : r.issuance?.status === "prepared" ? "Prepared to send" : "Not issued"}</td>
               </tr>
             ))}
           </tbody>

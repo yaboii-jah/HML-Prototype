@@ -8,6 +8,7 @@ import { parseCalculation } from "../quotations/revisions.ts";
 import type { QuotationCalculation } from "../quotations/financial.ts";
 import type { DemandClaim } from "../demand/quantities.ts";
 import { parsePayment, parsePoReview, type PaymentArrangement, type PoReview } from "./accounting.ts";
+import { parsePoIssuance, type PoIssuance } from "./issuance.ts";
 
 export const PO_FIELDS = {
   date: "PO date",
@@ -70,6 +71,7 @@ export type PurchasingRecord = {
   calculation: QuotationCalculation | null;
   updatedAt: string;
   review?: PoReview | null;
+  issuance?: PoIssuance | null;
 };
 export type ComparisonArtifact = {
   id: string;
@@ -345,6 +347,7 @@ export function parsePurchasingView(value: unknown): PurchasingView | null {
   for (const raw of v.records) {
     const r = record(raw),
       review = r?.review === null || r?.review === undefined ? r?.review : parsePoReview(r.review),
+      issuance = r?.issuance === null || r?.issuance === undefined ? r?.issuance : parsePoIssuance(r.issuance),
       body = parseOrderBody(r?.body),
       calculation =
         r?.calculation === null ? null : parseCalculation(r?.calculation);
@@ -367,7 +370,8 @@ export function parsePurchasingView(value: unknown): PurchasingView | null {
       !Array.isArray(r.blockers) ||
       !r.blockers.every((b): b is string => typeof b === "string") ||
       (r.calculation !== null && !calculation) ||
-      (r.review !== null && r.review !== undefined && !review)
+      (r.review !== null && r.review !== undefined && !review) ||
+      (r.issuance !== null && r.issuance !== undefined && !issuance)
     )
       return null;
     records.push({
@@ -386,6 +390,7 @@ export function parsePurchasingView(value: unknown): PurchasingView | null {
       calculation,
       updatedAt: r.updatedAt,
       ...(review !== undefined ? { review } : {}),
+      ...(issuance !== undefined ? { issuance } : {}),
     });
   }
   for (const raw of v.claims) {

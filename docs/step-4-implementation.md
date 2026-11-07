@@ -7,8 +7,8 @@ Agreed 2026-11-03. This active companion owns the operational migration sequence
 Read the five core documents required by [AGENTS.md](../AGENTS.md), the checklist and this guide before planning, implementing, reviewing or resuming step 4.
 
 1. Reconcile Git status, the tracker and the actual implementation. Preserve unrelated pending work and the completed foundation planning retirement.
-2. Check the user's latest instruction before starting a unit. **Unit 4.8 is verified complete at `f1248bc` on 2026-11-07 after explicit confirmation of all three human groups with no skipped checks and passing combined acceptance. Unit 4.9 scope is locked and implementation was authorized on 2026-11-07; verification is pending. Merging and production remain separate.**
-3. Use the sequence below as the roadmap. Units through 4.9 have detailed scopes; later units require scoped planning and acceptance criteria before implementation.
+2. Check the user's latest instruction before starting a unit. **Unit 4.8 is verified complete at `f1248bc` on 2026-11-07 after explicit confirmation of all three human groups with no skipped checks and passing combined acceptance. Unit 4.9 is verified complete at `e00f8fd` on 2026-11-08 after explicit acceptance of all three human groups including assisted checks and passing combined acceptance. Unit 4.10 implementation was authorized on 2026-11-08 and passes local verification. Publication, hosted changes, merging and production remain separate.**
+3. Use the sequence below as the roadmap. Units through 4.10 have detailed scopes; later units require scoped planning and acceptance criteria before implementation.
 4. Verify a unit within its boundary, record actual results in the tracker, then check its completion box. A documentation checkpoint does not complete an operational workflow or checklist step 4.
 5. Retire this companion after the milestone is complete, preserving durable contracts in the core documents and completion evidence in the tracker.
 
@@ -40,8 +40,8 @@ The listed order is the default. Record any agreed scope/order revision here and
 | **4.6 Shared demand allocation** | [x] | Completed 2026-11-06 at `7e9b3a0`: private exact demand/claim contract passes local/four-job CI/full disposable/staging checks and scoped combined internal-demand acceptance. No staff allocation workflow is enabled. |
 | **4.7 Stock ledger and reservations** | [x] | Completed 2026-11-06 at `e749844`: exact private project-stock ledger/reservations pass local/four-job CI/full disposable/types/staging and scoped combined internal-stock acceptance. No staff stock workflow is enabled. |
 | **4.8 Awards and PO drafts** | [x] | Completed 2026-11-07 at `f1248bc`: automated/live-artifact/staging checks, all three explicit human groups with no skips and matching combined acceptance pass. |
-| **4.9 Accounting approval and commitments** | [ ] | PO review/returns, payment terms and transactional budget commitments under confirmed company policy. |
-| **4.10 Supplier issuance** | [ ] | Protected issuance after approval and completion of the required MRF/PO archives. |
+| **4.9 Accounting approval and commitments** | [x] | Completed 2026-11-08 at `e00f8fd`: automated/live-Drive/staging checks, all three explicit human groups including assisted checks with no skips or issues, and matching combined acceptance pass. |
+| **4.10 Supplier issuance** | [ ] | Authorized 2026-11-08; implemented and verified locally. Checked preparation, external sending declaration, permanent issuance and retained corrections; hosted and three-group human acceptance remain pending. |
 | **4.11 Payment coordination and verification** | [ ] | Finance coordination, Accounting proof-backed verification, credit balances and delivery clearance; retain these as separate milestones. |
 | **4.12 Purchased delivery dispatch** | [ ] | Supplier/site/warehouse delivery planning, scheduling and dispatch under the applicable clearance rules. |
 | **4.13 Purchased receiving and stock posting** | [ ] | Partial receiving, shortages/damage, required evidence, warehouse forwarding and exactly-once stock posting using 4.7. |
@@ -297,7 +297,9 @@ Authorized 2026-11-06 after all twenty interview decisions and the shared-unders
 
 All three results are recorded explicitly with no skipped checks or remaining issues. This purchasing confirmation is separate from earlier quotation/supplier/MRF attestations and does not establish acceptance of later units.
 
-## 4.9 Accounting Approval and Commitments
+## 4.9 Accounting Approval and Commitments — Complete
+
+**Completed 2026-11-08 at `e00f8fd`:** local/public-browser, four-job CI, full disposable SQL/Auth/application/Workflow/Realtime/type/race, owned live-Drive/cleanup and retained-state-safe staging checks pass. The user explicitly confirmed all three human groups including assisted checks passed with no skips or remaining issues. Matching combined acceptance passes. Earlier attestation dates/provenance and retained QA records/files are preserved. Step 4 remains open; authorized 4.10 work is tracked below. The Vercel deployment failure is separate from this unit acceptance.
 
 **Authorized 2026-11-07:** the user locked all twenty interview decisions and the shared-understanding check, then requested implementation. Unit 4.8 remains verified complete. Preserve incumbent styling, unrelated pending documentation and retained QA records/files. Supplier issuance remains 4.10; payments, spending and delivery clearance remain 4.11.
 
@@ -311,9 +313,9 @@ All three results are recorded explicitly with no skipped checks or remaining is
 
 **Done when:** budget contention/reduction/release/rollback/retry, all preparer/submitter identities, stale decisions, date boundaries, locked-endpoint bypasses, rejection/reopening, source/correction/withdrawal and archive/revocation races pass at both isolation levels. Verify actual Auth/application/Realtime/Workflow/private PDF/Range/recovery paths and desktop/mobile/multipage output. Complete local/public-browser/four-job CI/full disposable/types, owned live-Drive and exact-CI-SQL retained-state-safe staging checks. Obtain three new explicit human groups: review/terms/lifecycle; budgets/project visibility; archives/applicability/conflicts/access. Preserve earlier attestation provenance. Matching combined acceptance is required before checking 4.9. No merge or production authorization is implied.
 
-### 4.9 Targeted Human Review — Pending
+### 4.9 Targeted Human Review — Complete
 
-**Reported 2026-11-07:** the user selected **Not tested yet / checks remain**. No 4.9 human group is confirmed passed.
+**Accepted 2026-11-08:** after reporting overall success, the user explicitly selected **All three passed**, including assisted checks, with no skips or remaining issues. This supersedes **Not tested yet / checks remain** on 2026-11-07. Matching combined acceptance passes. The walkthrough below remains for reference; earlier attestations retain their original dates and provenance.
 
 Follow the steps in order. Each step names the account to use and the result to look for. The group numbers let you report the same three acceptance results at the end.
 
@@ -529,6 +531,116 @@ Actual result or setup needed:
 ```
 
 These are three new confirmations; earlier purchasing acceptance does not cover them. Only confirmation that all three groups passed without skips, together with matching automated acceptance, closes 4.9.
+
+## 4.10 Supplier Issuance
+
+**Authorized 2026-11-08:** the user confirmed all seventeen interview decisions and the shared understanding, then requested implementation. Preserve the pending 4.9 closeout. Procurement records the initial external sending only: Prepare to send → send externally → Confirm sent. No messaging, proof uploads, retransmission log or supplier acknowledgement.
+
+- Preparation requires current approval/applicability, supplier/source readiness, valid Credit terms and live verification of the current MRF archives plus exact approved-PO PDF. Bind those versions, block revocation while prepared and never auto-expire. Any currently authorized Procurement colleague may finish or cancel; cancellation requires a reason and explicit Not sent declaration.
+- Record channel (Email/Chat/Physical handover/Other), recipient, actual Philippine sending timestamp and optional notes; Other needs explanation. Retain automatic recording time and permanent actor snapshots. Actual sending is on/after preparation, not future, and within the approved Credit due date; valid late recording is allowed.
+- Confirm sent needs no live Drive call. Source/MRF changes after preparation retain actual issuance with visible unresolved blockers if already sent; if not sent, cancel preparation and resolve them. Sending outside valid preparation/timing cannot establish normal issuance and needs external escalation.
+- Issuance is permanent and separate from approval: no normal revoke/cancel/content edit and no changes to commitments, demand or delivery/payment progress. Procurement may append reasoned corrections to sending details while retaining originals and valid time bounds. Unresolved blockers have no override; post-issue financial/order correction remains later work.
+- Use private checked transactions, versions, stable receipts, immutable history, current access, existing lock order and protected realtime. Extend incumbent PO detail/directory with clear steps and recovery; preserve non-Site reads and Site denial.
+
+**Done when:** transactional/security/retry/time/source/access and observed-lock issuance/revocation/cancellation races pass at both isolation levels; real application/Realtime/Drive verification and failure recovery, local/four-job/disposable/types, scoped live-Drive and retained-state-safe staging checks pass. Inspect desktop/mobile and complete three new explicit human groups: issuance; lifecycle/history; archive/conflict/access. Match combined acceptance before checking 4.10. Payment/delivery, Vercel repair, merge and production remain separate.
+
+**Local checkpoint 2026-11-08:** standard lint/types/471 tests/build, public browser, owned migration replay and rollback/race checks, pinned type consistency and full real-account application/Workflow/Realtime/Drive-double verification pass. Desktop/mobile review is complete. Publication/four-job CI/disposable CI, retained-state-safe staging, owned live Drive, three new human groups and matching combined acceptance remain pending. The unit stays unchecked.
+
+### 4.10 Targeted Human Review
+
+**Confirmed 2026-11-08:** the user explicitly selected All three passed, including every assisted check, with no skips or remaining issues. Hosted verification and combined acceptance still gate 4.10 completion. Earlier 4.9 acceptance does not cover these new actions. Keep all QA records and files after testing.
+
+#### Before you start
+
+Open the supplied review app after its database has the 4.10 migration. Have these QA accounts ready:
+
+| Name below | Account |
+| --- | --- |
+| **Sender** | Procurement person preparing and sending the PO. |
+| **Colleague** | A different Procurement person, using a separate browser session. |
+| **Accountant** | Accounting person who did not prepare or submit this PO. |
+| **Site / Administrator** | Site person assigned to the QA project; Administrator to help with the access check. |
+
+Use an approved QA PO with no blockers, a valid payment arrangement and completed MRF/supporting/approved-PO archives. Use a supplier contact you can safely send QA documents to. Start with **Sending status: Not issued**. Record the PO number and its **Committed gross**. Issuance is permanent, so reserve this PO for the sending checks.
+
+For each action, click its button, read the dialog, complete the fields and confirm using the button inside the dialog. Wait for the dialog to close and the saved status to change. A required reason needs at least five characters. Use **Pending — setup needed** for any missing account or example.
+
+#### Walkthrough
+
+**1. Prepare the PO — Sender (Group 1)**
+
+1. Open **Purchase orders → QA PO → Supplier issuance**.
+2. Click **Prepare to send**, read the checks and confirm in the dialog.
+3. Wait for **Prepared to send**. Open **Open checked approved PO**, **Open checked MRF** and **Open checked supporting PDF**.
+
+**Expected:** all three documents are readable and belong to this PO/MRF. The page names the Sender and preparation time. Nothing has been sent by ConstructSync.
+
+**2. Check the lock and colleague cancellation — Accountant, then Colleague (Group 2)**
+
+1. **Accountant:** open the same PO from **Accounting**. Check **Revoke approval**.
+2. **Colleague:** open the PO. Without sending anything, click **Cancel preparation**. Enter `QA documents have not been sent` as the reason.
+3. Leave **I confirm these documents have not been sent** unticked. Check the confirmation button, then tick the declaration and confirm.
+4. Open **Sending history**. Compare **Committed gross** with your starting figure.
+
+**Expected:** revocation is unavailable while prepared. Cancellation needs both the reason and declaration. Status returns to **Not issued**. History retains the Sender as preparer and Colleague as canceller. Approval and committed gross stay unchanged; the Accountant can now revoke if correction is needed.
+
+**3. Send outside the app and record it — Sender and Colleague (Group 1)**
+
+1. **Sender:** prepare the same PO again. Wait for success before sending.
+2. Send the checked documents externally to the safe QA contact. Note the actual Philippine date and time.
+3. **Colleague:** click **Confirm sent**. Choose the sending channel, enter the recipient name/contact and actual sending time. For **Other**, explain the channel. Notes are optional.
+4. Verify what was actually sent, then tick **I confirm these checked documents were sent to this recipient**. A Procurement colleague may record the event; the application retains who prepared and who recorded it.
+5. Confirm and check the saved result in both browser sessions.
+
+**Expected:** status becomes **Issued** automatically in the other session too. The original preparer and person recording the sending are named separately. Actual sending time and automatic recording time are separate. Issued means sent; supplier acknowledgement is not recorded here. Gross, demand and payment/delivery/stock progress do not change.
+
+**4. Check permanent issue and correct a detail — Accountant, then the sending person (Group 2)**
+
+1. **Accountant:** reopen this PO. Check that **Revoke approval** remains unavailable. Check that Procurement cannot edit or cancel the PO.
+2. **Procurement:** click **Correct sending details**. Correct a recipient spelling or note, enter a reason and confirm the accuracy declaration.
+3. Open **Sending history**. Compare **Original sending declaration** with the new correction and the current details.
+
+**Expected:** the correction is appended with its actor, recording time and reason. The original stays unchanged. PO content, financial terms, commitments and demand remain unchanged. Corrections cannot move actual sending outside its valid time bounds.
+
+**5. Check time validation — a separate prepared QA PO (Group 1)**
+
+1. Open **Confirm sent** without actually sending this PO.
+2. Fill a channel and recipient. Enter a time before the displayed preparation, then a time in the future.
+3. Check the explanation and disabled confirmation. Close the dialog and cancel the preparation truthfully as **Not sent**.
+
+**Expected:** both times are refused. Do not invent a sending event to complete this check. Sending before preparation or outside approved Credit timing requires external escalation.
+
+#### Assisted checks — prepared examples required (Group 3)
+
+Have the person preparing the review provide these isolated QA examples. Keep the group **Pending — assistance needed** until every item is tested.
+
+| Check | What to do | Expected |
+| --- | --- | --- |
+| Missing/changed Drive document | On an isolated example with a missing or changed required file, try Prepare to send. Restore the original file/access and retry. | Failure leaves Not issued and no preparation. Retry succeeds after repair. Shared Drive configuration and retained documents are not altered for this test. |
+| Interrupted response | Use the supplied lost-response example, then click Check saved outcome. | The original outcome appears once, with no duplicate preparation, issuance or history. |
+| Repeated conflict | Leave Confirm sent open with completed entries. Have a colleague make two separate permitted version changes; after each, review the latest values explicitly. | Entries survive each change. Confirmation remains unavailable until the latest values are reviewed. |
+| Changed prerequisite | Use separate prepared examples for a supplier/source or MRF change. For the unsent example cancel and resolve first. For the already-sent example record its valid actual sending. | Unsent documents are not sent under stale prerequisites. The sent event becomes Issued with visible unresolved blockers; no override is offered. |
+| Credit timing / late entry | Use prepared Credit examples for overdue-before-preparation, sending after the due date, and valid timely sending recorded after the due date. | Overdue preparation and late sending are refused; valid timely sending can be recorded later. Actual Philippine sending date governs this check. |
+| Reader and changed access | Accounting/another non-Site reader opens the issued details; Site tries its PO/document URLs. Administrator removes a QA Procurement person's access while their dialog is open. | Readers cannot record sending. Site receives no PO or private documents. Removed access clears protected content and prevents completion; restoring access requires a fresh sign-in. |
+
+#### Report your results
+
+Use **Passed** only after all checks in that group pass without skips. Use **Pending** for untested checks or missing setup, and **Issue** for unexpected behavior.
+
+```text
+QA PO number:
+Group 1 — Preparation and sending (steps 1, 3, 5): Passed / Pending / Issue
+Group 2 — Locks, colleague handoff and history (steps 2, 4): Passed / Pending / Issue
+Group 3 — Archives, conflicts and access (all assisted checks): Passed / Pending / Issue
+
+For each Pending or Issue:
+Step/check:
+PO number:
+Expected result:
+Actual result or setup needed:
+```
+
+All three explicit results and source-matched automated/hosted acceptance are required before checking 4.10 complete.
 
 ## Milestone Completion and Documentation Ownership
 

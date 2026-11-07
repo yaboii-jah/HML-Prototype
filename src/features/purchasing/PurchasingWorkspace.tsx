@@ -22,6 +22,7 @@ import type {
 import { PO_FIELDS } from "@/src/domain/purchasing/contracts";
 import { OrderEditor } from "./OrderEditor";
 import { PoAccountingPanel } from "./PoAccountingPanel";
+import { PoIssuancePanel } from "./PoIssuancePanel";
 import { usePurchasingOperation } from "./use-purchasing-operation";
 import "./purchasing.css";
 
@@ -770,7 +771,7 @@ export function PurchasingWorkspace({
             </div>
             <SavedRecord record={record} view={view} />
             {record.kind === "po" && (poId
-              ? <PoAccountingPanel po={record} view={view} />
+              ? <><PoAccountingPanel po={record} view={view} /><PoIssuancePanel po={record} view={view} /></>
               : <Link className="text-link" href={`/accounting/${record.id}`}>Open PO review</Link>)}
             {record.kind === "po" && (
               <div className="button-row">
