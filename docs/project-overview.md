@@ -87,7 +87,7 @@ Unit 4.6 is verified complete on 2026-11-06 at `7e9b3a0` as an internal demand f
 
 ### Accounting and Payment Coordination
 
-- Confirmed 4.9 policy: Procurement submits complete POs; Accounting reviews without editing costs, may hold/return/reject, and independently approves. Historical preparers and submitters cannot approve. Approval commits gross before EWT under a hard scope cap and queues a retained attributed PO PDF. Accounting revocation of an unissued approval releases money and retains demand; terminal rejection releases demand. Payment arrangements are Upfront/Credit with a current agreed Credit due date and reasoned departures from quotation terms. Unit 4.9 is implemented locally with acceptance pending, not verified complete.
+- Confirmed 4.9 policy: Procurement submits complete POs; Accounting reviews without editing costs, may hold/return/reject, and independently approves. Historical preparers and submitters cannot approve. Approval commits gross before EWT under a hard scope cap and queues a retained attributed PO PDF. Accounting revocation of an unissued approval releases money and retains demand; terminal rejection releases demand. Payment arrangements are Upfront/Credit with a current agreed Credit due date and reasoned departures from quotation terms. Unit 4.9 is implemented and staged with targeted human acceptance pending, not verified complete.
 
 - Accounting review of PO costing, applicable taxes, adjustments, scope budgets and payment arrangements.
 - Finance priorities, planned payment dates, coordination notes and follow-up for externally executed payments.
