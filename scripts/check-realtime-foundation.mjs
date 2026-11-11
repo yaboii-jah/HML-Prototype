@@ -11,10 +11,31 @@ export async function checkRealtimeFoundation({ api, anon, secret, sql }) {
   const admin = createClient(api, secret, { auth: { persistSession: false, autoRefreshToken: false } });
   const clients = [];
   const ok = (result, label) => { assert.equal(result.error?.message, undefined, label); return result.data; };
-  const until = async predicate => {
+  const until = async (predicate, context) => {
     const deadline = Date.now() + 15000;
     while (!predicate() && Date.now() < deadline) await delay(50);
-    assert.ok(predicate(), 'Expected committed private broadcast arrived');
+    if (predicate()) return;
+    let detail = '';
+    if (context) {
+      try { detail = ' ' + await context(); }
+      catch (error) { detail = ' context unavailable: ' + error.message; }
+    }
+    assert.fail('Expected committed private broadcast arrived' + detail);
+  };
+  const broadcastContext = async (staff, socket, result) => {
+    const topic = staff.topic;
+    const facts = JSON.parse((await sql(`select jsonb_build_object(
+      'recipients',(select count(*) from private.session_bindings b
+        join auth.sessions s on s.id=b.session_id and s.user_id=b.user_id
+        join public.profiles p on p.user_id=b.user_id and p.access_revision=b.access_revision
+        where p.is_active and (s.not_after is null or s.not_after>now())
+          and exists(select 1 from public.role_grants g where g.user_id=p.user_id and g.role<>'Site Personnel')),
+      'pending',(select count(*) from realtime.messages),
+      'topicMessages',(select count(*) from realtime.messages where topic='${topic}'),
+      'binding',(select jsonb_build_object('binding',b.access_revision,'profile',p.access_revision,'session',b.session_id)
+        from private.session_bindings b join public.profiles p on p.user_id=b.user_id where b.session_id='${staff.sessionId}')
+    )::text;`)).output.trim());
+    return JSON.stringify({ ...facts, changed: result?.changed ?? null, channel: socket.channel.state, events: socket.events.length });
   };
   const login = async (role, existing) => {
     const email = existing?.email ?? randomUUID() + '@example.invalid', password = existing?.password ?? randomUUID();
@@ -68,7 +89,7 @@ export async function checkRealtimeFoundation({ api, anon, secret, sql }) {
     assert.equal((await sql(`select count(*) from private.project_operations where id='${rolledBack.requestId}';`)).output.trim(), '0', 'Rolled-back retry result was not persisted');
     const baseline = receiverSocket.events.length, siteBaseline = siteSocket.events.length;
     const result = ok(await admin.rpc('project_command', { actor, command }), 'Publish project change');
-    await until(() => receiverSocket.events.length > baseline);
+    await until(() => receiverSocket.events.length > baseline, () => broadcastContext(receiver, receiverSocket, result));
     const payload = receiverSocket.events.at(-1).payload;
     assert.deepEqual(Object.keys(payload).filter(key => key !== 'id'), [], 'Broadcast contains no record or financial fields');
     await delay(200);
