@@ -8,6 +8,13 @@ import { requireLoopback } from './helpers/supabase-target.mjs';
 export async function checkRealtimeFoundation({ api, anon, secret, sql }) {
   assert.equal(process.env.GITHUB_ACTIONS, 'true');
   requireLoopback(api);
+  // Earlier checks leave one bound session per test account, and every command
+  // publishes an invalidation to each of them. The disposable stack therefore
+  // carries a large undelivered queue for sessions nobody is listening to.
+  // Clear that queue so this check measures broadcast delivery itself.
+  const queued = (await sql('select count(*) from realtime.messages;')).output.trim();
+  await sql('delete from realtime.messages;');
+  console.log('Cleared ' + queued + ' undelivered disposable invalidations before the protocol check.');
   const admin = createClient(api, secret, { auth: { persistSession: false, autoRefreshToken: false } });
   const clients = [];
   const ok = (result, label) => { assert.equal(result.error?.message, undefined, label); return result.data; };
