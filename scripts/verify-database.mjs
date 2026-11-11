@@ -317,6 +317,11 @@ try {
   checks.push('realtime-races');
   passed = typeMatch;
 } finally {
+  try {
+    // Keep the owned Realtime service's own view of a failed run for diagnosis.
+    const service = await command('docker', ['logs', '--tail', '300', `supabase_realtime_${project}`]);
+    await writeFile('.verification/realtime-service.log', (service.output ?? '') + (service.diagnostics ?? ''));
+  } catch (error) { console.log('Realtime service log unavailable: ' + error.message); }
   try { await cli(['stop', '--project-id', project, '--no-backup'], { capture: true }); }
   finally {
     if (networkCreated) assert.equal((await command('docker', ['network', 'rm', network])).code, 0, 'Remove only run-owned Docker network');

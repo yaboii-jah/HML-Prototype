@@ -44,9 +44,19 @@ export async function checkRealtimeFoundation({ api, anon, secret, sql }) {
       'pending',(select count(*) from realtime.messages),
       'topicMessages',(select count(*) from realtime.messages where topic='${topic}'),
       'binding',(select jsonb_build_object('binding',b.access_revision,'profile',p.access_revision,'session',b.session_id)
-        from private.session_bindings b join public.profiles p on p.user_id=b.user_id where b.session_id='${staff.sessionId}')
+        from private.session_bindings b join public.profiles p on p.user_id=b.user_id where b.session_id='${staff.sessionId}'),
+      'session',(select jsonb_build_object('rows',count(*),'notAfter',min(s.not_after))
+        from auth.sessions s where s.id='${staff.sessionId}' and s.user_id='${staff.id}'),
+      'policy',(select count(*) from public.profiles p
+        join private.session_bindings b on b.user_id=p.user_id and b.access_revision=p.access_revision
+        join auth.sessions s on s.id=b.session_id and s.user_id=p.user_id
+        join auth.users u on u.id=p.user_id
+        where p.user_id='${staff.id}' and p.is_active and s.id::text='${staff.sessionId}'
+          and (s.not_after is null or s.not_after>now()) and not u.is_anonymous
+          and (u.banned_until is null or u.banned_until<=now())
+          and exists(select 1 from public.role_grants g where g.user_id=p.user_id))
     )::text;`)).output.trim());
-    return JSON.stringify({ ...facts, changed: result?.changed ?? null, channel: socket.channel.state, events: socket.events.length });
+    return JSON.stringify({ ...facts, claimSession: staff.claimSession, changed: result?.changed ?? null, channel: socket.channel.state, events: socket.events.length });
   };
   const login = async (role, existing) => {
     const email = existing?.email ?? randomUUID() + '@example.invalid', password = existing?.password ?? randomUUID();
@@ -64,7 +74,7 @@ export async function checkRealtimeFoundation({ api, anon, secret, sql }) {
       expected_revision: proof.revision, expected_credential: proof.credential }), 'Realtime binding'), true);
     const context = ok(await client.rpc('auth_session_context'), 'Realtime context');
     await client.realtime.setAuth(session.access_token);
-    return { id, email, password, client, context, sessionId: claims.session_id,
+    return { id, email, password, client, context, sessionId: claims.session_id, claimSession: claims.session_id,
       topic: `foundation:${id}:${context.revision}:${claims.session_id}` };
   };
   const subscribe = (staff, topic = staff.topic, privateChannel = true) => new Promise(resolve => {
