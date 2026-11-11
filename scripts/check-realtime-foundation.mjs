@@ -19,7 +19,11 @@ export async function checkRealtimeFoundation({ api, anon, secret, sql }) {
   const clients = [];
   const ok = (result, label) => { assert.equal(result.error?.message, undefined, label); return result.data; };
   const until = async (predicate, context) => {
-    const deadline = Date.now() + 15000;
+    // One committed change publishes an invalidation to every bound session, so
+    // delivery time scales with the recipient count of the disposable stack.
+    // The hosted stack holds hundreds of test sessions, which can exceed a
+    // short bound even though the message is queued for the subscriber.
+    const deadline = Date.now() + 60000;
     while (!predicate() && Date.now() < deadline) await delay(50);
     if (predicate()) return;
     let detail = '';
