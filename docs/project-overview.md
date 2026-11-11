@@ -87,6 +87,8 @@ Unit 4.6 is verified complete on 2026-11-06 at `7e9b3a0` as an internal demand f
 
 ### Accounting and Payment Coordination
 
+Unit 4.11 now has local implementation for issued-PO Finance plans, shared Accounting payment drafts/proofs, installments/reversals, proportional gross spending and independently held/cleared delivery. It is not yet verified complete; the tracker owns pending acceptance. Payment planning does not establish payment, tax remittance or delivery progress. Permanent Finance coordinators and settlement actors must differ in both directions per PO. Verified proof and original actions remain retained through corrections. Full supplier-net settlement is required for Upfront clearance; Credit can clear unpaid or overdue. Zero-net POs require explicit no-cash confirmation. Failed prerequisites require fresh Accounting clearance after recovery, without rewinding completed deliveries or stock.
+
 - Confirmed 4.9 policy: Procurement submits complete POs; Accounting reviews without editing costs, may hold/return/reject, and independently approves. Historical preparers and submitters cannot approve. Approval commits gross before EWT under a hard scope cap and queues a retained attributed PO PDF. Accounting revocation of an unissued approval releases money and retains demand; terminal rejection releases demand. Payment arrangements are Upfront/Credit with a current agreed Credit due date and reasoned departures from quotation terms. Unit 4.9 is verified complete on 2026-11-08 after all three human groups, including assisted checks, passed without skips or issues and matching combined acceptance passed.
 
 - Accounting review of PO costing, applicable taxes, adjustments, scope budgets and payment arrangements.

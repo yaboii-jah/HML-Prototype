@@ -686,6 +686,10 @@ export function ProjectDetailScreen({
             <strong>{formatPhp(project.financial?.committed ?? null)}</strong>
           </div>
           <div>
+            <small>Gross spent</small>
+            <strong>{formatPhp(project.financial?.spent ?? null)}</strong>
+          </div>
+          <div>
             <small>Uncommitted scope allocation</small>
             <strong>{formatPhp(project.financial?.uncommitted ?? null)}</strong>
           </div>
@@ -713,7 +717,7 @@ export function ProjectDetailScreen({
             <>
               <th>Scope of work</th>
               {financial && <th className="numeric">Allocated</th>}
-              {financial && <><th className="numeric">Committed gross</th><th className="numeric">Uncommitted</th></>}
+              {financial && <><th className="numeric">Committed gross</th><th className="numeric">Gross spent</th><th className="numeric">Uncommitted</th></>}
               {editable && <th>Actions</th>}
             </>
           }
@@ -723,7 +727,7 @@ export function ProjectDetailScreen({
               {financial && (
                 <td className="numeric">{formatPhp(scope.budget ?? null)}</td>
               )}
-              {financial && <><td className="numeric">{formatPhp(scope.committed ?? null)}</td><td className="numeric">{formatPhp(scope.uncommitted ?? null)}</td></>}
+              {financial && <><td className="numeric">{formatPhp(scope.committed ?? null)}</td><td className="numeric">{formatPhp(scope.spent ?? null)}</td><td className="numeric">{formatPhp(scope.uncommitted ?? null)}</td></>}
               {editable && (
                 <td>
                   <div className="button-row">
@@ -797,7 +801,7 @@ export function ProjectDetailScreen({
       <section className="panel project-unavailable">
         <h2>Operations</h2>
         <p>
-          Spending, stock and other operational balances remain unavailable while their workflows are migrated.
+          Stock and other operational balances remain unavailable while their workflows are migrated.
         </p>
       </section>
       {financial && <ChangeHistory history={history} />}

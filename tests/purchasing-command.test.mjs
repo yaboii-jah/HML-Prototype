@@ -22,6 +22,7 @@ globalThis.__purchasingCommand = {
   },
   dispatchComparisonArtifacts: async () => {},
   dispatchApprovedPoArchives: async () => {},
+  paymentsView: async () => ({ role: 'Procurement', actorId: randomUUID(), records: [] }),
 };
 registerHooks({
   resolve(specifier, context, nextResolve) {
@@ -32,6 +33,7 @@ registerHooks({
       "@/src/server/auth/service-rpc": ["serviceRpc"],
       "./artifacts": ["dispatchComparisonArtifacts"],
       "./approval-archives": ["dispatchApprovedPoArchives"],
+      "@/src/server/payments/payments": ["paymentsView"],
     }[specifier];
     if (names)
       return {

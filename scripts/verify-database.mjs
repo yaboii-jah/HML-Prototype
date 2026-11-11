@@ -9,6 +9,7 @@ import { accountingCheckSql } from './helpers/accounting-check.mjs';
 import { checkAccountingRaces } from './check-accounting-races.mjs';
 import { issuanceCheckSql } from './helpers/issuance-check.mjs';
 import { checkIssuanceRaces } from './check-issuance-races.mjs';
+import { checkPaymentRaces } from './check-payment-races.mjs';
 import { retainedStateQuery } from './helpers/staging-snapshot.mjs';
 import { checkDocumentRaces } from './check-document-races.mjs';
 import assert from 'node:assert/strict';
@@ -119,6 +120,9 @@ try {
   checks.push('accounting-sql');
   await sql(await issuanceCheckSql());
   checks.push('issuance-sql');
+  const { paymentCheckSql } = await import('./helpers/payment-check.mjs');
+  await sql(await paymentCheckSql());
+  checks.push('payment-sql');
   checks.push('purchasing-sql');
   checks.push('stock-sql');
   checks.push('quotation-finalization-sql');
@@ -291,6 +295,8 @@ try {
   checks.push('accounting-races');
   await checkIssuanceRaces({ sql, database, environment });
   checks.push('issuance-races');
+  await checkPaymentRaces({ sql, database, environment });
+  checks.push('payment-races');
   await checkQuotationFinalizationRaces({ sql, database, environment, fixture: quotationFixture.financial });
   checks.push('quotation-finalization-races');
   await checkQuotationRaces({ sql, database, environment, fixture: quotationFixture });
