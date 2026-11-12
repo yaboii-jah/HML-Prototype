@@ -660,6 +660,8 @@ All three explicit results and source-matched automated/hosted acceptance are re
 
 ### 4.11 Targeted Human Review — Pending
 
+Recovery correction 2026-11-13: an uncertain Finance/Accounting action exposes **Check saved outcome** even if the displayed record version changes or coordination becomes Settled. It retries the original immutable command/operation identity. Resolve that outcome before starting another action; if the original was not recorded and its version is stale, review current data before resubmission. New focused database coverage includes both zero-net arrangements and unpaid/part-paid overdue Credit. No new human confirmation is inferred from these tests.
+
 Use retained staging QA records only after the reviewed migration is applied under its own authorization. Keep QA records/files and earlier acceptance dates. No human result has been recorded for 4.11.
 
 1. **Finance coordination/access:** as Finance, open an issued QA PO, save priority, Scheduled/date and Delayed/reason examples, and check the retained history. After an Accounting partial payment, verify the saved plan remains but requires review. Confirm settled plans are read-only and reversal reopens them. Check both permanent-identity exclusion directions with separate accounts; evidence preparation and clearance remain independent. Site cannot access payment records/files.

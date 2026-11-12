@@ -220,7 +220,25 @@ export async function checkPayments({
     "return !!document.querySelector('dialog[open] input[type=checkbox]')",
   );
   await browser.click("dialog[open] input[type=checkbox]");
+  // Commit the action, discard only its response, then let realtime advance the
+  // displayed version. Recovery must replay the original receipt identity.
+  await browser.run(`window.paymentOriginalFetch=window.fetch;
+    window.paymentLostResponse=false;
+    window.fetch=async function(input,init){
+      const response=await window.paymentOriginalFetch.call(this,input,init);
+      if(!window.paymentLostResponse&&new Headers(init?.headers).has('Next-Action')&&typeof init?.body==='string'&&init.body.includes('verify')){
+        window.paymentLostResponse=true;await response.clone().arrayBuffer();throw new TypeError('Synthetic lost payment acknowledgement');
+      }
+      return response;
+    };`);
   await click(browser, "Verify payment");
+  await browser.wait("return [...document.querySelectorAll('dialog[open] button')].some(b=>b.textContent.trim()==='Check saved outcome'&&!b.disabled)");
+  assert.equal(await browser.run("return window.paymentLostResponse"),true);
+  await browser.wait("return document.querySelector('dialog[open]')?.textContent.includes('The record changed')");
+  const beforeRecovery = await view();
+  assert.equal(beforeRecovery.verifications.length,1);
+  await browser.run("window.fetch=window.paymentOriginalFetch;delete window.paymentOriginalFetch;");
+  await click(browser, "Check saved outcome");
   await browser.wait("return !document.querySelector('dialog[open]')");
   await browser.wait(
     "return document.body.textContent.includes('Verified by')",
