@@ -456,6 +456,336 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"payment_clearances": {
+                  Row: {
+                    "action": string,"actor": NonNullable<Json>,"epoch": number,"id": string,"po_id": string,"reason": string,"recorded_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "action": string,"actor": NonNullable<Json>,"epoch": number,"id"?: string,"po_id": string,"reason": string,"recorded_at"?: string
+                  }
+                  Update: {
+                    "action"?: string,"actor"?: NonNullable<Json>,"epoch"?: number,"id"?: string,"po_id"?: string,"reason"?: string,"recorded_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "payment_clearances_po_id_fkey"
+      columns: ["po_id"]
+isOneToOne: false
+      referencedRelation: "purchasing_records"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"payment_coordination": {
+                  Row: {
+                    "actor": NonNullable<Json>,"id": string,"ledger_version": number,"plan": NonNullable<Json>,"po_id": string,"recorded_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "actor": NonNullable<Json>,"id"?: string,"ledger_version": number,"plan": NonNullable<Json>,"po_id": string,"recorded_at"?: string
+                  }
+                  Update: {
+                    "actor"?: NonNullable<Json>,"id"?: string,"ledger_version"?: number,"plan"?: NonNullable<Json>,"po_id"?: string,"recorded_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "payment_coordination_po_id_fkey"
+      columns: ["po_id"]
+isOneToOne: false
+      referencedRelation: "purchasing_records"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"payment_drafts": {
+                  Row: {
+                    "body": NonNullable<Json>,"created_at": string,"creator_id": string,"creator_name": string,"current_files": (string)[],"file_version": number,"id": string,"po_id": string,"replaces_id": string | null,"request_id": string,"state": string,"version": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "body": NonNullable<Json>,"created_at"?: string,"creator_id": string,"creator_name": string,"current_files"?: (string)[],"file_version"?: number,"id": string,"po_id": string,"replaces_id"?: string | null,"request_id": string,"state"?: string,"version"?: number
+                  }
+                  Update: {
+                    "body"?: NonNullable<Json>,"created_at"?: string,"creator_id"?: string,"creator_name"?: string,"current_files"?: (string)[],"file_version"?: number,"id"?: string,"po_id"?: string,"replaces_id"?: string | null,"request_id"?: string,"state"?: string,"version"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "payment_drafts_po_id_fkey"
+      columns: ["po_id"]
+isOneToOne: false
+      referencedRelation: "purchasing_records"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "payment_drafts_replaces_id_fkey"
+      columns: ["replaces_id"]
+isOneToOne: false
+      referencedRelation: "payment_verifications"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"payment_file_operations": {
+                  Row: {
+                    "actor_id": string,"id": string,"payload": NonNullable<Json>,"result": Json | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "actor_id": string,"id": string,"payload": NonNullable<Json>,"result"?: Json | null
+                  }
+                  Update: {
+                    "actor_id"?: string,"id"?: string,"payload"?: NonNullable<Json>,"result"?: Json | null
+                  }
+                  Relationships: [
+
+                  ]
+                },"payment_files": {
+                  Row: {
+                    "created_at": string,"draft_id": string,"drive_file_id": string | null,"encrypted_session": string | null,"expires_at": string,"folder_mapping_id": string,"group_id": string,"id": string,"lease": string | null,"lease_until": string | null,"mime": string,"name": string,"offset_bytes": number,"retained": boolean,"sha256": string,"size": number,"state": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"draft_id": string,"drive_file_id"?: string | null,"encrypted_session"?: string | null,"expires_at"?: string,"folder_mapping_id": string,"group_id": string,"id": string,"lease"?: string | null,"lease_until"?: string | null,"mime": string,"name": string,"offset_bytes"?: number,"retained"?: boolean,"sha256": string,"size": number,"state"?: string
+                  }
+                  Update: {
+                    "created_at"?: string,"draft_id"?: string,"drive_file_id"?: string | null,"encrypted_session"?: string | null,"expires_at"?: string,"folder_mapping_id"?: string,"group_id"?: string,"id"?: string,"lease"?: string | null,"lease_until"?: string | null,"mime"?: string,"name"?: string,"offset_bytes"?: number,"retained"?: boolean,"sha256"?: string,"size"?: number,"state"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "payment_files_draft_id_fkey"
+      columns: ["draft_id"]
+isOneToOne: false
+      referencedRelation: "payment_drafts"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "payment_files_folder_mapping_id_fkey"
+      columns: ["folder_mapping_id"]
+isOneToOne: false
+      referencedRelation: "project_document_folders"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "payment_files_group_id_fkey"
+      columns: ["group_id"]
+isOneToOne: false
+      referencedRelation: "payment_groups"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"payment_groups": {
+                  Row: {
+                    "actor": NonNullable<Json>,"created_at": string,"draft_id": string,"expected_version": number,"files": (string)[],"id": string,"original_actor": NonNullable<Json>,"state": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "actor": NonNullable<Json>,"created_at"?: string,"draft_id": string,"expected_version": number,"files"?: (string)[],"id": string,"original_actor": NonNullable<Json>,"state"?: string
+                  }
+                  Update: {
+                    "actor"?: NonNullable<Json>,"created_at"?: string,"draft_id"?: string,"expected_version"?: number,"files"?: (string)[],"id"?: string,"original_actor"?: NonNullable<Json>,"state"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "payment_groups_draft_id_fkey"
+      columns: ["draft_id"]
+isOneToOne: false
+      referencedRelation: "payment_drafts"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"payment_heads": {
+                  Row: {
+                    "clearance_epoch": number,"ledger_version": number,"po_id": string,"version": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "clearance_epoch"?: number,"ledger_version"?: number,"po_id": string,"version"?: number
+                  }
+                  Update: {
+                    "clearance_epoch"?: number,"ledger_version"?: number,"po_id"?: string,"version"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "payment_heads_po_id_fkey"
+      columns: ["po_id"]
+isOneToOne: true
+      referencedRelation: "purchasing_records"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"payment_jobs": {
+                  Row: {
+                    "actor": NonNullable<Json>,"attempts": number,"checkpoint": NonNullable<Json>,"dispatched_at": string | null,"file_id": string,"id": string,"kind": string,"lease": string | null,"lease_until": string | null,"message": string | null,"original_actor": NonNullable<Json>,"state": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "actor": NonNullable<Json>,"attempts"?: number,"checkpoint"?: NonNullable<Json>,"dispatched_at"?: string | null,"file_id": string,"id"?: string,"kind": string,"lease"?: string | null,"lease_until"?: string | null,"message"?: string | null,"original_actor": NonNullable<Json>,"state"?: string
+                  }
+                  Update: {
+                    "actor"?: NonNullable<Json>,"attempts"?: number,"checkpoint"?: NonNullable<Json>,"dispatched_at"?: string | null,"file_id"?: string,"id"?: string,"kind"?: string,"lease"?: string | null,"lease_until"?: string | null,"message"?: string | null,"original_actor"?: NonNullable<Json>,"state"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "payment_jobs_file_id_fkey"
+      columns: ["file_id"]
+isOneToOne: false
+      referencedRelation: "payment_files"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"payment_no_cash": {
+                  Row: {
+                    "actor": NonNullable<Json>,"id": string,"po_id": string,"reason": string,"recorded_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "actor": NonNullable<Json>,"id"?: string,"po_id": string,"reason": string,"recorded_at"?: string
+                  }
+                  Update: {
+                    "actor"?: NonNullable<Json>,"id"?: string,"po_id"?: string,"reason"?: string,"recorded_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "payment_no_cash_po_id_fkey"
+      columns: ["po_id"]
+isOneToOne: false
+      referencedRelation: "purchasing_records"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"payment_no_cash_reversals": {
+                  Row: {
+                    "actor": NonNullable<Json>,"confirmation_id": string,"reason": string,"recorded_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "actor": NonNullable<Json>,"confirmation_id": string,"reason": string,"recorded_at"?: string
+                  }
+                  Update: {
+                    "actor"?: NonNullable<Json>,"confirmation_id"?: string,"reason"?: string,"recorded_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "payment_no_cash_reversals_confirmation_id_fkey"
+      columns: ["confirmation_id"]
+isOneToOne: true
+      referencedRelation: "payment_no_cash"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"payment_operations": {
+                  Row: {
+                    "actor_id": string,"id": string,"payload": NonNullable<Json>,"po_id": string | null,"result": Json | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "actor_id": string,"id": string,"payload": NonNullable<Json>,"po_id"?: string | null,"result"?: Json | null
+                  }
+                  Update: {
+                    "actor_id"?: string,"id"?: string,"payload"?: NonNullable<Json>,"po_id"?: string | null,"result"?: Json | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "payment_operations_po_id_fkey"
+      columns: ["po_id"]
+isOneToOne: false
+      referencedRelation: "purchasing_records"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"payment_participants": {
+                  Row: {
+                    "actor": NonNullable<Json>,"actor_id": string,"created_at": string,"kind": string,"po_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "actor": NonNullable<Json>,"actor_id": string,"created_at"?: string,"kind": string,"po_id": string
+                  }
+                  Update: {
+                    "actor"?: NonNullable<Json>,"actor_id"?: string,"created_at"?: string,"kind"?: string,"po_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "payment_participants_po_id_fkey"
+      columns: ["po_id"]
+isOneToOne: false
+      referencedRelation: "purchasing_records"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"payment_reversals": {
+                  Row: {
+                    "actor": NonNullable<Json>,"reason": string,"recorded_at": string,"verification_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "actor": NonNullable<Json>,"reason": string,"recorded_at"?: string,"verification_id": string
+                  }
+                  Update: {
+                    "actor"?: NonNullable<Json>,"reason"?: string,"recorded_at"?: string,"verification_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "payment_reversals_verification_id_fkey"
+      columns: ["verification_id"]
+isOneToOne: true
+      referencedRelation: "payment_verifications"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"payment_spending": {
+                  Row: {
+                    "actor": NonNullable<Json>,"amount": number,"approval_id": string,"id": string,"po_id": string,"project_id": string,"recorded_at": string,"scope_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "actor": NonNullable<Json>,"amount": number,"approval_id": string,"id": string,"po_id": string,"project_id": string,"recorded_at"?: string,"scope_id": string
+                  }
+                  Update: {
+                    "actor"?: NonNullable<Json>,"amount"?: number,"approval_id"?: string,"id"?: string,"po_id"?: string,"project_id"?: string,"recorded_at"?: string,"scope_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "payment_spending_approval_id_fkey"
+      columns: ["approval_id"]
+isOneToOne: false
+      referencedRelation: "po_approvals"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "payment_spending_po_id_fkey"
+      columns: ["po_id"]
+isOneToOne: false
+      referencedRelation: "purchasing_records"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"payment_verifications": {
+                  Row: {
+                    "actor": NonNullable<Json>,"amount": number,"approval_id": string,"body": NonNullable<Json>,"files": (string)[],"id": string,"po_id": string,"reference_key": string,"verified_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "actor": NonNullable<Json>,"amount": number,"approval_id": string,"body": NonNullable<Json>,"files": (string)[],"id": string,"po_id": string,"reference_key": string,"verified_at"?: string
+                  }
+                  Update: {
+                    "actor"?: NonNullable<Json>,"amount"?: number,"approval_id"?: string,"body"?: NonNullable<Json>,"files"?: (string)[],"id"?: string,"po_id"?: string,"reference_key"?: string,"verified_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "payment_verifications_approval_id_fkey"
+      columns: ["approval_id"]
+isOneToOne: false
+      referencedRelation: "po_approvals"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "payment_verifications_id_fkey"
+      columns: ["id"]
+isOneToOne: true
+      referencedRelation: "payment_drafts"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "payment_verifications_po_id_fkey"
+      columns: ["po_id"]
+isOneToOne: false
+      referencedRelation: "purchasing_records"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"po_approvals": {
                   Row: {
                     "actor": NonNullable<Json>,"approved_at": string,"id": string,"po_id": string,"project_id": string,"request_id": string,"scope_id": string,"snapshot": NonNullable<Json>,"submission_id": string,"version": number
@@ -1476,6 +1806,99 @@ isOneToOne: false
 "mrf_register_downstream":
 { Args: { "kind": string,"record_id": string,"target": string }; Returns: undefined
                            },
+"payment_actor":
+{ Args: { "actor": Json,"writing"?: boolean }; Returns: string
+                           },
+"payment_audit":
+{ Args: { "actor": Json,"details": Json,"kind": string,"operation": string,"target": string }; Returns: undefined
+                           },
+"payment_body":
+{ Args: { "complete"?: boolean,"value": Json }; Returns: Json
+                           },
+"payment_bump":
+{ Args: { "ledger"?: boolean,"target": string }; Returns: undefined
+                           },
+"payment_clearance_blockers":
+{ Args: { "target": string }; Returns: Json
+                           },
+"payment_cleared":
+{ Args: { "target": string }; Returns: boolean
+                           },
+"payment_command":
+{ Args: { "actor": Json,"command": Json }; Returns: Json
+                           },
+"payment_commit_group":
+{ Args: { "target": string }; Returns: undefined
+                           },
+"payment_dispatch":
+{ Args: Record<PropertyKey, never>; Returns: Json
+                           },
+"payment_draft_view":
+{ Args: { "target": string }; Returns: Json
+                           },
+"payment_enqueue":
+{ Args: { "actor": Json,"file": string,"kind": string }; Returns: undefined
+                           },
+"payment_file":
+{ Args: { "actor": Json,"file_id": string }; Returns: Json
+                           },
+"payment_files_command":
+{ Args: { "actor": Json,"command": Json }; Returns: Json
+                           },
+"payment_invalidate":
+{ Args: { "actor": Json,"reason": string,"target": string }; Returns: undefined
+                           },
+"payment_job_allowed":
+{ Args: { "actor": Json,"target": string }; Returns: boolean
+                           },
+"payment_lock":
+{ Args: { "editing"?: boolean,"target": string }; Returns: {
+              "body": NonNullable<Json>,
+"created_at": string,
+"creator_id": string,
+"creator_name": string,
+"current_files": (string)[],
+"file_version": number,
+"id": string,
+"po_id": string,
+"replaces_id": string | null,
+"request_id": string,
+"state": string,
+"version": number
+            }
+                          SetofOptions: {
+        from: "*"
+        to: "payment_drafts"
+        isOneToOne: true
+        isSetofReturn: false
+      } },
+"payment_no_cash_id":
+{ Args: { "target": string }; Returns: string
+                           },
+"payment_notify":
+{ Args: Record<PropertyKey, never>; Returns: undefined
+                           },
+"payment_paid":
+{ Args: { "target": string }; Returns: number
+                           },
+"payment_participate":
+{ Args: { "actor": Json,"caller": string,"kind": string,"target": string }; Returns: undefined
+                           },
+"payment_settled":
+{ Args: { "target": string }; Returns: boolean
+                           },
+"payment_transfer":
+{ Args: { "action": string,"actor": Json,"file_id": string,"lease_id"?: string,"patch"?: Json }; Returns: Json
+                           },
+"payment_view":
+{ Args: { "target": string }; Returns: Json
+                           },
+"payment_worker":
+{ Args: { "action": string,"job_id": string,"lease_id"?: string,"patch"?: Json }; Returns: Json
+                           },
+"payments_read":
+{ Args: { "actor": Json,"target_po"?: string,"target_request"?: string }; Returns: Json
+                           },
 "po_active_preparation":
 { Args: { "target": string }; Returns: string
                            },
@@ -1707,6 +2130,9 @@ isOneToOne: false
                            },
 "scope_snapshot":
 { Args: { "target": string }; Returns: Json
+                           },
+"scope_spent":
+{ Args: { "target": string }; Returns: number
                            },
 "scope_uncommitted":
 { Args: { "target": string }; Returns: number
@@ -2016,6 +2442,27 @@ isOneToOne: false
                            },
 "issuance_receipt":
 { Args: { "actor": Json,"command": Json }; Returns: Json
+                           },
+"payment_command":
+{ Args: { "actor": Json,"command": Json }; Returns: Json
+                           },
+"payment_dispatch":
+{ Args: Record<PropertyKey, never>; Returns: Json
+                           },
+"payment_file":
+{ Args: { "actor": Json,"file_id": string }; Returns: Json
+                           },
+"payment_files_command":
+{ Args: { "actor": Json,"command": Json }; Returns: Json
+                           },
+"payment_transfer":
+{ Args: { "action": string,"actor": Json,"file_id": string,"lease_id"?: string,"patch"?: Json }; Returns: Json
+                           },
+"payment_worker":
+{ Args: { "action": string,"job_id": string,"lease_id"?: string,"patch"?: Json }; Returns: Json
+                           },
+"payments_read":
+{ Args: { "actor": Json,"target_po"?: string,"target_request"?: string }; Returns: Json
                            },
 "po_archive_dispatch":
 { Args: Record<PropertyKey, never>; Returns: Json

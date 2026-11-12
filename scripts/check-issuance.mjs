@@ -98,10 +98,15 @@ export async function checkIssuance({ browser, second, sql, drive, login, logout
   await click(browser, 'Prepare to send'); await click(browser, 'Prepare to send');
   await browser.wait("return !document.querySelector('dialog[open]')");
   await second.wait("return document.body.textContent.includes('Prepared to send')");
+  const preparedAt = (await saved()).issuance.preparation.at;
+  // The form accepts whole seconds, so the earliest valid sending time is the
+  // next second after preparation. Wait for it to elapse before submitting.
+  const sentAt = new Date(new Date(preparedAt).getTime() + 1000 + 8 * 3600000).toISOString().slice(0, 19);
   await click(second, 'Confirm sent');
   await field(second, 'Sending channel', 'email', true);
   await field(second, 'Recipient name / contact', 'QA supplier contact <supplier@example.invalid>');
-  await field(second, 'Actually sent (Philippine date and time)', new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 19));
+  await field(second, 'Actually sent (Philippine date and time)', sentAt);
+  await delay(1100);
   await declare(second);
   const reason = 'Keep this entry while prerequisites change';
   await field(second, 'Sending notes (optional)', reason);

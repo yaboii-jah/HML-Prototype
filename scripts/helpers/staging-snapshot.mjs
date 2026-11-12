@@ -2,7 +2,7 @@ import { requireStaging, STAGING_REF } from './supabase-target.mjs';
 
 /** Read-only retained-state evidence. No Auth passwords, tokens or raw business
  * rows are returned. Application rows are compared using deterministic hashes. */
-export function retainedStateQuery({ includeProjectOperations = true, includeDocuments = true, includeReview = true, includeSuppliers = true, includeQuotations = true, includeQuotationFinalization = true, includeDemand = true, includeStock = true, includePurchasing = true, includeAccounting = true, includeIssuance = true } = {}) {
+export function retainedStateQuery({ includeProjectOperations = true, includeDocuments = true, includeReview = true, includeSuppliers = true, includeQuotations = true, includeQuotationFinalization = true, includeDemand = true, includeStock = true, includePurchasing = true, includeAccounting = true, includeIssuance = true, includePayments = true } = {}) {
   const tables = [
     ['profiles', 'public.profiles', 'user_id'], ['grants', 'public.role_grants', 'user_id,role'],
     ['assignments', 'public.project_assignments', 'user_id,project_id'], ['projects', 'public.projects', 'id'],
@@ -16,6 +16,15 @@ export function retainedStateQuery({ includeProjectOperations = true, includeDoc
     ['poSendPreparations', 'private.po_send_preparations', 'id'], ['poSendCancellations', 'private.po_send_cancellations', 'preparation_id'],
     ['poIssuances', 'private.po_issuances', 'id'], ['poIssuanceCorrections', 'private.po_issuance_corrections', 'id'],
     ['issuanceOperations', 'private.issuance_operations', 'id'],
+  );
+  if (includePayments) tables.push(
+    ['paymentHeads', 'private.payment_heads', 'po_id'], ['paymentParticipants', 'private.payment_participants', 'po_id,actor_id'],
+    ['paymentDrafts', 'private.payment_drafts', 'id'], ['paymentVerifications', 'private.payment_verifications', 'id'],
+    ['paymentReversals', 'private.payment_reversals', 'verification_id'], ['paymentNoCash', 'private.payment_no_cash', 'id'],
+    ['paymentNoCashReversals', 'private.payment_no_cash_reversals', 'confirmation_id'], ['paymentCoordination', 'private.payment_coordination', 'id'],
+    ['paymentClearances', 'private.payment_clearances', 'id'], ['paymentSpending', 'private.payment_spending', 'id'],
+    ['paymentOperations', 'private.payment_operations', 'id'], ['paymentGroups', 'private.payment_groups', 'id'],
+    ['paymentFiles', 'private.payment_files', 'id'], ['paymentJobs', 'private.payment_jobs', 'id'], ['paymentFileOperations', 'private.payment_file_operations', 'id'],
   );
   if (includePurchasing && includeAccounting) tables.push(
     ['poSubmissions', 'private.po_submissions', 'id'], ['poApprovals', 'private.po_approvals', 'id'],

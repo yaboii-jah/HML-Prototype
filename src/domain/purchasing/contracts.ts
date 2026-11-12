@@ -1,5 +1,5 @@
 import { UUID_PATTERN, isAuthRole, type AuthRole } from "../auth/session.ts";
-import { record } from "../projects/projects.ts";
+import { record, canonicalMoney } from "../projects/projects.ts";
 import {
   parseQuotationsView,
   type QuotationsView,
@@ -9,6 +9,7 @@ import type { QuotationCalculation } from "../quotations/financial.ts";
 import type { DemandClaim } from "../demand/quantities.ts";
 import { parsePayment, parsePoReview, type PaymentArrangement, type PoReview } from "./accounting.ts";
 import { parsePoIssuance, type PoIssuance } from "./issuance.ts";
+import { parsePaymentsView, type PaymentsView } from "../payments/payments.ts";
 
 export const PO_FIELDS = {
   date: "PO date",
@@ -72,6 +73,7 @@ export type PurchasingRecord = {
   updatedAt: string;
   review?: PoReview | null;
   issuance?: PoIssuance | null;
+  settlement?: { outstanding: string; settled: boolean; cleared: boolean };
 };
 export type ComparisonArtifact = {
   id: string;
@@ -94,6 +96,7 @@ export type PurchasingHistory = {
   details: Record<string, unknown>;
 };
 export type PurchasingView = {
+  payments?: PaymentsView | null;
   role: AuthRole;
   version: string;
   demandVersion: string;
@@ -374,6 +377,8 @@ export function parsePurchasingView(value: unknown): PurchasingView | null {
       (r.issuance !== null && r.issuance !== undefined && !issuance)
     )
       return null;
+    const settlement = r.settlement === undefined ? null : record(r.settlement);
+    if (r.settlement !== undefined && (!settlement || canonicalMoney(settlement.outstanding) === null || typeof settlement.settled !== "boolean" || typeof settlement.cleared !== "boolean")) return null;
     records.push({
       id: r.id,
       mrfId: r.mrfId,
@@ -391,6 +396,7 @@ export function parsePurchasingView(value: unknown): PurchasingView | null {
       updatedAt: r.updatedAt,
       ...(review !== undefined ? { review } : {}),
       ...(issuance !== undefined ? { issuance } : {}),
+      ...(settlement ? { settlement: { outstanding: String(settlement.outstanding), settled: settlement.settled === true, cleared: settlement.cleared === true } } : {}),
     });
   }
   for (const raw of v.claims) {
@@ -480,7 +486,10 @@ export function parsePurchasingView(value: unknown): PurchasingView | null {
       details,
     });
   }
+  const payments = v.payments === undefined ? undefined : v.payments === null ? null : parsePaymentsView(v.payments);
+  if (v.payments !== undefined && v.payments !== null && !payments) return null;
   return {
+    ...(payments !== undefined ? { payments } : {}),
     role: v.role,
     version: v.version,
     demandVersion: v.demandVersion,

@@ -12,6 +12,8 @@ import { purchasingView, purchasingDirectory } from "@/src/server/purchasing/pur
 import { quotationActor } from "@/src/server/quotations/drafts";
 import { serviceRpc } from "@/src/server/auth/service-rpc";
 
+import { paymentsView } from "@/src/server/payments/payments";
+
 const headers = { "Cache-Control": "private, no-store, max-age=0", Vary: "Cookie", "Referrer-Policy": "no-referrer" };
 const json = (value: unknown, status = 200) => Response.json(value, { status, headers });
 function sameOrigin(request: Request) {
@@ -43,6 +45,12 @@ export async function foundationResponse(request: Request, credentials = false) 
         accessToken: token.access_token, expiresAt: token.expires_at });
     }
     const query = new URL(request.url).searchParams, view = query.get("view");
+    if (view === "payments") {
+      if (session.activeRole === "Site Personnel") return json({ error: "Payment access denied." }, 403);
+      const poId = query.get("poId");
+      if (poId && !UUID_PATTERN.test(poId)) return json({ error: "Valid PO required." }, 400);
+      return json({ session, view: { kind: "payments", data: await paymentsView(poId ?? undefined) } });
+    }
     if (view === "purchasing" || view === "purchaseOrders") {
       if (session.activeRole === "Site Personnel") return json({ error: "Purchasing access denied." }, 403);
       if (view === "purchaseOrders") return json({ session, view: { kind: "purchaseOrders", data: { role: session.activeRole, records: await purchasingDirectory() } } });

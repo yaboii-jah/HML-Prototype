@@ -39,7 +39,7 @@ export type ReviewActor = { userId: string; name: string; activeRole: AuthRole }
 export type PoBudget = {
   projectId: string; projectName: string; version: string;
   scopeId: string; scopeName: string;
-  allocation: string | null; committed: string; uncommitted: string | null;
+  allocation: string | null; spent?: string; committed: string; uncommitted: string | null;
 };
 export type PoApproval = {
   id: string; version: string; actor: ReviewActor; at: string;
@@ -74,6 +74,7 @@ export function parsePoReview(value: unknown): PoReview | null {
     budget = {
       projectId: b.projectId, scopeId: b.scopeId, projectName: b.projectName, scopeName: b.scopeName, version: b.version,
       allocation: b.allocation === null ? null : canonicalMoney(b.allocation), committed: canonicalMoney(b.committed)!,
+      ...(b.spent !== undefined && canonicalMoney(b.spent) ? { spent: canonicalMoney(b.spent)! } : {}),
       uncommitted: b.uncommitted === null ? null : canonicalMoney(b.uncommitted),
     };
   }

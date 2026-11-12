@@ -25,6 +25,7 @@ import { PoAccountingPanel } from "./PoAccountingPanel";
 import { PoIssuancePanel } from "./PoIssuancePanel";
 import { usePurchasingOperation } from "./use-purchasing-operation";
 import "./purchasing.css";
+import { PaymentWorkspace } from "@/src/features/payments/PaymentWorkspace";
 
 type Base = { expectedVersion: string; expectedDemand: string };
 type Editor = {
@@ -842,6 +843,7 @@ export function PurchasingWorkspace({
           ))}
         </section>
       )}
+      {poId && view.payments?.records.some(r => r.poId === poId) && <PaymentWorkspace initial={view.payments} poId={poId} embedded />}
       <section className="panel">
         <h2>Purchasing history</h2>
         {!view.history.length && <p>No purchasing changes recorded.</p>}

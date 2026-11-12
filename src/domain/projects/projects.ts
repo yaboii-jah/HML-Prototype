@@ -56,6 +56,7 @@ export type ProjectSummary = {
     allocated: string | null;
     unallocated: string | null;
     committed?: string | null;
+    spent?: string | null;
     uncommitted?: string | null;
   };
 };
@@ -65,6 +66,7 @@ export type ProjectScope = {
   version: string;
   budget?: string | null;
   committed?: string | null;
+  spent?: string | null;
   uncommitted?: string | null;
 };
 export type ProjectDetail = ProjectSummary & {
@@ -283,7 +285,7 @@ export function parseProject(
     )
       return null;
     project.financial = { budget, allocated, unallocated };
-    for (const key of ["committed", "uncommitted"] as const) {
+    for (const key of ["committed", "spent", "uncommitted"] as const) {
       if (key in f) {
         const amount = moneyField(f[key]);
         if (amount === undefined) return null;
@@ -302,14 +304,14 @@ export function parseProject(
       const budget = moneyField(s.budget);
       if (budget === undefined) return null;
       scope.budget = budget;
-      for (const key of ["committed", "uncommitted"] as const) {
+      for (const key of ["committed", "spent", "uncommitted"] as const) {
         if (key in s) {
           const amount = moneyField(s[key]);
           if (amount === undefined) return null;
           scope[key] = amount;
         }
       }
-    } else if ("budget" in s || "committed" in s || "uncommitted" in s) return null;
+    } else if ("budget" in s || "committed" in s || "spent" in s || "uncommitted" in s) return null;
     project.scopes.push(scope);
   }
   if (project.scopes.length !== project.scopeCount) return null;
