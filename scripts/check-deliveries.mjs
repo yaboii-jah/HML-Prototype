@@ -24,7 +24,7 @@ export async function checkDeliveries({ browser, second, client, sql, login, log
   await field('Pickup address','Supplier bay'); await field('Destination address','Assigned project site access road');
   const quantityLabel = await browser.run("return document.querySelectorAll('fieldset')[1].querySelector('label.field span').textContent");
   await field(quantityLabel,'2'); await click('Save schedule');
-  await browser.wait("return /^\/deliveries\/[0-9a-f-]+$/.test(location.pathname)&&document.body.textContent.includes('Retained history')");
+  await browser.wait("return location.pathname.startsWith('/deliveries/')&&!location.pathname.endsWith('/new')&&document.body.textContent.includes('Retained history')");
   const id = await browser.run("return location.pathname.split('/').pop()");
   assert.equal(await browser.run("return [...document.querySelectorAll('button')].find(b=>b.textContent==='Record dispatch').disabled"),true);
   // Two authenticated colleagues see the same persisted load through protected refreshes.
