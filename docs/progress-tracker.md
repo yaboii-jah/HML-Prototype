@@ -10,7 +10,7 @@
 ## Current Goal
 
 - Documentation reduction is complete: task-specific reading, full milestone acceptance and bounded unrelated-failure diagnosis are the project defaults. Durable contracts and final evidence remain; superseded history is recoverable in Git, with no new archive document.
-- Unit 4.11 is verified complete at `09c1e8c`. Unit 4.12 implementation and subsequent dedicated-branch commit/push/draft PR publication are authorized; full acceptance remains pending. Hosted migrations, merge and production remain outside publication authorization.
+- Unit 4.11 is verified complete at `09c1e8c`. Unit 4.12 implementation/publication, compatible dependency repair and the subsequent standard-CI/staging/live-Drive checks are authorized; full acceptance remains pending. Merge and production remain outside this authorization.
 
 ## In Progress
 
@@ -21,7 +21,7 @@
 
 ## Next Up
 
-- **Exact next action:** resolve the unpatched dependency-audit blocker before obtaining a passing standard matrix. Then complete separately authorized staging/live-Drive and explicit human acceptance. The guide owns completion criteria; later units require their own scoped authorization.
+- **Exact next action:** verify and publish the exactly pinned picomatch fork repair, obtain a passing standard matrix/full disposable run, then complete authorized staging/live-Drive checks before requesting the three human-review groups. The guide owns completion criteria; later units require their own scoped authorization.
 - **Separate release blockers:** unresolved Vercel Node-version deployment failure; real email/custom SMTP and verified sender; company-owned Shared Drive/services and suitable hosting; tested backup/restore, monitoring/incident owners and departmental release acceptance. Supported Node 26.12.1/npm 11.20.0 remain local; deployment targets Node 24.x, CI baseline 24.22.1.
 
 ## Completed
@@ -81,7 +81,7 @@ The [architecture document](architecture.md) owns settled decisions: one HML com
 
 ### Known Limitations
 
-- **Publication dependency investigation, 2026-11-18:** user authorized compatible dependency repair in a separate commit. Hosted audit reports 40 findings (15 moderate, 25 high), including the transitive picomatch chain. [GHSA-fc5q-39xc-vjpf](https://github.com/advisories/GHSA-fc5q-39xc-vjpf) affects versions through 4.0.7 and lists no patched release; npm's latest is 4.0.7. A compatible version bump cannot currently clear this blocker. No forced downgrade, package override, audit exclusion or third-party source edit was applied; dependency files remain unchanged. The earlier production-only local audit is narrower and does not establish this full gate passed. A maintained patch or replacement requires its own reviewed approach.
+- **Dependency repair, 2026-11-18:** upstream [GHSA-fc5q-39xc-vjpf](https://github.com/advisories/GHSA-fc5q-39xc-vjpf) has no patched picomatch release. Continued authorized review found [@ryotsu/picomatch 4.0.7-a](https://github.com/ryotsu-kankichi/secured-picomatch), pinned exactly through npm overrides with lockfile integrity. Published source matches commit `3ab5a7627d480259e3d9ca67fbc14c125d374f0e`; reviewed runtime differences are limited to parser/constants, with no runtime dependencies/install hooks. Bounded CVE and ordinary-glob tests pass; upstream compatibility gives 1,981 passes and two exact-regex snapshot failures from the intentional punctuation escaping change, not a claimed clean upstream-suite pass. The local unchanged audit gate now reports zero high/critical and 29 moderate findings. This adds a separate publisher dependency; retain the exact pin and reassess replacement by an upstream fix. Full application/CI verification is pending. No audit exclusion, forced workflow downgrade or node_modules source edit was used.
 
 - **4.12 checkpoint, 2026-11-18:** the existing Next.js version raised a security upgrade recommendation during a standalone build; the subsequent standard build succeeded. A read-only production-dependency audit reported 23 moderate findings, zero high/critical; it includes a Next.js cache-information-disclosure advisory. Dependencies were not changed. Review a compatible security update separately; no clean dependency claim is made.
 
