@@ -57,6 +57,7 @@ export async function checkDeliveries({ browser, second, client, sql, login, log
   for (const width of [1440,375]) {
     await browser.call('Emulation.setDeviceMetricsOverride',{ width,height:1000,deviceScaleFactor:1,mobile:width<500 });
     if (width<500 && await browser.run("return !!document.querySelector('.mobile-scrim')")) await browser.run("document.querySelector('.mobile-scrim').click()");
+    if (width<500) await browser.wait("return !document.querySelector('.mobile-scrim')&&document.querySelector('.side-nav').getBoundingClientRect().right<=1");
     assert.equal(await browser.run('return document.documentElement.scrollWidth<=innerWidth+1'),true,`Delivery fits ${width}px`);
     const shot = await browser.call('Page.captureScreenshot',{ format:'png' });
     await writeFile(`.verification/delivery-${width}.png`,Buffer.from(shot.data,'base64'));
