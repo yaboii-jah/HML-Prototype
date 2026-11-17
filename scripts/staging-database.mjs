@@ -9,6 +9,7 @@ import { stagingSnapshot } from './helpers/staging-snapshot.mjs';
 import { accountingCheckSql } from './helpers/accounting-check.mjs';
 import { paymentCheckSql } from './helpers/payment-check.mjs';
 import { issuanceCheckSql } from './helpers/issuance-check.mjs';
+import { deliveryCheckSql } from './helpers/delivery-check.mjs';
 
 const action = process.argv[2];
 if (!['preview', 'apply', 'types', 'types-check', 'check', 'auth-check', 'auth-apply', 'realtime-check', 'realtime-apply'].includes(action) || process.argv.length > 3) {
@@ -111,6 +112,9 @@ if (action.startsWith('realtime-')) {
   const paymentFile = resolve('.verification/payment-rollback.sql');
   await writeFile(paymentFile, await paymentCheckSql());
   await supabase(['db', 'query', '--linked', '--project-ref', STAGING_REF, '--file', paymentFile]);
+  const deliveryFile = resolve('.verification/delivery-rollback.sql');
+  await writeFile(deliveryFile, await deliveryCheckSql());
+  await supabase(['db', 'query', '--linked', '--project-ref', STAGING_REF, '--file', deliveryFile]);
   const after = await stagingSnapshot();
   assert.deepEqual(after, before, 'Rollback checks preserve retained staging state');
   await mkdir('.verification', { recursive: true });

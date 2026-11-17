@@ -47,6 +47,7 @@ jobs:
             .verification/accounting-*.pdf
             .verification/purchasing-*.xlsx
             .verification/payment-*.png
+            .verification/delivery-*.png
             .verification/realtime-service.log
           include-hidden-files: true
           retention-days: 7
