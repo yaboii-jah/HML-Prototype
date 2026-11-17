@@ -1,0 +1,80 @@
+import assert from 'node:assert/strict';
+import { randomUUID } from 'node:crypto';
+import { mkdir, writeFile } from 'node:fs/promises';
+import { deliveryCheckSql } from './helpers/delivery-check.mjs';
+
+/** Actual Logistics session/UI against owned disposable records; no hosted data. */
+export async function checkDeliveries({ browser, second, client, sql, login, logout }) {
+  const definition = await deliveryCheckSql({ definitionsOnly:true });
+  const fixture = JSON.parse((await sql(definition + 'select pg_temp.delivery_fixture(); commit;')).output.split('\n').find(x=>x.startsWith('{')));
+  const staff = { email:randomUUID()+'@example.invalid',password:randomUUID() };
+  const user = await client.auth.admin.createUser({ ...staff,email_confirm:true });
+  assert.ifError(user.error); staff.id = user.data.user.id;
+  assert.ifError((await client.from('profiles').insert({ user_id:staff.id,display_name:'Delivery Logistics reviewer',is_active:true })).error);
+  assert.ifError((await client.from('role_grants').insert({ user_id:staff.id,role:'Logistics' })).error);
+  const click = async label => {
+    const expression = `const b=[...document.querySelectorAll('button')].find(b=>b.textContent.trim()===${JSON.stringify(label)}&&!b.disabled);`;
+    await browser.wait(expression+'return !!b;'); await browser.run(expression+'b.click();');
+  };
+  const field = async (label,value) => browser.run(`const l=[...document.querySelectorAll('label.field')].find(l=>l.querySelector('span')?.textContent===${JSON.stringify(label)});const el=l?.querySelector('input,textarea,select');if(!el)throw Error('Delivery field missing');const proto=el instanceof HTMLSelectElement?HTMLSelectElement.prototype:el instanceof HTMLTextAreaElement?HTMLTextAreaElement.prototype:HTMLInputElement.prototype;Object.getOwnPropertyDescriptor(proto,'value').set.call(el,${JSON.stringify(value)});el.dispatchEvent(new Event(el instanceof HTMLSelectElement?'change':'input',{bubbles:true}));`);
+  await logout(browser); await login(browser,staff);
+  await browser.navigate('/deliveries/new');
+  await browser.wait("return document.body.textContent.includes('Select an issued purchase order')");
+  await field('Purchase order',fixture.po); await click('Plan delivery');
+  await field('Pickup address','Supplier bay'); await field('Destination address','Assigned project site access road');
+  const quantityLabel = await browser.run("return document.querySelectorAll('fieldset')[1].querySelector('label.field span').textContent");
+  await field(quantityLabel,'2'); await click('Save schedule');
+  await browser.wait("return /^\/deliveries\/[0-9a-f-]+$/.test(location.pathname)&&document.body.textContent.includes('Retained history')");
+  const id = await browser.run("return location.pathname.split('/').pop()");
+  assert.equal(await browser.run("return [...document.querySelectorAll('button')].find(b=>b.textContent==='Record dispatch').disabled"),true);
+  // Two authenticated colleagues see the same persisted load through protected refreshes.
+  await logout(second); await login(second,staff); await second.navigate(`/deliveries/${id}`);
+  await second.wait("return document.body.textContent.includes('Assigned project site access road')");
+  await click('Revise schedule'); await field('Notes (optional)','Changed truck booking');
+  await field('Reason for revision','Supplier changed the truck booking'); await click('Save schedule');
+  await second.wait("return document.body.textContent.includes('Changed truck booking')",30000);
+  await sql(definition+`select pg_temp.delivery_clear('${JSON.stringify(fixture)}'::jsonb); commit;`);
+  await browser.wait("return [...document.querySelectorAll('button')].some(b=>b.textContent==='Record dispatch'&&!b.disabled)",30000);
+  await click('Record dispatch');
+  await browser.run("document.querySelector('.delivery-form input[type=checkbox]').click()");
+  await browser.run(`window.deliveryOriginalFetch=window.fetch;window.deliveryLostResponse=false;
+    window.fetch=async function(input,init){const response=await window.deliveryOriginalFetch.call(this,input,init);
+      if(!window.deliveryLostResponse&&new Headers(init?.headers).has('Next-Action')&&typeof init?.body==='string'&&init.body.includes('dispatch')){
+        window.deliveryLostResponse=true;await response.clone().arrayBuffer();throw new TypeError('Synthetic lost delivery acknowledgement');}
+      return response;};`);
+  await click('Confirm dispatch');
+  await browser.wait("return [...document.querySelectorAll('button')].some(b=>b.textContent==='Check saved outcome'&&!b.disabled)");
+  assert.equal(await browser.run('return window.deliveryLostResponse'),true);
+  await browser.run('window.fetch=window.deliveryOriginalFetch;delete window.deliveryOriginalFetch;');
+  await click('Check saved outcome');
+  await browser.wait("return document.body.textContent.includes('Recorded departure')");
+  assert.equal((await sql(`select state from private.deliveries where id='${id}';`)).output.trim(),'dispatched');
+  await click('Correct departure details'); await field('Reference (optional)','Supplier DR-412');
+  await field('Reason','Supplier provided the final reference');
+  await browser.run("document.querySelector('.delivery-form input[type=checkbox]').click()");
+  await click('Confirm correct'); await browser.wait("return document.body.textContent.includes('Supplier DR-412')");
+  await mkdir('.verification',{ recursive:true });
+  for (const width of [1440,375]) {
+    await browser.call('Emulation.setDeviceMetricsOverride',{ width,height:1000,deviceScaleFactor:1,mobile:width<500 });
+    if (width<500 && await browser.run("return !!document.querySelector('.mobile-scrim')")) await browser.run("document.querySelector('.mobile-scrim').click()");
+    assert.equal(await browser.run('return document.documentElement.scrollWidth<=innerWidth+1'),true,`Delivery fits ${width}px`);
+    const shot = await browser.call('Page.captureScreenshot',{ format:'png' });
+    await writeFile(`.verification/delivery-${width}.png`,Buffer.from(shot.data,'base64'));
+  }
+  await browser.call('Emulation.clearDeviceMetricsOverride');
+  const site = { email:randomUUID()+'@example.invalid',password:randomUUID() };
+  const createdSite = await client.auth.admin.createUser({ ...site,email_confirm:true });
+  assert.ifError(createdSite.error); site.id = createdSite.data.user.id;
+  assert.ifError((await client.from('profiles').insert({ user_id:site.id,display_name:'Assigned delivery receiver',is_active:true })).error);
+  assert.ifError((await client.from('role_grants').insert({ user_id:site.id,role:'Site Personnel' })).error);
+  assert.ifError((await client.from('project_assignments').insert({ user_id:site.id,project_id:fixture.project })).error);
+  await logout(second); await login(second,site); await second.navigate(`/deliveries/${id}`);
+  await second.wait("return document.body.textContent.includes('Supplier DR-412')");
+  assert.equal(await second.run("return [...document.querySelectorAll('button')].some(b=>/Revise schedule|Record dispatch|Correct departure/.test(b.textContent))"),false);
+  const projection = await second.run("return (await fetch('/api/foundation/view?view=deliveries')).json()");
+  assert.equal(projection.view.data.role,'Site Personnel');
+  assert.ok(projection.view.data.deliveries.some(d=>d.id===id));
+  assert.doesNotMatch(JSON.stringify(projection.view.data),/"(?:gross|net|paid|proof|budget|unitPrice|calculation)"/);
+  assert.equal(await second.run(`return (await fetch('/api/foundation/view?view=payments&poId=${fixture.po}')).status`),403);
+  console.log('Delivery Logistics scheduling, revisions, realtime, dispatch and retained correction UI passed.');
+}

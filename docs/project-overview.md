@@ -97,6 +97,7 @@ Issued-PO payment workflows provide Finance plans, shared Accounting drafts/proo
 ### Deliveries and Stock Transfers
 
 - Supplier-to-site, supplier-to-warehouse, warehouse-to-site and inter-project delivery paths.
+- Purchased delivery plans may split one issued PO across partial supplier loads and the site/warehouse routes. Logistics can schedule before Accounting clearance; each saved load reserves its PO quantities. Reasoned revisions/cancellation precede departure. Dispatch requires current clearance and records an actual Philippine departure time after scheduling, issuance and the applicable clearance. Invalid departures need external escalation. Assigned Site users see operational schedules without financial details. Implementation acceptance is tracked separately in the [tracker](progress-tracker.md).
 - Logistics scheduling and dispatch, receiving records, partial acceptance and shortage or damage reporting.
 - Generated receipts, signed evidence and separate Accounting document review.
 - Transfers have no supplier PO, invoice/payment approval, tax calculation or budget charge. Dispatch debits source stock once; receiving records accepted quantities; posting credits destination stock once. Shortages reopen sourcing without automatically restoring dispatched stock to the source.

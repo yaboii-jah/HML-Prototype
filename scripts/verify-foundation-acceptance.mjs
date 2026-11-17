@@ -37,7 +37,10 @@ try {
     // Manual review is deliberately explicit, never inferred from green CI.
     const manual = await read('foundation-manual.json');
     requireCurrentEvidence(manual, source, 'targeted manual review');
-    if (!manual.confirmedByUser || !manual.reviewedBehavior?.includes('error-retry')) throw Error('Targeted recovery review pending');
+      if (!manual.confirmedByUser || !manual.reviewedBehavior?.includes('error-retry')) throw Error('Targeted recovery review pending');
+      for (const behavior of ['delivery-planning-quantities','delivery-dispatch-history','delivery-access-conflicts-recovery']) {
+        if (!manual.reviewedBehavior?.includes(behavior)) throw Error(`Targeted delivery review pending: ${behavior}`);
+      }
     if (!drive.checks?.includes('approved-po-pdf')) throw Error('Approved PO live-Drive verification pending');
     if (!drive.checks?.includes('supplier-issuance-files')) throw Error('Supplier issuance live-file verification pending');
     for (const behavior of ['supplier-issuance-sending', 'supplier-issuance-lifecycle-history', 'supplier-issuance-archives-conflicts-access']) {

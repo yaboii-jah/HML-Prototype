@@ -1,0 +1,9 @@
+.delivery-workspace { display: grid; gap: var(--space-5, 1.5rem); }
+.delivery-workspace .panel { padding: var(--space-5, 1.5rem); }
+.delivery-workspace small { display: block; }
+.delivery-workspace th, .delivery-workspace td { vertical-align: top; }
+.delivery-form { display: grid; gap: var(--space-4, 1rem); }
+.delivery-form fieldset { display: grid; gap: var(--space-4, 1rem); min-width: 0; }
+.delivery-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr)); gap: var(--space-4, 1rem); }
+.delivery-facts dd { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.delivery-workspace li { margin-block: var(--space-3, .75rem); }

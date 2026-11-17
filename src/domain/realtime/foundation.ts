@@ -11,8 +11,10 @@ export type AccountsView = AccountDirectory & { actorId: string; emailEnabled: b
 import { parseQuotationsView, type QuotationsView } from "../quotations/drafts.ts";
 
 import { parsePaymentsView, type PaymentsView } from "../payments/payments.ts";
+import { parseDeliveriesView, type DeliveriesView } from '../deliveries/contracts.ts';
 
 export type FoundationView =
+  | { kind: 'deliveries'; data: DeliveriesView }
   | { kind: "payments"; data: PaymentsView }
   | { kind: "purchasing"; data: PurchasingView }
   | { kind: "purchaseOrders"; data: { records: PurchasingRecord[] } }
@@ -40,6 +42,10 @@ export function parseRealtimeSession(value: unknown): RealtimeSession | null {
 export function parseFoundationView(value: unknown): FoundationView | null {
   const raw = object(value), data = object(raw?.data);
   if (!raw || !data) return null;
+  if (raw.kind === 'deliveries') {
+    const parsed = parseDeliveriesView(data);
+    return parsed ? { kind:'deliveries', data:parsed } : null;
+  }
   if (raw.kind === "payments") {
     const parsed = parsePaymentsView(data);
     return parsed ? { kind: "payments", data: parsed } : null;
@@ -86,6 +92,7 @@ export function parseFoundationView(value: unknown): FoundationView | null {
   return null;
 }
 export function foundationViewQuery(pathname: string): string | null {
+  if (/^\/deliveries(?:\/[^/]+)?$/.test(pathname)) return 'view=deliveries';
   if (pathname === "/finance") return "view=payments";
   const payment = /^\/finance\/([^/]+)$/.exec(pathname);
   if (payment && UUID_PATTERN.test(payment[1])) return `view=payments&poId=${payment[1]}`;

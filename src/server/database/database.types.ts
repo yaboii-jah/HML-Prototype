@@ -146,6 +146,86 @@ isOneToOne: false
                   Relationships: [
 
                   ]
+                },"deliveries": {
+                  Row: {
+                    "created_at": string,"departure": Json | null,"departure_ceiling": string | null,"departure_floor": string | null,"id": string,"plan": NonNullable<Json>,"po_id": string,"ref": string,"state": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"departure"?: Json | null,"departure_ceiling"?: string | null,"departure_floor"?: string | null,"id": string,"plan": NonNullable<Json>,"po_id": string,"ref": string,"state": string
+                  }
+                  Update: {
+                    "created_at"?: string,"departure"?: Json | null,"departure_ceiling"?: string | null,"departure_floor"?: string | null,"id"?: string,"plan"?: NonNullable<Json>,"po_id"?: string,"ref"?: string,"state"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "deliveries_po_id_fkey"
+      columns: ["po_id"]
+isOneToOne: false
+      referencedRelation: "purchasing_records"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"delivery_events": {
+                  Row: {
+                    "action": string,"actor": NonNullable<Json>,"delivery_id": string,"id": string,"reason": string,"recorded_at": string,"snapshot": NonNullable<Json>
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "action": string,"actor": NonNullable<Json>,"delivery_id": string,"id"?: string,"reason": string,"recorded_at"?: string,"snapshot": NonNullable<Json>
+                  }
+                  Update: {
+                    "action"?: string,"actor"?: NonNullable<Json>,"delivery_id"?: string,"id"?: string,"reason"?: string,"recorded_at"?: string,"snapshot"?: NonNullable<Json>
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "delivery_events_delivery_id_fkey"
+      columns: ["delivery_id"]
+isOneToOne: false
+      referencedRelation: "deliveries"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"delivery_heads": {
+                  Row: {
+                    "po_id": string,"version": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "po_id": string,"version"?: number
+                  }
+                  Update: {
+                    "po_id"?: string,"version"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "delivery_heads_po_id_fkey"
+      columns: ["po_id"]
+isOneToOne: true
+      referencedRelation: "purchasing_records"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"delivery_operations": {
+                  Row: {
+                    "actor_id": string,"id": string,"payload": NonNullable<Json>,"po_id": string,"result": NonNullable<Json>
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "actor_id": string,"id": string,"payload": NonNullable<Json>,"po_id": string,"result": NonNullable<Json>
+                  }
+                  Update: {
+                    "actor_id"?: string,"id"?: string,"payload"?: NonNullable<Json>,"po_id"?: string,"result"?: NonNullable<Json>
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "delivery_operations_po_id_fkey"
+      columns: ["po_id"]
+isOneToOne: false
+      referencedRelation: "purchasing_records"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"demand_claims": {
                   Row: {
                     "id": string,"item_id": string,"owner_id": string,"owner_kind": string,"owner_line_id": string,"quantity": number,"request_id": string
@@ -1740,6 +1820,21 @@ isOneToOne: false
 "current_user_authorized":
 { Args: Record<PropertyKey, never>; Returns: boolean
                            },
+"deliveries_read":
+{ Args: { "actor": Json }; Returns: Json
+                           },
+"delivery_actor":
+{ Args: { "actor": Json,"writing"?: boolean }; Returns: string
+                           },
+"delivery_command":
+{ Args: { "actor": Json,"command": Json }; Returns: Json
+                           },
+"delivery_departure":
+{ Args: { "lower_bound": string,"upper_bound": string,"value": Json }; Returns: Json
+                           },
+"delivery_plan":
+{ Args: { "excluded": string,"target": string,"value": Json }; Returns: Json
+                           },
 "demand_apply":
 { Args: { "actor": Json,"changes": Json,"expected_version": string,"operation": string,"reason": string,"target": string }; Returns: Json
                            },
@@ -2412,6 +2507,12 @@ isOneToOne: false
                            },
 "comparison_worker":
 { Args: { "action": string,"job_id": string,"lease_id"?: string,"patch"?: Json }; Returns: Json
+                           },
+"deliveries_read":
+{ Args: { "actor": Json }; Returns: Json
+                           },
+"delivery_command":
+{ Args: { "actor": Json,"command": Json }; Returns: Json
                            },
 "document_command":
 { Args: { "actor": Json,"command": Json }; Returns: Json

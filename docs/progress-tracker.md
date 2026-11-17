@@ -1,6 +1,6 @@
 # Progress Tracker
 
-**Last reviewed: 2026-11-15.** Read current-state sections first; consult completed evidence only when relevant. Product contracts live in the [overview](project-overview.md) and [architecture](architecture.md); sequencing is in the [step 4 guide](step-4-implementation.md), policy in [workflow rules](ai-workflow-rules.md).
+**Last reviewed: 2026-11-18.** Read current-state sections first; consult completed evidence only when relevant. Product contracts live in the [overview](project-overview.md) and [architecture](architecture.md); sequencing is in the [step 4 guide](step-4-implementation.md), policy in [workflow rules](ai-workflow-rules.md).
 
 ## Current Phase
 
@@ -10,16 +10,18 @@
 ## Current Goal
 
 - Documentation reduction is complete: task-specific reading, full milestone acceptance and bounded unrelated-failure diagnosis are the project defaults. Durable contracts and final evidence remain; superseded history is recoverable in Git, with no new archive document.
-- Unit 4.11 is verified complete at `09c1e8c`. The user authorized committing/pushing the documentation closeout and reduction on 2026-11-15. Next operational work is scoped planning for 4.12 when requested; implementation, migrations, merge and production remain separate.
+- Unit 4.11 is verified complete at `09c1e8c`. Unit 4.12 implementation and subsequent dedicated-branch commit/push/draft PR publication are authorized; full acceptance remains pending. Hosted migrations, merge and production remain outside publication authorization.
 
 ## In Progress
 
-- No operational implementation unit is active. Branch `feat/step-4-payment-verification` remains in [draft PR #46](https://github.com/yaboii-jah/HML-Prototype/pull/46) into `feat/step-4-supplier-issuance`; the documentation closeout/reduction is included in this publication checkpoint. Existing documentation checks pass; no application checks are repeated for publication.
+- Unit 4.12 implementation authorized 2026-11-18 after seventeen interview decisions and explicit shared-understanding confirmation. Publication is in progress on `feat/step-4-purchased-dispatch`, stacked onto `feat/step-4-payment-verification` and [draft PR #46](https://github.com/yaboii-jah/HML-Prototype/pull/46). No 4.12 completion is claimed.
 - Preserve unrelated work, private untracked `docs/test-account.md`, retained staging QA records/files and the real Administrator. Do not reset staging, repurpose retained identities or rerun first-Administrator bootstrap.
+- 4.12 local code includes private delivery records/commands, exact reservations, permanent DEL numbering, operational Site projections, maintained routes/realtime and retained correction/recovery UI. SQL rollback and observed-lock race checks plus authenticated browser coverage are wired into acceptance. The local PostgreSQL WASM replay/rollback pass uses synthetic Auth/Realtime schemas and is not disposable Supabase acceptance. Hosted CI, real-session integration/races, staging migration/parity, owned Drive and three new human groups remain pending; 4.12 stays unchecked. Before first staging DDL, snapshot with `includeDeliveries:false`; after DDL verify new tables empty, then include them in retained-state checks.
+- Local checkpoint 2026-11-18: `npm run verify` passes with 483 unit/API tests, lint, generated route types, TypeScript and production build; final `foundation-public` browser gate passes; standalone final SQL replay/rollback checks pass. Actual component desktop/mobile previews pass without horizontal overflow using mock transport, and the Impeccable detector reports no deterministic findings. Updated guide/overview/architecture/workflow/tracker claims; 52 local documentation targets and Git whitespace checks pass. Detailed local reports remain ignored under `.verification/`; these results do not replace hosted integration or human acceptance.
 
 ## Next Up
 
-- **Exact next action:** scope and plan 4.12 purchased delivery dispatch when requested; enforce current effective clearance atomically. The guide owns dependencies and completion criteria. Later units require their own scoped authorization.
+- **Exact next action:** publish the authorized 4.12 draft PR, run all four standard CI jobs and full disposable integration, then proceed through separately authorized staging/live-Drive and explicit human acceptance. The guide owns completion criteria; later units require their own scoped authorization.
 - **Separate release blockers:** unresolved Vercel Node-version deployment failure; real email/custom SMTP and verified sender; company-owned Shared Drive/services and suitable hosting; tested backup/restore, monitoring/incident owners and departmental release acceptance. Supported Node 26.12.1/npm 11.20.0 remain local; deployment targets Node 24.x, CI baseline 24.22.1.
 
 ## Completed
@@ -78,6 +80,8 @@ The [architecture document](architecture.md) owns settled decisions: one HML com
 - **Earlier 4.11 correction attempts, 2026-11-13:** a local browser attempt stopped at the inherited populated-stack bootstrap prerequisite before payment work; fresh disposable CI supplied the pass. Drive `invalid_grant` failed before resource creation, then passed after explicit credential renewal. The staging guard initially blocked on an unimported CI artifact before external changes; digest-verified import preceded the successful retry. These unsuccessful attempts remain failures, separate from final evidence.
 
 ### Known Limitations
+
+- **4.12 checkpoint, 2026-11-18:** the existing Next.js version raised a security upgrade recommendation during a standalone build; the subsequent standard build succeeded. A read-only production-dependency audit reported 23 moderate findings, zero high/critical; it includes a Next.js cache-information-disclosure advisory. Dependencies were not changed. Review a compatible security update separately; no clean dependency claim is made.
 
 - Disposable CI raised its owned Realtime tenant limits for 277 synthetic bound sessions after proving the default 100-events/second limit dropped broadcasts. Company tenants keep provider defaults; concurrent staff-session fan-out beyond those limits remains a deployment scale boundary. The harness change does not establish production capacity.
 - Last recorded dependency audit: high-severity gate passed, 24 moderate findings remained. Counts are historical; no fresh audit or clean-dependency claim. Assess compatible remediation separately.
