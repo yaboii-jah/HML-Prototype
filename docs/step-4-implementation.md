@@ -319,6 +319,14 @@ Authorized 2026-11-18 after seventeen interview decisions and shared-understandi
 
 **Done when:** exact quantity/reservation/numbering/retry/security/time tests and observed-lock races at both isolation levels pass, including capacity contention, revise/cancel versus dispatch, clearance invalidation and access revocation. Complete real-session application/Realtime/recovery, desktop/mobile, standard/public-browser/four-job CI/full disposable/types, retained-state-safe staging and existing owned live-Drive gates. Obtain three new explicit human groups: planning/quantities; dispatch/history; access/conflicts/recovery. Preserve preceding attestations and require matching combined acceptance before checking 4.12.
 
+### 4.12 Targeted Human Review ? Pending
+
+Automated/staging/Drive readiness passes; see the tracker for dated evidence. Use designated synthetic 4.12 QA records and authorized identities, retain their records/files, and preserve earlier QA identities and evidence. Report each group as passed, failed or not tested, including all skips/issues. Automated checks do not establish human acceptance.
+
+- **Planning and quantities:** Logistics schedules before clearance, splits PO quantities across site/warehouse, sees exact unit equivalents and shared remaining capacity, and makes reasoned revisions/cancellation without reusing DEL numbers.
+- **Dispatch and history:** Accounting clearance gates departure; review exact saved loads, bounded Philippine departure times, short-load revision and immutable quantities/routes. Inspect retained corrections and confirm later holds preserve completed dispatch.
+- **Access, conflicts and recovery:** assigned Site sees operational data without financials or edit controls; unassigned access is denied. Review colleague refresh/conflicts, preserved input, desktop/mobile navigation and Check saved outcome. Request assisted execution for lost acknowledgements or revocation when necessary; explicit review of assisted outcomes is still required.
+
 ## Milestone Completion and Documentation Ownership
 
 Keep permanent product responsibilities in the [overview](project-overview.md), system contracts in [architecture](architecture.md), conventions in [code standards](code-standards.md) and execution/verification policy in [workflow rules](ai-workflow-rules.md). Keep current work, dependencies, dated evidence and deferred-suite restoration in the tracker rather than duplicating logs here.
