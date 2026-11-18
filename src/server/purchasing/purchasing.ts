@@ -15,6 +15,8 @@ import {
 import { dispatchComparisonArtifacts } from "./artifacts";
 import { dispatchApprovedPoArchives } from "./approval-archives";
 
+import { paymentsView } from "@/src/server/payments/payments";
+
 export async function purchasingView(mrfId: string) {
   const actor = await quotationActor();
   if (!actor) return null;
@@ -39,6 +41,7 @@ export async function purchasingView(mrfId: string) {
     }
   await dispatchComparisonArtifacts().catch(() => {});
   await dispatchApprovedPoArchives().catch(() => {});
+  view.payments = await paymentsView(undefined, mrfId);
   return view;
 }
 
@@ -66,7 +69,11 @@ export async function purchasingDirectory() {
     history: [],
   });
   if (!parsed) throw Error("Purchase order records are invalid.");
-  return parsed.records;
+  const payments = await paymentsView();
+  return parsed.records.map(record => {
+    const payment = payments?.records.find(p => p.poId === record.id);
+    return payment ? { ...record, settlement: { outstanding: payment.outstanding, settled: payment.settled, cleared: payment.cleared } } : record;
+  });
 }
 
 export async function runPurchasingCommand(

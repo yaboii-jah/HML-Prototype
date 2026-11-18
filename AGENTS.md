@@ -10,20 +10,19 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## Project workflow
 
-At the start of every project task, read all five core context documents before planning or making changes:
+Start every task by reading these instructions and the current phase, goal, in-progress work and next action in the [progress tracker](docs/progress-tracker.md). Reconcile them with Git and the latest user instruction; preserve unrelated pending work.
 
-1. [Project overview](docs/project-overview.md): product scope, workflows and acceptance criteria.
-2. [Architecture context](docs/architecture.md): boundaries, storage/access decisions and invariants.
-3. [AI workflow rules](docs/ai-workflow-rules.md): scoping, execution and verification process.
-4. [Code standards](docs/code-standards.md): implementation conventions.
-5. [Progress tracker](docs/progress-tracker.md): current phase, goal, pending changes, open questions and verification history.
+Read other context by task, using headings/search to select relevant sections:
 
-Read them again when resuming without their current contents or when the documentation has changed. Distinguish production targets from implemented behavior and preserve unrelated pending work.
+- [Project overview](docs/project-overview.md): product scope, workflows, responsibilities and acceptance criteria affected by the task.
+- [Architecture](docs/architecture.md): affected system contracts, access/storage boundaries and invariants.
+- [AI workflow rules](docs/ai-workflow-rules.md): execution, documentation and verification policy when planning or changing the project.
+- [Code standards](docs/code-standards.md): applicable conventions before writing code.
+- [Production checklist](docs/checklist.md): the relevant milestone and completion conditions for foundation/migration work.
+- [Step 4 guide](docs/step-4-implementation.md): roadmap/dependencies, the current unit and completion criteria for step 4 work. Read completed units only when their contracts affect the task.
 
-Before completing a task, review its documentation impact and update affected documents in the same change. Update the tracker after meaningful changes or decisions. In the completion report, identify the documents updated or briefly explain why no update was necessary. Keep the five core documents and the agreed companion documents; follow the workflow rules for their detailed update responsibilities.
+Reuse unchanged context within a session. On resumption, refresh current status and any relevant sections whose contents are missing or changed; do not reread every document by default. Distinguish production targets from implemented behavior.
 
-For foundation or migration milestone work, also read the companion [production checklist](docs/checklist.md) before planning or completing the unit. Update it as milestone progress changes; check a step only after verification, with its completion date and a brief evidence note. Keep active work, blockers and detailed evidence in the progress tracker.
+Complete authorized work through the required acceptance gates. Use focused checks while iterating, concise successful results and matching existing evidence where permitted. Do not repeat passing checks without a relevant change or unresolved failure. Diagnose an unrelated failure once; report the blocker and seek scope expansion before substantial unrelated repairs. Never claim blocked acceptance passed.
 
-For the current milestone, use the tracker for the active unit, blockers and next action. Read any milestone-specific companion only when its scope has been agreed and it is still active.
-
-When planning, implementing, reviewing or resuming checklist step 4, also read the active [step 4 implementation guide](docs/step-4-implementation.md). It owns the unit sequence and completion criteria; the tracker owns current authorization, blockers, next action and evidence. Check the latest user instruction before starting a unit, and check completion only after verification.
+Before completion, update only documents whose claims changed and record meaningful decisions/results in the tracker. Keep final dates, source revisions, evidence links and unresolved limitations concise; use Git for superseded narratives instead of appending transcripts. Check milestones only after verification, with date/evidence. Report changed documents and checks run. The workflow rules own detailed responsibilities.

@@ -455,6 +455,11 @@ async function checkFinalization({
   const accounting = await checkAccounting({ browser, second, sql, base, drive, mrf, quote, ...purchasing,
     login, logout, procurement: accounts[1], preparer: accounts[0], accountant: accounts[2], manager });
   // Actual MRF correction/reapproval/Workflow must not silently revalidate the offer.
+  await until(
+    async () =>
+      (await sql(`select private.mrf_ready('${mrf}');`)).output.trim() === "t",
+    "approved MRF archive readiness",
+  );
   await second.navigate(`/requests/${mrf}`);
   await second.run(
     "const input=document.querySelector('#mrf-review-heading ~ .field textarea');input.focus();input.select()",
@@ -708,5 +713,7 @@ async function checkFinalization({
     previous: replacement,
     accounting,
     issuance,
+    accounts,
+    staff,
   };
 }

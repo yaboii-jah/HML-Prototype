@@ -8,13 +8,55 @@ import { requireLoopback } from './helpers/supabase-target.mjs';
 export async function checkRealtimeFoundation({ api, anon, secret, sql }) {
   assert.equal(process.env.GITHUB_ACTIONS, 'true');
   requireLoopback(api);
+  // Earlier checks leave one bound session per test account, and every command
+  // publishes an invalidation to each of them. The disposable stack therefore
+  // carries a large undelivered queue for sessions nobody is listening to.
+  // Clear that queue so this check measures broadcast delivery itself.
+  const queued = (await sql('select count(*) from realtime.messages;')).output.trim();
+  await sql('delete from realtime.messages;');
+  console.log('Cleared ' + queued + ' undelivered disposable invalidations before the protocol check.');
   const admin = createClient(api, secret, { auth: { persistSession: false, autoRefreshToken: false } });
   const clients = [];
   const ok = (result, label) => { assert.equal(result.error?.message, undefined, label); return result.data; };
-  const until = async predicate => {
-    const deadline = Date.now() + 15000;
+  const until = async (predicate, context) => {
+    // One committed change publishes an invalidation to every bound session, so
+    // delivery time scales with the recipient count of the disposable stack.
+    // The hosted stack holds hundreds of test sessions, which can exceed a
+    // short bound even though the message is queued for the subscriber.
+    const deadline = Date.now() + 60000;
     while (!predicate() && Date.now() < deadline) await delay(50);
-    assert.ok(predicate(), 'Expected committed private broadcast arrived');
+    if (predicate()) return;
+    let detail = '';
+    if (context) {
+      try { detail = ' ' + await context(); }
+      catch (error) { detail = ' context unavailable: ' + error.message; }
+    }
+    assert.fail('Expected committed private broadcast arrived' + detail);
+  };
+  const broadcastContext = async (staff, socket, result) => {
+    const topic = staff.topic;
+    const facts = JSON.parse((await sql(`select jsonb_build_object(
+      'recipients',(select count(*) from private.session_bindings b
+        join auth.sessions s on s.id=b.session_id and s.user_id=b.user_id
+        join public.profiles p on p.user_id=b.user_id and p.access_revision=b.access_revision
+        where p.is_active and (s.not_after is null or s.not_after>now())
+          and exists(select 1 from public.role_grants g where g.user_id=p.user_id and g.role<>'Site Personnel')),
+      'pending',(select count(*) from realtime.messages),
+      'topicMessages',(select count(*) from realtime.messages where topic='${topic}'),
+      'binding',(select jsonb_build_object('binding',b.access_revision,'profile',p.access_revision,'session',b.session_id)
+        from private.session_bindings b join public.profiles p on p.user_id=b.user_id where b.session_id='${staff.sessionId}'),
+      'session',(select jsonb_build_object('rows',count(*),'notAfter',min(s.not_after))
+        from auth.sessions s where s.id='${staff.sessionId}' and s.user_id='${staff.id}'),
+      'policy',(select count(*) from public.profiles p
+        join private.session_bindings b on b.user_id=p.user_id and b.access_revision=p.access_revision
+        join auth.sessions s on s.id=b.session_id and s.user_id=p.user_id
+        join auth.users u on u.id=p.user_id
+        where p.user_id='${staff.id}' and p.is_active and s.id::text='${staff.sessionId}'
+          and (s.not_after is null or s.not_after>now()) and not u.is_anonymous
+          and (u.banned_until is null or u.banned_until<=now())
+          and exists(select 1 from public.role_grants g where g.user_id=p.user_id))
+    )::text;`)).output.trim());
+    return JSON.stringify({ ...facts, claimSession: staff.claimSession, changed: result?.changed ?? null, channel: socket.channel.state, events: socket.events.length });
   };
   const login = async (role, existing) => {
     const email = existing?.email ?? randomUUID() + '@example.invalid', password = existing?.password ?? randomUUID();
@@ -32,7 +74,7 @@ export async function checkRealtimeFoundation({ api, anon, secret, sql }) {
       expected_revision: proof.revision, expected_credential: proof.credential }), 'Realtime binding'), true);
     const context = ok(await client.rpc('auth_session_context'), 'Realtime context');
     await client.realtime.setAuth(session.access_token);
-    return { id, email, password, client, context, sessionId: claims.session_id,
+    return { id, email, password, client, context, sessionId: claims.session_id, claimSession: claims.session_id,
       topic: `foundation:${id}:${context.revision}:${claims.session_id}` };
   };
   const subscribe = (staff, topic = staff.topic, privateChannel = true) => new Promise(resolve => {
@@ -68,7 +110,7 @@ export async function checkRealtimeFoundation({ api, anon, secret, sql }) {
     assert.equal((await sql(`select count(*) from private.project_operations where id='${rolledBack.requestId}';`)).output.trim(), '0', 'Rolled-back retry result was not persisted');
     const baseline = receiverSocket.events.length, siteBaseline = siteSocket.events.length;
     const result = ok(await admin.rpc('project_command', { actor, command }), 'Publish project change');
-    await until(() => receiverSocket.events.length > baseline);
+    await until(() => receiverSocket.events.length > baseline, () => broadcastContext(receiver, receiverSocket, result));
     const payload = receiverSocket.events.at(-1).payload;
     assert.deepEqual(Object.keys(payload).filter(key => key !== 'id'), [], 'Broadcast contains no record or financial fields');
     await delay(200);

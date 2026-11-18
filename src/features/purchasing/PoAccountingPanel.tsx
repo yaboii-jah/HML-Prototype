@@ -51,6 +51,7 @@ export function PoAccountingPanel({ po, view }: { po: PurchasingRecord; view: Pu
     ["Budget scope", budget ? `${budget.projectName} / ${budget.scopeName}` : "Unavailable"],
     ["Scope allocation", formatPhp(budget?.allocation ?? null)],
     ["Committed gross", formatPhp(budget?.committed ?? null)],
+    ["Gross spent", formatPhp(budget?.spent ?? null)],
     ["Uncommitted allocation", formatPhp(budget?.uncommitted ?? null)],
     ["This PO's gross budget charge", po.calculation ? php(po.calculation.gross) : "Unavailable"],
     ["Supplier net payable", po.calculation ? php(po.calculation.net) : "Unavailable"],

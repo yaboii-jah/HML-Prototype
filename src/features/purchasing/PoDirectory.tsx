@@ -5,6 +5,7 @@ import { useFoundationRealtime } from "@/src/app-state/FoundationRealtime";
 import { PageHeader, Badge } from "@/src/components/ui/Primitives";
 import type { PurchasingRecord } from "@/src/domain/purchasing/contracts";
 import { PO_STATUSES } from "@/src/domain/purchasing/accounting";
+import { formatPhp } from "@/src/domain/projects/projects";
 export function PoDirectory({
   initial,
   accounting = false,
@@ -24,7 +25,7 @@ export function PoDirectory({
   };
   const shown = records.filter((record) => {
     const status = accounting ? statusOf(record) : record.state;
-    const matchesState = state === "all" || (state === "waiting"
+    const matchesState = state === "all" || (state === "payment" ? !!record.settlement && !record.settlement.settled : state === "clearance" ? !!record.settlement && !record.settlement.cleared : state === "waiting"
       ? ["submitted", "held"].includes(status)
       : status === state);
     const text = `${record.ref} ${record.body.fields.vendorName} ${record.body.reason}`;
@@ -34,7 +35,7 @@ export function PoDirectory({
     <>
       <PageHeader
         title={accounting ? "Accounting" : "Purchase orders"}
-        description={accounting ? "Review submitted purchase orders, payment arrangements and scope commitments." : "Shared purchase orders, Accounting review and supplier sending."}
+        description={accounting ? "Review purchase orders, verify payments and manage delivery clearance." : "Shared purchase orders, Accounting review and supplier sending."}
       />
       <div className="toolbar">
         <label>
@@ -51,6 +52,8 @@ export function PoDirectory({
             {accounting ? (
               <>
                 <option value="waiting">Waiting for Accounting</option>
+                <option value="payment">Outstanding / settlement checks</option>
+                <option value="clearance">Delivery not cleared</option>
                 {[...PO_STATUSES, "cancelled"].map((status) => (
                   <option key={status} value={status}>{status}</option>
                 ))}
@@ -74,6 +77,8 @@ export function PoDirectory({
               <th>Status</th>
               <th>Preparation</th>
               <th>Supplier sending</th>
+              <th className="numeric">Outstanding</th>
+              <th>Delivery clearance</th>
             </tr>
           </thead>
           <tbody>
@@ -98,6 +103,8 @@ export function PoDirectory({
                   )}
                 </td>
                 <td>{r.issuance?.status === "issued" ? "Issued" : r.issuance?.status === "prepared" ? "Prepared to send" : "Not issued"}</td>
+                <td className="numeric">{r.settlement ? formatPhp(r.settlement.outstanding) : "Not issued"}</td>
+                <td>{r.settlement ? r.settlement.cleared ? "Cleared" : "Not cleared" : "Not issued"}</td>
               </tr>
             ))}
           </tbody>
