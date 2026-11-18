@@ -1,6 +1,7 @@
 import { object } from '../accounts/accounts.ts';
 import { id, version, quantity } from '../purchasing/contracts.ts';
 import { isAuthRole, type AuthRole } from '../auth/session.ts';
+import { parseTrip, parseTripCounts, parseTripTotals, type TransferTrip, type TripCounts, type TripTotals } from './trips.ts';
 
 const states = ['review_pending','suitable','converted','release_pending','approved','rejected','cancelled'] as const;
 export type TransferStatus = typeof states[number];
@@ -15,7 +16,8 @@ type TransferEvent = { id:string; action:string; reason:string; at:string; actor
   snapshot:{ status:TransferStatus; lines:TransferLine[] } };
 export type TransferRecord = { id:string; ref:string|null; requestId:string|null; requestRef:string;
   source:string; destination:string; status:TransferStatus; version:string; note:string; ready:boolean; demandVersion:string|null;
-  canReview:boolean; canApprove:boolean; canCancel:boolean; canRequestRelease:boolean; lines:TransferLine[]; history:TransferEvent[] };
+  canReview:boolean; canApprove:boolean; canCancel:boolean; canRequestRelease:boolean; lines:TransferLine[]; history:TransferEvent[];
+  canManageTrips:boolean; canCancelRemaining:boolean; trips:TransferTrip[]; tripTotals:TripTotals[]; tripCounts:TripCounts };
 export type TransferSourcing = { requestId:string; requestRef:string; ready:boolean; demandVersion:string;
   items:{ id:string; name:string; unit:string; unassigned:string }[];
   candidates:{ id:string; projectId:string; project:string; name:string; unit:string; available:string }[] };
@@ -92,13 +94,16 @@ function parseEvent(raw:unknown):TransferEvent|null {
 
 function parseRecord(raw:unknown):TransferRecord|null {
   const r=object(raw), lines=list(r?.lines,parseLine), history=list(r?.history,parseEvent);
+  const trips=list(r?.trips,parseTrip), tripTotals=list(r?.tripTotals,parseTripTotals), tripCounts=parseTripCounts(r?.tripCounts);
   if (!r || !lines || !history || !id(r.id)||(r.ref!==null&&!text(r.ref))||(r.requestId!==null&&!id(r.requestId))
     || !text(r.requestRef)||!text(r.source)||!text(r.destination)||!status(r.status)||!version(r.version)||!bounded(r.note)
     || !flag(r.ready)|| (r.demandVersion!==null&&!version(r.demandVersion))
-    || !flag(r.canReview)||!flag(r.canApprove)||!flag(r.canCancel)||!flag(r.canRequestRelease)) return null;
+    || !flag(r.canReview)||!flag(r.canApprove)||!flag(r.canCancel)||!flag(r.canRequestRelease)
+    || !flag(r.canManageTrips)||!flag(r.canCancelRemaining)||!trips||!tripTotals||!tripCounts) return null;
   return { id:r.id,ref:r.ref,requestId:r.requestId,requestRef:r.requestRef,source:r.source,destination:r.destination,
     status:r.status,version:r.version,note:r.note,ready:r.ready,demandVersion:r.demandVersion,
-    canReview:r.canReview,canApprove:r.canApprove,canCancel:r.canCancel,canRequestRelease:r.canRequestRelease,lines,history };
+    canReview:r.canReview,canApprove:r.canApprove,canCancel:r.canCancel,canRequestRelease:r.canRequestRelease,lines,history,
+    canManageTrips:r.canManageTrips,canCancelRemaining:r.canCancelRemaining,trips,tripTotals,tripCounts };
 }
 
 function parseSourcing(raw:unknown):TransferSourcing|null {

@@ -7,8 +7,8 @@ Agreed 2026-11-03. This active companion owns the operational migration sequence
 Follow the task-specific reading map in [AGENTS.md](../AGENTS.md). For step 4, read this roadmap/dependencies, the affected unit contract and completion criteria, plus the relevant checklist step. Completed units need reading only when they constrain current work; final evidence lives in the tracker.
 
 1. Reconcile Git status, the tracker and the actual implementation. Preserve unrelated pending work and the completed foundation planning retirement.
-2. Check the latest user instruction and the tracker. Units through 4.13 are verified complete. Scope and authorize unit 4.14 before implementation.
-3. Use the sequence below as the roadmap. Units through 4.13 have detailed scopes. Define acceptance criteria before implementing later units.
+2. Check the latest user instruction and the tracker. Units through 4.14 are verified complete. Unit 4.15 has confirmed scope and proceeds through the acceptance gates below.
+3. Use the sequence below as the roadmap. Units through 4.14 have detailed scopes. Define acceptance criteria before implementing later units.
 4. Verify a unit within its boundary, record actual results in the tracker, then check its completion box. A documentation checkpoint does not complete an operational workflow or checklist step 4.
 5. Retire this companion after the milestone is complete, preserving durable contracts in the core documents and completion evidence in the tracker.
 
@@ -45,7 +45,7 @@ The listed order is the default. Record any agreed scope/order revision here and
 | **4.11 Payment coordination and verification** | [x] | Complete 2026-11-15 at `09c1e8c`: automated/Drive/staging checks, all three explicit human groups including assisted recovery and matching combined acceptance pass. Finance, settlement and clearance remain separate milestones. |
 | **4.12 Purchased delivery dispatch** | [x] | Completed 2026-11-18 at `4c601af`. All three human groups and matching combined acceptance passed. |
 | **4.13 Purchased receiving and stock posting** | [x] | Completed 2026-11-18 at `6906014`. All three staff review groups and matching combined acceptance passed. |
-| **4.14 Transfer approval and reservation** | [ ] | Matching, suitability review, source approval and reservation using 4.6/4.7; no supplier payment or budget charge. |
+| **4.14 Transfer approval and reservation** | [x] | Completed 2026-11-18 at `63b2f6d`. All three staff review groups and matching combined acceptance passed. |
 | **4.15 Transfer trips and dispatch** | [ ] | Trip planning, partial dispatch and exactly-once source-stock debit after source approval. |
 | **4.16 Transfer receiving and posting** | [ ] | Destination receiving, evidence, shortages and exactly-once destination-stock credit. |
 | **4.17 Usage and stock corrections** | [ ] | Immutable usage entries and authorized adjustments respecting reservations, reasons and history. |
@@ -344,6 +344,16 @@ Procurement sends one submission per source and approved MRF. Exact matches need
 A numbered release reserves source stock and claims demand. Assigned source Site staff approve the whole request with per-line quantities or reject it. Reductions and rejection need a reason. Approval requires someone other than the Procurement submitter and, for an alternative, the destination suitability reviewer, using permanent identities. Procurement can cancel pending or approved allocations before trips exist. Approval pauses during MRF correction and resumes when the archive is ready. Rejection and cancellation can release existing claims during a pause.
 
 **Done when:** local/public browser, all four CI jobs, disposable SQL, observed-lock contention at both isolation levels, signed-in desktop/mobile, checked types and retained-state-safe staging pass. Record explicit staff outcomes for sourcing and suitability (`transfer-sourcing-suitability`), release and reservation (`transfer-release-reservation`), and access and recovery (`transfer-access-recovery`). Require matching combined milestone acceptance. Trip and receiving evidence belong to 4.15 and 4.16.
+
+## 4.15 Transfer Trips and Dispatch
+
+Logistics books source-site-to-destination-site and source-site-to-warehouse trips from approved allocations in Stock transfers. Multiple trips can split exact quantities. The destination project's shared DEL sequence identifies each trip. Current saved locations are frozen with the route. A route change requires cancelling and booking a new trip. Schedule in Philippine time, with optional planned time and directions. Revisions and cancellations require a reason. An overdue trip retains its schedule and may still be revised or dispatched.
+
+The current MRF archive gates departure while planning stays available. Actual departure must follow the first saved booking, source approval and current archive readiness, and cannot be in the future. Confirm the full saved load. Revise a short load first so the rest stays reserved and available to book. Transport details are optional. Logistics can correct departure details with a reason and within the original time window. Prior details stay in trip history.
+
+Procurement previews active bookings before releasing the entire undispatched balance. The release cancels those trips, frees source reservations and reopens the corresponding demand in one save. Departed quantities stay claimed and visible in history. Assigned Site Personnel at either end can read operational trip details. MRF access still follows destination permissions. Receiving and onward movement follow in 4.16.
+
+**Done when:** current-source local/public browser, all four CI jobs, disposable SQL and observed-lock races at both isolation levels, signed-in desktop/mobile, checked types and retained-state-safe staging pass. Record explicit staff outcomes for trip planning and quantities (`transfer-trip-planning`), departure and cancellation (`transfer-trip-dispatch-cancellation`), and access, history and recovery (`transfer-trip-access-recovery`). Require matching combined milestone acceptance.
 
 ## Milestone Completion and Documentation Ownership
 

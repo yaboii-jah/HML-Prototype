@@ -4,16 +4,11 @@ import { spawn } from 'node:child_process';
 import { setTimeout as delay } from 'node:timers/promises';
 import { transferCheckSql } from './helpers/transfer-check.mjs';
 
-export async function checkTransferRaces({ sql,database,environment }) {
-  const definition=await transferCheckSql({ definitionsOnly:true });
-  const json=value=>"'"+JSON.stringify(value).replaceAll("'","''")+"'::jsonb";
-  const read=async query=>JSON.parse((await sql(query)).output.split('\n').find(line=>line.startsWith('{')));
-  const fresh=()=>read(definition+'select pg_temp.transfer_fixture(); commit;');
-  const input=(f,type,id,extra={})=>read(definition+`select pg_temp.transfer_input(${json(f)},'${type}',${id?"'"+id+"'":'null'},${json(extra)}); rollback;`);
-  const call=(actor,command)=>`select public.transfer_command(${json(actor)},${json(command)});`;
-  const selection=(f,quantity)=>({ itemId:f.item,stockId:f.direct,quantity,match:'direct',verified:true,explanation:'' });
+export const transferJson=value=>"'"+JSON.stringify(value).replaceAll("'","''")+"'::jsonb";
+export const transferResult=async (sql,query)=>JSON.parse((await sql(query)).output.split('\n').find(line=>line.startsWith('{')));
 
-  async function race(first,second,isolation) {
+export function transferRace({ sql,database,environment }) {
+  return async function race(first,second,isolation) {
     const child=spawn('docker',['exec','-i',database,'psql','-U','postgres','-d','postgres','-At','-v','ON_ERROR_STOP=1'],
       { env:environment,stdio:['pipe','pipe','pipe'] });
     let output='',diagnostics='',competitor;
@@ -40,8 +35,18 @@ export async function checkTransferRaces({ sql,database,environment }) {
       if (!child.stdin.writableEnded) child.stdin.end('rollback;\n');
       await Promise.allSettled([completed,competitor]);
     }
-  }
+  };
+}
 
+export async function checkTransferRaces(context) {
+  const { sql }=context;
+  const race=transferRace(context),json=transferJson;
+  const read=query=>transferResult(sql,query);
+  const definition=await transferCheckSql({ definitionsOnly:true });
+  const fresh=()=>read(definition+'select pg_temp.transfer_fixture(); commit;');
+  const input=(f,type,id,extra={})=>read(definition+`select pg_temp.transfer_input(${json(f)},'${type}',${id?"'"+id+"'":'null'},${json(extra)}); rollback;`);
+  const call=(actor,command)=>`select public.transfer_command(${json(actor)},${json(command)});`;
+  const selection=(f,quantity)=>({ itemId:f.item,stockId:f.direct,quantity,match:'direct',verified:true,explanation:'' });
   for (const isolation of ['read committed','repeatable read']) {
     const f=await fresh();
     const transfer=await input(f,'submit',null,{selections:[selection(f,'6')]});

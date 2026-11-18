@@ -13,6 +13,8 @@ import { checkPaymentRaces } from './check-payment-races.mjs';
 import { checkDeliveryRaces } from './check-delivery-races.mjs';
 import { checkTransferRaces } from './check-transfer-races.mjs';
 import { transferCheckSql } from './helpers/transfer-check.mjs';
+import { transferTripCheckSql } from './helpers/transfer-trip-check.mjs';
+import { checkTransferTripRaces } from './check-transfer-trip-races.mjs';
 import { retainedStateQuery } from './helpers/staging-snapshot.mjs';
 import { checkDocumentRaces } from './check-document-races.mjs';
 import assert from 'node:assert/strict';
@@ -131,6 +133,8 @@ try {
   checks.push('delivery-sql');
   await sql(await transferCheckSql());
   checks.push('transfer-approval-sql');
+  await sql(await transferTripCheckSql());
+  checks.push('transfer-trip-sql');
   checks.push('purchasing-sql');
   checks.push('stock-sql');
   checks.push('quotation-finalization-sql');
@@ -309,6 +313,8 @@ try {
   checks.push('delivery-races');
   await checkTransferRaces({ sql, database, environment });
   checks.push('transfer-approval-races');
+  await checkTransferTripRaces({ sql, database, environment });
+  checks.push('transfer-trip-races');
   await checkQuotationFinalizationRaces({ sql, database, environment, fixture: quotationFixture.financial });
   checks.push('quotation-finalization-races');
   await checkQuotationRaces({ sql, database, environment, fixture: quotationFixture });

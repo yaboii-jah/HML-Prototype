@@ -1848,14 +1848,14 @@ isOneToOne: false
                   ]
                 },"transfer_lines": {
                   Row: {
-                    "approved": number,"explanation": string,"id": string,"item_id": string,"proposed": number,"requested_name": string,"requested_unit": string,"stock_id": string,"stock_name": string,"stock_unit": string,"transfer_id": string
+                    "approved": number,"explanation": string,"id": string,"item_id": string,"proposed": number,"released": number,"requested_name": string,"requested_unit": string,"stock_id": string,"stock_name": string,"stock_unit": string,"transfer_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "approved"?: number,"explanation": string,"id": string,"item_id": string,"proposed": number,"requested_name": string,"requested_unit": string,"stock_id": string,"stock_name": string,"stock_unit": string,"transfer_id": string
+                    "approved"?: number,"explanation": string,"id": string,"item_id": string,"proposed": number,"released"?: number,"requested_name": string,"requested_unit": string,"stock_id": string,"stock_name": string,"stock_unit": string,"transfer_id": string
                   }
                   Update: {
-                    "approved"?: number,"explanation"?: string,"id"?: string,"item_id"?: string,"proposed"?: number,"requested_name"?: string,"requested_unit"?: string,"stock_id"?: string,"stock_name"?: string,"stock_unit"?: string,"transfer_id"?: string
+                    "approved"?: number,"explanation"?: string,"id"?: string,"item_id"?: string,"proposed"?: number,"released"?: number,"requested_name"?: string,"requested_unit"?: string,"stock_id"?: string,"stock_name"?: string,"stock_unit"?: string,"transfer_id"?: string
                   }
                   Relationships: [
                     {
@@ -1885,6 +1885,72 @@ isOneToOne: false
                   }
                   Relationships: [
 
+                  ]
+                },"transfer_trip_events": {
+                  Row: {
+                    "action": string,"actor": NonNullable<Json>,"id": string,"reason": string,"recorded_at": string,"snapshot": NonNullable<Json>,"trip_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "action": string,"actor": NonNullable<Json>,"id"?: string,"reason": string,"recorded_at"?: string,"snapshot": NonNullable<Json>,"trip_id": string
+                  }
+                  Update: {
+                    "action"?: string,"actor"?: NonNullable<Json>,"id"?: string,"reason"?: string,"recorded_at"?: string,"snapshot"?: NonNullable<Json>,"trip_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "transfer_trip_events_trip_id_fkey"
+      columns: ["trip_id"]
+isOneToOne: false
+      referencedRelation: "transfer_trips"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"transfer_trip_lines": {
+                  Row: {
+                    "line_id": string,"quantity": number,"trip_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "line_id": string,"quantity": number,"trip_id": string
+                  }
+                  Update: {
+                    "line_id"?: string,"quantity"?: number,"trip_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "transfer_trip_lines_line_id_fkey"
+      columns: ["line_id"]
+isOneToOne: false
+      referencedRelation: "transfer_lines"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "transfer_trip_lines_trip_id_fkey"
+      columns: ["trip_id"]
+isOneToOne: false
+      referencedRelation: "transfer_trips"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"transfer_trips": {
+                  Row: {
+                    "created_at": string,"departure": Json | null,"departure_ceiling": string | null,"departure_floor": string | null,"destination_address": string,"destination_name": string,"directions": string,"id": string,"pickup_address": string,"pickup_name": string,"planned_date": string,"planned_time": string,"ref": string,"route": string,"state": string,"transfer_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"departure"?: Json | null,"departure_ceiling"?: string | null,"departure_floor"?: string | null,"destination_address": string,"destination_name": string,"directions": string,"id": string,"pickup_address": string,"pickup_name": string,"planned_date": string,"planned_time": string,"ref": string,"route": string,"state": string,"transfer_id": string
+                  }
+                  Update: {
+                    "created_at"?: string,"departure"?: Json | null,"departure_ceiling"?: string | null,"departure_floor"?: string | null,"destination_address"?: string,"destination_name"?: string,"directions"?: string,"id"?: string,"pickup_address"?: string,"pickup_name"?: string,"planned_date"?: string,"planned_time"?: string,"ref"?: string,"route"?: string,"state"?: string,"transfer_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "transfer_trips_transfer_id_fkey"
+      columns: ["transfer_id"]
+isOneToOne: false
+      referencedRelation: "transfers"
+      referencedColumns: ["id"]
+    }
                   ]
                 },"transfers": {
                   Row: {
@@ -2458,6 +2524,26 @@ isOneToOne: true
 "transfer_reservation":
 { Args: { "amount": number,"line": Omit<Database["private"]['Tables']["transfer_lines"]['Row'], Database["private"]['Tables']["transfer_lines"]['ComputedFields']> }; Returns: Json
                            },
+"transfer_trip_command":
+{ Args: { "actor": Json,"command": Json }; Returns: Json
+                           },
+"transfer_trip_event":
+{ Args: { "action": string,"actor": Json,"reason": string,"target": string }; Returns: undefined
+                           },
+"transfer_trip_plan_lines":
+{ Args: { "lines": Json,"target": string,"trip": string }; Returns: undefined
+                           },
+"transfer_trip_snapshot":
+{ Args: { "target": string }; Returns: Json
+                           },
+"transfer_trip_stock":
+{ Args: { "actor": Json,"operation": string,"postings": Json,"reason": string,"reservations": Json }; Returns: undefined
+                           },
+"transfer_trip_totals":
+{ Args: { "excluded"?: string,"target": string }; Returns: {
+              "approved": number,"booked": number,"departed": number,"line_id": string,"released": number
+            }[]
+                           },
 "transfer_unit":
 { Args: { "value": string }; Returns: string
                            },
@@ -2850,6 +2936,9 @@ isOneToOne: false
                            },
 "transfer_read":
 { Args: { "actor": Json,"target_request": string,"target_transfer": string }; Returns: Json
+                           },
+"transfer_trip_command":
+{ Args: { "actor": Json,"command": Json }; Returns: Json
                            }
           }
           Enums: {
