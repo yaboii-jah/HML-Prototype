@@ -3,9 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { writeFile } from 'node:fs/promises';
 import { transferCheckSql } from './helpers/transfer-check.mjs';
 
-export async function checkTransferApproval({ browser,second,client,sql,login,logout }) {
-  const definition=await transferCheckSql({definitionsOnly:true});
-  const fixture=JSON.parse((await sql(definition+'select pg_temp.transfer_fixture(); commit;')).output.split('\n').find(line=>line.startsWith('{')));
+export function transferBrowserTools(client) {
   async function staff(role,projectId) {
     const identity={ email:randomUUID()+'@example.invalid',password:randomUUID() };
     const user=await client.auth.admin.createUser({ ...identity,email_confirm:true });
@@ -16,8 +14,6 @@ export async function checkTransferApproval({ browser,second,client,sql,login,lo
     if (projectId) assert.ifError((await client.from('project_assignments').insert({ user_id:userId,project_id:projectId })).error);
     return identity;
   }
-  const procurement=await staff('Procurement'), destination=await staff('Site Personnel',fixture.destination);
-  const source=await staff('Site Personnel',fixture.source);
   const click=async (page,label) => {
     const expression=`const b=[...document.querySelectorAll('button')].find(b=>b.textContent.trim()===${JSON.stringify(label)}&&!b.disabled);`;
     await page.wait(expression+'return !!b;');
@@ -29,6 +25,15 @@ export async function checkTransferApproval({ browser,second,client,sql,login,lo
     const type=input instanceof HTMLSelectElement?HTMLSelectElement.prototype:input instanceof HTMLTextAreaElement?HTMLTextAreaElement.prototype:HTMLInputElement.prototype;
     Object.getOwnPropertyDescriptor(type,'value').set.call(input,${JSON.stringify(value)});
     input.dispatchEvent(new Event(input instanceof HTMLSelectElement?'change':'input',{bubbles:true}));`);
+  return { staff,click,field };
+}
+
+export async function checkTransferApproval({ browser,second,client,sql,login,logout }) {
+  const definition=await transferCheckSql({definitionsOnly:true});
+  const fixture=JSON.parse((await sql(definition+'select pg_temp.transfer_fixture(); commit;')).output.split('\n').find(line=>line.startsWith('{')));
+  const { staff,click,field }=transferBrowserTools(client);
+  const procurement=await staff('Procurement'), destination=await staff('Site Personnel',fixture.destination);
+  const source=await staff('Site Personnel',fixture.source);
   await logout(browser); await login(browser,procurement);
   await browser.navigate(`/stock-transfers/source/${fixture.request}`);
   await browser.wait("return document.body.textContent.includes('Source project stock')");

@@ -4,6 +4,7 @@ import { serviceRpc, ServiceCommandError } from '@/src/server/auth/service-rpc';
 import { object } from '@/src/domain/accounts/accounts';
 import { id } from '@/src/domain/purchasing/contracts';
 import { parseTransferCommand, parseTransferView } from '@/src/domain/transfers/contracts';
+import { parseTransferTripCommand } from '@/src/domain/transfers/trips';
 
 async function transferActor() {
   const s=await readSession();
@@ -21,12 +22,13 @@ export async function transferView(targetRequest?:string, targetTransfer?:string
 }
 
 export async function runTransferCommand(input:unknown) {
-  const command=parseTransferCommand(input);
+  const trip=parseTransferTripCommand(input);
+  const command=trip??parseTransferCommand(input);
   if (!command) return { ok:false,message:'Review the selected materials, exact quantities and required explanations.' };
   try {
     const actor=await transferActor();
     if (!actor) return { ok:false,message:'Sign in again to record this action.' };
-    const result=object(await serviceRpc('transfer_command',{ actor,command }));
+    const result=object(await serviceRpc(trip?'transfer_trip_command':'transfer_command',{ actor,command }));
     if (!Array.isArray(result?.ids)||!result.ids.every(id)) throw Error('Invalid transfer outcome.');
     return { ok:true,message:'Transfer action recorded.',ids:result.ids };
   } catch (error) {
@@ -40,6 +42,14 @@ export async function runTransferCommand(input:unknown) {
         P4142:'Available source stock changed. Review the quantities and try again.',
         P4143:'A different assigned source reviewer must approve this release.',
         P4144:'Set a document code on the destination project before requesting release.',
+        P4150:'Review the route, exact load quantities, Philippine schedule and required reason.',
+        P4151:'This trip action is unavailable. Review the current allocation and trip status.',
+        P4152:'The load exceeds remaining booking capacity or the source reservation changed.',
+        P4153:'Departure is paused until the current approved MRF archive is ready.',
+        P4154:'Set the missing project location or destination document code before scheduling.',
+        P4123:'Choose an actual departure after booking, approval and archive readiness, within the allowed time window.',
+        '22007':'Enter a valid Philippine date and time.',
+        '22008':'Enter a valid Philippine date and time.',
         P4803:'This operation identity already belongs to a different action.',
       };
       if (messages[error.code]) return { ok:false,conflict:['40001','P4142'].includes(error.code),message:messages[error.code] };

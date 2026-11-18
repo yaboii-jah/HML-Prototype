@@ -8,22 +8,29 @@ import { transferCommandAction } from '@/app/(workspace)/stock-transfers/actions
 import type { TransferCommand, TransferRecord, TransferSelection, TransferSourcing, TransferStatus, TransferView } from '@/src/domain/transfers/contracts';
 import { rankStockCandidates } from '@/src/domain/stock-matching';
 import { compare, decimal } from '@/src/domain/quotations/decimal';
+import type { TransferTripCommand } from '@/src/domain/transfers/trips';
+import { TransferTrips } from './TransferTrips';
 
-type Command = TransferCommand extends infer C ? C extends TransferCommand ? Omit<C,'requestId'> : never : never;
+type SavedCommand = TransferCommand|TransferTripCommand;
+type WithoutRequest<C> = C extends SavedCommand ? Omit<C,'requestId'> : never;
+type Command = WithoutRequest<SavedCommand>;
 type Action = Exclude<TransferCommand['type'],'submit'>;
 type Send = (command:Command)=>Promise<void>;
 
 const labels:Record<TransferStatus,string> = {
   review_pending:'Awaiting destination review', suitable:'Suitable · awaiting release request',
   converted:'Release requested', release_pending:'Awaiting source approval',
-  approved:'Approved · stock reserved', rejected:'Rejected', cancelled:'Cancelled',
+  approved:'Approved', rejected:'Rejected', cancelled:'Cancelled',
 };
 const actions:Record<string,string> = {
   submit:'Submitted', confirmSuitability:'Suitability confirmed', requestRelease:'Release requested',
   approveRelease:'Source release approved', reject:'Rejected', cancel:'Cancelled',
+  cancelRemaining:'Undispatched balance cancelled',
 };
 const when = (value:string) => new Date(value).toLocaleString('en-PH',{ timeZone:'Asia/Manila' });
 const blankLine = ():TransferSelection => ({ itemId:'',stockId:'',quantity:'',match:'alternative',verified:false,explanation:'' });
+const statusLabel = (record:TransferRecord) => record.status==='approved'&&record.tripTotals.some(line=>/[1-9]/.test(line.booked)||/[1-9]/.test(line.schedulable))
+  ? 'Approved · stock reserved' : labels[record.status];
 
 function SourcingForm({ sourcing, busy, send }: { sourcing:TransferSourcing; busy:boolean; send:Send }) {
   const [source,setSource] = useState('');
@@ -107,10 +114,14 @@ function SourcingForm({ sourcing, busy, send }: { sourcing:TransferSourcing; bus
 function RecordList({ records }: { records:TransferRecord[] }) {
   if (!records.length) return <p>No transfers or suitability reviews are available for this view.</p>;
   return <div className="table-scroll"><table className="data-table">
-    <thead><tr><th>Record</th><th>Source</th><th>Destination</th><th>Status</th></tr></thead>
+    <thead><tr><th>Record</th><th>Source</th><th>Destination</th><th>Status</th><th>Trips</th></tr></thead>
     <tbody>{records.map(record=><tr key={record.id}>
       <td><Link href={`/stock-transfers/${record.id}`}>{record.ref??'Suitability review'}</Link><small>{record.requestRef}</small></td>
-      <td>{record.source}</td><td>{record.destination}</td><td><Badge value={labels[record.status]} /></td>
+      <td>{record.source}</td><td>{record.destination}</td><td><Badge value={statusLabel(record)} /></td>
+      <td>{Object.values(record.tripCounts).some(Boolean) ? <>
+        {record.tripCounts.scheduled} booked · {record.tripCounts.dispatched} departed
+        {record.tripCounts.cancelled>0 && <small>{record.tripCounts.cancelled} cancelled</small>}
+      </> : '—'}</td>
     </tr>)}</tbody>
   </table></div>;
 }
@@ -135,8 +146,8 @@ function TransferDetail({ record,busy,send }: { record:TransferRecord; busy:bool
     <section className="panel">
       <h2>Material quantities</h2>
       <p>{record.source} → {record.destination} · {record.requestId ? <Link href={`/requests/${record.requestId}`}>{record.requestRef}</Link> : record.requestRef}</p>
-      <p><Badge value={labels[record.status]} /></p>
-      {!record.ready && <p role="status">Approval is paused until the current MRF archive is ready.</p>}
+      <p><Badge value={statusLabel(record)} /></p>
+      {!record.ready && record.status!=='approved' && <p role="status">Approval is paused until the current MRF archive is ready.</p>}
       {record.note && <p>{record.note}</p>}
       <div className="table-scroll"><table className="data-table">
         <thead><tr><th>Requested material</th><th>Source stock</th><th>Proposed</th><th>Approved</th></tr></thead>
@@ -187,6 +198,8 @@ function TransferDetail({ record,busy,send }: { record:TransferRecord; busy:bool
         </div>
       </form>}
     </section>
+    {(record.status==='approved'||record.trips.length>0||record.tripTotals.some(total=>/[1-9]/.test(total.released))) &&
+      <TransferTrips record={record} busy={busy} send={send} />}
     <section className="panel">
       <h2>History</h2>
       <ol>{record.history.map(event=><li key={event.id}>
@@ -206,10 +219,10 @@ export function TransfersWorkspace({ initial,recordId,sourcingPage=false }: { in
   const selected=view.records.find(r=>r.id===recordId);
   const [busy,setBusy]=useState(false), [uncertain,setUncertain]=useState(false), [message,setMessage]=useState('');
   const [formVersion,setFormVersion]=useState(0);
-  const pending=useRef<TransferCommand|null>(null), running=useRef(false);
+  const pending=useRef<SavedCommand|null>(null), running=useRef(false);
   async function perform(input?:Command) {
     if (running.current || (input&&pending.current)) return;
-    if (input) pending.current=structuredClone({ ...input,requestId:crypto.randomUUID() } as TransferCommand);
+    if (input) pending.current=structuredClone({ ...input,requestId:crypto.randomUUID() } as SavedCommand);
     if (!pending.current) return;
     running.current=true;
     setBusy(true);
