@@ -113,7 +113,7 @@ export async function checkDeliveries({ browser, second, client, sql, login, log
   assert.ifError((await client.from('role_grants').insert({ user_id:accountant.id,role:'Accounting' })).error);
   await logout(browser); await login(browser,accountant); await browser.navigate(`/deliveries/${id}`);
   await click('Approve receipt evidence');
-  await browser.wait("return [...document.querySelectorAll('p')].some(p=>p.textContent.includes('Accounting review')&&p.textContent.includes('approved'))");
+  await browser.wait("return [...document.querySelectorAll('p')].some(p=>p.textContent.includes('Accounting review')&&/\\bapproved\\b/i.test(p.querySelector('.badge')?.textContent??''))");
   assert.equal(await browser.run(`return (await fetch('/api/delivery-files/${signedId}',{headers:{Range:'bytes=0-4'}})).status`),206);
   for (const width of [1440,375]) {
     await browser.call('Emulation.setDeviceMetricsOverride',{ width,height:1000,deviceScaleFactor:1,mobile:width<500 });
