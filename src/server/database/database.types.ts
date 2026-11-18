@@ -148,17 +148,23 @@ isOneToOne: false
                   ]
                 },"deliveries": {
                   Row: {
-                    "created_at": string,"departure": Json | null,"departure_ceiling": string | null,"departure_floor": string | null,"id": string,"plan": NonNullable<Json>,"po_id": string,"ref": string,"state": string
+                    "created_at": string,"departure": Json | null,"departure_ceiling": string | null,"departure_floor": string | null,"id": string,"parent_delivery_id": string | null,"plan": NonNullable<Json>,"po_id": string,"ref": string,"state": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"departure"?: Json | null,"departure_ceiling"?: string | null,"departure_floor"?: string | null,"id": string,"plan": NonNullable<Json>,"po_id": string,"ref": string,"state": string
+                    "created_at"?: string,"departure"?: Json | null,"departure_ceiling"?: string | null,"departure_floor"?: string | null,"id": string,"parent_delivery_id"?: string | null,"plan": NonNullable<Json>,"po_id": string,"ref": string,"state": string
                   }
                   Update: {
-                    "created_at"?: string,"departure"?: Json | null,"departure_ceiling"?: string | null,"departure_floor"?: string | null,"id"?: string,"plan"?: NonNullable<Json>,"po_id"?: string,"ref"?: string,"state"?: string
+                    "created_at"?: string,"departure"?: Json | null,"departure_ceiling"?: string | null,"departure_floor"?: string | null,"id"?: string,"parent_delivery_id"?: string | null,"plan"?: NonNullable<Json>,"po_id"?: string,"ref"?: string,"state"?: string
                   }
                   Relationships: [
                     {
+      foreignKeyName: "deliveries_parent_delivery_id_fkey"
+      columns: ["parent_delivery_id"]
+isOneToOne: false
+      referencedRelation: "deliveries"
+      referencedColumns: ["id"]
+    },{
       foreignKeyName: "deliveries_po_id_fkey"
       columns: ["po_id"]
 isOneToOne: false
@@ -223,6 +229,66 @@ isOneToOne: true
       columns: ["po_id"]
 isOneToOne: false
       referencedRelation: "purchasing_records"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"delivery_receipt_files": {
+                  Row: {
+                    "created_actor": Json | null,"created_at": string,"created_by": string | null,"created_revision": number | null,"created_role": string | null,"current_evidence": boolean,"drive_id": string | null,"folder_id": string | null,"id": string,"kind": string,"lease_id": string | null,"lease_until": string | null,"mime": string,"name": string,"offset_bytes": number,"root_id": string | null,"session_ticket": string | null,"sha256": string | null,"size": number | null,"state": string,"version_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_actor"?: Json | null,"created_at"?: string,"created_by"?: string | null,"created_revision"?: number | null,"created_role"?: string | null,"current_evidence"?: boolean,"drive_id"?: string | null,"folder_id"?: string | null,"id"?: string,"kind": string,"lease_id"?: string | null,"lease_until"?: string | null,"mime"?: string,"name": string,"offset_bytes"?: number,"root_id"?: string | null,"session_ticket"?: string | null,"sha256"?: string | null,"size"?: number | null,"state"?: string,"version_id": string
+                  }
+                  Update: {
+                    "created_actor"?: Json | null,"created_at"?: string,"created_by"?: string | null,"created_revision"?: number | null,"created_role"?: string | null,"current_evidence"?: boolean,"drive_id"?: string | null,"folder_id"?: string | null,"id"?: string,"kind"?: string,"lease_id"?: string | null,"lease_until"?: string | null,"mime"?: string,"name"?: string,"offset_bytes"?: number,"root_id"?: string | null,"session_ticket"?: string | null,"sha256"?: string | null,"size"?: number | null,"state"?: string,"version_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "delivery_receipt_files_version_id_fkey"
+      columns: ["version_id"]
+isOneToOne: false
+      referencedRelation: "delivery_receipt_versions"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"delivery_receipt_versions": {
+                  Row: {
+                    "actor": NonNullable<Json>,"delivery_id": string,"id": string,"recorded_at": string,"revision": number,"snapshot": NonNullable<Json>
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "actor": NonNullable<Json>,"delivery_id": string,"id"?: string,"recorded_at"?: string,"revision": number,"snapshot": NonNullable<Json>
+                  }
+                  Update: {
+                    "actor"?: NonNullable<Json>,"delivery_id"?: string,"id"?: string,"recorded_at"?: string,"revision"?: number,"snapshot"?: NonNullable<Json>
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "delivery_receipt_versions_delivery_id_fkey"
+      columns: ["delivery_id"]
+isOneToOne: false
+      referencedRelation: "delivery_receipts"
+      referencedColumns: ["delivery_id"]
+    }
+                  ]
+                },"delivery_receipts": {
+                  Row: {
+                    "arrival_at": string,"delivery_id": string,"posted_at": string | null,"review_reason": string,"review_state": string,"revision": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "arrival_at": string,"delivery_id": string,"posted_at"?: string | null,"review_reason"?: string,"review_state"?: string,"revision": number
+                  }
+                  Update: {
+                    "arrival_at"?: string,"delivery_id"?: string,"posted_at"?: string | null,"review_reason"?: string,"review_state"?: string,"revision"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "delivery_receipts_delivery_id_fkey"
+      columns: ["delivery_id"]
+isOneToOne: true
+      referencedRelation: "deliveries"
       referencedColumns: ["id"]
     }
                   ]
@@ -1829,11 +1895,32 @@ isOneToOne: false
 "delivery_command":
 { Args: { "actor": Json,"command": Json }; Returns: Json
                            },
+"delivery_current_receipt":
+{ Args: { "target": string }; Returns: Json
+                           },
 "delivery_departure":
 { Args: { "lower_bound": string,"upper_bound": string,"value": Json }; Returns: Json
                            },
+"delivery_file_action":
+{ Args: { "action": string,"actor": Json,"file_id": string,"lease": string,"patch": Json,"version_id": string }; Returns: Json
+                           },
 "delivery_plan":
 { Args: { "excluded": string,"target": string,"value": Json }; Returns: Json
+                           },
+"delivery_post_stock":
+{ Args: { "actor": Json,"lines": Json,"operation": string,"project": string,"reason": string,"target": string }; Returns: undefined
+                           },
+"delivery_receipt_lines":
+{ Args: { "load": Json,"submitted": Json,"target": string }; Returns: Json
+                           },
+"delivery_receipt_view":
+{ Args: { "role_name": string,"target": string }; Returns: Json
+                           },
+"delivery_record_receipt":
+{ Args: { "actor": Json,"command": Json,"load": Omit<Database["private"]['Tables']["deliveries"]['Row'], Database["private"]['Tables']["deliveries"]['ComputedFields']>,"project": string }; Returns: Json
+                           },
+"delivery_warehouse_allocated":
+{ Args: { "excluded"?: string,"line_id": string,"parent": string }; Returns: number
                            },
 "demand_apply":
 { Args: { "actor": Json,"changes": Json,"expected_version": string,"operation": string,"reason": string,"target": string }; Returns: Json
@@ -2513,6 +2600,9 @@ isOneToOne: false
                            },
 "delivery_command":
 { Args: { "actor": Json,"command": Json }; Returns: Json
+                           },
+"delivery_receipt_file":
+{ Args: { "action": string,"actor": Json,"file_id": string,"lease": string,"patch": Json,"version_id": string }; Returns: Json
                            },
 "document_command":
 { Args: { "actor": Json,"command": Json }; Returns: Json

@@ -44,7 +44,7 @@ The listed order is the default. Record any agreed scope/order revision here and
 | **4.10 Supplier issuance** | [x] | Completed 2026-11-08 at `77e3965`: automated/staging/Drive, explicit three-group human and combined acceptance pass. |
 | **4.11 Payment coordination and verification** | [x] | Complete 2026-11-15 at `09c1e8c`: automated/Drive/staging checks, all three explicit human groups including assisted recovery and matching combined acceptance pass. Finance, settlement and clearance remain separate milestones. |
 | **4.12 Purchased delivery dispatch** | [x] | Completed 2026-11-18 at `4c601af`. All three human groups and matching combined acceptance passed. |
-| **4.13 Purchased receiving and stock posting** | [ ] | Partial receiving, shortages/damage, required evidence, warehouse forwarding and exactly-once stock posting using 4.7. |
+| **4.13 Purchased receiving and stock posting** | [ ] | Receiving, warehouse forwarding, stock posting and per-receipt evidence review. See [4.13 acceptance](#413-purchased-receiving-and-stock-posting). |
 | **4.14 Transfer approval and reservation** | [ ] | Matching, suitability review, source approval and reservation using 4.6/4.7; no supplier payment or budget charge. |
 | **4.15 Transfer trips and dispatch** | [ ] | Trip planning, partial dispatch and exactly-once source-stock debit after source approval. |
 | **4.16 Transfer receiving and posting** | [ ] | Destination receiving, evidence, shortages and exactly-once destination-stock credit. |
@@ -326,6 +326,16 @@ The user confirmed all three groups on 2026-11-18, including interrupted save, a
 - **Planning and quantities:** Logistics schedules before clearance, splits PO quantities across site/warehouse, sees exact unit equivalents and shared remaining capacity, and makes reasoned revisions/cancellation without reusing DEL numbers.
 - **Dispatch and history:** Accounting clearance gates departure; review exact saved loads, bounded Philippine departure times, short-load revision and immutable quantities/routes. Inspect retained corrections and confirm later holds preserve completed dispatch.
 - **Access, conflicts and recovery:** assigned Site sees operational data without financials or edit controls. Unassigned access is denied. Review covered colleague refresh and conflicts, preserved input, desktop/mobile navigation, interrupted save, access removal and Check saved outcome.
+
+## 4.13 Purchased Receiving and Stock Posting
+
+Scope confirmed on 2026-11-18. Procurement confirms a supplier-to-warehouse receipt and assigned Site Personnel confirms direct and onward site receipts. Each dispatched load has one receipt with exact accepted, missing and rejected counts, an explanation for discrepancies, and separate notes for extra goods. A supplier discrepancy flags Procurement follow-up and the original supplier load still counts against its purchase order. Actual Philippine arrival falls between recorded departure and confirmation; a departure correction cannot cross confirmed receipt arrival.
+
+Logistics can reserve accepted custody from one warehouse receipt for each onward trip. Multiple trips can split custody; cancellation releases a scheduled reservation and departure permanently consumes it. A later Accounting hold still blocks new supplier dispatch and permits internal forwarding. Assigned Site Personnel separately posts positive accepted quantities once, converting to the frozen material-request description and unit. Zero accepted quantities require no posting. Reasoned recounts preserve versions before site posting or the first onward departure and respect scheduled reservations.
+
+Generated receipts and signed evidence archive independently of physical processing. The receiving role and Accounting can upload a signed PDF or image up to 20 MiB and resume by reselecting the same file. Accounting reviews each current receipt, can request replacement evidence, and can approve after both archives verify. Completed replaced files and reviews remain in history. Only Accounting and Procurement for warehouse receipts can open signed originals. Assigned Site Personnel can open generated site receipts and see evidence status.
+
+**Done when:** current-source local and public browser, four-job CI, disposable database and real-session browser checks pass, including receipt/posting/custody races at both isolation levels, lost response, archive recovery, role denials and desktop/mobile. Complete scoped live Drive and retained-state-safe staging checks. Record explicit human outcomes for receiving and discrepancies (`receiving-discrepancies`), forwarding and stock posting (`forwarding-stock-posting`), and evidence, access and recovery (`receipt-evidence-access-recovery`). Require matching combined milestone acceptance.
 
 ## Milestone Completion and Documentation Ownership
 

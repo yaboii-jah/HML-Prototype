@@ -17,7 +17,8 @@ begin
     insert into public.projects(id,name,document_code) values(project,'Demand fixture '||project,'DM-'||upper(substr(project::text,1,8)));
   end if;
   form:=jsonb_build_object('items',jsonb_build_array(
-    jsonb_build_object('id',item,'quantity','18','unit','bag'),jsonb_build_object('id',other_item,'quantity','0.3','unit','m')));
+    jsonb_build_object('id',item,'name','Requested cement','quantity','18','unit','bag'),
+    jsonb_build_object('id',other_item,'name','Requested cable','quantity','0.3','unit','m')));
   select coalesce(max(r.sequence),0)+1 into request_sequence from public.material_requests r where r.project_id=project;
   insert into public.material_requests(id,project_id,scope_id,ref,sequence,data,creator_id,creator_name,updater_id,updater_name,status)
     values(request,project,shared_scope,'DM-'||request||'-MRF-0001',request_sequence,'{}',person,'Demand fixture',person,'Demand fixture','approved');

@@ -11,14 +11,26 @@ export type DeliveryPlan = {
 };
 export type Departure = { at: string; carrier: string; driver: string; vehicle: string; reference: string; note: string };
 export type DeliveryCommand = {
-  type: 'schedule' | 'revise' | 'cancel' | 'dispatch' | 'correct';
+  type: 'schedule' | 'scheduleForward' | 'revise' | 'cancel' | 'dispatch' | 'correct'
+    | 'receive' | 'recount' | 'post' | 'approveEvidence' | 'requestEvidence';
   requestId: string; deliveryId: string; poId: string; expectedVersion: string;
   reason: string; plan?: DeliveryPlan; departure?: Departure;
+  parentDeliveryId?: string; arrivalAt?: string; extraGoods?: string; receiptLines?: ReceiptCount[]; receiptVersionId?: string;
 };
-export type DeliveryEvent = { action: string; reason: string; at: string; actorName: string; snapshot: { plan: DeliveryPlan; departure: Departure | null } };
+export type ReceiptCount = { lineId: string; accepted: string; missing: string; rejected: string; issue: string };
+export type ReceiptLine = ReceiptCount & { expected: string; description: string; unit: string; stockDescription: string; stockUnit: string; stockQuantity: string };
+export type ReceiptSnapshot = { ref: string; revision: number; arrivalAt: string; extraGoods: string; lines: ReceiptLine[] };
+type ReceiptFile = { id: string | null; state: 'pending' | 'uploading' | 'processing' | 'failed' | 'complete' };
+export type DeliveryReceipt = ReceiptSnapshot & {
+  id: string; postedAt: string | null; reviewState: 'pending' | 'needs_evidence' | 'approved'; reviewReason: string;
+  canRecount: boolean; generated: ReceiptFile; signed: ReceiptFile | null; signedUploadState: ReceiptFile['state'] | null;
+  historicalFiles: { id: string; kind: 'generated' | 'signed'; revision: number; name: string }[];
+};
+export type DeliveryEvent = { action: string; reason: string; at: string; actorName: string; snapshot: { plan: DeliveryPlan; departure: Departure | null; receipt?: ReceiptSnapshot } };
 export type Delivery = {
   id: string; poId: string; ref: string; version: string; state: 'scheduled' | 'dispatched' | 'cancelled';
   createdAt: string; plan: DeliveryPlan; departure: Departure | null; history: DeliveryEvent[];
+  parentDeliveryId: string | null; receipt: DeliveryReceipt | null; warehouseRemaining: Record<string, string>;
 };
 export type DeliveryOrder = {
   id: string; ref: string; projectId: string; project: string; vendor: string;
@@ -57,11 +69,11 @@ export function parseDeparture(value: unknown): Departure | null {
 export function parseDeliveryCommand(value: unknown): DeliveryCommand | null {
   const c = record(value);
   if (!c || !id(c.requestId) || !id(c.deliveryId) || !id(c.poId) || !version(c.expectedVersion) || !text(c.reason)
-    || !['schedule', 'revise', 'cancel', 'dispatch', 'correct'].includes(String(c.type))) return null;
+    || !['schedule','scheduleForward','revise','cancel','dispatch','correct','receive','recount','post','approveEvidence','requestEvidence'].includes(String(c.type))) return null;
   const type = c.type as DeliveryCommand['type'];
-  if (['revise', 'cancel', 'correct'].includes(type) && c.reason.trim().length < 5) return null;
+  if (['revise','cancel','correct','recount','requestEvidence'].includes(type) && c.reason.trim().length < 5) return null;
   const result: DeliveryCommand = { type, requestId: c.requestId, deliveryId: c.deliveryId, poId: c.poId, expectedVersion: c.expectedVersion, reason: c.reason };
-  if (type === 'schedule' || type === 'revise') {
+  if (type === 'schedule' || type === 'scheduleForward' || type === 'revise') {
     const plan = parseDeliveryPlan(c.plan);
     if (!plan) return null;
     result.plan = plan;
@@ -71,7 +83,76 @@ export function parseDeliveryCommand(value: unknown): DeliveryCommand | null {
     if (!departure) return null;
     result.departure = departure;
   }
+  if (type === 'scheduleForward') {
+    if (!id(c.parentDeliveryId)) return null;
+    result.parentDeliveryId = c.parentDeliveryId;
+  }
+  if (type === 'receive' || type === 'recount') {
+    if (!text(c.extraGoods) || !Array.isArray(c.receiptLines) || c.receiptLines.length < 1 || c.receiptLines.length > 500) return null;
+    const counts: ReceiptCount[] = [];
+    for (const raw of c.receiptLines) {
+      const count = parseReceiptCount(raw);
+      if (!count || counts.some(line => line.lineId === count.lineId)) return null;
+      counts.push(count);
+    }
+    result.receiptLines = counts;
+    result.extraGoods = c.extraGoods;
+    if (type === 'receive') {
+      if (!instant(c.arrivalAt)) return null;
+      result.arrivalAt = c.arrivalAt;
+    }
+  }
+  if (type === 'approveEvidence' || type === 'requestEvidence') {
+    if (!id(c.receiptVersionId)) return null;
+    result.receiptVersionId = c.receiptVersionId;
+  }
   return result;
+}
+
+function parseReceiptCount(raw: unknown): ReceiptCount | null {
+  const line = record(raw);
+  if (!line || !id(line.lineId) || !quantity(line.accepted) || !quantity(line.missing) || !quantity(line.rejected) || !text(line.issue)) return null;
+  return { lineId:line.lineId, accepted:line.accepted, missing:line.missing, rejected:line.rejected, issue:line.issue };
+}
+
+export function parseReceiptSnapshot(raw: unknown): ReceiptSnapshot | null {
+  const r = record(raw);
+  if (!r || !text(r.ref) || typeof r.revision !== 'number' || !Number.isSafeInteger(r.revision)
+    || r.revision < 1 || !instant(r.arrivalAt) || !text(r.extraGoods) || !Array.isArray(r.lines)) return null;
+  const lines: ReceiptLine[] = [];
+  for (const rawLine of r.lines) {
+    const count = parseReceiptCount(rawLine), line = record(rawLine);
+    if (!count || !line || !quantity(line.expected) || !text(line.description) || !text(line.unit)
+      || typeof line.stockDescription !== 'string' || typeof line.stockUnit !== 'string' || !quantity(line.stockQuantity)) return null;
+    lines.push({ ...count, expected:line.expected, description:line.description, unit:line.unit,
+      stockDescription:line.stockDescription, stockUnit:line.stockUnit, stockQuantity:line.stockQuantity });
+  }
+  return { ref:r.ref, revision:r.revision, arrivalAt:r.arrivalAt, extraGoods:r.extraGoods, lines };
+}
+
+function parseReceiptFile(raw: unknown): ReceiptFile | null {
+  const file = record(raw);
+  if (!file || (file.id !== null && !id(file.id)) || !['pending','uploading','processing','failed','complete'].includes(String(file.state))) return null;
+  return { id:file.id, state:file.state as ReceiptFile['state'] };
+}
+
+function parseDeliveryReceipt(raw: unknown): DeliveryReceipt | null {
+  const r = record(raw), snapshot = parseReceiptSnapshot(raw);
+  const generated = parseReceiptFile(r?.generated), signed = parseReceiptFile(r?.signed);
+  if (!r || !snapshot || !generated || !id(r.id) || (r.postedAt !== null && !instant(r.postedAt))
+    || !['pending','needs_evidence','approved'].includes(String(r.reviewState)) || !text(r.reviewReason)
+    || typeof r.canRecount !== 'boolean' || (r.signed !== null && !signed)
+    || !Array.isArray(r.historicalFiles)
+    || (r.signedUploadState !== null && !['uploading','processing','failed'].includes(String(r.signedUploadState)))) return null;
+  const historicalFiles: DeliveryReceipt['historicalFiles'] = [];
+  for (const raw of r.historicalFiles) {
+    const file = record(raw);
+    if (!file || !id(file.id) || !text(file.name) || (file.kind!=='generated' && file.kind!=='signed')
+      || typeof file.revision!=='number' || !Number.isSafeInteger(file.revision) || file.revision<1) return null;
+    historicalFiles.push({ id:file.id, name:file.name, kind:file.kind, revision:file.revision });
+  }
+  return { ...snapshot, id:r.id, postedAt:r.postedAt, reviewState:r.reviewState as DeliveryReceipt['reviewState'],
+    reviewReason:r.reviewReason, canRecount:r.canRecount, generated, signed, historicalFiles, signedUploadState:r.signedUploadState as DeliveryReceipt['signedUploadState'] };
 }
 export function parseDeliveriesView(value: unknown): DeliveriesView | null {
   const v = record(value);
@@ -96,16 +177,26 @@ export function parseDeliveriesView(value: unknown): DeliveriesView | null {
   for (const raw of v.deliveries) {
     const d = record(raw), plan = parseDeliveryPlan(d?.plan);
     const departure = d?.departure === null ? null : parseDeparture(d?.departure);
-    if (!d || Object.keys(d).some(k => !['id','poId','ref','version','state','createdAt','plan','departure','history'].includes(k))
+    const receipt = parseDeliveryReceipt(d?.receipt), available = record(d?.warehouseRemaining ?? {});
+    if (!d || Object.keys(d).some(k => !['id','poId','ref','version','state','createdAt','plan','departure','history','parentDeliveryId','receipt','warehouseRemaining'].includes(k))
       || !id(d.id) || !id(d.poId) || !text(d.ref) || !version(d.version) || !instant(d.createdAt) || !plan
-      || !['scheduled','dispatched','cancelled'].includes(String(d.state)) || (d.departure !== null && !departure) || !Array.isArray(d.history)) return null;
+      || !['scheduled','dispatched','cancelled'].includes(String(d.state)) || (d.departure !== null && !departure) || !Array.isArray(d.history)
+      || (d.parentDeliveryId != null && !id(d.parentDeliveryId)) || (d.receipt != null && !receipt) || !available) return null;
+    const warehouseRemaining: Record<string, string> = {};
+    for (const [lineId, amount] of Object.entries(available)) {
+      if (!id(lineId) || !quantity(amount)) return null;
+      warehouseRemaining[lineId] = amount;
+    }
     const history: DeliveryEvent[] = [];
     for (const rawEvent of d.history) {
       const e = record(rawEvent), s = record(e?.snapshot), p = parseDeliveryPlan(s?.plan), dep = s?.departure === null ? null : parseDeparture(s?.departure);
       if (!e || !s || !p || !text(e.action) || !text(e.reason) || !instant(e.at) || !text(e.actorName) || (s.departure !== null && !dep)) return null;
-      history.push({ action:e.action, reason:e.reason, at:e.at, actorName:e.actorName, snapshot:{ plan:p, departure:dep } });
+      const eventReceipt = parseReceiptSnapshot(s.receipt);
+      if (s.receipt != null && !eventReceipt) return null;
+      history.push({ action:e.action, reason:e.reason, at:e.at, actorName:e.actorName, snapshot:{ plan:p, departure:dep, ...(eventReceipt ? { receipt:eventReceipt } : {}) } });
     }
-    deliveries.push({ id:d.id, poId:d.poId, ref:d.ref, version:d.version, state:d.state as Delivery['state'], createdAt:d.createdAt, plan, departure, history });
+    deliveries.push({ id:d.id, poId:d.poId, ref:d.ref, version:d.version, state:d.state as Delivery['state'], createdAt:d.createdAt, plan, departure, history,
+      parentDeliveryId:d.parentDeliveryId ?? null, receipt, warehouseRemaining });
   }
   return { role:v.role, orders, deliveries };
 }

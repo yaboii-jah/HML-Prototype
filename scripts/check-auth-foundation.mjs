@@ -305,7 +305,7 @@ export async function checkAuthFoundation({ api, anon, secret, mailpit, sql, env
       accountant: quotationFixture.financial.accounts[2],
       staff: quotationFixture.financial.staff });
     checks.push('payment-browser-workflow');
-    await checkDeliveries({ browser, second, client, sql, login, logout });
+    await checkDeliveries({ browser, second, client, sql, login, logout, drive });
     checks.push('delivery-browser-workflow');
     await checkSupplierDirectory({ browser, second, client, login, logout, sessionCookie, sql });
     checks.push('supplier-browser');

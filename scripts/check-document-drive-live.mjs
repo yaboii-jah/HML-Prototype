@@ -7,6 +7,7 @@ import { verificationSource } from './helpers/verification-evidence.mjs';
 import { driveAccessToken } from '../src/server/documents/drive-auth.ts';
 import { createDriveGateway } from '../src/server/documents/drive-gateway.ts';
 import { validateSupportingPdf } from '../src/server/documents/pdf-validation.ts';
+import { renderReceiptPdf } from '../src/server/delivery-receipt-pdf.ts';
 import sharp from 'sharp';
 import { validateQuotationOriginal } from '../src/server/quotations/original-validation.ts';
 import { generatePurchasingComparisonPdf, generatePurchasingComparisonWorkbook, generatePurchasingPoPreview, XLSX_MIME } from '../src/server/purchasing/documents.ts';
@@ -96,6 +97,29 @@ try {
   await verifySendingFiles(issuanceProof, drive);
   await assert.rejects(verifySendingFiles({ ...issuanceProof, files: issuanceFiles.map((f, i) => i === 2 ? { ...f, sha256: '0'.repeat(64) } : f) }, drive));
   result.checks.push('supplier-issuance-files');
+  const receipt = await renderReceiptPdf({
+    title:'DELIVERY RECEIPT', ref:'SYNTHETIC-DEL-0001', stage:'Receipt version 2', received:true,
+    generatedAt:comparison.createdAt,
+    fields:[{ label:'ARRIVAL', value:comparison.createdAt }],
+    materials:[{ name:'Synthetic material', unit:'box', expected:'3', accepted:'2.5',
+      issue:'Missing 0.25; rejected 0.25. Accepted in request units: 25 pcs.' }],
+    footerFields:[], signatureLabels:['Dispatched by','Received by'],
+  });
+  const receiptVersion = randomUUID();
+  for (const [kind, content] of [['generated',receipt],['signed',bytes]]) {
+    const fileId = await drive.generateId();
+    const receiptTags = { hmlReceiptFile:randomUUID(), hmlReceiptVersion:receiptVersion };
+    const session = await drive.begin(fileId,folderId,`synthetic-receipt-${kind}.pdf`,content.length,receiptTags);
+    assert.ok(session);
+    assert.equal((await drive.transfer(session,content.length,content)).complete,true);
+    const actual = await drive.verifyPdf(fileId,folderId,receiptTags,content.length,createHash('sha256').update(content).digest('hex'));
+    assert.deepEqual(Buffer.from(actual),Buffer.from(content));
+    await validateSupportingPdf(actual);
+    const part = await drive.stream(fileId,{ start:0,end:4 });
+    assert.equal(part.status,206);
+    assert.equal(await part.text(),'%PDF-');
+  }
+  result.checks.push('purchased-receipt-archive');
   result.passed = true;
 } finally {
   if (folderId) {

@@ -4,9 +4,12 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { deliveryCheckSql } from './helpers/delivery-check.mjs';
 
 /** Actual Logistics session/UI against owned disposable records; no hosted data. */
-export async function checkDeliveries({ browser, second, client, sql, login, logout }) {
+export async function checkDeliveries({ browser, second, client, sql, login, logout, drive }) {
   const definition = await deliveryCheckSql({ definitionsOnly:true });
   const fixture = JSON.parse((await sql(definition + 'select pg_temp.delivery_fixture(); commit;')).output.split('\n').find(x=>x.startsWith('{')));
+  const [folderId, rootId] = (await sql(`select folder_id||'|'||root_id from private.project_document_folders where project_id='${fixture.project}' and current;`)).output.trim().split('|');
+  drive.files.set(rootId,{ id:rootId,name:'Fixture root',parents:[],mimeType:'application/vnd.google-apps.folder',trashed:false,capabilities:{ canAddChildren:true } });
+  drive.files.set(folderId,{ id:folderId,name:'Fixture deliveries',parents:[rootId],mimeType:'application/vnd.google-apps.folder',trashed:false,capabilities:{ canAddChildren:true } });
   const staff = { email:randomUUID()+'@example.invalid',password:randomUUID() };
   const user = await client.auth.admin.createUser({ ...staff,email_confirm:true });
   assert.ifError(user.error); staff.id = user.data.user.id;
@@ -77,5 +80,50 @@ export async function checkDeliveries({ browser, second, client, sql, login, log
   assert.ok(projection.view.data.deliveries.some(d=>d.id===id));
   assert.doesNotMatch(JSON.stringify(projection.view.data),/"(?:gross|net|paid|proof|budget|unitPrice|calculation)"/);
   assert.equal(await second.run(`return (await fetch('/api/foundation/view?view=payments&poId=${fixture.po}')).status`),403);
-  console.log('Delivery Logistics scheduling, revisions, realtime, dispatch and retained correction UI passed.');
+  await logout(browser); await login(browser,site); await browser.navigate(`/deliveries/${id}`);
+  await click('Confirm receipt');
+  await field('Accepted','1.5'); await field('Missing','0.5');
+  await field('Discrepancy explanation','Half a bag was short');
+  await click('Save receipt');
+  await browser.wait("return document.body.textContent.includes('Procurement follow-up required')");
+  await browser.run(`window.deliveryOriginalFetch=window.fetch;window.deliveryLostResponse=false;
+    window.fetch=async function(input,init){const response=await window.deliveryOriginalFetch.call(this,input,init);
+      if(!window.deliveryLostResponse&&new Headers(init?.headers).has('Next-Action')&&typeof init?.body==='string'&&init.body.includes('"post"')){
+        window.deliveryLostResponse=true;await response.clone().arrayBuffer();throw new TypeError('Synthetic lost stock acknowledgement');}
+      return response;};`);
+  await click('Post accepted stock');
+  await browser.wait("return [...document.querySelectorAll('button')].some(b=>b.textContent==='Check saved outcome'&&!b.disabled)");
+  await browser.run('window.fetch=window.deliveryOriginalFetch;delete window.deliveryOriginalFetch;');
+  await click('Check saved outcome');
+  await browser.wait("return document.body.textContent.includes('Stock posted')");
+  assert.equal((await sql(`select quantity::text from private.stock_movements where source_id='${id}';`)).output.trim(),'1.5');
+  await browser.wait("return [...document.querySelectorAll('a')].some(link=>link.textContent==='Open generated receipt')",30000);
+  await browser.run(`const link=[...document.querySelectorAll('a')].find(link=>link.textContent==='Open generated receipt');
+    const response=await fetch(link.href); if(!response.ok)throw Error('Receipt PDF unavailable');
+    const transfer=new DataTransfer();transfer.items.add(new File([await response.blob()],'signed-fixture.pdf',{type:'application/pdf'}));
+    const input=document.querySelector('input[type=file]');input.files=transfer.files;input.dispatchEvent(new Event('change',{bubbles:true}));`);
+  await browser.wait("return [...document.querySelectorAll('p')].some(p=>p.textContent.includes('Signed evidence')&&p.textContent.includes('complete'))",30000);
+  const signedId = (await sql(`select f.id from private.delivery_receipt_files f join private.delivery_receipt_versions v on v.id=f.version_id where v.delivery_id='${id}' and f.current_evidence;`)).output.trim();
+  assert.equal(await browser.run(`return (await fetch('/api/delivery-files/${signedId}')).status`),403);
+  assert.equal(await browser.run("return [...document.querySelectorAll('a')].some(link=>link.textContent==='Open signed evidence')"),false);
+  const accountant = { email:randomUUID()+'@example.invalid',password:randomUUID() };
+  const createdAccountant = await client.auth.admin.createUser({ ...accountant,email_confirm:true });
+  assert.ifError(createdAccountant.error); accountant.id = createdAccountant.data.user.id;
+  assert.ifError((await client.from('profiles').insert({ user_id:accountant.id,display_name:'Receipt reviewer',is_active:true })).error);
+  assert.ifError((await client.from('role_grants').insert({ user_id:accountant.id,role:'Accounting' })).error);
+  await logout(browser); await login(browser,accountant); await browser.navigate(`/deliveries/${id}`);
+  await click('Approve receipt evidence');
+  await browser.wait("return [...document.querySelectorAll('p')].some(p=>p.textContent.includes('Accounting review')&&/\\bapproved\\b/i.test(p.querySelector('.badge')?.textContent??''))");
+  assert.equal(await browser.run(`return (await fetch('/api/delivery-files/${signedId}',{headers:{Range:'bytes=0-4'}})).status`),206);
+  for (const width of [1440,375]) {
+    await browser.call('Emulation.setDeviceMetricsOverride',{ width,height:1000,deviceScaleFactor:1,mobile:width<500 });
+    if (width<500 && await browser.run("return !!document.querySelector('.mobile-scrim')")) await browser.run("document.querySelector('.mobile-scrim').click()");
+    if (width<500) await browser.wait("return !document.querySelector('.mobile-scrim')&&document.querySelector('.side-nav').getBoundingClientRect().right<=1");
+    assert.equal(await browser.run('return document.documentElement.scrollWidth<=innerWidth+1'),true,`Receiving fits ${width}px`);
+    await browser.run("[...document.querySelectorAll('h2')].find(h=>h.textContent==='Site receipt').scrollIntoView()");
+    const shot = await browser.call('Page.captureScreenshot',{ format:'png' });
+    await writeFile(`.verification/receiving-${width}.png`,Buffer.from(shot.data,'base64'));
+  }
+  await browser.call('Emulation.clearDeviceMetricsOverride');
+  console.log('Delivery scheduling, dispatch, receiving, stock recovery and protected evidence review passed.');
 }
