@@ -34,6 +34,7 @@ registerHooks({ resolve(specifier, context, nextResolve) {
     '@/src/server/quotations/drafts': ['quotationsView', 'quotationActor'],
     '@/src/server/purchasing/purchasing': ['purchasingView', 'purchasingDirectory'],
     '@/src/server/payments/payments': ['paymentsView'],
+    '@/src/server/deliveries/deliveries': ['deliveriesView'],
     '@/src/server/auth/service-rpc': ['serviceRpc'],
     '@/src/server/suppliers/suppliers': ['supplierView'],
     '@/src/server/requests/drafts': ['requestView'],

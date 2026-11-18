@@ -167,6 +167,12 @@ Actual external payments remain recordable during source/MRF blockers and after 
 
 Uncertain Finance/Accounting actions expose **Check saved outcome** even after realtime changes the displayed version or coordination becomes Settled. Recovery retries the original immutable command and operation identity; resolve it before another action. If it was not recorded and its version is stale, preserve input, review current data and submit with a fresh identity.
 
+### Purchased Delivery Dispatch
+
+Unit 4.12 introduces private PO-bound deliveries, shared PO-level delivery versions, immutable events and operation receipts. Scheduled/dispatched quantities jointly consume the ordered PO-line allowance across supplier-to-site and supplier-to-warehouse routes. Cancellation/reduction explicitly releases scheduled capacity; source or Accounting holds retain it. Delivery allocation is separate from demand and stock reservations. Project DEL numbering is transactional, permanent and shared with future transfer trips.
+
+Logistics alone changes deliveries; all non-Site readers and currently assigned Site users receive dedicated operational projections without financial/payment/proof data or protected PO files. Dispatch checks effective clearance, issuance and archive prerequisites inside the checked transaction under the existing guard/session/project/MRF/PO lock order. Departure cannot predate saved scheduling, actual issuance or the currently effective clearance. Stored original departure bounds constrain later detail corrections. Completed dispatch never rewinds on later payment/source transitions; receiving, forwarding and stock posting remain separate. Private project-scoped invalidations refresh authorized views, while immutable command identities recover lost responses before another action.
+
 ## Storage Model
 
 - **Postgres:** The source of truth for users' application profiles, role and project assignments, projects, MRFs, quotations, purchase orders, budgets, payments, deliveries, stock, document references, audit events and workflow/job status. Related changes such as stock, budgets and document numbering need database transactions, concurrency control and safe retries.

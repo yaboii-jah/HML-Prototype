@@ -307,6 +307,26 @@ Completed; see the unit's [final acceptance record](progress-tracker.md#complete
 
 Completed; see the unit's [final acceptance record](progress-tracker.md#completed). Original walkthroughs are recoverable from Git. Retain QA records/files and earlier attestation dates; do not repeat acceptance solely because this guide was shortened.
 
+## 4.12 Purchased Delivery Planning and Dispatch
+
+Authorized 2026-11-18 after seventeen interview decisions and shared-understanding confirmation. Supplier-to-site and supplier-to-warehouse only; one issued PO and requesting project per delivery, selected partial PO-line quantities and one destination. Receiving, forwarding, stock posting, incident handling and financial corrections remain later scope.
+
+- Logistics may schedule before clearance. First save reserves exact PO-unit quantities and allocates a permanent project DEL number. Scheduled plus dispatched quantities across routes cannot exceed ordered quantities. Show exact frozen MRF equivalents without rounding. Any current Logistics colleague may make reasoned revisions or cancel before dispatch. Holds retain reservations; explicit reductions/cancellation release them. Cancelled deliveries are terminal and retain numbers/history.
+- Require a Philippine planned date today or later on creation or revision, with optional time/notes; missed schedules stay overdue. Use editable saved address snapshots from issued PO/site and the existing Company Warehouse default. PO/project ownership stays fixed and site locations remain within that project.
+- One action dispatches the entire saved load: revise short loads first. Check current Logistics/session authority, issuance, exact capacity, completed archives and effective Accounting clearance in the transaction, without live Drive calls. Actual Philippine departure time is required, no later than now and no earlier than schedule creation, actual issuance and the currently effective clearance event. Invalid departures remain blocked for external escalation; re-clearance never authorizes earlier departures.
+- Transport details, supplier reference and notes are optional. Post-dispatch reasoned corrections retain originals and the original valid departure bounds; quantities, PO/project and route stay fixed. Later holds/reversals never rewind dispatch. No receiving, stock, demand release, budget or payment effect is inferred.
+- All non-Site roles read; assigned Site users read only operational projections without financial/payment/proof/budget data or PO-file access. Logistics alone writes. Restore maintained delivery routes/navigation, private realtime, preserved drafts/conflicts and Check saved outcome recovery with immutable retry identities.
+
+**Done when:** exact quantity/reservation/numbering/retry/security/time tests and observed-lock races at both isolation levels pass, including capacity contention, revise/cancel versus dispatch, clearance invalidation and access revocation. Complete real-session application/Realtime/recovery, desktop/mobile, standard/public-browser/four-job CI/full disposable/types, retained-state-safe staging and existing owned live-Drive gates. Obtain three new explicit human groups: planning/quantities; dispatch/history; access/conflicts/recovery. Preserve preceding attestations and require matching combined acceptance before checking 4.12.
+
+### 4.12 Targeted Human Review ? Pending
+
+Automated/staging/Drive readiness passes; see the tracker for dated evidence. Use designated synthetic 4.12 QA records and authorized identities, retain their records/files, and preserve earlier QA identities and evidence. Report each group as passed, failed or not tested, including all skips/issues. Automated checks do not establish human acceptance.
+
+- **Planning and quantities:** Logistics schedules before clearance, splits PO quantities across site/warehouse, sees exact unit equivalents and shared remaining capacity, and makes reasoned revisions/cancellation without reusing DEL numbers.
+- **Dispatch and history:** Accounting clearance gates departure; review exact saved loads, bounded Philippine departure times, short-load revision and immutable quantities/routes. Inspect retained corrections and confirm later holds preserve completed dispatch.
+- **Access, conflicts and recovery:** assigned Site sees operational data without financials or edit controls; unassigned access is denied. Review colleague refresh/conflicts, preserved input, desktop/mobile navigation and Check saved outcome. Request assisted execution for lost acknowledgements or revocation when necessary; explicit review of assisted outcomes is still required.
+
 ## Milestone Completion and Documentation Ownership
 
 Keep permanent product responsibilities in the [overview](project-overview.md), system contracts in [architecture](architecture.md), conventions in [code standards](code-standards.md) and execution/verification policy in [workflow rules](ai-workflow-rules.md). Keep current work, dependencies, dated evidence and deferred-suite restoration in the tracker rather than duplicating logs here.
