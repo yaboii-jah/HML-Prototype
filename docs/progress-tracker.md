@@ -5,21 +5,22 @@
 ## Current Phase
 
 - Runtime/CI milestone 2, foundation units 3.1–3.6 and operational units 4.0–4.12 are verified complete. Overall checklist step 4 stays open for 4.13–4.19. Production readiness is unverified.
-- Supported runtime uses individual sessions and shared protected records through purchased delivery dispatch. Receiving, warehouse forwarding, staff stock, remaining monitoring and broader document/AI workflows await their owning units.
+- The verified workflow extends through purchased delivery dispatch. Unit 4.13 adds receiving, warehouse forwarding, site stock posting and per-receipt document review in the working tree. Its release and acceptance checks are open.
 
 ## Current Goal
 
 - Documentation reduction is complete: task-specific reading, full milestone acceptance and bounded unrelated-failure diagnosis are the project defaults. Durable contracts and final evidence remain; superseded history is recoverable in Git, with no new archive document.
-- Unit 4.12 is verified complete at `4c601af`. The next unit is 4.13 purchased receiving and stock posting, which requires scoped planning and authorization.
+- Unit 4.12 is verified complete at `4c601af`. The user confirmed and authorized the [4.13 scope](step-4-implementation.md#413-purchased-receiving-and-stock-posting) on 2026-11-18.
 
 ## In Progress
 
-- [PR #47](https://github.com/yaboii-jah/HML-Prototype/pull/47) merged purchased dispatch into `feat/step-4-payment-verification`. [PR #46](https://github.com/yaboii-jah/HML-Prototype/pull/46) brings payment verification and purchased dispatch to `staging`.
+- The verified 4.12 source from [PR #47](https://github.com/yaboii-jah/HML-Prototype/pull/47) reached `staging` at `637c536` via [PR #46](https://github.com/yaboii-jah/HML-Prototype/pull/46). The 4.13 implementation and migration remain local.
+- 4.13 local verification on 2026-11-18 passed 488 unit/API tests, lint, types, the production build, the public browser suite and matching local acceptance. Full migration replay and rollback delivery SQL passed in PGlite with synthetic Auth/Realtime. Live Drive verified both kinds of synthetic receipt files and confirmed owned-folder cleanup. The staging dry run listed only the 4.13 migration, with no seeds or roles.
 - Preserve unrelated work, private untracked `docs/test-account.md`, retained staging QA records/files and the real Administrator. Do not reset staging, repurpose retained identities or rerun first-Administrator bootstrap.
 
 ## Next Up
 
-- **Exact next action:** scope [4.13 purchased receiving and stock posting](step-4-implementation.md#ordered-roadmap) with the user before implementation.
+- **Exact next action:** finish 4.13 verification with matching hosted CI, disposable Auth/Realtime and observed-lock coverage. Complete scoped live Drive, retained-state-safe staging and all three human review groups before closing the unit.
 - **Separate release blockers:** unresolved Vercel Node-version deployment failure; real email/custom SMTP and verified sender; company-owned Shared Drive/services and suitable hosting; tested backup/restore, monitoring/incident owners and departmental release acceptance. Supported Node 26.12.1/npm 11.20.0 remain local; deployment targets Node 24.x, CI baseline 24.22.1.
 
 ## Completed

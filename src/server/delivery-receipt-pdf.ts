@@ -4,7 +4,7 @@ import { batchStage, isReceivedBatch, isSiteBatch, legLabel } from "../domain/de
 import type { DeliveryReceiptData } from "../domain/delivery-document.ts";
 import { documentDate, documentTemplate, wrapText } from "./document-template.ts";
 
-export type ReceiptRenderData = { title: string; ref: string; stage: string; received: boolean; fields: { label: string; value: unknown }[]; materials: { name: string; unit: string; expected: number; accepted: number; issue: string }[]; footerFields: { label: string; value: unknown }[]; signatureLabels: readonly [string, string] };
+export type ReceiptRenderData = { title: string; ref: string; stage: string; received: boolean; fields: { label: string; value: unknown }[]; materials: { name: string; unit: string; expected: number | string; accepted: number | string; issue: string }[]; footerFields: { label: string; value: unknown }[]; signatureLabels: readonly [string, string]; generatedAt?: string };
 export async function generateDeliveryReceiptPdf(data: DeliveryReceiptData) {
   const { batch, po, request, project, parentBatch } = data;
   const received = isReceivedBatch(batch), warehouse = !isSiteBatch(batch);
@@ -30,6 +30,10 @@ export async function generateDeliveryReceiptPdf(data: DeliveryReceiptData) {
 }
 export async function renderReceiptPdf(data: ReceiptRenderData) {
   const template = await documentTemplate("po"), { pdf, regular, bold } = template;
+  if (data.generatedAt) {
+    pdf.setCreationDate(new Date(data.generatedAt));
+    pdf.setModificationDate(new Date(data.generatedAt));
+  }
   const blue = rgb(0, .36, .68), edge = rgb(.75, .78, .82), pale = rgb(.94, .96, .98), left = 36, width = 540, size = 8, leading = 11;
   const { received } = data;
   const wrap = (value: unknown, cellWidth: number, strong = false) => wrapText(value, strong ? bold : regular, size, cellWidth - 10);
@@ -86,6 +90,6 @@ export async function renderReceiptPdf(data: ReceiptRenderData) {
   page.drawLine({ start: { x: left, y: 792 - top }, end: { x: left + 245, y: 792 - top }, thickness: .6, color: edge });
   page.drawLine({ start: { x: left + 295, y: 792 - top }, end: { x: left + width, y: 792 - top }, thickness: .6, color: edge });
   draw(["Signature / date"], left, top + 5); draw(["Signature / date"], left + 295, top + 5);
-  pdf.getPages().forEach((sheet, index) => sheet.drawText(`Page ${index + 1} of ${pdf.getPageCount()} · Generated ${auditTime(new Date().toISOString())}`, { x: left, y: 24, size: 7, font: regular, color: blue }));
+  pdf.getPages().forEach((sheet, index) => sheet.drawText(`Page ${index + 1} of ${pdf.getPageCount()} · Generated ${auditTime(data.generatedAt ?? new Date().toISOString())}`, { x: left, y: 24, size: 7, font: regular, color: blue }));
   return pdf.save();
 }

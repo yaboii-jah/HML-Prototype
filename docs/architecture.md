@@ -173,6 +173,12 @@ Unit 4.12 introduces private PO-bound deliveries, shared PO-level delivery versi
 
 Logistics alone changes deliveries; all non-Site readers and currently assigned Site users receive dedicated operational projections without financial/payment/proof data or protected PO files. Dispatch checks effective clearance, issuance and archive prerequisites inside the checked transaction under the existing guard/session/project/MRF/PO lock order. Departure cannot predate saved scheduling, actual issuance or the currently effective clearance. Stored original departure bounds constrain later detail corrections. Completed dispatch never rewinds on later payment/source transitions; receiving, forwarding and stock posting remain separate. Private project-scoped invalidations refresh authorized views, while immutable command identities recover lost responses before another action.
 
+### Purchased Receiving and Stock Posting
+
+4.13 uses the checked delivery commands and shared PO delivery version. One receipt head per dispatched load points to its current immutable count snapshot. Supplier counts retain the existing ordered-quantity limit. Forwarding reservations count against accepted quantities on one warehouse receipt. Site posting credits positive accepted quantities through the private stock ledger using the delivery and PO line as durable posting identities. The frozen approved material request supplies project-stock labels and units. Receipt, stock, clearance and review remain independent.
+
+Separate receipt file records track generated PDFs, signed uploads, provider identity, and leases for retryable Drive processing. Evidence completion and Accounting review are bound to the current immutable receipt version. Review history records the evidence used. Protected retrieval checks current project access and role before exposing any file bytes. Site Personnel can read generated site receipts and upload their own receipt evidence. Signed originals are readable by Accounting and by Procurement for warehouse receipts.
+
 ## Storage Model
 
 - **Postgres:** The source of truth for users' application profiles, role and project assignments, projects, MRFs, quotations, purchase orders, budgets, payments, deliveries, stock, document references, audit events and workflow/job status. Related changes such as stock, budgets and document numbering need database transactions, concurrency control and safe retries.

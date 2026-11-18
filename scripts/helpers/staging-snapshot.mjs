@@ -2,7 +2,7 @@ import { requireStaging, STAGING_REF } from './supabase-target.mjs';
 
 /** Read-only retained-state evidence. No Auth passwords, tokens or raw business
  * rows are returned. Application rows are compared using deterministic hashes. */
-export function retainedStateQuery({ includeProjectOperations = true, includeDocuments = true, includeReview = true, includeSuppliers = true, includeQuotations = true, includeQuotationFinalization = true, includeDemand = true, includeStock = true, includePurchasing = true, includeAccounting = true, includeIssuance = true, includePayments = true, includeDeliveries = true } = {}) {
+export function retainedStateQuery({ includeProjectOperations = true, includeDocuments = true, includeReview = true, includeSuppliers = true, includeQuotations = true, includeQuotationFinalization = true, includeDemand = true, includeStock = true, includePurchasing = true, includeAccounting = true, includeIssuance = true, includePayments = true, includeDeliveries = true, includeReceiving = true } = {}) {
   const tables = [
     ['profiles', 'public.profiles', 'user_id'], ['grants', 'public.role_grants', 'user_id,role'],
     ['assignments', 'public.project_assignments', 'user_id,project_id'], ['projects', 'public.projects', 'id'],
@@ -20,6 +20,11 @@ export function retainedStateQuery({ includeProjectOperations = true, includeDoc
   if (includeDeliveries) tables.push(
     ['deliveryHeads', 'private.delivery_heads', 'po_id'], ['deliveries', 'private.deliveries', 'id'],
     ['deliveryEvents', 'private.delivery_events', 'id'], ['deliveryOperations', 'private.delivery_operations', 'id'],
+  );
+  if (includeDeliveries && includeReceiving) tables.push(
+    ['deliveryReceipts', 'private.delivery_receipts', 'delivery_id'],
+    ['deliveryReceiptVersions', 'private.delivery_receipt_versions', 'id'],
+    ['deliveryReceiptFiles', 'private.delivery_receipt_files', 'id'],
   );
   if (includePayments) tables.push(
     ['paymentHeads', 'private.payment_heads', 'po_id'], ['paymentParticipants', 'private.payment_participants', 'po_id,actor_id'],
@@ -78,6 +83,7 @@ export function retainedStateQuery({ includeProjectOperations = true, includeDoc
   const hashes = tables.map(([name, table, order]) => {
     const row = name === 'requests' && !includeReview ? "to_jsonb(t)-'status'-'correction_kind'-'correction_state'-'submission_id'"
       : name === 'quotationDrafts' && !includeQuotationFinalization ? "to_jsonb(t)-'family_id'-'copied_from_revision'"
+      : name === 'deliveries' && !includeReceiving ? "to_jsonb(t)-'parent_delivery_id'"
       : name === 'purchasingRecords' && !includeAccounting ? "to_jsonb(t)-'po_status'-'submission_id'-'approval_id'" : 'to_jsonb(t)';
     return `'${name}',(select jsonb_build_object('count',count(*),'digest',md5(coalesce(jsonb_agg(${row} order by ${order})::text,'[]'))) from ${table} t)`;
   });

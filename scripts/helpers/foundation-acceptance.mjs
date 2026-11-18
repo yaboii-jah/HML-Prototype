@@ -5,6 +5,7 @@ export const databaseChecks = ['delivery-sql', 'delivery-races', 'issuance-sql',
   'supplier-sql', 'supplier-races', 'request-sql', 'request-races', 'mrf-review-sql', 'document-sql', 'document-races', 'project-races', 'account-races', 'realtime-protocol', 'realtime-races'];
 export const authChecks = ['delivery-browser-workflow', 'payment-browser-workflow', 'issuance-browser-workflow', 'accounting-browser-workflow', 'purchasing-browser-workflow', 'quotation-finalization-browser', 'quotation-browser-workflow', 'supplier-browser', 'sessions', 'captured-email', 'accounts', 'projects', 'realtime-browser', 'shell-loading', 'http-roles-renewal', 'request-browser', 'document-browser-workflow', 'mrf-review-browser-workflow', 'isolation'];
 export const acceptanceRequirements = {
+  'purchased-receiving-stock-posting': ['delivery-sql', 'delivery-races', 'delivery-browser-workflow'],
   'purchased-delivery-dispatch': ['delivery-sql', 'delivery-races', 'delivery-browser-workflow'],
   'payment-coordination-verification': ['payment-sql', 'payment-races', 'payment-browser-workflow'],
   'supplier-issuance': ['issuance-sql', 'issuance-races', 'issuance-browser-workflow'],
