@@ -7,8 +7,8 @@ Agreed 2026-11-03. This active companion owns the operational migration sequence
 Follow the task-specific reading map in [AGENTS.md](../AGENTS.md). For step 4, read this roadmap/dependencies, the affected unit contract and completion criteria, plus the relevant checklist step. Completed units need reading only when they constrain current work; final evidence lives in the tracker.
 
 1. Reconcile Git status, the tracker and the actual implementation. Preserve unrelated pending work and the completed foundation planning retirement.
-2. Check the latest user instruction and the tracker. Units through 4.12 are verified complete. Scope and authorize unit 4.13 before implementation.
-3. Use the sequence below as the roadmap. Units through 4.12 have detailed scopes. Define acceptance criteria before implementing later units.
+2. Check the latest user instruction and the tracker. Units through 4.13 are verified complete. Scope and authorize unit 4.14 before implementation.
+3. Use the sequence below as the roadmap. Units through 4.13 have detailed scopes. Define acceptance criteria before implementing later units.
 4. Verify a unit within its boundary, record actual results in the tracker, then check its completion box. A documentation checkpoint does not complete an operational workflow or checklist step 4.
 5. Retire this companion after the milestone is complete, preserving durable contracts in the core documents and completion evidence in the tracker.
 
@@ -44,7 +44,7 @@ The listed order is the default. Record any agreed scope/order revision here and
 | **4.10 Supplier issuance** | [x] | Completed 2026-11-08 at `77e3965`: automated/staging/Drive, explicit three-group human and combined acceptance pass. |
 | **4.11 Payment coordination and verification** | [x] | Complete 2026-11-15 at `09c1e8c`: automated/Drive/staging checks, all three explicit human groups including assisted recovery and matching combined acceptance pass. Finance, settlement and clearance remain separate milestones. |
 | **4.12 Purchased delivery dispatch** | [x] | Completed 2026-11-18 at `4c601af`. All three human groups and matching combined acceptance passed. |
-| **4.13 Purchased receiving and stock posting** | [ ] | Receiving, warehouse forwarding, stock posting and per-receipt evidence review. See [4.13 acceptance](#413-purchased-receiving-and-stock-posting). |
+| **4.13 Purchased receiving and stock posting** | [x] | Completed 2026-11-18 at `6906014`. All three staff review groups and matching combined acceptance passed. |
 | **4.14 Transfer approval and reservation** | [ ] | Matching, suitability review, source approval and reservation using 4.6/4.7; no supplier payment or budget charge. |
 | **4.15 Transfer trips and dispatch** | [ ] | Trip planning, partial dispatch and exactly-once source-stock debit after source approval. |
 | **4.16 Transfer receiving and posting** | [ ] | Destination receiving, evidence, shortages and exactly-once destination-stock credit. |
@@ -336,6 +336,14 @@ Logistics can reserve accepted custody from one warehouse receipt for each onwar
 Generated receipts and signed evidence archive independently of physical processing. The receiving role and Accounting can upload a signed PDF or image up to 20 MiB and resume by reselecting the same file. Accounting reviews each current receipt, can request replacement evidence, and can approve after both archives verify. Completed replaced files and reviews remain in history. Only Accounting and Procurement for warehouse receipts can open signed originals. Assigned Site Personnel can open generated site receipts and see evidence status.
 
 **Done when:** current-source local and public browser, four-job CI, disposable database and real-session browser checks pass, including receipt/posting/custody races at both isolation levels, lost response, archive recovery, role denials and desktop/mobile. Complete scoped live Drive and retained-state-safe staging checks. Record explicit human outcomes for receiving and discrepancies (`receiving-discrepancies`), forwarding and stock posting (`forwarding-stock-posting`), and evidence, access and recovery (`receipt-evidence-access-recovery`). Require matching combined milestone acceptance.
+
+## 4.14 Transfer Approval and Reservation
+
+Procurement sends one submission per source and approved MRF. Exact matches need explicit Procurement verification; alternatives require a written explanation and destination Site confirmation of the same specifications. Known 1:1 unit synonyms match while retaining the source account’s unit. A single save may send both paths. Suitability sets aside demand only. Procurement rechecks availability and requests release once per approved review, releasing any unused demand.
+
+A numbered release reserves source stock and claims demand. Assigned source Site staff approve the whole request with per-line quantities or reject it. Reductions and rejection need a reason. Approval requires someone other than the Procurement submitter and, for an alternative, the destination suitability reviewer, using permanent identities. Procurement can cancel pending or approved allocations before trips exist. Approval pauses during MRF correction and resumes when the archive is ready. Rejection and cancellation can release existing claims during a pause.
+
+**Done when:** local/public browser, all four CI jobs, disposable SQL, observed-lock contention at both isolation levels, signed-in desktop/mobile, checked types and retained-state-safe staging pass. Record explicit staff outcomes for sourcing and suitability (`transfer-sourcing-suitability`), release and reservation (`transfer-release-reservation`), and access and recovery (`transfer-access-recovery`). Require matching combined milestone acceptance. Trip and receiving evidence belong to 4.15 and 4.16.
 
 ## Milestone Completion and Documentation Ownership
 

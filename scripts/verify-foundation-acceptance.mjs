@@ -38,6 +38,9 @@ try {
     const manual = await read('foundation-manual.json');
     requireCurrentEvidence(manual, source, 'targeted manual review');
       if (!manual.confirmedByUser || !manual.reviewedBehavior?.includes('error-retry')) throw Error('Targeted recovery review pending');
+      for (const behavior of ['transfer-sourcing-suitability','transfer-release-reservation','transfer-access-recovery']) {
+        if (!manual.reviewedBehavior?.includes(behavior)) throw Error(`Targeted transfer review pending: ${behavior}`);
+      }
       if (!drive.checks?.includes('purchased-receipt-archive')) throw Error('Purchased receipt live-Drive verification pending');
       for (const behavior of ['receiving-discrepancies','forwarding-stock-posting','receipt-evidence-access-recovery']) {
         if (!manual.reviewedBehavior?.includes(behavior)) throw Error(`Targeted receiving review pending: ${behavior}`);

@@ -12,8 +12,10 @@ import { parseQuotationsView, type QuotationsView } from "../quotations/drafts.t
 
 import { parsePaymentsView, type PaymentsView } from "../payments/payments.ts";
 import { parseDeliveriesView, type DeliveriesView } from '../deliveries/contracts.ts';
+import { parseTransferView, type TransferView } from '../transfers/contracts.ts';
 
 export type FoundationView =
+  | { kind: 'transfers'; data: TransferView }
   | { kind: 'deliveries'; data: DeliveriesView }
   | { kind: "payments"; data: PaymentsView }
   | { kind: "purchasing"; data: PurchasingView }
@@ -42,6 +44,10 @@ export function parseRealtimeSession(value: unknown): RealtimeSession | null {
 export function parseFoundationView(value: unknown): FoundationView | null {
   const raw = object(value), data = object(raw?.data);
   if (!raw || !data) return null;
+  if (raw.kind === 'transfers') {
+    const parsed = parseTransferView(data);
+    return parsed ? { kind:'transfers',data:parsed } : null;
+  }
   if (raw.kind === 'deliveries') {
     const parsed = parseDeliveriesView(data);
     return parsed ? { kind:'deliveries', data:parsed } : null;
@@ -92,6 +98,11 @@ export function parseFoundationView(value: unknown): FoundationView | null {
   return null;
 }
 export function foundationViewQuery(pathname: string): string | null {
+  if (pathname === '/stock-transfers') return 'view=transfers';
+  const source = /^\/stock-transfers\/source\/([^/]+)$/.exec(pathname);
+  if (source && UUID_PATTERN.test(source[1])) return `view=transfers&mrfId=${source[1]}`;
+  const transfer = /^\/stock-transfers\/([^/]+)$/.exec(pathname);
+  if (transfer && UUID_PATTERN.test(transfer[1])) return `view=transfers&transferId=${transfer[1]}`;
   if (/^\/deliveries(?:\/[^/]+)?$/.test(pathname)) return 'view=deliveries';
   if (pathname === "/finance") return "view=payments";
   const payment = /^\/finance\/([^/]+)$/.exec(pathname);

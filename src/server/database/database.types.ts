@@ -1826,6 +1826,92 @@ isOneToOne: false
                   Relationships: [
 
                   ]
+                },"transfer_events": {
+                  Row: {
+                    "action": string,"actor": NonNullable<Json>,"id": string,"reason": string,"recorded_at": string,"snapshot": NonNullable<Json>,"transfer_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "action": string,"actor": NonNullable<Json>,"id"?: string,"reason": string,"recorded_at"?: string,"snapshot": NonNullable<Json>,"transfer_id": string
+                  }
+                  Update: {
+                    "action"?: string,"actor"?: NonNullable<Json>,"id"?: string,"reason"?: string,"recorded_at"?: string,"snapshot"?: NonNullable<Json>,"transfer_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "transfer_events_transfer_id_fkey"
+      columns: ["transfer_id"]
+isOneToOne: false
+      referencedRelation: "transfers"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"transfer_lines": {
+                  Row: {
+                    "approved": number,"explanation": string,"id": string,"item_id": string,"proposed": number,"requested_name": string,"requested_unit": string,"stock_id": string,"stock_name": string,"stock_unit": string,"transfer_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "approved"?: number,"explanation": string,"id": string,"item_id": string,"proposed": number,"requested_name": string,"requested_unit": string,"stock_id": string,"stock_name": string,"stock_unit": string,"transfer_id": string
+                  }
+                  Update: {
+                    "approved"?: number,"explanation"?: string,"id"?: string,"item_id"?: string,"proposed"?: number,"requested_name"?: string,"requested_unit"?: string,"stock_id"?: string,"stock_name"?: string,"stock_unit"?: string,"transfer_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "transfer_lines_stock_id_fkey"
+      columns: ["stock_id"]
+isOneToOne: false
+      referencedRelation: "stock_accounts"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "transfer_lines_transfer_id_fkey"
+      columns: ["transfer_id"]
+isOneToOne: false
+      referencedRelation: "transfers"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"transfer_operations": {
+                  Row: {
+                    "actor_id": string,"id": string,"payload": NonNullable<Json>,"request_id": string,"result": NonNullable<Json>
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "actor_id": string,"id": string,"payload": NonNullable<Json>,"request_id": string,"result": NonNullable<Json>
+                  }
+                  Update: {
+                    "actor_id"?: string,"id"?: string,"payload"?: NonNullable<Json>,"request_id"?: string,"result"?: NonNullable<Json>
+                  }
+                  Relationships: [
+
+                  ]
+                },"transfers": {
+                  Row: {
+                    "basis_archive_id": string,"created_at": string,"destination_id": string,"id": string,"note": string,"origin_review_id": string | null,"ref": string | null,"request_id": string,"source_id": string,"status": string,"submitted_by": string,"suitability_reviewer": string | null,"version": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "basis_archive_id": string,"created_at"?: string,"destination_id": string,"id": string,"note": string,"origin_review_id"?: string | null,"ref"?: string | null,"request_id": string,"source_id": string,"status": string,"submitted_by": string,"suitability_reviewer"?: string | null,"version"?: number
+                  }
+                  Update: {
+                    "basis_archive_id"?: string,"created_at"?: string,"destination_id"?: string,"id"?: string,"note"?: string,"origin_review_id"?: string | null,"ref"?: string | null,"request_id"?: string,"source_id"?: string,"status"?: string,"submitted_by"?: string,"suitability_reviewer"?: string | null,"version"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "transfers_basis_archive_id_fkey"
+      columns: ["basis_archive_id"]
+isOneToOne: false
+      referencedRelation: "mrf_archive_snapshots"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "transfers_origin_review_id_fkey"
+      columns: ["origin_review_id"]
+isOneToOne: true
+      referencedRelation: "transfers"
+      referencedColumns: ["id"]
+    }
+                  ]
                 }
           }
           Views: {
@@ -1924,6 +2010,8 @@ isOneToOne: false
                            },
 "demand_apply":
 { Args: { "actor": Json,"changes": Json,"expected_version": string,"operation": string,"reason": string,"target": string }; Returns: Json
+                           } |
+{ Args: { "actor": Json,"changes": Json,"expected_version": string,"operation": string,"reason": string,"target": string,"transfer_context": string }; Returns: Json
                            },
 "demand_snapshot":
 { Args: { "target": string }; Returns: Json
@@ -2343,6 +2431,36 @@ isOneToOne: false
 "suppliers_read":
 { Args: { "actor": Json,"target_supplier"?: string }; Returns: Json
                            },
+"transfer_claim":
+{ Args: { "amount": number,"line": Omit<Database["private"]['Tables']["transfer_lines"]['Row'], Database["private"]['Tables']["transfer_lines"]['ComputedFields']>,"owner_kind": string }; Returns: Json
+                           },
+"transfer_command":
+{ Args: { "actor": Json,"command": Json }; Returns: Json
+                           },
+"transfer_demand_allowed":
+{ Args: { "actor": Json,"changes": Json,"target": string,"transfer_id": string }; Returns: boolean
+                           },
+"transfer_event":
+{ Args: { "action": string,"actor": Json,"reason": string,"target": string }; Returns: undefined
+                           },
+"transfer_lines_view":
+{ Args: { "target": string }; Returns: Json
+                           },
+"transfer_number":
+{ Args: { "destination": string }; Returns: string
+                           },
+"transfer_quantity":
+{ Args: { "value": Json }; Returns: number
+                           },
+"transfer_read":
+{ Args: { "actor": Json,"target_request": string,"target_transfer": string }; Returns: Json
+                           },
+"transfer_reservation":
+{ Args: { "amount": number,"line": Omit<Database["private"]['Tables']["transfer_lines"]['Row'], Database["private"]['Tables']["transfer_lines"]['ComputedFields']> }; Returns: Json
+                           },
+"transfer_unit":
+{ Args: { "value": string }; Returns: string
+                           },
 "unbind_session":
 { Args: { "target_session": string,"target_user": string }; Returns: undefined
                            }
@@ -2726,6 +2844,12 @@ isOneToOne: false
                            },
 "suppliers_read":
 { Args: { "actor": Json,"target_supplier"?: string }; Returns: Json
+                           },
+"transfer_command":
+{ Args: { "actor": Json,"command": Json }; Returns: Json
+                           },
+"transfer_read":
+{ Args: { "actor": Json,"target_request": string,"target_transfer": string }; Returns: Json
                            }
           }
           Enums: {

@@ -37,6 +37,9 @@
 .stock-transfer-detail .form-grid input,.stock-transfer-detail .form-grid select{width:100%;min-width:0}
 .stock-transfer-detail .transfer-schedule .form-grid{margin-bottom:16px}
 .stock-transfer-detail textarea{min-height:88px;resize:vertical}
+.stock-transfer-approval-form{display:grid;gap:var(--space-4,1rem)}
+.stock-transfer-approval-form fieldset{display:grid;gap:var(--space-4,1rem);min-width:0}
+.stock-transfer-detail .data-table small{display:block}
 .stock-transfer-detail .transfer-review-status{display:grid;justify-items:start;gap:12px;margin-bottom:16px}
 .stock-transfer-detail .transfer-review-status ul{margin:0;padding-left:20px;line-height:1.6;color:var(--muted)}
 .stock-transfer-detail .transfer-review-status li+li{margin-top:6px}
