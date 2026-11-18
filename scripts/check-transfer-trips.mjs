@@ -80,6 +80,14 @@ export async function checkTransferTrips({ browser,second,client,sql,login,logou
     if (width<500 && await second.run("return !!document.querySelector('.mobile-scrim')")) await second.run("document.querySelector('.mobile-scrim').click()");
     if (width<500) await second.wait("return !document.querySelector('.mobile-scrim')&&document.querySelector('.side-nav').getBoundingClientRect().right<=1");
     assert.equal(await second.run('return document.documentElement.scrollWidth<=innerWidth+1'),true,`Trip detail fits ${width}px`);
+    if (width<500) assert.equal(await second.run(`
+      const quantities=document.querySelector('[aria-label="Transfer quantities"]');
+      const finalColumn=quantities.querySelector('th:last-child');
+      quantities.scrollLeft=quantities.scrollWidth;
+      const reached=quantities.scrollLeft>0&&finalColumn.getBoundingClientRect().right<=quantities.getBoundingClientRect().right+1;
+      quantities.scrollLeft=0;
+      return reached;
+    `),true,'The released quantity column is reachable inside the mobile table');
     const shot=await second.call('Page.captureScreenshot',{format:'png'});
     await writeFile(`.verification/transfer-trip-${width}.png`,Buffer.from(shot.data,'base64'));
   }
