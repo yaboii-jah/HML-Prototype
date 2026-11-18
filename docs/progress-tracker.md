@@ -4,23 +4,24 @@
 
 ## Current Phase
 
-- Runtime/CI milestone 2, foundation units 3.1–3.6 and operational units 4.0–4.13 are verified complete. Overall checklist step 4 stays open for 4.14–4.19. Production readiness is unverified.
-- The verified workflow extends through purchased receiving, warehouse forwarding, site stock posting and per-receipt document review.
+- Runtime/CI milestone 2, foundation units 3.1–3.6 and operational units 4.0–4.14 are verified complete. Overall checklist step 4 stays open for 4.15–4.19. Production readiness is unverified.
+- The verified workflow includes purchased receiving and stock posting, plus transfer suitability, release approval and source-stock reservation.
 
 ## Current Goal
 
 - Documentation reduction is complete: task-specific reading, full milestone acceptance and bounded unrelated-failure diagnosis are the project defaults. Durable contracts and final evidence remain; superseded history is recoverable in Git, with no new archive document.
-- Unit 4.13 is verified complete at `6906014`. The user confirmed and authorized the [4.14 scope](step-4-implementation.md#414-transfer-approval-and-reservation) on 2026-11-18.
+- Unit 4.15 adds first-leg transfer trips and exact source-stock dispatch on top of unit 4.14 at `63b2f6d`.
 
 ## In Progress
 
-- The verified 4.13 implementation is in [draft PR #48](https://github.com/yaboii-jah/HML-Prototype/pull/48).
-- Unit 4.14 implements checked sourcing, suitability, release approval and paired demand/stock effects. Local migration replay and rollback SQL passed in PGlite with synthetic Auth and Realtime. Hosted acceptance remains open.
+- The verified 4.13 implementation is merged in [PR #48](https://github.com/yaboii-jah/HML-Prototype/pull/48).
+- The verified 4.14 implementation is in [draft PR #49](https://github.com/yaboii-jah/HML-Prototype/pull/49) at `63b2f6d`.
+- The user confirmed the 4.15 scope on 2026-11-18. Staff review and matching combined acceptance are pending.
 - Preserve unrelated work, private untracked `docs/test-account.md`, retained staging QA records/files and the real Administrator. Do not reset staging, repurpose retained identities or rerun first-Administrator bootstrap.
 
 ## Next Up
 
-- **Exact next action:** verify 4.14 with matching hosted CI, disposable Auth/Realtime and observed-lock coverage, then retained-state-safe staging and the three staff review groups.
+- **Exact next action:** verify [4.15 transfer trips and dispatch](step-4-implementation.md#415-transfer-trips-and-dispatch) through the matching integration, staging and staff gates.
 - **Separate release blockers:** unresolved Vercel Node-version deployment failure; real email/custom SMTP and verified sender; company-owned Shared Drive/services and suitable hosting; tested backup/restore, monitoring/incident owners and departmental release acceptance. Supported Node 26.12.1/npm 11.20.0 remain local; deployment targets Node 24.x, CI baseline 24.22.1.
 
 ## Completed
@@ -29,6 +30,7 @@ The table records final acceptance, not fresh reruns. Implemented code units hav
 
 | Unit | Completion date | Source | Outcome and acceptance boundary | Final links |
 | --- | --- | --- | --- | --- |
+| 4.14 | 2026-11-18 | `63b2f6d` | Cross-project sourcing, suitability, release approval and atomic demand/stock reservations. All three staff groups and matching combined milestone acceptance passed. | [PR #49](https://github.com/yaboii-jah/HML-Prototype/pull/49), [CI](https://github.com/yaboii-jah/HML-Prototype/actions/runs/44299582021), [integration](https://github.com/yaboii-jah/HML-Prototype/actions/runs/44299582023/attempts/2) |
 | 4.13 | 2026-11-18 | `6906014` | Purchased receiving, warehouse forwarding, exactly-once site stock posting and per-receipt evidence review. All three staff groups passed. Matching combined milestone acceptance passed. | [PR #48](https://github.com/yaboii-jah/HML-Prototype/pull/48), [CI](https://github.com/yaboii-jah/HML-Prototype/actions/runs/44286142754), [integration](https://github.com/yaboii-jah/HML-Prototype/actions/runs/44286143055) |
 | 4.12 | 2026-11-18 | `4c601af` | Purchased delivery planning, exact reservations, clearance-gated dispatch and retained departure corrections. All three human groups passed, including interrupted save, access removal and Check saved outcome. Matching combined acceptance passed after importing all five CI reports. | [PR #47](https://github.com/yaboii-jah/HML-Prototype/pull/47), [CI](https://github.com/yaboii-jah/HML-Prototype/actions/runs/44263388344), [integration](https://github.com/yaboii-jah/HML-Prototype/actions/runs/44263388299) |
 | 4.11 | 2026-11-15 | `09c1e8c` | Finance plans, proof-backed installments/reversals, proportional gross spending, no-cash confirmation and delivery clearance. Three explicit human groups include assisted checks and Check saved outcome, with no skips/issues. Combined milestone acceptance passes. | [PR #46](https://github.com/yaboii-jah/HML-Prototype/pull/46), [CI](https://github.com/yaboii-jah/HML-Prototype/actions/runs/43275883451), [integration](https://github.com/yaboii-jah/HML-Prototype/actions/runs/43275883357) |
@@ -54,6 +56,8 @@ The table records final acceptance, not fresh reruns. Implemented code units hav
 Runtime/CI milestone 2 completed 2026-10-28 at `cc87c65`: [all four jobs](https://github.com/yaboii-jah/HML-Prototype/actions/runs/40544882334), 365 tests/job and all 28 then-maintained browser suites on both Windows runtimes. Git/documentation baseline `a26983a` was saved 2026-10-27; cleanup/tooling baseline `104640a` and foundation planning checkpoint `0b9d3ae` remain recoverable. Historical prototype passes do not establish current operational acceptance.
 
 ### Final Evidence Links
+
+At `63b2f6d`, 488 unit/API tests, lint, types, build, public browser, disposable database, observed-lock races, signed-in desktop/mobile and inherited Drive checks passed. Staging applied only `20261118113908_transfer_approval_reservation.sql`, preserving existing records and access hashes. The new transfer tables were empty, staging parity passed and no email was sent. The 4.13 attestation and pending 4.14 review have byte-preserved backups with SHA-256 provenance.
 
 At `6906014`, 488 unit/API tests, lint, types, build, public browser, disposable database, signed-in desktop/mobile and live receipt archives with verified cleanup passed. Staging applied only `20261118094346_purchased_receiving_stock_posting.sql`. Existing records and access hashes matched, full staging parity passed and no email was sent. The retained 4.12 attestation and the pending 4.13 review have byte-preserved backups with SHA-256 provenance.
 

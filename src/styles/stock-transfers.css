@@ -58,6 +58,19 @@
 .transfer-upload .qa-file-upload{margin:0;min-width:0}
 .transfer-documents .qa-upload-status{font-size:12px}
 .stock-transfer-detail .transfer-actions .button{min-height:40px}
+.transfer-trip-panel>.table-scroll{margin-bottom:16px}
+.transfer-trip-panel table{min-width:660px}
+.transfer-trip-panel .transfer-trip{padding-top:16px;margin-top:16px;border-top:1px solid var(--line)}
+.transfer-trip-heading{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}
+.transfer-trip-heading h3{margin:0}
+.transfer-trip-facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr));gap:12px 20px;margin:12px 0}
+.transfer-trip-facts dt{font-weight:600}
+.transfer-trip-facts dd{margin:0;overflow-wrap:anywhere;white-space:pre-line}
+.transfer-trip-load{padding-inline-start:20px}
+.transfer-trip-editor{max-width:840px;margin:16px 0}
+.transfer-trip-history{margin-top:16px}
+.transfer-trip-history summary{cursor:pointer}
+.transfer-trip-history li+li{margin-top:8px}
 @media(max-width:768px){
   .stock-transfer-detail .form-grid{grid-template-columns:minmax(0,1fr)}
   .transfer-document-row.qa-document-record{align-items:stretch}

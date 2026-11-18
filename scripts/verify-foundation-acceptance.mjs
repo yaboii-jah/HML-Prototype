@@ -38,6 +38,9 @@ try {
     const manual = await read('foundation-manual.json');
     requireCurrentEvidence(manual, source, 'targeted manual review');
       if (!manual.confirmedByUser || !manual.reviewedBehavior?.includes('error-retry')) throw Error('Targeted recovery review pending');
+      for (const behavior of ['transfer-trip-planning','transfer-trip-dispatch-cancellation','transfer-trip-access-recovery']) {
+        if (!manual.reviewedBehavior?.includes(behavior)) throw Error(`Targeted transfer trip review pending: ${behavior}`);
+      }
       for (const behavior of ['transfer-sourcing-suitability','transfer-release-reservation','transfer-access-recovery']) {
         if (!manual.reviewedBehavior?.includes(behavior)) throw Error(`Targeted transfer review pending: ${behavior}`);
       }

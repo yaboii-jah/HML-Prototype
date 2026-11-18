@@ -4,7 +4,7 @@
 
 HML ConstructSync is an internal construction materials operations system for HML Technologies and Services Inc. It gives Site Personnel, Project Managers, Procurement, Accounting, Finance, Logistics and Administrators a shared way to follow each material request through sourcing, purchasing, payment verification, delivery and stock posting, alongside project inventory and material usage. Its main purpose is traceability across departments: staff can see the related records, responsible people, supporting documents, completed actions and outstanding work for a request.
 
-> **Current status.** Foundation 3.1–3.6 and operational units through 4.13 are verified complete, including purchased receiving, forwarding, stock posting and receipt document review. See the [tracker](progress-tracker.md#current-phase) and [final evidence](progress-tracker.md#completed).
+> **Current status.** Foundation 3.1–3.6 and operational units through 4.14 are verified complete, including transfer approval and source-stock reservation. Unit 4.15 adds transfer trip planning and dispatch and is in verification. See the [tracker](progress-tracker.md#current-phase) and [final evidence](progress-tracker.md#completed).
 
 See [architecture context](architecture.md) for the technical boundaries and production migration responsibilities.
 

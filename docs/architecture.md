@@ -185,6 +185,14 @@ Unit 4.14 stores operational reviews and releases separately from transport. A P
 
 The private demand helper accepts a narrowly checked transfer context for reductions and releases by source-only Site staff. It derives authority from the current source assignment and the existing pending transfer’s claim and line identities. Current session checks and actor history retain the actual reviewer. Source-only views expose the saved operational request basis and release history, while MRF reads continue to check the destination assignment. Transfer changes invalidate both project views.
 
+### Transfer Trips and Dispatch
+
+Unit 4.15 keeps first-leg trips on the approved transfer. Each trip uses the destination project's shared DEL sequence and freezes its route and addresses at booking. The per-line capacity is approved less released, actively booked and departed quantities. A cancelled booking frees capacity and preserves the allocation's reservation.
+
+Dispatch requires a ready destination MRF archive and an actual Philippine departure between the latest of the first booking, release approval and current archive completion and the time of recording. Dispatch consumes the exact booked quantities from source reservations and records one immutable negative movement per trip and transfer line. Demand stays claimed for those quantities. Corrections retain the original departure and validate the new time against the saved window.
+
+Procurement can release the entire undispatched balance and cancel its active bookings in one transaction. Trip changes and balance cancellation use the same transfer version, current session checks, idempotent operation receipts and both projects' private invalidations. Destination stock posting, warehouse receipts and forwarding are covered in 4.16.
+
 ## Storage Model
 
 - **Postgres:** The source of truth for users' application profiles, role and project assignments, projects, MRFs, quotations, purchase orders, budgets, payments, deliveries, stock, document references, audit events and workflow/job status. Related changes such as stock, budgets and document numbering need database transactions, concurrency control and safe retries.
