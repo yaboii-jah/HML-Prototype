@@ -7,13 +7,14 @@ import { philippineToday } from '@/src/domain/payments/payments';
 import { compare, decimal, add } from '@/src/domain/quotations/decimal';
 import { exactQuantity } from '@/src/domain/purchasing/pricing';
 import type { TransferRecord } from '@/src/domain/transfers/contracts';
-import type { TransferRoute, TransferTrip, TransferTripCommand, TripPlan } from '@/src/domain/transfers/trips';
+import type { TransferRoute, TransferTrip, TransferTripCommand, TripPlan, TripState } from '@/src/domain/transfers/trips';
 
 type TripAction = TransferTripCommand['type'];
 type Editor = { type:TripAction; version:string; tripId:string; plan:TripPlan; quantities:Record<string,string>;
   departure:Departure; reason:string; confirmed:boolean };
 
 const routes:Record<TransferRoute,string> = { 'site-site':'Site to site', 'site-warehouse':'Site to warehouse' };
+const states:Record<TripState,string> = { scheduled:'Scheduled',dispatched:'Departed',cancelled:'Cancelled' };
 const labels:Record<TripAction,string> = {
   scheduleTrip:'Schedule trip', reviseTrip:'Revise trip', cancelTrip:'Cancel trip',
   dispatchTrip:'Record departure', correctTrip:'Correct departure', cancelRemaining:'Cancel undispatched balance',
@@ -162,7 +163,10 @@ export function TransferTrips({ record,busy,send }: {
           <p>The quantities that have yet to depart will be released and the remaining demand will reopen.</p>
           {booked.length>0 && <div><p>Trips that will be cancelled</p><ul>
             {booked.map(trip=><li key={trip.id}><strong>{trip.ref}</strong> · {routes[trip.route]} · {trip.plannedDate}
-              <ul>{trip.lines.map(line=><li key={line.lineId}>{line.quantity} {record.lines.find(entry=>entry.id===line.lineId)?.stockName}</li>)}</ul>
+              <ul>{trip.lines.map(line=>{
+                const material=record.lines.find(entry=>entry.id===line.lineId);
+                return <li key={line.lineId}>{line.quantity} {material?.stockUnit} · {material?.stockName}</li>;
+              })}</ul>
             </li>)}
           </ul></div>}
         </>}
@@ -190,7 +194,7 @@ export function TransferTrips({ record,busy,send }: {
     {record.trips.map(trip=><article className="transfer-trip" key={trip.id}>
       <div className="transfer-trip-heading">
         <h3>{trip.ref}</h3><span>{routes[trip.route]}</span>
-        <Badge value={trip.state} />
+        <Badge value={trip.state}>{states[trip.state]}</Badge>
         {trip.state==='scheduled'&&trip.plannedDate<today && <Badge value="Overdue" />}
       </div>
       <TripFacts trip={trip} record={record} />
