@@ -7,8 +7,8 @@ Agreed 2026-11-03. This active companion owns the operational migration sequence
 Follow the task-specific reading map in [AGENTS.md](../AGENTS.md). For step 4, read this roadmap/dependencies, the affected unit contract and completion criteria, plus the relevant checklist step. Completed units need reading only when they constrain current work; final evidence lives in the tracker.
 
 1. Reconcile Git status, the tracker and the actual implementation. Preserve unrelated pending work and the completed foundation planning retirement.
-2. Check the latest user instruction and the tracker: units through 4.11 are verified complete; 4.12 requires scoped planning and implementation authorization. Merge and production remain separate.
-3. Use the sequence below as the roadmap. Units through 4.11 have detailed scopes; later units require scoped planning and acceptance criteria before implementation.
+2. Check the latest user instruction and the tracker. Units through 4.12 are verified complete. Scope and authorize unit 4.13 before implementation.
+3. Use the sequence below as the roadmap. Units through 4.12 have detailed scopes. Define acceptance criteria before implementing later units.
 4. Verify a unit within its boundary, record actual results in the tracker, then check its completion box. A documentation checkpoint does not complete an operational workflow or checklist step 4.
 5. Retire this companion after the milestone is complete, preserving durable contracts in the core documents and completion evidence in the tracker.
 
@@ -43,7 +43,7 @@ The listed order is the default. Record any agreed scope/order revision here and
 | **4.9 Accounting approval and commitments** | [x] | Completed 2026-11-08 at `e00f8fd`: automated/live-Drive/staging checks, all three explicit human groups including assisted checks with no skips or issues, and matching combined acceptance pass. |
 | **4.10 Supplier issuance** | [x] | Completed 2026-11-08 at `77e3965`: automated/staging/Drive, explicit three-group human and combined acceptance pass. |
 | **4.11 Payment coordination and verification** | [x] | Complete 2026-11-15 at `09c1e8c`: automated/Drive/staging checks, all three explicit human groups including assisted recovery and matching combined acceptance pass. Finance, settlement and clearance remain separate milestones. |
-| **4.12 Purchased delivery dispatch** | [ ] | Supplier/site/warehouse delivery planning, scheduling and dispatch under the applicable clearance rules. |
+| **4.12 Purchased delivery dispatch** | [x] | Completed 2026-11-18 at `4c601af`. All three human groups and matching combined acceptance passed. |
 | **4.13 Purchased receiving and stock posting** | [ ] | Partial receiving, shortages/damage, required evidence, warehouse forwarding and exactly-once stock posting using 4.7. |
 | **4.14 Transfer approval and reservation** | [ ] | Matching, suitability review, source approval and reservation using 4.6/4.7; no supplier payment or budget charge. |
 | **4.15 Transfer trips and dispatch** | [ ] | Trip planning, partial dispatch and exactly-once source-stock debit after source approval. |
@@ -319,13 +319,13 @@ Authorized 2026-11-18 after seventeen interview decisions and shared-understandi
 
 **Done when:** exact quantity/reservation/numbering/retry/security/time tests and observed-lock races at both isolation levels pass, including capacity contention, revise/cancel versus dispatch, clearance invalidation and access revocation. Complete real-session application/Realtime/recovery, desktop/mobile, standard/public-browser/four-job CI/full disposable/types, retained-state-safe staging and existing owned live-Drive gates. Obtain three new explicit human groups: planning/quantities; dispatch/history; access/conflicts/recovery. Preserve preceding attestations and require matching combined acceptance before checking 4.12.
 
-### 4.12 Targeted Human Review ? Pending
+### 4.12 Targeted Human Review — Complete
 
-Automated/staging/Drive readiness passes; see the tracker for dated evidence. Use designated synthetic 4.12 QA records and authorized identities, retain their records/files, and preserve earlier QA identities and evidence. Report each group as passed, failed or not tested, including all skips/issues. Automated checks do not establish human acceptance.
+The user confirmed all three groups on 2026-11-18, including interrupted save, access removal and Check saved outcome. Combined acceptance passed at `4c601af`. Retain the designated QA records, files and earlier attestations. [Final acceptance record](progress-tracker.md#completed)
 
 - **Planning and quantities:** Logistics schedules before clearance, splits PO quantities across site/warehouse, sees exact unit equivalents and shared remaining capacity, and makes reasoned revisions/cancellation without reusing DEL numbers.
 - **Dispatch and history:** Accounting clearance gates departure; review exact saved loads, bounded Philippine departure times, short-load revision and immutable quantities/routes. Inspect retained corrections and confirm later holds preserve completed dispatch.
-- **Access, conflicts and recovery:** assigned Site sees operational data without financials or edit controls; unassigned access is denied. Review colleague refresh/conflicts, preserved input, desktop/mobile navigation and Check saved outcome. Request assisted execution for lost acknowledgements or revocation when necessary; explicit review of assisted outcomes is still required.
+- **Access, conflicts and recovery:** assigned Site sees operational data without financials or edit controls. Unassigned access is denied. Review covered colleague refresh and conflicts, preserved input, desktop/mobile navigation, interrupted save, access removal and Check saved outcome.
 
 ## Milestone Completion and Documentation Ownership
 
