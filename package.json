@@ -42,7 +42,7 @@
     "@supabase/supabase-js": "2.118.0",
     "exceljs": "4.4.0",
     "google-auth-library": "^11.1.0",
-    "next": "16.4.3",
+    "next": "16.4.6",
     "pdf-lib": "^1.17.1",
     "pdfjs-dist": "6.4.299",
     "react": "19.2.8",
@@ -58,7 +58,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "16.4.3",
+    "eslint-config-next": "16.4.6",
     "supabase": "2.122.0",
     "tailwindcss": "^4",
     "typescript": "^5"
