@@ -478,6 +478,7 @@ export function PurchasingWorkspace({
         <>
           <section className="panel">
             <h2>Demand and current offers</h2>
+            {editable && <Link className="button secondary" href={`/stock-transfers/source/${request.id}`}>Source project stock</Link>}
             <p className="helper-note">
               Remaining to purchase excludes POs, suitability holds and
               transfers. Unassigned also excludes saved supplier awards.

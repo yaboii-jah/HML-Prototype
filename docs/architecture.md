@@ -179,6 +179,12 @@ Logistics alone changes deliveries; all non-Site readers and currently assigned 
 
 Separate receipt file records track generated PDFs, signed uploads, provider identity, and leases for retryable Drive processing. Evidence completion and Accounting review are bound to the current immutable receipt version. Review history records the evidence used. Protected retrieval checks current project access and role before exposing any file bytes. Site Personnel can read generated site receipts and upload their own receipt evidence. Signed originals are readable by Accounting and by Procurement for warehouse receipts.
 
+### Transfer Approval and Reservation
+
+Unit 4.14 stores operational reviews and releases separately from transport. A Procurement submission binds one source and one approved destination MRF. Alternative reviews claim demand alone. Converting an approved review atomically closes its original claim, claims the requested release quantity and reserves source stock. Numbered releases retain their actor history. Approval, reduction, rejection and cancellation update demand and stock together without creating movements.
+
+The private demand helper accepts a narrowly checked transfer context for reductions and releases by source-only Site staff. It derives authority from the current source assignment and the existing pending transfer’s claim and line identities. Current session checks and actor history retain the actual reviewer. Source-only views expose the saved operational request basis and release history, while MRF reads continue to check the destination assignment. Transfer changes invalidate both project views.
+
 ## Storage Model
 
 - **Postgres:** The source of truth for users' application profiles, role and project assignments, projects, MRFs, quotations, purchase orders, budgets, payments, deliveries, stock, document references, audit events and workflow/job status. Related changes such as stock, budgets and document numbering need database transactions, concurrency control and safe retries.

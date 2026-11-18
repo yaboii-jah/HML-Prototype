@@ -14,6 +14,7 @@ import { serviceRpc } from "@/src/server/auth/service-rpc";
 
 import { paymentsView } from "@/src/server/payments/payments";
 import { deliveriesView } from '@/src/server/deliveries/deliveries';
+import { transferView } from '@/src/server/transfers/transfers';
 
 const headers = { "Cache-Control": "private, no-store, max-age=0", Vary: "Cookie", "Referrer-Policy": "no-referrer" };
 const json = (value: unknown, status = 200) => Response.json(value, { status, headers });
@@ -46,6 +47,14 @@ export async function foundationResponse(request: Request, credentials = false) 
         accessToken: token.access_token, expiresAt: token.expires_at });
     }
     const query = new URL(request.url).searchParams, view = query.get("view");
+    if (view === 'transfers') {
+      const mrf = query.get('mrfId'), transfer = query.get('transferId');
+      if ((mrf && transfer) || (mrf && !UUID_PATTERN.test(mrf)) || (transfer && !UUID_PATTERN.test(transfer))) {
+        return json({ error:'Valid material request or transfer required.' },400);
+      }
+      const data = await transferView(mrf ?? undefined, transfer ?? undefined);
+      return json({ session,view:{ kind:'transfers',data:data ?? { records:[],sourcing:null } } });
+    }
     if (view === 'deliveries') return json({ session, view:{ kind:'deliveries', data:await deliveriesView() } });
     if (view === "payments") {
       if (session.activeRole === "Site Personnel") return json({ error: "Payment access denied." }, 403);

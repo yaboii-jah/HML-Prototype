@@ -18,7 +18,7 @@ Use this companion to track the steps toward production. See the [progress track
 
 - [ ] **4. Move operational records and business workflows to the server.**
   Done when each migrated workflow has shared authoritative records and realtime updates, with authorized, transactional, retry-safe and audited changes; prototype data authority/reset paths are retired and deferred operational browser coverage is restored.
-  Units 4.0–4.12 are verified complete. Unit 4.12 closed on 2026-11-18 at `4c601af` after all three human review groups and matching combined acceptance passed. Units 4.13–4.19 remain open. See the [roadmap](step-4-implementation.md#ordered-roadmap) and [final evidence](progress-tracker.md#completed).
+  Units 4.0–4.13 are verified complete. Unit 4.13 closed on 2026-11-18 at `6906014` after all three staff review groups and matching combined acceptance passed. Units 4.14–4.19 remain open. See the [roadmap](step-4-implementation.md#ordered-roadmap) and [final evidence](progress-tracker.md#completed).
 
 - [ ] **5. Complete reliable document and AI integrations.**
   Done when the remaining broader document/project-folder features and optional AI integrations work, building on the protected uploads, required folder operations and archive jobs verified with step 4 workflows. Verify correct files, recovery from failures, protected browsing and human review of AI results.

@@ -49,6 +49,7 @@ jobs:
             .verification/payment-*.png
             .verification/delivery-*.png
             .verification/receiving-*.png
+            .verification/transfer-approval-*.png
             .verification/realtime-service.log
           include-hidden-files: true
           retention-days: 7

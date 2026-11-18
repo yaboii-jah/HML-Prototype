@@ -2,7 +2,7 @@ import { requireStaging, STAGING_REF } from './supabase-target.mjs';
 
 /** Read-only retained-state evidence. No Auth passwords, tokens or raw business
  * rows are returned. Application rows are compared using deterministic hashes. */
-export function retainedStateQuery({ includeProjectOperations = true, includeDocuments = true, includeReview = true, includeSuppliers = true, includeQuotations = true, includeQuotationFinalization = true, includeDemand = true, includeStock = true, includePurchasing = true, includeAccounting = true, includeIssuance = true, includePayments = true, includeDeliveries = true, includeReceiving = true } = {}) {
+export function retainedStateQuery({ includeProjectOperations = true, includeDocuments = true, includeReview = true, includeSuppliers = true, includeQuotations = true, includeQuotationFinalization = true, includeDemand = true, includeStock = true, includePurchasing = true, includeAccounting = true, includeIssuance = true, includePayments = true, includeDeliveries = true, includeReceiving = true, includeTransfers = true } = {}) {
   const tables = [
     ['profiles', 'public.profiles', 'user_id'], ['grants', 'public.role_grants', 'user_id,role'],
     ['assignments', 'public.project_assignments', 'user_id,project_id'], ['projects', 'public.projects', 'id'],
@@ -25,6 +25,10 @@ export function retainedStateQuery({ includeProjectOperations = true, includeDoc
     ['deliveryReceipts', 'private.delivery_receipts', 'delivery_id'],
     ['deliveryReceiptVersions', 'private.delivery_receipt_versions', 'id'],
     ['deliveryReceiptFiles', 'private.delivery_receipt_files', 'id'],
+  );
+  if (includeTransfers) tables.push(
+    ['transfers', 'private.transfers', 'id'], ['transferLines', 'private.transfer_lines', 'id'],
+    ['transferEvents', 'private.transfer_events', 'id'], ['transferOperations', 'private.transfer_operations', 'id'],
   );
   if (includePayments) tables.push(
     ['paymentHeads', 'private.payment_heads', 'po_id'], ['paymentParticipants', 'private.payment_participants', 'po_id,actor_id'],

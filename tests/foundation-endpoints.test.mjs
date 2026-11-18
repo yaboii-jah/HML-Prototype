@@ -19,6 +19,7 @@ globalThis.__foundation = {
   purchasingView: async () => ({ quotations: { request: null }, role: current.activeRole }),
   purchasingDirectory: async () => [],
   paymentsView: async () => ({ role: current.activeRole, actorId: userId, records: [] }),
+  transferView: async () => ({ records: [], sourcing: null }),
   serviceRpc: async () => randomUUID(),
   supplierView: async () => ({ suppliers: [], history: [], role: current.activeRole }),
   requestView: async () => ({ requests: [], projects: [], role: current.activeRole }),
@@ -35,6 +36,7 @@ registerHooks({ resolve(specifier, context, nextResolve) {
     '@/src/server/purchasing/purchasing': ['purchasingView', 'purchasingDirectory'],
     '@/src/server/payments/payments': ['paymentsView'],
     '@/src/server/deliveries/deliveries': ['deliveriesView'],
+    '@/src/server/transfers/transfers': ['transferView'],
     '@/src/server/auth/service-rpc': ['serviceRpc'],
     '@/src/server/suppliers/suppliers': ['supplierView'],
     '@/src/server/requests/drafts': ['requestView'],
@@ -73,6 +75,11 @@ test('foundation reads distinguish missing sessions, temporary failures, roles a
   assert.equal((await foundationResponse(request('view=unknown'))).status, 400);
   assert.equal((await foundationResponse(request('view=requests&requestId=invalid'))).status, 400);
   assert.equal((await foundationResponse(request('view=requests'))).status, 200);
+  assert.equal((await foundationResponse(request('view=transfers&transferId=invalid'))).status, 400);
+  assert.equal((await foundationResponse(request('view=transfers&transferId='+randomUUID()+'&mrfId='+randomUUID()))).status, 400);
+  const transfers = await foundationResponse(request('view=transfers'));
+  assert.equal(transfers.status, 200);
+  assert.deepEqual((await transfers.json()).view.data, { records: [], sourcing: null });
   const missing = await foundationResponse(request('view=project&projectId=' + randomUUID()));
   assert.equal((await missing.json()).view.data.project, null);
   assert.equal((await foundationResponse(request('view=projects', { 'sec-fetch-site': 'cross-site' }))).status, 403);

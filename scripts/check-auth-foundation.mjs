@@ -6,6 +6,7 @@ import { checkQuotationDrafts } from './check-quotation-drafts.mjs';
 import { checkQuotationFinalization } from './check-quotation-finalization.mjs';
 import { checkPayments } from './check-payments.mjs';
 import { checkDeliveries } from './check-deliveries.mjs';
+import { checkTransferApproval } from './check-transfer-approval.mjs';
 import { fakeDrive } from './helpers/fake-drive.mjs';
 import assert from 'node:assert/strict';
 import { randomUUID, randomBytes } from 'node:crypto';
@@ -307,6 +308,8 @@ export async function checkAuthFoundation({ api, anon, secret, mailpit, sql, env
     checks.push('payment-browser-workflow');
     await checkDeliveries({ browser, second, client, sql, login, logout, drive });
     checks.push('delivery-browser-workflow');
+    await checkTransferApproval({ browser, second, client, sql, login, logout });
+    checks.push('transfer-approval-browser');
     await checkSupplierDirectory({ browser, second, client, login, logout, sessionCookie, sql });
     checks.push('supplier-browser');
     for (const browser of browsers) browser.assertIsolated();
