@@ -2265,6 +2265,28 @@ isOneToOne: true
 "login_preflight":
 { Args: { "login_email": string }; Returns: Json
                            },
+"monitoring_consumption":
+{ Args: { "filters": Json,"projects": (string)[] }; Returns: Json
+                           },
+"monitoring_lifecycle":
+{ Args: { "project": string,"site": boolean,"target": string }; Returns: Json
+                           },
+"monitoring_queue":
+{ Args: { "caller": string,"projects": (string)[],"ready_only": boolean,"role_name": string }; Returns: Json
+                           },
+"monitoring_reports":
+{ Args: { "filters": Json,"projects": (string)[] }; Returns: Json
+                           },
+"monitoring_request_items":
+{ Args: { "target": string }; Returns: {
+              "id": string,"line_order": number,"material": string,"quantity": number,"unit": string
+            }[]
+                           },
+"monitoring_shipments":
+{ Args: { "projects": (string)[] }; Returns: {
+              "can_forward": boolean,"created_at": string,"departed_at": string,"evidence_ready": boolean,"id": string,"kind": string,"lines": Json,"onward": boolean,"owner_id": string,"planned_date": string,"planned_time": string,"posted_at": string,"project_id": string,"receipt_at": string,"ref": string,"request_id": string,"review_state": string,"signed_ready": boolean,"state": string,"warehouse": boolean
+            }[]
+                           },
 "mrf_editable":
 { Args: { "target": string }; Returns: boolean
                            },
@@ -2999,6 +3021,9 @@ isOneToOne: false
                            },
 "issuance_receipt":
 { Args: { "actor": Json,"command": Json }; Returns: Json
+                           },
+"monitoring_read":
+{ Args: { "filters": Json,"mode": string,"viewer": Json }; Returns: Json
                            },
 "payment_command":
 { Args: { "actor": Json,"command": Json }; Returns: Json

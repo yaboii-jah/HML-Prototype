@@ -1,0 +1,19 @@
+.monitoring-page { display: grid; gap: 20px; min-width: 0; }
+.monitoring-page h2 { margin: 0 0 10px; }
+.monitoring-page .page-header { margin-bottom: 0; }
+.monitoring-filters { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; }
+.monitoring-filters .field { min-width: min(155px, 100%); max-width: 280px; margin: 0; }
+.monitoring-filter-form { margin-bottom: 8px; }
+.monitoring-queues { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; scroll-margin-top: 5rem; }
+.monitoring-queues section, .monitoring-lifecycle { min-width: 0; }
+.monitoring-count { font-size: .78em; opacity: .72; margin-inline-start: .35em; font-variant-numeric: tabular-nums; }
+.monitoring-page tbody th, .monitoring-lifecycle tbody th { font-weight: 600; text-align: start; }
+.monitoring-page tbody th small, .monitoring-lifecycle tbody th small { display: block; font-weight: 400; margin-block: 3px; }
+.monitoring-quantity-table td { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.monitoring-quantity-table th { min-width: 105px; }
+.monitoring-quantity-table th:first-child { min-width: 145px; }
+.monitoring-records { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(230px, 100%), 1fr)); gap: 12px; padding: 0; margin: 12px 0; }
+.monitoring-records li { display: grid; gap: 4px; border-inline-start: 2px solid var(--line); padding-inline-start: 12px; }
+.monitoring-dependencies { margin: 16px 0; padding-inline-start: 20px; }
+.monitoring-tabs { flex-wrap: wrap; }
+@media (max-width: 900px) { .monitoring-queues { grid-template-columns: minmax(0, 1fr); } }

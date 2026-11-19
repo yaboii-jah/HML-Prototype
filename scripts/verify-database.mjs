@@ -18,6 +18,7 @@ import { checkTransferTripRaces } from './check-transfer-trip-races.mjs';
 import { transferReceivingCheckSql } from './helpers/transfer-receiving-check.mjs';
 import { checkTransferReceivingRaces } from './check-transfer-receiving-races.mjs';
 import { inventoryCheckSql } from './helpers/inventory-check.mjs';
+import { monitoringCheckSql } from './helpers/monitoring-check.mjs';
 import { checkInventoryRaces } from './check-inventory-races.mjs';
 import { retainedStateQuery } from './helpers/staging-snapshot.mjs';
 import { checkDocumentRaces } from './check-document-races.mjs';
@@ -146,6 +147,8 @@ try {
   checks.push('transfer-receiving-sql');
   await sql(await inventoryCheckSql());
   checks.push('inventory-usage-sql');
+  await sql(await monitoringCheckSql());
+  checks.push('operational-monitoring-sql');
   checks.push('purchasing-sql');
   checks.push('stock-sql');
   checks.push('quotation-finalization-sql');

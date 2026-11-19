@@ -25,14 +25,14 @@ const hasQuantity = (quantity: string) => /[1-9]/.test(quantity);
 type Editor = { id:string; poId:string; version:string; plan:DeliveryPlan; forwardFrom?:string };
 type Decision = { type:'dispatch' | 'cancel' | 'correct'; version:string; reason:string; departure:Departure; localTime:string; reviewed:boolean };
 
-export function DeliveryWorkspace({ initial, deliveryId, create = false }: { initial:DeliveriesView; deliveryId?:string; create?:boolean }) {
+export function DeliveryWorkspace({ initial, deliveryId, create = false, initialPoId = '' }: { initial:DeliveriesView; deliveryId?:string; create?:boolean; initialPoId?:string }) {
   const live = useFoundationRealtime(), router = useRouter();
   const view = live.view?.kind === 'deliveries' ? live.view.data : initial;
   const saved = view.deliveries.find(d => d.id === deliveryId);
   const order = view.orders.find(o => o.id === saved?.poId);
   const [editor, setEditor] = useState<Editor | null>(null);
   const [decision, setDecision] = useState<Decision | null>(null);
-  const [selectedPo, setSelectedPo] = useState('');
+  const [selectedPo, setSelectedPo] = useState(initialPoId);
   const [message, setMessage] = useState(''), [busy, setBusy] = useState(false), [uncertain, setUncertain] = useState(false), [conflict, setConflict] = useState(false);
   const pending = useRef<DeliveryCommand | null>(null), running = useRef(false);
   const editingOrder = view.orders.find(o => o.id === editor?.poId);

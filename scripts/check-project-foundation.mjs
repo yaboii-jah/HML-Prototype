@@ -13,13 +13,14 @@ export async function checkProjectFoundation({ browser, second, client, login, l
   };
   const manager = await fixture('Project Manager'), site = await fixture('Site Personnel'), reader = await fixture('Accounting');
   await login(browser, administrator);
-  await browser.wait("return location.pathname==='/projects'&&!!document.querySelector('.masthead-account')");
+  await browser.wait("return location.pathname==='/dashboard'&&!!document.querySelector('.masthead-account')");
   const session = await sessionCookie(browser);
   const claims = ok(await client.auth.getClaims(session.access_token), 'Verify project actor claims').claims;
   const context = await fetch(client.supabaseUrl + '/rest/v1/rpc/auth_session_context', { method: 'POST',
     headers: { apikey: client.supabaseKey, Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' }, body: '{}' }).then(r => r.json());
   const actor = { userId: context.userId, sessionId: claims.session_id, revision: context.revision, activeRole: 'Administrator' };
   const confirm = async (danger = false) => { await browser.wait("return !!document.querySelector('.confirm-dialog[open]')"); await browser.click(`.confirm-dialog[open] .${danger ? 'danger-outline' : 'primary'}`); };
+  await browser.navigate('/projects');
   await browser.wait("return !!document.querySelector('.page-header .primary')&&!document.querySelector('.page-header .primary').disabled");
   await browser.click('.page-header .primary');
   await browser.wait("return !!document.querySelector('.project-editor')");
@@ -47,7 +48,7 @@ export async function checkProjectFoundation({ browser, second, client, login, l
   await browser.wait("return !document.querySelector('.record-dialog[open]')&&document.querySelectorAll('[data-scope-id]').length===2");
   assert.match(await browser.run("return document.querySelector('.project-financials').textContent"), /100\.00/);
   // Another real manager sees the shared record, then makes an intervening edit.
-  await login(second, manager); await second.wait("return location.pathname==='/projects'&&!!document.querySelector('.masthead-account')");
+  await login(second, manager); await second.wait("return location.pathname==='/dashboard'&&!!document.querySelector('.masthead-account')");
   await second.navigate(`/projects/${id}`);
   assert.match(await second.run('return document.body.innerText'), /Structural Works/);
   await browser.click('.page-header .secondary'); await browser.wait("return !!document.querySelector('.project-editor')");
@@ -74,7 +75,7 @@ export async function checkProjectFoundation({ browser, second, client, login, l
   await browser.click('.record-dialog .form-actions .primary'); await confirm();
   await browser.wait("return !document.querySelector('.record-dialog[open]')");
   await logout(second);
-  await login(second, site); await second.wait("return location.pathname==='/projects'&&!!document.querySelector('.masthead-account')");
+  await login(second, site); await second.wait("return location.pathname==='/dashboard'&&!!document.querySelector('.masthead-account')");
   await second.navigate(`/projects/${id}`);
   assert.equal(await second.run("return !!document.querySelector('.project-financials,.project-history,.project-removal')"), false, 'Site sees no financial/history/admin controls');
   assert.equal(await second.run("return document.querySelectorAll('th.numeric').length"), 0);
@@ -96,12 +97,12 @@ export async function checkProjectFoundation({ browser, second, client, login, l
   assert.equal(await second.run("return document.body.innerText.includes('Structural Works')"), false, 'Unassigned target does not reveal scopes');
   // All non-Site readers see financial values/history but cannot mutate.
   await second.navigate('/projects'); await logout(second);
-  await login(second, reader); await second.wait("return location.pathname==='/projects'&&!!document.querySelector('.masthead-account')");
+  await login(second, reader); await second.wait("return location.pathname==='/dashboard'&&!!document.querySelector('.masthead-account')");
   await second.navigate(`/projects/${id}`);
   assert.equal(await second.run("return !!document.querySelector('.project-financials,.project-history')"), true);
   assert.equal(await second.run("return !!document.querySelector('.project-removal,.page-header button')"), false);
   await logout(second); await login(second, manager);
-  await second.wait("return location.pathname==='/projects'&&!!document.querySelector('.masthead-account')");
+  await second.wait("return location.pathname==='/dashboard'&&!!document.querySelector('.masthead-account')");
   await second.navigate(`/projects/${id}`);
   assert.equal(await second.run("return document.querySelector('.project-removal button').disabled"), true, 'PM cannot remove Administrator-managed assignments');
   // Keep a distinct live Site session: the browser's earlier Site session was
