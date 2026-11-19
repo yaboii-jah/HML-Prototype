@@ -70,6 +70,8 @@ export function documentError(error: unknown) {
       P3406: [409, "This operation identity was used for different input. Refresh before continuing."],
       P4201: [409, "An Administrator or Project Manager must set up the project document folder first."],
       P4202: [410, "This upload expired. Cancel it and start a new upload."],
+      P4162: [409, "This evidence action is unavailable for the current receipt."],
+      P4165: [400, "Use up to 12 files and 45 MiB total for the current receipt evidence."],
     };
     if (errors[error.code]) [status, message] = errors[error.code];
   }

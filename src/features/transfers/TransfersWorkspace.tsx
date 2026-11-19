@@ -9,9 +9,10 @@ import type { TransferCommand, TransferRecord, TransferSelection, TransferSourci
 import { rankStockCandidates } from '@/src/domain/stock-matching';
 import { compare, decimal } from '@/src/domain/quotations/decimal';
 import type { TransferTripCommand } from '@/src/domain/transfers/trips';
+import type { TransferReceiptCommand } from '@/src/domain/transfers/receipts';
 import { TransferTrips } from './TransferTrips';
 
-type SavedCommand = TransferCommand|TransferTripCommand;
+type SavedCommand = TransferCommand|TransferTripCommand|TransferReceiptCommand;
 type WithoutRequest<C> = C extends SavedCommand ? Omit<C,'requestId'> : never;
 type Command = WithoutRequest<SavedCommand>;
 type Action = Exclude<TransferCommand['type'],'submit'>;
@@ -126,7 +127,7 @@ function RecordList({ records }: { records:TransferRecord[] }) {
   </table></div>;
 }
 
-function TransferDetail({ record,busy,send }: { record:TransferRecord; busy:boolean; send:Send }) {
+function TransferDetail({ record,busy,send,refresh }: { record:TransferRecord; busy:boolean; send:Send; refresh:()=>void }) {
   const [review,setReview] = useState<{ type:Action; version:string; demand:string|null }|null>(null);
   const [reason,setReason] = useState('');
   const [quantities,setQuantities] = useState<Record<string,string>>({});
@@ -199,7 +200,7 @@ function TransferDetail({ record,busy,send }: { record:TransferRecord; busy:bool
       </form>}
     </section>
     {(record.status==='approved'||record.trips.length>0||record.tripTotals.some(total=>/[1-9]/.test(total.released))) &&
-      <TransferTrips record={record} busy={busy} send={send} />}
+      <TransferTrips record={record} busy={busy} send={send} refresh={refresh} />}
     <section className="panel">
       <h2>History</h2>
       <ol>{record.history.map(event=><li key={event.id}>
@@ -251,7 +252,7 @@ export function TransfersWorkspace({ initial,recordId,sourcingPage=false }: { in
       <Link className="back-link" href={`/requests/${view.sourcing.requestId}/purchasing`}>Back to purchasing</Link>
       <SourcingForm key={formVersion} sourcing={view.sourcing} busy={busy||uncertain} send={perform} />
     </section>}
-    {selected&&<TransferDetail key={formVersion} record={selected} busy={busy||uncertain} send={perform} />}
+    {selected&&<TransferDetail key={formVersion} record={selected} busy={busy||uncertain} send={perform} refresh={live.refresh} />}
     {recordId&&!selected&&<p>This transfer is unavailable for your current access.</p>}
     {!recordId&&<section className="panel"><h2>{sourcingPage?'Stock requests for this MRF':'Transfer register'}</h2>
       <RecordList records={view.records} /></section>}

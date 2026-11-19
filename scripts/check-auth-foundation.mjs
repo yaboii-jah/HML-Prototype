@@ -8,6 +8,7 @@ import { checkPayments } from './check-payments.mjs';
 import { checkDeliveries } from './check-deliveries.mjs';
 import { checkTransferApproval } from './check-transfer-approval.mjs';
 import { checkTransferTrips } from './check-transfer-trips.mjs';
+import { checkTransferReceiving } from './check-transfer-receiving.mjs';
 import { fakeDrive } from './helpers/fake-drive.mjs';
 import assert from 'node:assert/strict';
 import { randomUUID, randomBytes } from 'node:crypto';
@@ -313,6 +314,8 @@ export async function checkAuthFoundation({ api, anon, secret, mailpit, sql, env
     checks.push('transfer-approval-browser');
     await checkTransferTrips({ browser, second, client, sql, login, logout });
     checks.push('transfer-trip-browser');
+    await checkTransferReceiving({ browser, second, client, sql, login, logout, drive });
+    checks.push('transfer-receiving-browser');
     await checkSupplierDirectory({ browser, second, client, login, logout, sessionCookie, sql });
     checks.push('supplier-browser');
     for (const browser of browsers) browser.assertIsolated();

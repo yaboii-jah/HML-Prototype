@@ -2,7 +2,7 @@ import { requireStaging, STAGING_REF } from './supabase-target.mjs';
 
 /** Read-only retained-state evidence. No Auth passwords, tokens or raw business
  * rows are returned. Application rows are compared using deterministic hashes. */
-export function retainedStateQuery({ includeProjectOperations = true, includeDocuments = true, includeReview = true, includeSuppliers = true, includeQuotations = true, includeQuotationFinalization = true, includeDemand = true, includeStock = true, includePurchasing = true, includeAccounting = true, includeIssuance = true, includePayments = true, includeDeliveries = true, includeReceiving = true, includeTransfers = true, includeTransferTrips = includeTransfers } = {}) {
+export function retainedStateQuery({ includeProjectOperations = true, includeDocuments = true, includeReview = true, includeSuppliers = true, includeQuotations = true, includeQuotationFinalization = true, includeDemand = true, includeStock = true, includePurchasing = true, includeAccounting = true, includeIssuance = true, includePayments = true, includeDeliveries = true, includeReceiving = true, includeTransfers = true, includeTransferTrips = includeTransfers, includeTransferReceiving = includeTransferTrips } = {}) {
   const tables = [
     ['profiles', 'public.profiles', 'user_id'], ['grants', 'public.role_grants', 'user_id,role'],
     ['assignments', 'public.project_assignments', 'user_id,project_id'], ['projects', 'public.projects', 'id'],
@@ -33,6 +33,11 @@ export function retainedStateQuery({ includeProjectOperations = true, includeDoc
   if (includeTransferTrips) tables.push(
     ['transferTrips', 'private.transfer_trips', 'id'], ['transferTripLines', 'private.transfer_trip_lines', 'trip_id,line_id'],
     ['transferTripEvents', 'private.transfer_trip_events', 'id'],
+  );
+  if (includeTransferReceiving) tables.push(
+    ['transferReceipts','private.transfer_receipts','trip_id'],
+    ['transferReceiptVersions','private.transfer_receipt_versions','id'],
+    ['transferReceiptFiles','private.transfer_receipt_files','id'],
   );
   if (includePayments) tables.push(
     ['paymentHeads', 'private.payment_heads', 'po_id'], ['paymentParticipants', 'private.payment_participants', 'po_id,actor_id'],
@@ -93,6 +98,7 @@ export function retainedStateQuery({ includeProjectOperations = true, includeDoc
       : name === 'quotationDrafts' && !includeQuotationFinalization ? "to_jsonb(t)-'family_id'-'copied_from_revision'"
       : name === 'deliveries' && !includeReceiving ? "to_jsonb(t)-'parent_delivery_id'"
       : name === 'transferLines' && !includeTransferTrips ? "to_jsonb(t)-'released'"
+      : name === 'transferTrips' && !includeTransferReceiving ? "to_jsonb(t)-'parent_trip_id'"
       : name === 'purchasingRecords' && !includeAccounting ? "to_jsonb(t)-'po_status'-'submission_id'-'approval_id'" : 'to_jsonb(t)';
     return `'${name}',(select jsonb_build_object('count',count(*),'digest',md5(coalesce(jsonb_agg(${row} order by ${order})::text,'[]'))) from ${table} t)`;
   });

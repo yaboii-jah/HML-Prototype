@@ -8,12 +8,14 @@ import { compare, decimal, add } from '@/src/domain/quotations/decimal';
 import { exactQuantity } from '@/src/domain/purchasing/pricing';
 import type { TransferRecord } from '@/src/domain/transfers/contracts';
 import type { TransferRoute, TransferTrip, TransferTripCommand, TripPlan, TripState } from '@/src/domain/transfers/trips';
+import type { TransferReceiptCommand } from '@/src/domain/transfers/receipts';
+import { TransferReceiving } from './TransferReceiving';
 
 type TripAction = TransferTripCommand['type'];
 type Editor = { type:TripAction; version:string; tripId:string; plan:TripPlan; quantities:Record<string,string>;
   departure:Departure; reason:string; confirmed:boolean };
 
-const routes:Record<TransferRoute,string> = { 'site-site':'Site to site', 'site-warehouse':'Site to warehouse' };
+const routes:Record<TransferRoute,string> = { 'site-site':'Site to site', 'site-warehouse':'Site to warehouse', 'warehouse-site':'Warehouse to site' };
 const states:Record<TripState,string> = { scheduled:'Scheduled',dispatched:'Departed',cancelled:'Cancelled' };
 const labels:Record<TripAction,string> = {
   scheduleTrip:'Schedule trip', reviseTrip:'Revise trip', cancelTrip:'Cancel trip',
@@ -22,6 +24,9 @@ const labels:Record<TripAction,string> = {
 const historyLabels:Record<string,string> = {
   scheduleTrip:'Trip scheduled', reviseTrip:'Schedule revised', cancelTrip:'Trip cancelled',
   dispatchTrip:'Departure recorded', correctTrip:'Departure corrected', cancelRemaining:'Trip cancelled with allocation balance',
+  receiveTrip:'Receipt confirmed', recountTrip:'Receipt recounted', postTrip:'Stock posted',
+  approveTripEvidence:'Evidence approved', requestTripEvidence:'Replacement evidence requested',
+  attachTripEvidence:'Evidence attached', withdrawTripEvidence:'Unfinished evidence withdrawn',
 };
 const transport = { carrier:'Carrier',driver:'Driver',vehicle:'Vehicle',reference:'Waybill reference',note:'Transport notes' } as const;
 const timeZone='Asia/Manila';
@@ -29,7 +34,7 @@ const when=(value:string)=>new Date(value).toLocaleString('en-PH',{ timeZone });
 const manilaTime=(value:string)=>new Date(Date.parse(value)+8*3600000).toISOString().slice(0,23);
 const positive=(value:string)=>compare(decimal(value))>0;
 
-function TripFacts({ trip, record }: { trip:Omit<TransferTrip,'history'>; record:TransferRecord }) {
+function TripFacts({ trip, record }: { trip:TripPlan & Pick<TransferTrip,'pickupName'|'pickupAddress'|'destinationName'|'destinationAddress'|'departure'>; record:TransferRecord }) {
   return <>
     <dl className="transfer-trip-facts">
       <div><dt>Pickup</dt><dd>{trip.pickupName}<br />{trip.pickupAddress}</dd></div>
@@ -47,8 +52,9 @@ function TripFacts({ trip, record }: { trip:Omit<TransferTrip,'history'>; record
   </>;
 }
 
-export function TransferTrips({ record,busy,send }: {
-  record:TransferRecord; busy:boolean; send:(command:Omit<TransferTripCommand,'requestId'>)=>Promise<void>;
+export function TransferTrips({ record,busy,send,refresh }: {
+  record:TransferRecord; busy:boolean; refresh:()=>void;
+  send:(command:Omit<TransferTripCommand,'requestId'>|Omit<TransferReceiptCommand,'requestId'>)=>Promise<void>;
 }) {
   const [editor,setEditor]=useState<Editor|null>(null);
   const [error,setError]=useState('');
@@ -56,8 +62,12 @@ export function TransferTrips({ record,busy,send }: {
   const editingAction=editor?.type;
   useEffect(()=>{ if (editingAction) editorHeading.current?.focus(); },[editingAction]);
   const today=philippineToday();
-  const booked=record.trips.filter(trip=>trip.state==='scheduled');
+  const booked=record.trips.filter(trip=>trip.state==='scheduled'&&!trip.parentTripId);
   const current=record.trips.find(trip=>trip.id===editor?.tripId);
+  const parent=record.trips.find(trip=>trip.id===editor?.plan.parentTripId);
+  const quantities=parent?.receipt
+    ? parent.receipt.custody.map(line=>({ lineId:line.lineId,schedulable:line.available }))
+    : record.tripTotals;
   const stale=!!editor&&editor.version!==record.version;
   const planning=editor?.type==='scheduleTrip'||editor?.type==='reviseTrip';
   const dispatching=editor?.type==='dispatchTrip';
@@ -65,9 +75,9 @@ export function TransferTrips({ record,busy,send }: {
   const cancellingBalance=editor?.type==='cancelRemaining';
   const actionAvailable=editor && (cancellingBalance ? record.canCancelRemaining
     : record.canManageTrips && (editor.type==='scheduleTrip' || current?.state===(correcting?'dispatched':'scheduled')));
-  function open(type:TripAction,trip?:TransferTrip) {
-    const plan=trip ? { route:trip.route,plannedDate:trip.plannedDate,plannedTime:trip.plannedTime,directions:trip.directions,lines:trip.lines }
-      : { route:'site-site' as const,plannedDate:today,plannedTime:'',directions:'',lines:[] };
+  function open(type:TripAction,trip?:TransferTrip,warehouse?:TransferTrip) {
+    const plan:TripPlan=trip ? { route:trip.route,parentTripId:trip.parentTripId,plannedDate:trip.plannedDate,plannedTime:trip.plannedTime,directions:trip.directions,lines:trip.lines }
+      : { route:warehouse?'warehouse-site':'site-site',parentTripId:warehouse?.id,plannedDate:today,plannedTime:'',directions:'',lines:[] };
     const initial=trip?.departure??{ at:new Date().toISOString(),carrier:'',driver:'',vehicle:'',reference:'',note:'' };
     setEditor({ type,version:record.version,tripId:trip?.id??crypto.randomUUID(),plan,
       quantities:Object.fromEntries(plan.lines.map(line=>[line.lineId,line.quantity])),
@@ -106,7 +116,7 @@ export function TransferTrips({ record,busy,send }: {
   }
   return <section className="panel transfer-trip-panel">
     <h2>Transfer trips</h2>
-    {!record.ready && record.status==='approved' && <p role="status">Departure is paused until the current MRF archive is ready.</p>}
+    {!record.ready && record.status==='approved' && <p role="status">First-leg departure is paused until the current MRF archive is ready.</p>}
     <div className="table-scroll" role="region" aria-label="Transfer quantities" tabIndex={0}><table className="data-table">
       <thead><tr><th>Material</th><th>Approved</th><th>Available to book</th><th>Booked</th><th>Departed</th><th>Released</th></tr></thead>
       <tbody>{record.tripTotals.map(total=>{
@@ -125,9 +135,10 @@ export function TransferTrips({ record,busy,send }: {
         <legend ref={editorHeading} tabIndex={-1}>{labels[editor.type]}{current&&` · ${current.ref}`}</legend>
         {planning && <>
           <div className="form-grid">
-            <Field label="Route"><select value={editor.plan.route} disabled={editor.type==='reviseTrip'}
+            <Field label="Route"><select value={editor.plan.route} disabled={editor.type==='reviseTrip'||!!parent}
               onChange={event=>update({ plan:{ ...editor.plan,route:event.target.value as TransferRoute } })}>
-              {Object.entries(routes).map(([route,label])=><option key={route} value={route}>{label}</option>)}
+              {Object.entries(routes).filter(([route])=>parent?route==='warehouse-site':route!=='warehouse-site')
+                .map(([route,label])=><option key={route} value={route}>{label}</option>)}
             </select></Field>
             <Field label="Planned date (PH)"><input required type="date"
               min={current?.plannedDate && current.plannedDate<today ? current.plannedDate : today}
@@ -137,7 +148,8 @@ export function TransferTrips({ record,busy,send }: {
           </div>
           <Field label="Pickup and drop-off directions (optional)"><textarea maxLength={2000} value={editor.plan.directions}
             onChange={event=>update({ plan:{ ...editor.plan,directions:event.target.value } })} /></Field>
-          <div className="form-grid">{record.tripTotals.map(total=>{
+          {parent && <p>Warehouse receipt for {parent.ref}</p>}
+          <div className="form-grid">{quantities.map(total=>{
             const line=record.lines.find(entry=>entry.id===total.lineId);
             const saved=current?.lines.find(entry=>entry.lineId===total.lineId)?.quantity??'0';
             const available=exactQuantity(add(decimal(total.schedulable),decimal(saved)));
@@ -184,7 +196,7 @@ export function TransferTrips({ record,busy,send }: {
       <div className="form-actions">
         {stale && actionAvailable && <button type="button" className="button secondary" disabled={busy}
           onClick={()=>update({ version:record.version,confirmed:false })}>Use current version after review</button>}
-        <button className="button primary" disabled={busy||stale||!actionAvailable||(dispatching&&!record.ready)}>
+        <button className="button primary" disabled={busy||stale||!actionAvailable||(dispatching&&!record.ready&&!current?.parentTripId)}>
           {planning?`Save ${editor.type==='reviseTrip'?'revision':'schedule'}`:labels[editor.type]}
         </button>
         <button type="button" className="button secondary" disabled={busy} onClick={()=>setEditor(null)}>Close</button>
@@ -198,14 +210,18 @@ export function TransferTrips({ record,busy,send }: {
         {trip.state==='scheduled'&&trip.plannedDate<today && <Badge value="Overdue" />}
       </div>
       <TripFacts trip={trip} record={record} />
+      {trip.parentTripId && <p>From warehouse receipt for {record.trips.find(parentTrip=>parentTrip.id===trip.parentTripId)?.ref}</p>}
       {record.canManageTrips && !editor && <div className="form-actions">
         {trip.state==='scheduled' && <>
-          <button className="button primary" disabled={busy||!record.ready} onClick={()=>open('dispatchTrip',trip)}>{labels.dispatchTrip}</button>
+          <button className="button primary" disabled={busy||(!record.ready&&!trip.parentTripId)} onClick={()=>open('dispatchTrip',trip)}>{labels.dispatchTrip}</button>
           <button className="button secondary" disabled={busy} onClick={()=>open('reviseTrip',trip)}>{labels.reviseTrip}</button>
           <button className="button secondary" disabled={busy} onClick={()=>open('cancelTrip',trip)}>{labels.cancelTrip}</button>
         </>}
         {trip.state==='dispatched' && <button className="button secondary" disabled={busy} onClick={()=>open('correctTrip',trip)}>{labels.correctTrip}</button>}
+        {trip.route==='site-warehouse'&&trip.receipt?.custody.some(line=>positive(line.available))&&
+          <button className="button primary" disabled={busy} onClick={()=>open('scheduleTrip',undefined,trip)}>Schedule onward trip</button>}
       </div>}
+      {trip.state==='dispatched' && <TransferReceiving trip={trip} record={record} busy={busy||!!editor} send={send} refresh={refresh} />}
       <details className="transfer-trip-history"><summary>Trip history</summary>
         <ol>{trip.history.map(event=><li key={event.id}>
           <strong>{historyLabels[event.action]??event.action}</strong> · {event.actorName} · {when(event.at)}

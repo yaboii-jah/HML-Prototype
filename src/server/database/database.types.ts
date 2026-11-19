@@ -1886,6 +1886,72 @@ isOneToOne: false
                   Relationships: [
 
                   ]
+                },"transfer_receipt_files": {
+                  Row: {
+                    "created_actor": Json | null,"created_at": string,"created_by": string | null,"created_revision": number | null,"created_role": string | null,"current_evidence": boolean,"drive_id": string | null,"folder_id": string | null,"id": string,"kind": string,"lease_id": string | null,"lease_until": string | null,"mime": string,"name": string,"offset_bytes": number,"replaces_id": string | null,"root_id": string | null,"session_ticket": string | null,"sha256": string | null,"size": number | null,"state": string,"version_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_actor"?: Json | null,"created_at"?: string,"created_by"?: string | null,"created_revision"?: number | null,"created_role"?: string | null,"current_evidence"?: boolean,"drive_id"?: string | null,"folder_id"?: string | null,"id"?: string,"kind": string,"lease_id"?: string | null,"lease_until"?: string | null,"mime"?: string,"name": string,"offset_bytes"?: number,"replaces_id"?: string | null,"root_id"?: string | null,"session_ticket"?: string | null,"sha256"?: string | null,"size"?: number | null,"state"?: string,"version_id": string
+                  }
+                  Update: {
+                    "created_actor"?: Json | null,"created_at"?: string,"created_by"?: string | null,"created_revision"?: number | null,"created_role"?: string | null,"current_evidence"?: boolean,"drive_id"?: string | null,"folder_id"?: string | null,"id"?: string,"kind"?: string,"lease_id"?: string | null,"lease_until"?: string | null,"mime"?: string,"name"?: string,"offset_bytes"?: number,"replaces_id"?: string | null,"root_id"?: string | null,"session_ticket"?: string | null,"sha256"?: string | null,"size"?: number | null,"state"?: string,"version_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "transfer_receipt_files_replaces_id_fkey"
+      columns: ["replaces_id"]
+isOneToOne: false
+      referencedRelation: "transfer_receipt_files"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "transfer_receipt_files_version_id_fkey"
+      columns: ["version_id"]
+isOneToOne: false
+      referencedRelation: "transfer_receipt_versions"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"transfer_receipt_versions": {
+                  Row: {
+                    "actor": NonNullable<Json>,"id": string,"recorded_at": string,"revision": number,"snapshot": NonNullable<Json>,"trip_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "actor": NonNullable<Json>,"id"?: string,"recorded_at"?: string,"revision": number,"snapshot": NonNullable<Json>,"trip_id": string
+                  }
+                  Update: {
+                    "actor"?: NonNullable<Json>,"id"?: string,"recorded_at"?: string,"revision"?: number,"snapshot"?: NonNullable<Json>,"trip_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "transfer_receipt_versions_trip_id_fkey"
+      columns: ["trip_id"]
+isOneToOne: false
+      referencedRelation: "transfer_receipts"
+      referencedColumns: ["trip_id"]
+    }
+                  ]
+                },"transfer_receipts": {
+                  Row: {
+                    "arrival_at": string,"posted_at": string | null,"review_reason": string,"review_state": string,"revision": number,"trip_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "arrival_at": string,"posted_at"?: string | null,"review_reason"?: string,"review_state"?: string,"revision": number,"trip_id": string
+                  }
+                  Update: {
+                    "arrival_at"?: string,"posted_at"?: string | null,"review_reason"?: string,"review_state"?: string,"revision"?: number,"trip_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "transfer_receipts_trip_id_fkey"
+      columns: ["trip_id"]
+isOneToOne: true
+      referencedRelation: "transfer_trips"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"transfer_trip_events": {
                   Row: {
                     "action": string,"actor": NonNullable<Json>,"id": string,"reason": string,"recorded_at": string,"snapshot": NonNullable<Json>,"trip_id": string
@@ -1934,17 +2000,23 @@ isOneToOne: false
                   ]
                 },"transfer_trips": {
                   Row: {
-                    "created_at": string,"departure": Json | null,"departure_ceiling": string | null,"departure_floor": string | null,"destination_address": string,"destination_name": string,"directions": string,"id": string,"pickup_address": string,"pickup_name": string,"planned_date": string,"planned_time": string,"ref": string,"route": string,"state": string,"transfer_id": string
+                    "created_at": string,"departure": Json | null,"departure_ceiling": string | null,"departure_floor": string | null,"destination_address": string,"destination_name": string,"directions": string,"id": string,"parent_trip_id": string | null,"pickup_address": string,"pickup_name": string,"planned_date": string,"planned_time": string,"ref": string,"route": string,"state": string,"transfer_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"departure"?: Json | null,"departure_ceiling"?: string | null,"departure_floor"?: string | null,"destination_address": string,"destination_name": string,"directions": string,"id": string,"pickup_address": string,"pickup_name": string,"planned_date": string,"planned_time": string,"ref": string,"route": string,"state": string,"transfer_id": string
+                    "created_at"?: string,"departure"?: Json | null,"departure_ceiling"?: string | null,"departure_floor"?: string | null,"destination_address": string,"destination_name": string,"directions": string,"id": string,"parent_trip_id"?: string | null,"pickup_address": string,"pickup_name": string,"planned_date": string,"planned_time": string,"ref": string,"route": string,"state": string,"transfer_id": string
                   }
                   Update: {
-                    "created_at"?: string,"departure"?: Json | null,"departure_ceiling"?: string | null,"departure_floor"?: string | null,"destination_address"?: string,"destination_name"?: string,"directions"?: string,"id"?: string,"pickup_address"?: string,"pickup_name"?: string,"planned_date"?: string,"planned_time"?: string,"ref"?: string,"route"?: string,"state"?: string,"transfer_id"?: string
+                    "created_at"?: string,"departure"?: Json | null,"departure_ceiling"?: string | null,"departure_floor"?: string | null,"destination_address"?: string,"destination_name"?: string,"directions"?: string,"id"?: string,"parent_trip_id"?: string | null,"pickup_address"?: string,"pickup_name"?: string,"planned_date"?: string,"planned_time"?: string,"ref"?: string,"route"?: string,"state"?: string,"transfer_id"?: string
                   }
                   Relationships: [
                     {
+      foreignKeyName: "transfer_trips_parent_trip_id_fkey"
+      columns: ["parent_trip_id"]
+isOneToOne: false
+      referencedRelation: "transfer_trips"
+      referencedColumns: ["id"]
+    },{
       foreignKeyName: "transfer_trips_transfer_id_fkey"
       columns: ["transfer_id"]
 isOneToOne: false
@@ -2061,6 +2133,8 @@ isOneToOne: true
                            },
 "delivery_post_stock":
 { Args: { "actor": Json,"lines": Json,"operation": string,"project": string,"reason": string,"target": string }; Returns: undefined
+                           } |
+{ Args: { "actor": Json,"lines": Json,"operation": string,"project": string,"reason": string,"source_kind": string,"target": string }; Returns: undefined
                            },
 "delivery_receipt_lines":
 { Args: { "load": Json,"submitted": Json,"target": string }; Returns: Json
@@ -2503,11 +2577,23 @@ isOneToOne: true
 "transfer_command":
 { Args: { "actor": Json,"command": Json }; Returns: Json
                            },
+"transfer_custody":
+{ Args: { "parent": string }; Returns: Json
+                           },
+"transfer_custody_used":
+{ Args: { "excluded"?: string,"material": string,"parent": string }; Returns: number
+                           },
 "transfer_demand_allowed":
 { Args: { "actor": Json,"changes": Json,"target": string,"transfer_id": string }; Returns: boolean
                            },
 "transfer_event":
 { Args: { "action": string,"actor": Json,"reason": string,"target": string }; Returns: undefined
+                           },
+"transfer_evidence_changed":
+{ Args: { "action": string,"actor": Json,"allocation": Omit<Database["private"]['Tables']["transfers"]['Row'], Database["private"]['Tables']["transfers"]['ComputedFields']>,"file": string,"replaced": string,"target": string }; Returns: undefined
+                           },
+"transfer_file_action":
+{ Args: { "action": string,"actor": Json,"file_id": string,"lease": string,"patch": Json,"version_id": string }; Returns: Json
                            },
 "transfer_lines_view":
 { Args: { "target": string }; Returns: Json
@@ -2521,8 +2607,20 @@ isOneToOne: true
 "transfer_read":
 { Args: { "actor": Json,"target_request": string,"target_transfer": string }; Returns: Json
                            },
+"transfer_receipt_command":
+{ Args: { "actor": Json,"command": Json }; Returns: Json
+                           },
+"transfer_receipt_lines":
+{ Args: { "load": Json,"submitted": Json,"target": string }; Returns: Json
+                           },
+"transfer_receipt_view":
+{ Args: { "actor": Json,"assigned_destination": boolean,"target": string }; Returns: Json
+                           },
 "transfer_reservation":
 { Args: { "amount": number,"line": Omit<Database["private"]['Tables']["transfer_lines"]['Row'], Database["private"]['Tables']["transfer_lines"]['ComputedFields']> }; Returns: Json
+                           },
+"transfer_shortage":
+{ Args: { "excluded"?: string,"material": string }; Returns: number
                            },
 "transfer_trip_command":
 { Args: { "actor": Json,"command": Json }; Returns: Json
@@ -2936,6 +3034,12 @@ isOneToOne: false
                            },
 "transfer_read":
 { Args: { "actor": Json,"target_request": string,"target_transfer": string }; Returns: Json
+                           },
+"transfer_receipt_command":
+{ Args: { "actor": Json,"command": Json }; Returns: Json
+                           },
+"transfer_receipt_file":
+{ Args: { "action": string,"actor": Json,"file_id": string,"lease": string,"patch": Json,"version_id": string }; Returns: Json
                            },
 "transfer_trip_command":
 { Args: { "actor": Json,"command": Json }; Returns: Json
