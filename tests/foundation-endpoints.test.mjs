@@ -20,6 +20,8 @@ globalThis.__foundation = {
   purchasingDirectory: async () => [],
   paymentsView: async () => ({ role: current.activeRole, actorId: userId, records: [] }),
   transferView: async () => ({ records: [], sourcing: null }),
+  inventoryView: async ({ mode, target }) => ({ mode, target: target ?? null, role: current.activeRole, found: false,
+    projects: [], scopes: [], accounts: [], usage: [], movements: [] }),
   serviceRpc: async () => randomUUID(),
   supplierView: async () => ({ suppliers: [], history: [], role: current.activeRole }),
   requestView: async () => ({ requests: [], projects: [], role: current.activeRole }),
@@ -37,13 +39,14 @@ registerHooks({ resolve(specifier, context, nextResolve) {
     '@/src/server/payments/payments': ['paymentsView'],
     '@/src/server/deliveries/deliveries': ['deliveriesView'],
     '@/src/server/transfers/transfers': ['transferView'],
+    '@/src/server/inventory/inventory': ['inventoryView'],
     '@/src/server/auth/service-rpc': ['serviceRpc'],
     '@/src/server/suppliers/suppliers': ['supplierView'],
     '@/src/server/requests/drafts': ['requestView'],
     '@/src/server/accounts/accounts': ['accountDirectory'],
   }[specifier];
   if (exports) return { url: 'data:text/javascript,' + exports.map(name => `export const ${name}=(...args)=>globalThis.__foundation.${name}(...args);`).join(''), shortCircuit: true };
-  if (specifier === '@/src/domain/auth/session') return nextResolve(new URL('../src/domain/auth/session.ts', import.meta.url).href, context);
+  if (specifier.startsWith('@/src/domain/')) return nextResolve(new URL('../' + specifier.slice(2) + '.ts', import.meta.url).href, context);
   return nextResolve(specifier, context);
 } });
 const { foundationResponse } = await import('../src/server/realtime/foundation.ts');
@@ -80,6 +83,11 @@ test('foundation reads distinguish missing sessions, temporary failures, roles a
   const transfers = await foundationResponse(request('view=transfers'));
   assert.equal(transfers.status, 200);
   assert.deepEqual((await transfers.json()).view.data, { records: [], sourcing: null });
+  assert.equal((await foundationResponse(request('view=inventory&mode=material&projectId=invalid'))).status, 400);
+  const inventory = await foundationResponse(request('view=inventory&mode=stock'));
+  assert.equal(inventory.status, 200);
+  assert.match(inventory.headers.get('cache-control'), /private, no-store/);
+  assert.equal((await inventory.json()).view.kind, 'inventory');
   const missing = await foundationResponse(request('view=project&projectId=' + randomUUID()));
   assert.equal((await missing.json()).view.data.project, null);
   assert.equal((await foundationResponse(request('view=projects', { 'sec-fetch-site': 'cross-site' }))).status, 403);
