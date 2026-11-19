@@ -123,6 +123,7 @@ async function checkCapture({
   const path = `/requests/${mrf}/quotes/${quote}`;
   await login(second, accounts[1]);
   await second.navigate(path);
+  await second.wait("return !!document.querySelector('input[name=ref]:not(:disabled)')");
   const colleague = await actor(second);
   await browser.fill("input[name=ref]", "Preserved local source");
   await second.fill("input[name=ref]", "Saved by colleague");
