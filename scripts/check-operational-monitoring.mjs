@@ -87,7 +87,11 @@ export async function checkOperationalMonitoring({ browser, second, client, sql,
   await text(browser, 'Outstanding Credit');
   for (const width of [1440, 375]) {
     await second.call('Emulation.setDeviceMetricsOverride', { width, height: 1000, deviceScaleFactor: 1, mobile: width < 500 });
-    await second.wait('return document.documentElement.scrollWidth<=innerWidth+1');
+    if (width < 500) await second.wait("return document.querySelector('.side-nav').getBoundingClientRect().right<=1");
+    assert.equal(await second.run(`return document.documentElement.scrollWidth<=innerWidth+1
+      && [...document.querySelectorAll('.monitoring-filters .field,.monitoring-filter-form button,.header-actions a,.register-footer')].every(node=>{
+        const bounds=node.getBoundingClientRect(); return bounds.left>=0&&bounds.right<=innerWidth+1;
+      });`), true, `Monitoring filters, download and pagination fit ${width}px`);
     const shot = await second.call('Page.captureScreenshot', { format: 'png' });
     await writeFile(`.verification/operational-monitoring-${width}.png`, Buffer.from(shot.data, 'base64'));
   }

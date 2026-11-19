@@ -55,7 +55,7 @@ export function ConsumptionReport({ initial, initialFilters }: {
         headers={<><th scope="col">Material / unit</th><th scope="col">Project</th>{columns.map(([title]) => <th scope="col" key={title}>{title}</th>)}</>}
         renderRow={row => <tr key={row.id}><th scope="row">
           <Link className="text-link" href={`/inventory/${row.projectId}/${row.id}`}>{row.material}</Link><small>{row.unit}</small>
-        </th><td>{row.project}</td>{columns.map(([, key]) => <td key={key}>{row[key]}</td>)}</tr>} />}
+        </th><td className="monitoring-project">{row.project}</td>{columns.map(([, key]) => <td key={key}>{row[key]}</td>)}</tr>} />}
     </section>
   </div>;
 }
