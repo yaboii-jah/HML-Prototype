@@ -9,6 +9,7 @@ import { checkDeliveries } from './check-deliveries.mjs';
 import { checkTransferApproval } from './check-transfer-approval.mjs';
 import { checkTransferTrips } from './check-transfer-trips.mjs';
 import { checkTransferReceiving } from './check-transfer-receiving.mjs';
+import { checkInventoryUsage } from './check-inventory-usage.mjs';
 import { fakeDrive } from './helpers/fake-drive.mjs';
 import assert from 'node:assert/strict';
 import { randomUUID, randomBytes } from 'node:crypto';
@@ -316,6 +317,8 @@ export async function checkAuthFoundation({ api, anon, secret, mailpit, sql, env
     checks.push('transfer-trip-browser');
     await checkTransferReceiving({ browser, second, client, sql, login, logout, drive });
     checks.push('transfer-receiving-browser');
+    await checkInventoryUsage({ browser,second,client,sql,login,logout });
+    checks.push('inventory-usage-browser');
     await checkSupplierDirectory({ browser, second, client, login, logout, sessionCookie, sql });
     checks.push('supplier-browser');
     for (const browser of browsers) browser.assertIsolated();

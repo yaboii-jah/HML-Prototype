@@ -17,6 +17,8 @@ import { transferTripCheckSql } from './helpers/transfer-trip-check.mjs';
 import { checkTransferTripRaces } from './check-transfer-trip-races.mjs';
 import { transferReceivingCheckSql } from './helpers/transfer-receiving-check.mjs';
 import { checkTransferReceivingRaces } from './check-transfer-receiving-races.mjs';
+import { inventoryCheckSql } from './helpers/inventory-check.mjs';
+import { checkInventoryRaces } from './check-inventory-races.mjs';
 import { retainedStateQuery } from './helpers/staging-snapshot.mjs';
 import { checkDocumentRaces } from './check-document-races.mjs';
 import assert from 'node:assert/strict';
@@ -142,6 +144,8 @@ try {
   checks.push('transfer-trip-sql');
   await sql(await transferReceivingCheckSql());
   checks.push('transfer-receiving-sql');
+  await sql(await inventoryCheckSql());
+  checks.push('inventory-usage-sql');
   checks.push('purchasing-sql');
   checks.push('stock-sql');
   checks.push('quotation-finalization-sql');
@@ -324,6 +328,8 @@ try {
   checks.push('transfer-trip-races');
   await checkTransferReceivingRaces({ sql, database, environment });
   checks.push('transfer-receiving-races');
+  await checkInventoryRaces({ sql,database,environment });
+  checks.push('inventory-usage-races');
   await checkQuotationFinalizationRaces({ sql, database, environment, fixture: quotationFixture.financial });
   checks.push('quotation-finalization-races');
   await checkQuotationRaces({ sql, database, environment, fixture: quotationFixture });
