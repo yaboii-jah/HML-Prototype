@@ -691,7 +691,7 @@ begin
     perform private.transfer_evidence_changed(actor,allocation,trip.id,'withdrawTripEvidence',file.id,null);
     return jsonb_build_object('id',file.id);
   elsif action='retryFile' then
-    if not current_version or (file.kind<>'generated' and not file.current_evidence) then
+    if file.kind<>'generated' and (not current_version or not file.current_evidence) then
       raise exception 'Receipt or evidence changed' using errcode='40001';
     end if;
     if file.state='failed' and (file.kind='generated' or file.offset_bytes=file.size) then
@@ -792,12 +792,11 @@ grant execute on function private.transfer_file_action(jsonb,uuid,uuid,text,uuid
   public.transfer_receipt_file(jsonb,uuid,uuid,text,uuid,jsonb) to service_role;
 
 
-create function private.transfer_receipt_view(target uuid, actor jsonb, assigned_destination boolean)
+create function private.transfer_receipt_view(target uuid, viewer jsonb, assigned_destination boolean)
 returns jsonb language sql stable set search_path='' as $$
   select v.snapshot-'plan'-'departure' || jsonb_build_object(
     'id',v.id,'postedAt',h.posted_at,'revision',v.revision,'actorName',v.actor->>'name',
     'reviewState',h.review_state,'reviewReason',h.review_reason,
-    'canReceive',permissions.receiver,
     'canRecount',permissions.receiver and h.posted_at is null and not exists(
       select 1 from private.transfer_trips c where c.parent_trip_id=t.id and c.state='dispatched'),
     'canWriteEvidence',permissions.receiver or permissions.accounting,
@@ -811,26 +810,26 @@ returns jsonb language sql stable set search_path='' as $$
     'files',coalesce((select jsonb_agg(jsonb_build_object(
       'id',case when access.manage or access.read then f.id end,
       'readable',access.read and f.state='complete','kind',f.kind,'state',f.state,
-      'name',case when access.read or access.manage and f.created_by=(actor->>'userId')::uuid then f.name end,
+      'name',case when access.read or access.manage and f.created_by=(viewer->>'userId')::uuid then f.name end,
       'size',f.size,'current',old.id=v.id and (f.kind='generated' or f.current_evidence),
-      'revision',old.revision,'resumable',coalesce(access.manage and f.created_by=(actor->>'userId')::uuid
-        and f.created_revision=(actor->>'revision')::bigint and f.created_role=actor->>'activeRole',false),
+      'revision',old.revision,'resumable',coalesce(access.manage and f.created_by=(viewer->>'userId')::uuid
+        and f.created_revision=(viewer->>'revision')::bigint and f.created_role=viewer->>'activeRole',false),
       'uploaded',coalesce(f.offset_bytes=f.size,false)) order by old.revision desc,f.created_at,f.id)
       from private.transfer_receipt_files f join private.transfer_receipt_versions old on old.id=f.version_id
       cross join lateral (select
         permissions.receiver or permissions.accounting as manage,
         case when f.kind='generated' then permissions.generated else permissions.original end as read) access
       where old.trip_id=t.id and (old.id=v.id and (f.kind='generated' or f.current_evidence)
-        or access.read and f.state='complete')),'[]'::jsonb)
+        or access.read and f.state='complete' or access.manage and f.kind='generated')),'[]'::jsonb)
   )
   from private.transfer_receipts h
   join private.transfer_trips t on t.id=h.trip_id
   join private.transfer_receipt_versions v on v.trip_id=h.trip_id and v.revision=h.revision
   cross join lateral (select
-    actor->>'activeRole'='Accounting' as accounting,
-    actor->>'activeRole'='Accounting' or (actor->>'activeRole'='Procurement' and t.route='site-warehouse') as original,
-    actor->>'activeRole'<>'Site Personnel' or (assigned_destination and t.route<>'site-warehouse') as generated,
-    actor->>'activeRole'=(case when t.route='site-warehouse' then 'Procurement' else 'Site Personnel' end)
+    viewer->>'activeRole'='Accounting' as accounting,
+    viewer->>'activeRole'='Accounting' or (viewer->>'activeRole'='Procurement' and t.route='site-warehouse') as original,
+    viewer->>'activeRole'<>'Site Personnel' or (assigned_destination and t.route<>'site-warehouse') as generated,
+    viewer->>'activeRole'=(case when t.route='site-warehouse' then 'Procurement' else 'Site Personnel' end)
       and assigned_destination as receiver) permissions
   where h.trip_id=target
 $$;
@@ -892,6 +891,7 @@ begin
     'trips',case when target_transfer is not null then coalesce((
       select jsonb_agg(private.transfer_trip_snapshot(trip.id)||jsonb_build_object(
         'canReceive',trip.state='dispatched' and private.request_project_allowed(actor,t.destination_id)
+          and not exists(select 1 from private.transfer_receipts h where h.trip_id=trip.id)
           and role_name=case when trip.route='site-warehouse' then 'Procurement' else 'Site Personnel' end,
         'receipt',private.transfer_receipt_view(trip.id,actor,private.request_project_allowed(actor,t.destination_id)),
         'history',coalesce((

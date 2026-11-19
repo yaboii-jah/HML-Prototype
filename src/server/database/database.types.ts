@@ -2614,7 +2614,7 @@ isOneToOne: true
 { Args: { "load": Json,"submitted": Json,"target": string }; Returns: Json
                            },
 "transfer_receipt_view":
-{ Args: { "actor": Json,"assigned_destination": boolean,"target": string }; Returns: Json
+{ Args: { "assigned_destination": boolean,"target": string,"viewer": Json }; Returns: Json
                            },
 "transfer_reservation":
 { Args: { "amount": number,"line": Omit<Database["private"]['Tables']["transfer_lines"]['Row'], Database["private"]['Tables']["transfer_lines"]['ComputedFields']> }; Returns: Json

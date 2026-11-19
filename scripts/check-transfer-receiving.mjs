@@ -26,16 +26,21 @@ export async function checkTransferReceiving({ browser,second,client,sql,login,l
   const path=`/stock-transfers/${fixture.transfer}`;
   const content=(page,value)=>page.wait(`return document.querySelector('.transfer-trip-panel')?.textContent.includes(${JSON.stringify(value)});`);
   const enter=async(page,identity)=>{ await logout(page); await login(page,identity); await page.navigate(path); await content(page,'Transfer trips'); };
+  const openEditor=(page,label,ready)=>page.wait(`
+    const panel=document.querySelector('.transfer-trip-panel');
+    if (panel?.textContent.includes(${JSON.stringify(ready)})) return true;
+    [...(panel?.querySelectorAll('button')??[])].find(b=>!b.disabled&&b.textContent.trim()===${JSON.stringify(label)})?.click();
+    return false;`);
 
   await enter(browser,procurement);
-  await click(browser,'Confirm warehouse receiving');
+  await openEditor(browser,'Confirm warehouse receiving','Discrepancy explanation');
   await field(browser,'Accepted','5.5'); await field(browser,'Missing','0.5');
   await field(browser,'Discrepancy explanation','Half a bag was missing at the warehouse');
   await click(browser,'Save receiving');
   await content(browser,'5.5 available to forward');
 
   await enter(browser,logistics);
-  await click(browser,'Schedule onward trip');
+  await openEditor(browser,'Schedule onward trip','5.5 bags available for this trip');
   await field(browser,'Load for Requested cement (bags)','4');
   await click(browser,'Save schedule');
   await content(browser,'Warehouse to site');
@@ -47,7 +52,7 @@ export async function checkTransferReceiving({ browser,second,client,sql,login,l
     where parent_trip_id='${fixture.warehouse}' and state='dispatched';`);
 
   await enter(browser,destination);
-  await click(browser,'Confirm site receiving');
+  await openEditor(browser,'Confirm site receiving','Discrepancy explanation');
   await field(browser,'Accepted','3.8'); await field(browser,'Rejected','0.2');
   await field(browser,'Discrepancy explanation','A damaged package contained 0.2 bags');
   await click(browser,'Save receiving');
@@ -86,6 +91,8 @@ export async function checkTransferReceiving({ browser,second,client,sql,login,l
   assert.equal(await second.run(`return !!document.querySelector(${JSON.stringify(selector+' a[href^="/api/transfer-files/"]')});`),false);
 
   await enter(browser,accounting);
+  await openEditor(browser,'Request replacement evidence','What needs to be replaced?');
+  await click(browser,'Close');
   await click(browser,'Approve receipt evidence');
   await content(browser,'Evidence approved');
   assert.equal(await browser.run(`return (await fetch('/api/transfer-files/${signed}',{ headers:{ Range:'bytes=0-4' } })).status`),206);

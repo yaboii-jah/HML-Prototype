@@ -74,7 +74,7 @@ export function TransferReceiving({ trip,record,busy,send,refresh }: {
   const disabled=busy||fileBusy;
   const base={ transferId:record.id,tripId:trip.id,expectedVersion:record.version,reason:'' };
   const activeFiles=receipt?.files.filter(file=>file.current)??[];
-  const history=receipt?.files.filter(file=>!file.current&&file.readable)??[];
+  const history=receipt?.files.filter(file=>!file.current&&(file.readable||receipt.canWriteEvidence&&file.kind==='generated'))??[];
   const canApprove=receipt?.reviewState==='pending'&&activeFiles.some(file=>file.kind==='signed')
     &&activeFiles.some(file=>file.kind==='generated')&&activeFiles.every(file=>file.state==='complete');
   const canCount=draft?.action==='recountTrip'?receipt?.canRecount:trip.canReceive&&!receipt;
@@ -184,8 +184,12 @@ export function TransferReceiving({ trip,record,busy,send,refresh }: {
             if (files.length) void runFiles(async()=>{ for (const file of files) await upload(receipt.id,kind,file); }); }} /></Field>
         <small>Up to 12 PDF or image files, 20 MiB each and 45 MiB total.</small>
       </div>}
-      {history.length>0&&<details><summary>Archived file history</summary><ul>
-        {history.map(file=><li key={file.id}><EvidenceFile file={file} /> · Receipt version {file.revision}</li>)}
+      {history.length>0&&<details><summary>Receipt file history</summary><ul>
+        {history.map(file=><li key={file.id}><EvidenceFile file={file} /> · Receipt version {file.revision}
+          {receipt.canWriteEvidence&&file.id&&file.kind==='generated'&&file.state!=='complete'&&
+            <button type="button" className="button secondary" disabled={disabled}
+              onClick={()=>void runFiles(()=>evidenceCommand({ type:'retry',id:file.id }))}>Retry archive</button>}
+        </li>)}
       </ul></details>}
       {receipt.canReview&&!review&&<div className="form-actions">
         {canApprove&&<button type="button" className="button primary" disabled={disabled}
