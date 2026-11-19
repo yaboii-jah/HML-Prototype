@@ -7,7 +7,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 export async function checkAccountAdministration({ browser, second, client, login, logout, sessionCookie, mailLink, savePassword, administrator, passwordClient, sql }) {
   const ok = (result, label) => { assert.equal(result.error?.message, undefined, label); return result.data; };
   await login(browser, administrator);
-  await browser.wait("return location.pathname==='/projects'&&document.querySelector('.account-label small')?.textContent==='Administrator'");
+  await browser.wait("return location.pathname==='/dashboard'&&document.querySelector('.account-label small')?.textContent==='Administrator'");
   await browser.navigate('/admin');
   await browser.wait("return !!document.querySelector('input[aria-label=\"Search users\"]')&&!document.querySelector('.page-header .primary').disabled");
   assert.equal(await browser.run("return !!document.querySelector('input[name=password]')"), false, 'Administrator never chooses another user password');
@@ -64,7 +64,7 @@ export async function checkAccountAdministration({ browser, second, client, logi
   await second.wait("return location.pathname==='/choose-role'");
   await second.run("const el=document.querySelector('#active-role');el.value='Accounting';el.dispatchEvent(new Event('change',{bubbles:true}));");
   await second.click('.signin-form button');
-  await second.wait("return location.pathname==='/projects'&&!!document.querySelector('.masthead-account')");
+  await second.wait("return location.pathname==='/dashboard'&&!!document.querySelector('.masthead-account')");
   const old = await sessionCookie(second);
   const staffClient = passwordClient();
   ok(await staffClient.auth.setSession({ access_token: old.access_token, refresh_token: old.refresh_token }), 'Use current non-Administrator session');
@@ -110,7 +110,7 @@ export async function checkAccountAdministration({ browser, second, client, logi
   assert.equal(ok(await client.rpc('auth_bind_session', oldProof), 'Old credential proof after refresh'), false, 'Token refresh never repairs an old credential proof');
   await probe.auth.signOut({ scope: 'local' });
   await login(second, { email, password: changedPassword });
-  await second.wait("return location.pathname==='/projects'&&!!document.querySelector('.masthead-account')");
+  await second.wait("return location.pathname==='/dashboard'&&!!document.querySelector('.masthead-account')");
   const fresh = await sessionCookie(second);
   const current = ok(await client.rpc('accounts_directory', { actor }), 'Read staff version').users.find(u => u.id === staff.id);
   assert.ok(current.firstSignedInAt, 'Successful app sign-in qualifies onboarding');

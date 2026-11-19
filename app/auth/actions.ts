@@ -2,7 +2,7 @@
 
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { chooseActiveRole, isAuthRole, parseLoginPreflight, parseSessionContext, rolePreferenceCookie, safeWorkspaceDestination, UUID_PATTERN } from "@/src/domain/auth/session";
+import { chooseActiveRole, isAuthRole, parseLoginPreflight, parseSessionContext, rolePreferenceCookie, safeWorkspaceDestination, workspaceEntry, UUID_PATTERN } from "@/src/domain/auth/session";
 import { clearAuthCookies, cookieAuthClient, passwordClient, privilegedAuthClient } from "@/src/server/auth/clients";
 import { requireSession } from "@/src/server/auth/session";
 import { serviceRpc } from "@/src/server/auth/service-rpc";
@@ -47,7 +47,7 @@ export async function signInAction(_state: AuthFormState, form: FormData): Promi
     const projection = parseSessionContext(rawProjection);
     if (projectionError || !projection) return { error: unavailable };
     const preference = (await cookies()).get(rolePreferenceCookie(data.user.id))?.value;
-    if (!chooseActiveRole(projection.roles, preference)) destination = "/choose-role";
+    if (!chooseActiveRole(projection.roles, preference)) destination = workspaceEntry("/choose-role", destination);
     issuedToken = undefined;
   } catch {
     return { error: unavailable };
@@ -95,7 +95,7 @@ export async function selectRoleAction(_state: AuthFormState, form: FormData): P
     httpOnly: true, sameSite: "lax", secure: process.env.APP_ORIGIN?.startsWith("https:") ?? false,
     path: "/", maxAge: 60 * 60 * 24 * 365,
   });
-  redirect("/projects");
+  redirect(safeWorkspaceDestination(form.get("next")));
 }
 
 export async function confirmPasswordAction(_state: AuthFormState, form: FormData): Promise<AuthFormState> {

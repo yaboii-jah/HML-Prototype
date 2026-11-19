@@ -44,6 +44,7 @@ function InventoryRegister({ view, actorId, initialUsage, refresh }: {
         onClick={()=>{setUsage(false);setSearch('');}}>Stock</button>
       <button type="button" className={`button ${usage?'primary':'secondary'}`} aria-pressed={usage}
         onClick={()=>{setUsage(true);setSearch('');}}>Usage entries</button>
+      <Link className="button secondary" href="/inventory?view=consumption">Consumption</Link>
     </div>
     {usage ? <Register rows={view.usage.filter(e=>(!project||e.projectId===project)&&matching(e.reason+' '+e.actorName))}
       unit="usage entries" resetKey={project+search} filters={filters}

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { chooseActiveRole, parseLoginPreflight, parseSessionContext, safeWorkspaceDestination } from '../src/domain/auth/session.ts';
+import { chooseActiveRole, parseLoginPreflight, parseSessionContext, safeWorkspaceDestination, workspaceEntry } from '../src/domain/auth/session.ts';
 
 test('remembered roles never establish a grant or change permanent identity', () => {
   assert.equal(chooseActiveRole(['Accounting'], 'Administrator'), 'Accounting');
@@ -15,7 +15,9 @@ test('remembered roles never establish a grant or change permanent identity', ()
 });
 
 test('return destinations reject external, encoded, auth and malformed paths', () => {
-  for (const value of ['//evil.example', 'https://evil.example', '/\\evil.example', '/projects/%2f%2fevil', '/auth/confirm', '/sign-in', '/projects\n', '/projects/../auth/confirm', null]) assert.equal(safeWorkspaceDestination(value), '/projects');
+  for (const value of ['//evil.example', 'https://evil.example', '/\\evil.example', '/projects/%2f%2fevil', '/auth/confirm', '/sign-in', '/projects\n', '/projects/../auth/confirm', null]) assert.equal(safeWorkspaceDestination(value), '/dashboard');
   assert.equal(safeWorkspaceDestination('/projects/abc'), '/projects/abc');
   assert.equal(safeWorkspaceDestination('/requests/new'), '/requests/new');
+  const destination = '/inventory?view=consumption&search=Ready%20mix';
+  assert.equal(new URL(workspaceEntry('/choose-role', destination), 'https://workspace.example').searchParams.get('next'), destination);
 });

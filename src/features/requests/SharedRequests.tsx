@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { saveMrfDraftAction } from "@/app/(workspace)/requests/actions";
+import { RequestLifecycle } from "@/src/features/monitoring/RequestLifecycle";
+import type { MonitoringView } from "@/src/domain/monitoring/contracts";
 import { useFoundationRealtime } from "@/src/app-state/FoundationRealtime";
 import { Register } from "@/src/components/ui/Register";
 import { Field, InlineError, PageHeader } from "@/src/components/ui/Primitives";
@@ -18,13 +20,13 @@ const labels = { sourceRef: "Source MRF number", requestDate: "Request date", re
 const availability = "Save incomplete work as a draft. Submission requires complete requirements and a verified supporting PDF. AI remains unavailable.";
 const shown = (value: string | null | undefined) => value || "Not recorded";
 
-export function SharedRequests({ initial, mode, id, today }: { initial: RequestView; mode: "register" | "new" | "detail" | "edit"; id?: string; today: string }) {
+export function SharedRequests({ initial, mode, id, today, lifecycle = null }: { initial: RequestView; mode: "register" | "new" | "detail" | "edit"; id?: string; today: string; lifecycle?: MonitoringView<"lifecycle"> | null }) {
   const { view } = useFoundationRealtime();
   const data = view?.kind === "requests" ? view.data : initial;
   const saved = data.requests.find(request => request.id === id);
   if (mode === "register") return <RequestRegister data={data} />;
   if (mode !== "new" && !saved) return <><PageHeader title="Material request unavailable" description="This record does not exist or is outside your current project access." /><Link href="/requests">Return to material requests</Link></>;
-  if (mode === "detail" && saved) return <RequestDetail saved={saved} data={data} />;
+  if (mode === "detail" && saved) return <RequestDetail saved={saved} data={data} lifecycle={lifecycle} />;
   if (data.role !== "Site Personnel") return <><PageHeader title="Read-only access" description="Only currently assigned Site Personnel can create or edit MRF drafts." /><Link href={saved ? `/requests/${saved.id}` : "/requests"}>Return to material requests</Link></>;
   return <DraftEditor key={id ?? "new"} latest={saved} data={data} today={today} />;
 }
@@ -57,10 +59,11 @@ function DraftSummary({ draft, projectId, data }: { draft: MrfDraft; projectId: 
     <MaterialList items={draft.items} />
   </>;
 }
-function RequestDetail({ saved, data }: { saved: SavedMrf; data: RequestView }) {
+function RequestDetail({ saved, data, lifecycle }: { saved: SavedMrf; data: RequestView; lifecycle: MonitoringView<"lifecycle"> | null }) {
   const [filePending, setFilePending] = useState(false);
   return <><Link className="back-link" href="/requests">Back to material requests</Link><PageHeader title={saved.ref} description={mrfStatusLabel(saved)} actions={data.role === "Site Personnel" && mrfEditable(saved) && <Link className="button primary" href={`/requests/${saved.id}/edit`}>Edit draft</Link>} />
     <section className="panel"><h2>Request details</h2><DraftSummary draft={saved.draft} projectId={saved.projectId} data={saved.submitted ? { ...data, projects: data.projects.map(project => project.id === saved.projectId ? { ...project, name: saved.submitted!.projectName } : project) } : data} /></section>
+    <RequestLifecycle key={saved.id} target={saved.id} initial={lifecycle} />
     <section className="panel"><h2>Recorded responsibility</h2><p>Created by {saved.creatorName} · <time dateTime={saved.createdAt}>{new Date(saved.createdAt).toLocaleString("en-PH", { timeZone: "Asia/Manila" })}</time></p><p>Latest editor: {saved.updaterName} · <time dateTime={saved.updatedAt}>{new Date(saved.updatedAt).toLocaleString("en-PH", { timeZone: "Asia/Manila" })}</time></p><p className="muted">Printed signatory names do not establish approval or submission.</p></section>
     <MrfDocuments mrfId={saved.id} editable={data.role === "Site Personnel" && mrfEditable(saved)} archiveManager={data.role === "Project Manager"} onPendingFile={setFilePending} />
     <MrfReview saved={saved} role={data.role} disabled={filePending} />

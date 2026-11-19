@@ -5,10 +5,12 @@ import { usePathname } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { object } from "@/src/domain/accounts/accounts";
 import type { WorkspaceSession } from "@/src/domain/auth/session";
+import { workspaceEntry } from "@/src/domain/auth/session";
+import { parseMonitoringView } from "@/src/domain/monitoring/contracts";
 import { foundationViewQuery, parseFoundationView, parseRealtimeSession, parseWorkspaceSession, type FoundationView } from "@/src/domain/realtime/foundation";
 
-type LiveContext = { view: FoundationView | null; session: WorkspaceSession | null; refresh: () => void };
-const Context = createContext<LiveContext>({ view: null, session: null, refresh: () => {} });
+type LiveContext = { view: FoundationView | null; session: WorkspaceSession | null; refresh: () => void; revision: number; readyActions: number | null };
+const Context = createContext<LiveContext>({ view: null, session: null, refresh: () => {}, revision: 0, readyActions: null });
 export function useFoundationRealtime() { return useContext(Context); }
 
 export function FoundationRealtime({ session, children }: { session: WorkspaceSession; children: ReactNode }) {
@@ -17,6 +19,8 @@ export function FoundationRealtime({ session, children }: { session: WorkspaceSe
   const [status, setStatus] = useState("Connecting live updates…");
   const [removed, setRemoved] = useState(false);
   const [latestSession, setSession] = useState(session);
+  const [revision, setRevision] = useState(0);
+  const [readyActions, setReadyActions] = useState<number | null>(null);
   const refreshRef = useRef<() => void>(() => {});
   const refresh = useCallback(() => refreshRef.current(), []);
   useEffect(() => {
@@ -41,7 +45,7 @@ export function FoundationRealtime({ session, children }: { session: WorkspaceSe
         return false;
       }
       if (latest.activeRole !== session.activeRole) {
-        terminate("/projects");
+        terminate("/dashboard");
         return false;
       }
       return true;
@@ -50,8 +54,10 @@ export function FoundationRealtime({ session, children }: { session: WorkspaceSe
       const response = await fetch(url, { cache: "no-store", credentials: "same-origin",
         signal: AbortSignal.any([abort.signal, AbortSignal.timeout(20000)]) });
       if (stopped) return null;
-      if (response.status === 401) { terminate("/sign-in"); return null; }
-      if (response.status === 409) { terminate("/choose-role"); return null; }
+      if (response.status === 401 || response.status === 409) {
+        terminate(workspaceEntry(response.status === 401 ? "/sign-in" : "/choose-role", location.pathname + location.search));
+        return null;
+      }
       if (!response.ok) throw Error("Read unavailable");
       return response.json() as Promise<unknown>;
     };
@@ -104,8 +110,13 @@ export function FoundationRealtime({ session, children }: { session: WorkspaceSe
               });
           }
         }
-        const raw = object(await get("/api/foundation/view?" + query));
+        const [foundation, bell] = await Promise.allSettled([
+          get("/api/foundation/view?" + query),
+          get("/api/monitoring/view?mode=bell"),
+        ]);
         if (stopped) return;
+        if (foundation.status === "rejected") throw foundation.reason;
+        const raw = object(foundation.value);
         const latest = parseWorkspaceSession(raw?.session);
         if (!latest || !checkIdentity(latest)) throw Error("Invalid session");
         setSession(latest);
@@ -114,6 +125,10 @@ export function FoundationRealtime({ session, children }: { session: WorkspaceSe
           if (!next) throw Error("Invalid view");
           setView({ path: pathname, data: next });
         }
+        const notification = bell.status === "fulfilled" ? object(bell.value) : null;
+        setReadyActions(notification?.userId === latest.userId && notification.revision === latest.revision && notification.role === latest.activeRole
+          ? parseMonitoringView("bell", notification.view)?.count ?? null : null);
+        setRevision(value => value + 1);
         setStatus(connected ? "" : "Live updates reconnecting. Checking every 30 seconds.");
       } catch {
         if (!stopped) setStatus("Updates could not be checked. This view may be stale. Retry.");
@@ -147,7 +162,7 @@ export function FoundationRealtime({ session, children }: { session: WorkspaceSe
   }, [pathname, session.userId, session.revision, session.activeRole]);
 
   if (removed) return <p role="status">Your session changed. Returning to sign-in…</p>;
-  return <Context.Provider value={{ view: savedView?.path === pathname ? savedView.data : null, session: latestSession, refresh }}>
+  return <Context.Provider value={{ view: savedView?.path === pathname ? savedView.data : null, session: latestSession, refresh, revision, readyActions }}>
     {status && <div className="foundation-status" role="status"><span>{status}</span>
       <button type="button" className="button secondary" onClick={refresh}>Refresh / Retry</button></div>}
     {children}
