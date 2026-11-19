@@ -35,6 +35,7 @@ test('every disabled endpoint denies forged snapshots without reading bodies or 
       'app/api/approved-purchase-orders/[id]/route.ts'].includes(file)) continue;
     if (file.startsWith('app/api/payment-files/')) continue; // Covered by payment-file-routes and real-session payment acceptance.
     if (file.startsWith('app/api/delivery-files/')) continue; // Covered by delivery file route and real-session receiving checks.
+    if (file.startsWith('app/api/transfer-files/')) continue; // Covered by real-session transfer receipt and evidence checks.
     const handlers = await import(new URL('../' + file, import.meta.url));
     for (const method of ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD']) {
       if (typeof handlers[method] !== 'function') continue;
