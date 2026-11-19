@@ -49,6 +49,11 @@ export function WorkspaceShell({ session: initialSession, children }: { session:
         <div className="side-product"><strong>ConstructSync</strong><SidebarToggle/></div>
         <div className="compact-navigation">
           <nav aria-label="Main navigation">
+            <Link className={`side-link ${pathname.startsWith('/inventory') ? 'active' : ''}`} href="/inventory"
+              aria-label="Site inventory" aria-current={pathname.startsWith('/inventory') ? 'page' : undefined} onClick={() => setMenuOpen(false)}>
+              <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="m3 7 9-4 9 4v10l-9 4-9-4Zm0 0 9 4 9-4m-9 4v10"/></svg>
+              <span className="nav-label">Site inventory</span>
+            </Link>
             <Link className={`side-link ${pathname.startsWith('/stock-transfers') ? 'active' : ''}`} href="/stock-transfers"
               aria-label="Stock transfers" aria-current={pathname.startsWith('/stock-transfers') ? 'page' : undefined} onClick={() => setMenuOpen(false)}>
               <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M4 8h15m-4-4 4 4-4 4M20 16H5m4-4-4 4 4 4"/></svg>
@@ -80,7 +85,7 @@ export function WorkspaceShell({ session: initialSession, children }: { session:
       <div className="workspace">
         <header className="masthead">
           <button className="mobile-menu icon-button" aria-label="Open navigation" aria-expanded={menuOpen} aria-controls="workspace-navigation" onClick={() => setMenuOpen(true)}>☰</button>
-          <div className="top-context"><span>Workspace</span><span className="crumb-separator">/</span><strong>{pathname.startsWith("/projects") ? "Projects" : pathname.startsWith("/admin") ? "Users" : pathname.startsWith("/requests") ? "Material requests" : pathname.startsWith("/suppliers") ? "Suppliers" : pathname.startsWith("/purchase-orders") ? "Purchase orders" : pathname.startsWith("/accounting") ? "Accounting" : pathname.startsWith("/finance") ? "Finance" : pathname.startsWith("/deliveries") ? "Deliveries" : pathname.startsWith("/stock-transfers") ? "Stock transfers" : "Unavailable"}</strong></div>
+          <div className="top-context"><span>Workspace</span><span className="crumb-separator">/</span><strong>{pathname.startsWith("/projects") ? "Projects" : pathname.startsWith("/admin") ? "Users" : pathname.startsWith("/requests") ? "Material requests" : pathname.startsWith("/suppliers") ? "Suppliers" : pathname.startsWith("/purchase-orders") ? "Purchase orders" : pathname.startsWith("/accounting") ? "Accounting" : pathname.startsWith("/finance") ? "Finance" : pathname.startsWith("/deliveries") ? "Deliveries" : pathname.startsWith("/stock-transfers") ? "Stock transfers" : pathname.startsWith("/inventory") ? "Site inventory" : "Unavailable"}</strong></div>
           <div className="masthead-right">
             <button className="theme-toggle icon-button" type="button" aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`} aria-pressed={theme === "dark"} onClick={() => {
               const next = theme === "dark" ? "light" : "dark";

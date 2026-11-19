@@ -15,6 +15,8 @@ import { serviceRpc } from "@/src/server/auth/service-rpc";
 import { paymentsView } from "@/src/server/payments/payments";
 import { deliveriesView } from '@/src/server/deliveries/deliveries';
 import { transferView } from '@/src/server/transfers/transfers';
+import { inventoryView } from '@/src/server/inventory/inventory';
+import { parseInventoryQuery } from '@/src/domain/inventory/contracts';
 
 const headers = { "Cache-Control": "private, no-store, max-age=0", Vary: "Cookie", "Referrer-Policy": "no-referrer" };
 const json = (value: unknown, status = 200) => Response.json(value, { status, headers });
@@ -47,6 +49,11 @@ export async function foundationResponse(request: Request, credentials = false) 
         accessToken: token.access_token, expiresAt: token.expires_at });
     }
     const query = new URL(request.url).searchParams, view = query.get("view");
+    if (view==='inventory') {
+      const selection=parseInventoryQuery(query.get('mode'),query.get('projectId'),query.get('target'));
+      if (!selection) return json({ error:'Invalid inventory selection.' },400);
+      return json({ session,view:{ kind:'inventory',data:await inventoryView(selection) } });
+    }
     if (view === 'transfers') {
       const mrf = query.get('mrfId'), transfer = query.get('transferId');
       if ((mrf && transfer) || (mrf && !UUID_PATTERN.test(mrf)) || (transfer && !UUID_PATTERN.test(transfer))) {

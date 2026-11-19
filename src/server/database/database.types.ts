@@ -462,6 +462,52 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"inventory_entries": {
+                  Row: {
+                    "actor_id": string,"id": string,"kind": string,"payload": NonNullable<Json>,"project_id": string,"reason": string,"related_movement_id": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "actor_id": string,"id": string,"kind": string,"payload": NonNullable<Json>,"project_id": string,"reason": string,"related_movement_id"?: string | null
+                  }
+                  Update: {
+                    "actor_id"?: string,"id"?: string,"kind"?: string,"payload"?: NonNullable<Json>,"project_id"?: string,"reason"?: string,"related_movement_id"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "inventory_entries_related_movement_id_fkey"
+      columns: ["related_movement_id"]
+isOneToOne: false
+      referencedRelation: "stock_movements"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"inventory_usage_notes": {
+                  Row: {
+                    "account_id": string,"entry_id": string,"reason": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "account_id": string,"entry_id": string,"reason": string
+                  }
+                  Update: {
+                    "account_id"?: string,"entry_id"?: string,"reason"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "inventory_usage_notes_account_id_fkey"
+      columns: ["account_id"]
+isOneToOne: false
+      referencedRelation: "stock_accounts"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "inventory_usage_notes_entry_id_fkey"
+      columns: ["entry_id"]
+isOneToOne: false
+      referencedRelation: "inventory_entries"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"issuance_operations": {
                   Row: {
                     "actor_id": string,"id": string,"payload": NonNullable<Json>,"po_id": string,"result": NonNullable<Json>
@@ -2195,6 +2241,18 @@ isOneToOne: true
 "has_role":
 { Args: { "required_role": string }; Returns: boolean
                            },
+"inventory_command":
+{ Args: { "command": Json,"viewer": Json }; Returns: Json
+                           },
+"inventory_movement":
+{ Args: { "target": string }; Returns: Json
+                           },
+"inventory_read":
+{ Args: { "mode": string,"selected_project": string,"target": string,"viewer": Json }; Returns: Json
+                           },
+"inventory_receipt_scopes":
+{ Args: { "target": string }; Returns: Json
+                           },
 "issuance_actor":
 { Args: { "actor": Json }; Returns: string
                            },
@@ -2926,6 +2984,12 @@ isOneToOne: false
                            },
 "documents_read":
 { Args: { "actor": Json,"target_project"?: string,"target_request"?: string }; Returns: Json
+                           },
+"inventory_command":
+{ Args: { "command": Json,"viewer": Json }; Returns: Json
+                           },
+"inventory_read":
+{ Args: { "mode": string,"selected_project": string,"target": string,"viewer": Json }; Returns: Json
                            },
 "issuance_command":
 { Args: { "actor": Json,"command": Json,"proof"?: Json }; Returns: Json

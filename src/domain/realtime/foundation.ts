@@ -13,8 +13,10 @@ import { parseQuotationsView, type QuotationsView } from "../quotations/drafts.t
 import { parsePaymentsView, type PaymentsView } from "../payments/payments.ts";
 import { parseDeliveriesView, type DeliveriesView } from '../deliveries/contracts.ts';
 import { parseTransferView, type TransferView } from '../transfers/contracts.ts';
+import { parseInventoryView, type InventoryView } from '../inventory/contracts.ts';
 
 export type FoundationView =
+  | { kind:'inventory'; data:InventoryView }
   | { kind: 'transfers'; data: TransferView }
   | { kind: 'deliveries'; data: DeliveriesView }
   | { kind: "payments"; data: PaymentsView }
@@ -44,6 +46,10 @@ export function parseRealtimeSession(value: unknown): RealtimeSession | null {
 export function parseFoundationView(value: unknown): FoundationView | null {
   const raw = object(value), data = object(raw?.data);
   if (!raw || !data) return null;
+  if (raw.kind==='inventory') {
+    const parsed=parseInventoryView(data);
+    return parsed ? { kind:'inventory',data:parsed } : null;
+  }
   if (raw.kind === 'transfers') {
     const parsed = parseTransferView(data);
     return parsed ? { kind:'transfers',data:parsed } : null;
@@ -98,6 +104,14 @@ export function parseFoundationView(value: unknown): FoundationView | null {
   return null;
 }
 export function foundationViewQuery(pathname: string): string | null {
+  if (pathname==='/inventory') return 'view=inventory&mode=stock';
+  if (pathname==='/inventory/usage/new') return 'view=inventory&mode=new';
+  const usage=/^\/inventory\/usage\/([^/]+)$/.exec(pathname);
+  if (usage&&UUID_PATTERN.test(usage[1])) return `view=inventory&mode=entry&target=${usage[1]}`;
+  const material=/^\/inventory\/([^/]+)\/([^/]+)$/.exec(pathname);
+  if (material&&UUID_PATTERN.test(material[1])&&UUID_PATTERN.test(material[2])) {
+    return `view=inventory&mode=material&projectId=${material[1]}&target=${material[2]}`;
+  }
   if (pathname === '/stock-transfers') return 'view=transfers';
   const source = /^\/stock-transfers\/source\/([^/]+)$/.exec(pathname);
   if (source && UUID_PATTERN.test(source[1])) return `view=transfers&mrfId=${source[1]}`;

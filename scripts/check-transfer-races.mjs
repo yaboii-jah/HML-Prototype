@@ -30,7 +30,7 @@ export function transferRace({ sql,database,environment }) {
       assert.equal(await completed,0,diagnostics);
       const result=await competitor;
       assert.notEqual(result.code,0);
-      assert.match(result.diagnostics,/changed|unavailable|serialize|assignment|required|availability|already be allocated/i);
+      assert.match(result.diagnostics,/changed|unavailable|serialize|assignment|required|availability|already be allocated|already exists/i);
     } finally {
       if (!child.stdin.writableEnded) child.stdin.end('rollback;\n');
       await Promise.allSettled([completed,competitor]);
