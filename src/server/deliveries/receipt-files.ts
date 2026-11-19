@@ -12,26 +12,38 @@ import { rowValue, textValue } from '@/src/server/documents/state';
 import { validateQuotationOriginal } from '@/src/server/quotations/original-validation';
 import { openUploadTicket, sealUploadTicket } from '@/src/server/upload-ticket-codec';
 import { renderReceiptPdf } from '@/src/server/delivery-receipt-pdf';
-import { deliveryReceiptWorkflow } from '@/src/server/workflows/delivery-receipts';
+import { deliveryReceiptWorkflow, transferReceiptWorkflow } from '@/src/server/workflows/delivery-receipts';
 
 type Actor = Awaited<ReturnType<typeof documentActor>>;
-function rpc(action: string, options: { actor?: Actor; id?: string; version?: string; lease?: string; patch?: Record<string, unknown> }) {
-  return serviceRpc('delivery_receipt_file', {
+function receiptRpc(action: string, options: { actor?: Actor; id?: string; version?: string; lease?: string; patch?: Record<string, unknown> }, transfer = false) {
+  return serviceRpc(transfer ? 'transfer_receipt_file' : 'delivery_receipt_file', {
     actor:options.actor ?? null, file_id:options.id ?? null, version_id:options.version ?? null,
     action, lease:options.lease ?? null, patch:options.patch ?? {},
   });
 }
 
-const tags = (id: string, version: string) => ({ hmlReceiptFile:id, hmlReceiptVersion:version });
-const enqueue = async (id: string) => { if (process.env.GOOGLE_DRIVE_ENABLED === 'true') await start(deliveryReceiptWorkflow, [id]); };
+function tags(id: string, version: string, transfer: boolean): Record<string, string> {
+  return transfer ? { hmlTransferReceiptFile:id, hmlTransferReceiptVersion:version } : { hmlReceiptFile:id, hmlReceiptVersion:version };
+}
+
+export async function enqueueReceiptFile(id: string, transfer = false) {
+  if (process.env.GOOGLE_DRIVE_ENABLED !== 'true') return;
+  if (transfer) await start(transferReceiptWorkflow, [id]);
+  else await start(deliveryReceiptWorkflow, [id]);
+}
+
+function bindReceiptRpc(transfer: boolean) {
+  return (action: string, options: Parameters<typeof receiptRpc>[1]) => receiptRpc(action, options, transfer);
+}
 
 export async function receiptFileCommand(input: unknown, actor: Actor) {
+  const rpc = bindReceiptRpc(false);
   if (process.env.GOOGLE_DRIVE_ENABLED !== 'true') throw new DocumentHttpError(503, 'Drive is unavailable. The receipt and any posted stock are saved.');
   const command = record(input);
   if (!command || !quoteUuid(command.versionId)) throw new DocumentHttpError(400, 'Choose the current receipt.');
   if (command.type === 'retry' && (command.kind === 'generated' || command.kind === 'signed')) {
     const result = record(await rpc('retryVersion', { actor, version:command.versionId, patch:{ kind:command.kind } }));
-    if (quoteUuid(result?.id)) await enqueue(result.id);
+    if (quoteUuid(result?.id)) await enqueueReceiptFile(result.id);
     return { queued:!!result };
   }
   if (command.type !== 'begin' || !validQuoteFile(command.file)) throw new DocumentHttpError(400, 'Choose a readable PDF, JPEG, PNG or WebP up to 20 MiB.');
@@ -39,10 +51,36 @@ export async function receiptFileCommand(input: unknown, actor: Actor) {
   return rpc('begin', { actor, version:command.versionId, patch:{ name, size, mime, sha256 } });
 }
 
-export async function transferReceiptFile(id: string, chunk: Uint8Array, offset: number, actor: Actor) {
+export async function transferFileCommand(input: unknown, actor: Actor) {
+  const command = record(input);
+  if (command?.type === 'withdraw' && quoteUuid(command.id)) {
+    await receiptRpc('withdraw', { actor, id:command.id }, true);
+    return { withdrawn:true };
+  }
+  if (process.env.GOOGLE_DRIVE_ENABLED !== 'true') {
+    throw new DocumentHttpError(503, 'Drive is unavailable. The receipt and any posted stock are saved.');
+  }
+  if (command?.type === 'retry' && quoteUuid(command.id)) {
+    await receiptRpc('retryFile', { actor, id:command.id }, true);
+    await enqueueReceiptFile(command.id, true);
+    return { queued:true };
+  }
+  if (command?.type !== 'begin' || !quoteUuid(command.versionId) || !validQuoteFile(command.file)
+    || (command.kind !== 'signed' && command.kind !== 'supporting')
+    || (command.replacesId != null && !quoteUuid(command.replacesId))
+    || (command.resumeId != null && (!quoteUuid(command.resumeId) || command.replacesId != null))) {
+    throw new DocumentHttpError(400, 'Choose a PDF, JPEG, PNG or WebP up to 20 MiB.');
+  }
+  const { name, size, mime, sha256 } = command.file;
+  return receiptRpc('begin', { actor, version:command.versionId,
+    patch:{ name, size, mime, sha256, kind:command.kind, replacesId:command.replacesId, resumeId:command.resumeId } }, true);
+}
+
+export async function transferReceiptFile(id: string, chunk: Uint8Array, offset: number, actor: Actor, transfer = false) {
+  const rpc = bindReceiptRpc(transfer);
   let file = rowValue(await rpc('uploadClaim', { actor, id }));
   if (file.state === 'processing' || file.state === 'complete') {
-    if (file.state === 'processing') await enqueue(id).catch(() => {});
+    if (file.state === 'processing') await enqueueReceiptFile(id, transfer).catch(() => {});
     return { offset:Number(file.offset_bytes), state:file.state };
   }
   const lease = textValue(file.lease_id);
@@ -56,13 +94,13 @@ export async function transferReceiptFile(id: string, chunk: Uint8Array, offset:
   try {
     const drive = documentDrive();
     const folder = textValue(file.folder_id), size = Number(file.size), mime = textValue(file.mime);
-    const identity = tags(id, textValue(file.version_id));
+    const identity = tags(id, textValue(file.version_id), transfer);
     await drive.validateFolder(folder, textValue(file.root_id));
     if (!file.drive_id) await update({ driveId:await drive.generateId() });
     const providerId = textValue(file.drive_id);
     const finish = async () => {
       await rpc('uploadFinish', { actor, id, lease });
-      await enqueue(id).catch(() => {});
+      await enqueueReceiptFile(id, transfer).catch(() => {});
       return { offset:size, state:'processing' };
     };
     const existing = await drive.find(providerId);
@@ -96,13 +134,14 @@ export async function transferReceiptFile(id: string, chunk: Uint8Array, offset:
   }
 }
 
-export async function processDeliveryReceiptFile(id: string) {
+export async function processDeliveryReceiptFile(id: string, transfer = false) {
+  const rpc = bindReceiptRpc(transfer);
   const file = record(await rpc('workerClaim', { id }));
   if (!file) return;
   const lease = textValue(file.lease_id);
   try {
     const drive = documentDrive();
-    const folder = textValue(file.folder_id), identity = tags(id, textValue(file.version_id)), mime = textValue(file.mime);
+    const folder = textValue(file.folder_id), identity = tags(id, textValue(file.version_id), transfer), mime = textValue(file.mime);
     await drive.validateFolder(folder, textValue(file.root_id));
     let providerId = typeof file.drive_id === 'string' ? file.drive_id : '';
     let size = Number(file.size), sha256 = String(file.sha256 ?? '');
@@ -110,14 +149,24 @@ export async function processDeliveryReceiptFile(id: string) {
       const snapshot = parseReceiptSnapshot(file.snapshot);
       const plan = parseDeliveryPlan(record(file.snapshot)?.plan);
       const departure = parseDeparture(record(file.snapshot)?.departure);
-      if (!snapshot || !plan || !departure) throw Error('Invalid frozen receipt snapshot.');
+      const raw = record(file.snapshot);
+      const trip = record(raw?.plan);
+      if (!snapshot || !departure || (transfer ? !trip : !plan)) throw Error('Invalid frozen receipt snapshot.');
+      const routeFields = transfer ? [
+        { label:'TRANSFER / MRF', value:`${textValue(raw?.transferRef)} / ${textValue(raw?.mrfRef)}` },
+        ...(typeof raw?.warehouseRef === 'string' ? [{ label:'WAREHOUSE RECEIPT', value:raw.warehouseRef }] : []),
+        { label:'PICKUP', value:`${textValue(trip?.pickupName)}\n${textValue(trip?.pickupAddress)}` },
+        { label:'DESTINATION', value:`${textValue(trip?.destinationName)}\n${textValue(trip?.destinationAddress)}` },
+      ] : [
+        { label:'PICKUP', value:plan?.pickup },
+        { label:'DESTINATION', value:`${plan?.destination}\n${plan?.address}` },
+      ];
       const phTime = (value: string) => new Date(value).toLocaleString('en-PH', { timeZone:'Asia/Manila' });
       const bytes = await renderReceiptPdf({
-        title:'DELIVERY RECEIPT', ref:snapshot.ref, stage:`Receipt version ${snapshot.revision}`, received:true,
+        title:transfer ? 'STOCK TRANSFER RECEIPT' : 'DELIVERY RECEIPT', ref:snapshot.ref, stage:`Receipt version ${snapshot.revision}`, received:true,
         generatedAt:textValue(file.created_at),
         fields:[
-          { label:'PICKUP', value:plan.pickup },
-          { label:'DESTINATION', value:`${plan.destination}\n${plan.address}` },
+          ...routeFields,
           { label:'DEPARTURE (PH TIME)', value:phTime(departure.at) },
           { label:'ACTUAL ARRIVAL (PH TIME)', value:phTime(snapshot.arrivalAt) },
           { label:'RECEIVER', value:textValue(file.receiverName) },
@@ -154,7 +203,8 @@ export async function processDeliveryReceiptFile(id: string) {
   }
 }
 
-export async function readReceiptFile(request: Request, id: string) {
+export async function readReceiptFile(request: Request, id: string, transfer = false) {
+  const rpc = bindReceiptRpc(transfer);
   privateDocumentRead(request);
   const actor = await documentActor();
   const file = rowValue(await rpc('read', { actor, id }));

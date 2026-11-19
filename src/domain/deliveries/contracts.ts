@@ -109,7 +109,7 @@ export function parseDeliveryCommand(value: unknown): DeliveryCommand | null {
   return result;
 }
 
-function parseReceiptCount(raw: unknown): ReceiptCount | null {
+export function parseReceiptCount(raw: unknown): ReceiptCount | null {
   const line = record(raw);
   if (!line || !id(line.lineId) || !quantity(line.accepted) || !quantity(line.missing) || !quantity(line.rejected) || !text(line.issue)) return null;
   return { lineId:line.lineId, accepted:line.accepted, missing:line.missing, rejected:line.rejected, issue:line.issue };

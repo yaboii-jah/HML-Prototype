@@ -15,6 +15,8 @@ import { checkTransferRaces } from './check-transfer-races.mjs';
 import { transferCheckSql } from './helpers/transfer-check.mjs';
 import { transferTripCheckSql } from './helpers/transfer-trip-check.mjs';
 import { checkTransferTripRaces } from './check-transfer-trip-races.mjs';
+import { transferReceivingCheckSql } from './helpers/transfer-receiving-check.mjs';
+import { checkTransferReceivingRaces } from './check-transfer-receiving-races.mjs';
 import { retainedStateQuery } from './helpers/staging-snapshot.mjs';
 import { checkDocumentRaces } from './check-document-races.mjs';
 import assert from 'node:assert/strict';
@@ -105,6 +107,9 @@ try {
   for (const name of ['poSendPreparations', 'poSendCancellations', 'poIssuances', 'poIssuanceCorrections', 'issuanceOperations']) {
     assert.equal(retained.records[name].count, 0, 'Snapshot includes empty new issuance table: ' + name);
   }
+  for (const name of ['transferReceipts','transferReceiptVersions','transferReceiptFiles']) {
+    assert.equal(retained.records[name].count,0,'Snapshot includes empty new transfer receipt table: '+name);
+  }
   checks.push('retained-snapshot-sql');
   await sql(await readFile('supabase/checks/staging.sql', 'utf8'));
   await sql(await readFile('supabase/checks/sessions.sql', 'utf8'));
@@ -135,6 +140,8 @@ try {
   checks.push('transfer-approval-sql');
   await sql(await transferTripCheckSql());
   checks.push('transfer-trip-sql');
+  await sql(await transferReceivingCheckSql());
+  checks.push('transfer-receiving-sql');
   checks.push('purchasing-sql');
   checks.push('stock-sql');
   checks.push('quotation-finalization-sql');
@@ -315,6 +322,8 @@ try {
   checks.push('transfer-approval-races');
   await checkTransferTripRaces({ sql, database, environment });
   checks.push('transfer-trip-races');
+  await checkTransferReceivingRaces({ sql, database, environment });
+  checks.push('transfer-receiving-races');
   await checkQuotationFinalizationRaces({ sql, database, environment, fixture: quotationFixture.financial });
   checks.push('quotation-finalization-races');
   await checkQuotationRaces({ sql, database, environment, fixture: quotationFixture });

@@ -120,6 +120,33 @@ try {
     assert.equal(await part.text(),'%PDF-');
   }
   result.checks.push('purchased-receipt-archive');
+  const transferReceipt = await renderReceiptPdf({
+    title:'STOCK TRANSFER RECEIPT',ref:'SYNTHETIC-DEL-0002',stage:'Receipt version 1',received:true,
+    generatedAt:comparison.createdAt,fields:[{ label:'TRANSFER / MRF',value:'SYNTHETIC-TRF / SYNTHETIC-MRF' }],
+    materials:[{ name:'Synthetic transfer material',unit:'bag',expected:'4',accepted:'3.8',
+      issue:'Missing 0; rejected 0.2. Accepted in request units: 3.8 bags.' }],
+    footerFields:[],signatureLabels:['Dispatched by','Received by'],
+  });
+  const conditionPhoto = await sharp({ create:{ width:20,height:20,channels:3,background:'#bcb7a5' } }).png().toBuffer();
+  const transferVersion = randomUUID();
+  for (const { name,content,mime } of [
+    { name:'generated.pdf',content:transferReceipt,mime:'application/pdf' },
+    { name:'signed.pdf',content:bytes,mime:'application/pdf' },
+    { name:'condition.png',content:conditionPhoto,mime:'image/png' },
+  ]) {
+    const id = await drive.generateId();
+    const evidenceTags = { hmlTransferReceiptFile:randomUUID(),hmlTransferReceiptVersion:transferVersion };
+    const uri = await drive.begin(id,folderId,`synthetic-transfer-${name}`,content.length,evidenceTags,mime);
+    assert.ok(uri);
+    assert.equal((await drive.transfer(uri,content.length,content,0,mime)).complete,true);
+    const archived = await drive.verifyFile(id,folderId,evidenceTags,content.length,createHash('sha256').update(content).digest('hex'),mime);
+    assert.deepEqual(Buffer.from(archived),Buffer.from(content));
+    await validateQuotationOriginal(archived,mime);
+    const range = await drive.stream(id,{ start:0,end:4 });
+    assert.equal(range.status,206);
+    assert.deepEqual(Buffer.from(await range.arrayBuffer()),Buffer.from(content.subarray(0,5)));
+  }
+  result.checks.push('transfer-receipt-archive');
   result.passed = true;
 } finally {
   if (folderId) {

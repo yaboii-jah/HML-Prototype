@@ -2,10 +2,11 @@ import { object } from '../accounts/accounts.ts';
 import { id, version } from '../purchasing/contracts.ts';
 import { paymentDate } from '../payments/payments.ts';
 import { parseDeparture, quantity, type Departure, type LoadLine } from '../deliveries/contracts.ts';
+import { parseTransferReceipt, type TransferReceipt } from './receipts.ts';
 
-export type TransferRoute = 'site-site'|'site-warehouse';
+export type TransferRoute = 'site-site'|'site-warehouse'|'warehouse-site';
 export type TripState = 'scheduled'|'dispatched'|'cancelled';
-export type TripPlan = { route:TransferRoute; plannedDate:string; plannedTime:string; directions:string; lines:LoadLine[] };
+export type TripPlan = { route:TransferRoute; parentTripId?:string; plannedDate:string; plannedTime:string; directions:string; lines:LoadLine[] };
 export type TransferTripCommand = {
   type:'scheduleTrip'|'reviseTrip'|'cancelTrip'|'dispatchTrip'|'correctTrip'|'cancelRemaining';
   requestId:string; transferId:string; expectedVersion:string; reason:string;
@@ -13,7 +14,8 @@ export type TransferTripCommand = {
 };
 type TripSnapshot = TripPlan & { id:string; ref:string; state:TripState; pickupName:string; pickupAddress:string;
   destinationName:string; destinationAddress:string; departure:Departure|null };
-export type TransferTrip = TripSnapshot & { history:{ id:string; action:string; reason:string; at:string; actorName:string; snapshot:TripSnapshot }[] };
+export type TransferTrip = TripSnapshot & { canReceive:boolean; receipt:TransferReceipt|null;
+  history:{ id:string; action:string; reason:string; at:string; actorName:string; snapshot:TripSnapshot }[] };
 export type TripTotals = { lineId:string; approved:string; released:string; booked:string; departed:string; schedulable:string };
 export type TripCounts = Record<TripState,number>;
 
@@ -27,7 +29,8 @@ export function tripList<T>(value:unknown,parse:(entry:unknown)=>T|null):T[]|nul
 
 function parsePlan(raw:unknown):TripPlan|null {
   const p=object(raw);
-  if (!p || (p.route!=='site-site'&&p.route!=='site-warehouse')||!paymentDate(p.plannedDate)
+  if (!p || (p.route!=='site-site'&&p.route!=='site-warehouse'&&p.route!=='warehouse-site')
+    ||(p.route==='warehouse-site'?!id(p.parentTripId):p.parentTripId!=null)||!paymentDate(p.plannedDate)
     || !text(p.plannedTime)||!/^(|([01]\d|2[0-3]):[0-5]\d)$/.test(p.plannedTime)||!bounded(p.directions)) return null;
   const lines=tripList(p.lines,value=>{
     const line=object(value);
@@ -35,7 +38,8 @@ function parsePlan(raw:unknown):TripPlan|null {
       ? { lineId:line.lineId,quantity:line.quantity } : null;
   });
   if (!lines||!lines.length||lines.length>100||new Set(lines.map(l=>l.lineId)).size!==lines.length) return null;
-  return { route:p.route,plannedDate:p.plannedDate,plannedTime:p.plannedTime,directions:p.directions,lines };
+  return { route:p.route,parentTripId:id(p.parentTripId)?p.parentTripId:undefined,
+    plannedDate:p.plannedDate,plannedTime:p.plannedTime,directions:p.directions,lines };
 }
 
 export function parseTransferTripCommand(raw:unknown):TransferTripCommand|null {
@@ -75,12 +79,14 @@ function parseSnapshot(raw:unknown):TripSnapshot|null {
 
 export function parseTrip(raw:unknown):TransferTrip|null {
   const snapshot=parseSnapshot(raw);
+  const trip=object(raw);
+  const receipt=parseTransferReceipt(trip?.receipt);
   const history=tripList(object(raw)?.history,entry=>{
     const e=object(entry), saved=parseSnapshot(e?.snapshot);
     return e&&saved&&id(e.id)&&text(e.action)&&text(e.reason)&&text(e.at)&&Number.isFinite(Date.parse(e.at))&&text(e.actorName)
       ? { id:e.id,action:e.action,reason:e.reason,at:e.at,actorName:e.actorName,snapshot:saved } : null;
   });
-  return snapshot&&history?{ ...snapshot,history }:null;
+  return snapshot&&history&&(receipt||trip?.receipt==null)?{ ...snapshot,history,receipt,canReceive:trip?.canReceive===true }:null;
 }
 
 export function parseTripTotals(raw:unknown):TripTotals|null {
