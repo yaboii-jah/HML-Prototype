@@ -99,6 +99,8 @@ export async function checkOperationalAcceptance({ browser, second, client, sql,
     assert.equal(await second.run('return document.documentElement.scrollWidth<=innerWidth+1'), true);
     assert.equal(await second.run(`const cell = document.querySelector('${requestRow} th');
       return cell.scrollWidth <= cell.clientWidth + 1;`), true, 'Long request numbers wrap within their cell');
+    if (width < 500) assert.equal(await second.run(`const row = document.querySelector('${requestRow}');
+      return row.querySelector('th').clientWidth >= row.clientWidth * 0.85;`), true, 'The request number uses the full mobile row');
     const shot = await second.call('Page.captureScreenshot', { format: 'png' });
     await writeFile(`.verification/operational-acceptance-${width}.png`, Buffer.from(shot.data, 'base64'));
   }
