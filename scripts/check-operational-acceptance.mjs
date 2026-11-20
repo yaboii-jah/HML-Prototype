@@ -97,6 +97,8 @@ export async function checkOperationalAcceptance({ browser, second, client, sql,
     if (width < 500) await second.wait("return document.querySelector('.side-nav').getBoundingClientRect().right<=1");
     await second.run("document.querySelector('#dashboard-progress-title').scrollIntoView()");
     assert.equal(await second.run('return document.documentElement.scrollWidth<=innerWidth+1'), true);
+    assert.equal(await second.run(`const cell = document.querySelector('${requestRow} th');
+      return cell.scrollWidth <= cell.clientWidth + 1;`), true, 'Long request numbers wrap within their cell');
     const shot = await second.call('Page.captureScreenshot', { format: 'png' });
     await writeFile(`.verification/operational-acceptance-${width}.png`, Buffer.from(shot.data, 'base64'));
   }

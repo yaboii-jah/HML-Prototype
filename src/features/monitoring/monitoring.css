@@ -22,6 +22,7 @@
 .progress-register table { min-width: 650px; table-layout: fixed; }
 .progress-register th:nth-child(1), .progress-register th:nth-child(2) { width: 20%; }
 .progress-register td, .progress-register tbody th { overflow-wrap: anywhere; }
+.progress-register tbody .text-link { max-width: 100%; white-space: normal; text-align: start; }
 .progress-mobile-label { display: none; }
 @media (max-width: 720px) {
   .progress-register table, .progress-register tbody { display: block; min-width: 0; }
