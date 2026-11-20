@@ -2,6 +2,16 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { consumptionCsv, parseMonitoringFilters, parseMonitoringView } from '../src/domain/monitoring/contracts.ts';
 
+test('dashboard request progress accepts only checked filters and projects compact stage results', () => {
+  assert.deepEqual(parseMonitoringFilters('dashboardProgress', new URLSearchParams('page=2&status=all&search=+ABC+')),
+    { status: 'all', search: 'ABC', page: '2' });
+  for (const query of ['page=0','page=-1','page=1.2','page=1&page=2','status=complete','search='+'a'.repeat(129)]) {
+    assert.equal(parseMonitoringFilters('dashboardProgress', new URLSearchParams(query)), null, query);
+  }
+  assert.deepEqual(parseMonitoringView('dashboardProgress', { page: 1, pages: 1, total: 0, rows: [], payment: 'restricted' }),
+    { page: 1, pages: 1, total: 0, rows: [] });
+});
+
 test('consumption defaults to the Philippine calendar month and rejects invalid selections', () => {
   assert.deepEqual(parseMonitoringFilters('consumption', new URLSearchParams(), '2026-11-01'),
     { from: '2026-11-01', to: '2026-11-01' });

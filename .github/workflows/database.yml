@@ -54,6 +54,7 @@ jobs:
             .verification/transfer-receiving-*.png
             .verification/inventory-usage-*.png
             .verification/operational-monitoring-*.png
+            .verification/operational-acceptance-*.png
             .verification/realtime-service.log
           include-hidden-files: true
           retention-days: 7

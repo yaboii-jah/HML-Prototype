@@ -38,6 +38,9 @@ try {
     const manual = await read('foundation-manual.json');
     requireCurrentEvidence(manual, source, 'targeted manual review');
       if (!manual.confirmedByUser || !manual.reviewedBehavior?.includes('error-retry')) throw Error('Targeted recovery review pending');
+      for (const behavior of ['acceptance-department-handoffs','acceptance-dashboard-ledger','acceptance-access-retry']) {
+        if (!manual.reviewedBehavior?.includes(behavior)) throw Error(`Targeted Step 4.19 review pending: ${behavior}`);
+      }
       for (const behavior of ['monitoring-dashboard-actions','monitoring-lifecycle-reports','monitoring-access-filters-recovery']) {
         if (!manual.reviewedBehavior?.includes(behavior)) throw Error(`Targeted operational monitoring review pending: ${behavior}`);
       }

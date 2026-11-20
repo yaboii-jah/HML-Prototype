@@ -4,5 +4,8 @@ import { requireWorkspaceSession } from "@/src/server/auth/session";
 
 export default async function Page() {
   await requireWorkspaceSession();
-  return <Dashboard initial={await initialMonitoringView("dashboard")} />;
+  const [initial, progress] = await Promise.all([
+    initialMonitoringView("dashboard"), initialMonitoringView("dashboardProgress"),
+  ]);
+  return <Dashboard initial={initial} progress={progress} />;
 }

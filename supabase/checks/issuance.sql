@@ -1,7 +1,7 @@
 -- Appended to the shared Accounting fixture definitions. Provider references are
 -- synthetic here; real bytes and failure recovery belong to application checks.
-create function pg_temp.issuance_fixture() returns jsonb language plpgsql as $$
-declare f jsonb:=pg_temp.accounting_fixture(); job uuid; claimed jsonb;
+create function pg_temp.issuance_fixture(payment_mode text default 'upfront', only_cement boolean default false) returns jsonb language plpgsql as $$
+declare f jsonb:=pg_temp.accounting_fixture(null,payment_mode,only_cement); job uuid; claimed jsonb;
 begin
   perform pg_temp.accounting_action(f,'submitPo');
   perform pg_temp.accounting_action(f,'approvePo');

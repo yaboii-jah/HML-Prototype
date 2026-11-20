@@ -45,7 +45,7 @@ export function mrfEditable(mrf: MrfWorkflow) {
 export function mrfUnderReview(mrf: MrfWorkflow) {
   return mrf.status === "submitted" || mrf.status === "approved" && mrf.correctionState === "submitted";
 }
-export function mrfStatusLabel(mrf: MrfWorkflow) {
+export function mrfStatusLabel(mrf: Pick<MrfWorkflow, "status" | "correctionKind" | "correctionState">) {
   if (mrf.correctionKind) return `${mrf.correctionKind === "documents" ? "PDF" : "Full"} correction · ${mrf.correctionState}`;
   return mrf.status.charAt(0).toUpperCase() + mrf.status.slice(1);
 }

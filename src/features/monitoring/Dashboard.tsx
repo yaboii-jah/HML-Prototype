@@ -7,12 +7,16 @@ import { Register } from "@/src/components/ui/Register";
 import { businessDate } from "@/src/domain/business-dates";
 import type { MonitoringAction, MonitoringView } from "@/src/domain/monitoring/contracts";
 import { useMonitoring } from "./useMonitoring";
+import { DashboardProgress } from "./DashboardProgress";
 import "./monitoring.css";
 
 const defaults = {};
 const businessDayNumber = (date: string) => Date.parse(date) / 86400000;
 
-export function Dashboard({ initial }: { initial: MonitoringView<"dashboard"> | null }) {
+export function Dashboard({ initial, progress }: {
+  initial: MonitoringView<"dashboard"> | null;
+  progress: MonitoringView<"dashboardProgress"> | null;
+}) {
   const [projectId, setProject] = useState("");
   const { view, error, refresh } = useMonitoring("dashboard", { projectId }, initial, defaults);
   const projects = view?.projects ?? initial?.projects ?? [];
@@ -47,6 +51,9 @@ export function Dashboard({ initial }: { initial: MonitoringView<"dashboard"> | 
         {queue("Ready", view.actions.filter(action => !action.blocker), false)}
         {queue("Waiting", view.actions.filter(action => action.blocker), true)}
       </div>
+    </>}
+    <DashboardProgress projectId={projectId} initial={progress} />
+    {view && <>
       <section aria-labelledby="dashboard-projects"><h2 id="dashboard-projects">Material request overview</h2>
         <Register embedded rows={view.overview} resetKey={projectId} unit="projects" empty="No accessible projects."
           headers={<><th scope="col">Project</th><th scope="col">Draft or returned</th><th scope="col">For review</th><th scope="col">Approved</th></>}

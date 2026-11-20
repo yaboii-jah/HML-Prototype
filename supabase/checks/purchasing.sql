@@ -2,7 +2,7 @@
 -- asserted by these deliberately direct approved-record fixtures.
 begin;
 set local statement_timeout='60s';
-create function pg_temp.demand_fixture(shared_project uuid default null,shared_scope uuid default null) returns jsonb language plpgsql as $$
+create function pg_temp.demand_fixture(shared_project uuid default null,shared_scope uuid default null,only_cement boolean default false) returns jsonb language plpgsql as $$
 declare person uuid:=gen_random_uuid(); session uuid:=gen_random_uuid(); project uuid:=coalesce(shared_project,gen_random_uuid());
   request uuid:=gen_random_uuid(); item uuid:=gen_random_uuid(); other_item uuid:=gen_random_uuid();
   archive uuid:=gen_random_uuid(); document uuid:=gen_random_uuid(); mapping uuid:=gen_random_uuid(); proof jsonb; form jsonb; request_sequence bigint;
@@ -22,12 +22,14 @@ begin
         'neededDate','','purpose','','location','','remarks',''),
       jsonb_build_object('id',other_item,'name','Requested cable','quantity','0.3','unit','m',
         'neededDate','','purpose','','location','','remarks','')));
+  if only_cement then form:=form #- '{items,1}'; end if;
   select coalesce(max(r.sequence),0)+1 into request_sequence from public.material_requests r where r.project_id=project;
   insert into public.material_requests(id,project_id,scope_id,ref,sequence,data,creator_id,creator_name,updater_id,updater_name,status)
     values(request,project,shared_scope,'DM-'||upper(request::text)||'-MRF-0001',request_sequence,form-'items'-'scopeId',
       person,'Demand fixture',person,'Demand fixture','approved');
   insert into public.material_request_items(id,request_id,position,data)
-    values(item,request,0,form->'items'->0),(other_item,request,1,form->'items'->1);
+    select (line->>'id')::uuid,request,ordinality-1,line
+    from jsonb_array_elements(form->'items') with ordinality as items(line,ordinality);
   if shared_project is null then
     insert into private.project_document_folders(id,project_id,folder_id,root_id,name) values(mapping,project,'demand-'||mapping,'fixture-root','Fixture');
   else
@@ -47,8 +49,8 @@ end $$;
 
 -- Owning purchasing security/atomicity fixtures. Archive metadata below is synthetic;
 -- real bytes and Workflow integrity belong to the separate application acceptance.
-create function pg_temp.purchasing_fixture(with_charge boolean default false,shared_project uuid default null,shared_scope uuid default null) returns jsonb language plpgsql as $$
-declare f jsonb:=pg_temp.demand_fixture(shared_project,shared_scope); target uuid:=(f->>'request')::uuid; caller uuid:=(f->'actor'->>'userId')::uuid;
+create function pg_temp.purchasing_fixture(with_charge boolean default false,shared_project uuid default null,shared_scope uuid default null,only_cement boolean default false) returns jsonb language plpgsql as $$
+declare f jsonb:=pg_temp.demand_fixture(shared_project,shared_scope,only_cement); target uuid:=(f->>'request')::uuid; caller uuid:=(f->'actor'->>'userId')::uuid;
   supplier uuid:=gen_random_uuid(); quote uuid:=gen_random_uuid(); revision uuid:=gen_random_uuid(); line uuid:=gen_random_uuid();
   family uuid; body jsonb:='{}'; source jsonb:='{}'; review jsonb; calculation jsonb; k text; fields jsonb:='{}'; orderline uuid:=gen_random_uuid(); charge uuid:=gen_random_uuid(); order_adjustments jsonb:='[]';
 begin
