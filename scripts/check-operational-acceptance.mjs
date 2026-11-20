@@ -108,6 +108,8 @@ export async function checkOperationalAcceptance({ browser, second, client, sql,
   await enter(browser, ids[0]);
   await browser.navigate('/stock-transfers/' + transfer.transfer);
   await click(browser, 'Confirm site receiving');
+  await browser.wait(`return [...document.querySelectorAll('label.field')].some(label =>
+    label.querySelector('span')?.textContent === 'Accepted' && !!label.querySelector('input:not(:disabled)'))`);
   await field(browser, 'Accepted', '12');
   await click(browser, 'Save receiving');
   await click(browser, 'Post accepted stock');
