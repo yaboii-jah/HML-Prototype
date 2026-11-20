@@ -11,6 +11,7 @@ import { checkTransferTrips } from './check-transfer-trips.mjs';
 import { checkTransferReceiving } from './check-transfer-receiving.mjs';
 import { checkInventoryUsage } from './check-inventory-usage.mjs';
 import { checkOperationalMonitoring } from './check-operational-monitoring.mjs';
+import { checkOperationalAcceptance, checkPrototypeRetirement } from './check-operational-acceptance.mjs';
 import { fakeDrive } from './helpers/fake-drive.mjs';
 import assert from 'node:assert/strict';
 import { randomUUID, randomBytes } from 'node:crypto';
@@ -322,6 +323,10 @@ export async function checkAuthFoundation({ api, anon, secret, mailpit, sql, env
     checks.push('inventory-usage-browser');
     await checkOperationalMonitoring({ browser, second, client, sql, login, logout });
     checks.push('operational-monitoring-browser');
+    await checkPrototypeRetirement(browser);
+    checks.push('prototype-retirement-browser');
+    await checkOperationalAcceptance({ browser, second, client, sql, login, logout });
+    checks.push('operational-acceptance-browser');
     await checkSupplierDirectory({ browser, second, client, login, logout, sessionCookie, sql });
     checks.push('supplier-browser');
     for (const browser of browsers) browser.assertIsolated();

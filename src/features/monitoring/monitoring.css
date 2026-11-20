@@ -19,4 +19,19 @@
 .monitoring-dependencies { margin: 16px 0; padding-inline-start: 20px; }
 .monitoring-tabs { flex-wrap: wrap; }
 .monitoring-page .view-tabs { flex-wrap: wrap; }
+.progress-register table { min-width: 650px; table-layout: fixed; }
+.progress-register th:nth-child(1), .progress-register th:nth-child(2) { width: 20%; }
+.progress-register td, .progress-register tbody th { overflow-wrap: anywhere; }
+.progress-mobile-label { display: none; }
+@media (max-width: 720px) {
+  .progress-register table, .progress-register tbody { display: block; min-width: 0; }
+  .progress-register thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .progress-register tbody tr { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); padding: 12px; gap: 10px 8px; }
+  .progress-register tbody tr + tr { border-top: 1px solid var(--line); }
+  .progress-register tbody tr :is(th, td) { padding: 0; border: 0; width: auto; }
+  .progress-register tbody th { grid-column: 1 / -1; }
+  .progress-register tbody td { grid-column: span 3; }
+  .progress-register tbody td[data-stage] { grid-column: span 2; }
+  .progress-mobile-label { display: block; color: var(--muted); font-size: .85em; margin-bottom: 2px; }
+}
 @media (max-width: 900px) { .monitoring-queues { grid-template-columns: minmax(0, 1fr); } }

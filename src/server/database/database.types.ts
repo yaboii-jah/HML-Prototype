@@ -2268,8 +2268,19 @@ isOneToOne: true
 "monitoring_consumption":
 { Args: { "filters": Json,"projects": (string)[] }; Returns: Json
                            },
+"monitoring_dashboard_progress":
+{ Args: { "include_closed": boolean,"projects": (string)[],"ref_search": string,"requested_page": number }; Returns: Json
+                           },
 "monitoring_lifecycle":
 { Args: { "project": string,"site": boolean,"target": string }; Returns: Json
+                           },
+"monitoring_line_facts":
+{ Args: { "targets": (string)[] }; Returns: {
+              "accepted": number,"awarded": number,"hold": number,"id": string,"issued": number,"line_order": number,"material": string,"posted": number,"purchasing": number,"quantity": number,"release_pending": number,"request_id": string,"transfers": number,"unassigned": number,"unit": string
+            }[]
+                           },
+"monitoring_progress_stage":
+{ Args: { "complete": number,"started": boolean,"total": number }; Returns: Json
                            },
 "monitoring_queue":
 { Args: { "caller": string,"projects": (string)[],"ready_only": boolean,"role_name": string }; Returns: Json
