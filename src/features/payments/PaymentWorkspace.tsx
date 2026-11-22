@@ -65,7 +65,9 @@ export function PaymentWorkspace({ initial, poId, embedded = false }: { initial:
           {editor.body.method === 'Other' && <Field label="Other method explanation"><textarea maxLength={2000} value={editor.body.other} onChange={e => setEditor({ ...editor, body: { ...editor.body, other: e.target.value } })} /></Field>}
           <Field label="Payment note"><textarea maxLength={2000} value={editor.body.note} onChange={e => setEditor({ ...editor, body: { ...editor.body, note: e.target.value } })} /></Field>
           <Field label="Explanation if this method/reference matches another PO" hint="Only needed if another PO has the same payment method and reference."><textarea maxLength={2000} value={editor.body.duplicateReason} onChange={e => setEditor({ ...editor, body: { ...editor.body, duplicateReason: e.target.value } })} /></Field>
-        </div><div className="form-actions"><button className="button primary" disabled={operation.busy || editor.version !== saved.version}>Save payment draft</button><button className="button secondary" type="button" disabled={operation.busy} onClick={() => setEditor(null)}>Discard unsaved details</button></div>
+        </div>
+        {operation.message && !decision && <p role="status">{operation.message}</p>}
+        <div className="form-actions"><button className="button primary" disabled={operation.busy || editor.version !== saved.version}>Save payment draft</button><button className="button secondary" type="button" disabled={operation.busy} onClick={() => setEditor(null)}>Discard unsaved details</button></div>
       </form>}
       {!saved.drafts.length && <p className="empty">No payment drafts or verifications recorded.</p>}
       {saved.drafts.map(draft => {
@@ -89,7 +91,7 @@ export function PaymentWorkspace({ initial, poId, embedded = false }: { initial:
       })}
     </section>
     <section className="panel"><h2>Clearance and no-cash history</h2><p>Invalidated clearance requires a fresh Accounting action. Completed deliveries and stock remain unchanged.</p><EventHistory events={[...saved.clearanceHistory, ...saved.noCashHistory].sort((a, b) => a.at.localeCompare(b.at))} /></section>
-    {operation.message && <p role="status">{operation.message}</p>}
+    {operation.message && !editor && !decision && <p role="status">{operation.message}</p>}
     {operation.uncertain && !decision && <button type="button" className="button secondary" disabled={operation.running} onClick={async () => { const result = await operation.recover(); if (result?.ok) setEditor(null); }}>Check saved outcome</button>}
     {decision && <RecordModal open title={actionLabels[decision.type] || 'Record payment action'} onClose={() => { if (!operation.busy) setDecision(null); }}>
       <form onSubmit={async e => { e.preventDefault(); const result = await operation.run({ type: decision.type, poId, expectedVersion: decision.version, draftId: decision.draftId, reason: decision.reason, ...(decision.type === 'verify' ? { evidenceReviewed: decision.reviewed } : {}) }); if (result?.ok) setDecision(null); }}>

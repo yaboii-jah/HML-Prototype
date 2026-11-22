@@ -100,7 +100,7 @@ begin
 end $$;
 
 do $$
-declare mode text; f jsonb; po uuid; command jsonb; result jsonb; d uuid;
+declare mode text; f jsonb; po uuid; command jsonb; result jsonb; d uuid; proof uuid; draft_body jsonb;
 begin
   foreach mode in array array['upfront','credit'] loop
     f:=pg_temp.payment_terms_fixture(mode,true); po:=(f->>'po')::uuid;
@@ -126,4 +126,52 @@ begin
   perform pg_temp.payment_action(f,'hold');
   perform pg_temp.payment_action(f,'clear');
   if not private.payment_cleared(po) or private.payment_paid(po)<>333 or private.scope_spent((f->>'scope')::uuid)<>336 then raise exception 'Part-paid overdue Credit failed'; end if;
+
+  d:=pg_temp.payment_draft(f,'333.00','OVERDUE-CREDIT');
+  perform pg_temp.payment_proof(f,d,repeat('c',64));
+  begin
+    perform pg_temp.payment_action(f,'verify',jsonb_build_object('draftId',d,'evidenceReviewed',true));
+    raise exception 'Duplicate reference accepted on this PO';
+  exception when sqlstate 'P4118' then null; end;
+  select body into draft_body from private.payment_drafts where id=d;
+  perform pg_temp.payment_action(f,'saveDraft',jsonb_build_object('draftId',d,'body',draft_body||'{"reference":"NEW-REFERENCE"}'::jsonb));
+  begin
+    perform pg_temp.payment_action(f,'verify',jsonb_build_object('draftId',d,'evidenceReviewed',true));
+    raise exception 'Duplicate proof accepted for an installment';
+  exception when sqlstate 'P4120' then null; end;
+  perform pg_temp.payment_action(f,'cancelDraft',jsonb_build_object('draftId',d));
+
+  d:=pg_temp.payment_draft(f,'334.00','PAY-1');
+  proof:=pg_temp.payment_proof(f,d,repeat('d',64));
+  begin
+    perform pg_temp.payment_action(f,'verify',jsonb_build_object('draftId',d,'evidenceReviewed',true));
+    raise exception 'Installment exceeded the remaining balance';
+  exception when sqlstate 'P4112' then null; end;
+  select body into draft_body from private.payment_drafts where id=d;
+  draft_body:=draft_body||jsonb_build_object('amount','333.00','date',((now() at time zone 'Asia/Manila')::date+1)::text);
+  perform pg_temp.payment_action(f,'saveDraft',jsonb_build_object('draftId',d,'body',draft_body));
+  begin
+    perform pg_temp.payment_action(f,'verify',jsonb_build_object('draftId',d,'evidenceReviewed',true));
+    raise exception 'Future payment verified';
+  exception when sqlstate 'P4117' then null; end;
+  draft_body:=draft_body||jsonb_build_object('date',(now() at time zone 'Asia/Manila')::date::text);
+  perform pg_temp.payment_action(f,'saveDraft',jsonb_build_object('draftId',d,'body',draft_body));
+  begin
+    perform pg_temp.payment_action(f,'verify',jsonb_build_object('draftId',d,'evidenceReviewed',true));
+    raise exception 'Cross-PO reference match accepted without explanation';
+  exception when sqlstate 'P4119' then null; end;
+  draft_body:=draft_body||'{"reference":"OVERDUE-CREDIT-2","note":"Corrected installment"}'::jsonb;
+  command:=pg_temp.payment_input(f,'saveDraft',jsonb_build_object('draftId',d,'body',draft_body));
+  result:=public.payment_command(f->'accountant',command);
+  if public.payment_command(f->'accountant',command)<>result or not exists(
+    select 1 from private.payment_drafts where id=d and state='draft' and body=draft_body
+      and version=4 and current_files=array[proof]
+  ) then raise exception 'Draft edit or retry did not preserve identity, proof or version'; end if;
+  command:=pg_temp.payment_input(f,'verify',jsonb_build_object('draftId',d,'evidenceReviewed',true));
+  result:=public.payment_command(f->'accountant',command);
+  if public.payment_command(f->'accountant',command)<>result or not private.payment_cleared(po)
+    or not private.payment_settled(po) or private.payment_paid(po)<>666
+    or private.scope_spent((f->>'scope')::uuid)<>672
+    or (select count(*) from private.payment_verifications where po_id=po)<>2
+    then raise exception 'Credit installment verification, clearance or retry failed'; end if;
 end $$;

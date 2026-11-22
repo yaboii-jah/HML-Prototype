@@ -215,6 +215,16 @@ export async function checkPayments({
   await clickEntry(browser, firstRef, "Resume uploads");
   await browser.wait(proofReady(firstRef));
 
+  const savedDraft = (await view()).drafts.find(draft => draft.body.reference === firstRef);
+  assert.equal(savedDraft.files.length, 1);
+  await clickEntry(browser, firstRef, "Edit payment details");
+  await field(browser, "Payment note", "QA reviewed supplier transfer");
+  await click(browser, "Save payment draft");
+  await browser.wait("return !document.querySelector('.payment-editor') && document.body.textContent.includes('QA reviewed supplier transfer')");
+  const editedDraft = (await view()).drafts.find(draft => draft.id === savedDraft.id);
+  assert.equal(editedDraft.body.note, "QA reviewed supplier transfer");
+  assert.equal(editedDraft.files[0].id, savedDraft.files[0].id);
+
   await clickEntry(browser, firstRef, "Verify payment");
   await browser.wait(
     "return !!document.querySelector('dialog[open] input[type=checkbox]')",
