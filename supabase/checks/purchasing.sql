@@ -32,6 +32,7 @@ begin
     from jsonb_array_elements(form->'items') with ordinality as items(line,ordinality);
   if shared_project is null then
     insert into private.project_document_folders(id,project_id,folder_id,root_id,name) values(mapping,project,'demand-'||mapping,'fixture-root','Fixture');
+    insert into private.document_folder_owners values('demand-'||mapping,project);
   else
     select d.id into mapping from private.project_document_folders d where d.project_id=project and d.current;
   end if;

@@ -138,8 +138,8 @@ export async function checkAuthFoundation({ api, anon, secret, mailpit, sql, env
     await browser.navigate('/sign-in');
     assert.equal(await browser.run("return document.querySelector('.signin-submit').disabled"), true, 'Configured sign-in waits for client action hydration');
     await browser.call('Network.setBlockedURLs', { urls: [] });
-    const login = async (browser, account) => {
-      await browser.navigate('/sign-in');
+    const login = async (browser, account, path = '/sign-in') => {
+      await browser.navigate(path);
       await browser.wait("return !!document.querySelector('#signin-email')&&!document.querySelector('.signin-submit').disabled");
       await browser.fill('#signin-email', account.email); await browser.fill('#signin-password', account.password);
       await browser.click('.signin-submit');
@@ -182,9 +182,11 @@ export async function checkAuthFoundation({ api, anon, secret, mailpit, sql, env
       await browser.wait("return document.body.innerText.includes('temporarily unavailable')");
       assert.match(await browser.run('return document.body.innerText'), /temporarily unavailable/);
     }
+    await browser.navigate('/reports');
+    await browser.wait("return location.pathname==='/reports'&&!!document.querySelector('.masthead-account')");
     await logout(browser);
     assert.equal(await (await request('/rest/v1/rpc/auth_session_context', managerSession.access_token, { method: 'POST', body: '{}' })).json(), null, 'Copied signed JWT loses application access on logout');
-    await login(browser, multi);
+    await login(browser, multi, '/sign-in?next=%2Freports');
     await browser.wait("return location.pathname==='/choose-role'&&!!document.querySelector('#active-role')");
     const select = async (selector, value) => browser.run(`const el=document.querySelector(${JSON.stringify(selector)});el.value=${JSON.stringify(value)};el.dispatchEvent(new Event('change',{bubbles:true}));`);
     await select('#active-role', 'Accounting'); await browser.click('.signin-form button');
@@ -204,7 +206,7 @@ export async function checkAuthFoundation({ api, anon, secret, mailpit, sql, env
     assert.equal(await browser.run('return location.pathname'), '/choose-role', 'Forged remembered role grants no authority');
     assert.equal(await browser.run("return [...document.querySelector('#active-role').options].some(o=>o.value==='Administrator')"), false);
     await select('#active-role', 'Accounting'); await browser.click('.signin-form button');
-    await browser.wait("return location.pathname==='/projects'&&!!document.querySelector('.masthead-account')");
+    await browser.wait("return location.pathname==='/dashboard'&&!!document.querySelector('.masthead-account')");
     const stale = await sessionCookie(browser);
     ok(await client.from('role_grants').delete().eq('user_id', multi.id).eq('role', 'Finance'), 'Revoke a role');
     assert.equal(await browser.run("return (await fetch('/api/drive/projects',{method:'POST'})).status"), 401, 'Missed notifications do not preserve revoked access');
@@ -217,7 +219,11 @@ export async function checkAuthFoundation({ api, anon, secret, mailpit, sql, env
     await login(browser, multi); await browser.wait("return location.pathname==='/dashboard'&&!!document.querySelector('.masthead-account')");
     ok(await client.from('profiles').update({ is_active: false }).eq('user_id', multi.id), 'Deactivate account');
     assert.equal(await browser.run("return (await fetch('/api/documents/preview',{method:'POST'})).status"), 401, 'Deactivation immediately denies operations');
-    await login(second, site); await second.wait("return location.pathname==='/dashboard'&&!!document.querySelector('.masthead-account')");
+    await login(browser, site, '/sign-in?next=%2Freports');
+    await browser.wait("return location.pathname==='/dashboard'&&document.querySelector('.account-label small')?.textContent==='Site Personnel'");
+    await browser.navigate('/reports');
+    await browser.wait("return location.pathname==='/reports'&&document.querySelector('h1')?.textContent==='404'");
+    await login(second, site, '/reports'); await second.wait("return location.pathname==='/dashboard'&&!!document.querySelector('.masthead-account')");
     ok(await client.from('project_assignments').insert({ user_id: site.id, project_id: fixtureProject }), 'Change site assignment');
     await second.navigate('/projects');
     assert.equal(await second.run('return location.pathname'), '/sign-in', 'Assignment changes require fresh sign-in');

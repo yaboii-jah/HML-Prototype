@@ -6,6 +6,7 @@ import { rowValue, textValue, uploadTags } from "./state";
 import { sealUploadTicket, openUploadTicket } from "@/src/server/upload-ticket-codec";
 import { DOCUMENT_CHUNK_SIZE } from "@/src/domain/requests/documents";
 import { dispatchDocumentJobs } from "./dispatch";
+import { requestDriveParent } from "./request-folders";
 
 export async function transferSupportingPdf(uploadId: string, bytes?: Uint8Array, requestedOffset?: number) {
   const actor = await documentActor();
@@ -17,13 +18,14 @@ export async function transferSupportingPdf(uploadId: string, bytes?: Uint8Array
     upload = rowValue(await serviceRpc("document_transfer", { actor, upload_id: uploadId, action: "checkpoint", lease_id: lease, patch }));
   };
   try {
-    await drive.validateFolder(textValue(folder.folder_id), textValue(folder.root_id));
+    const projectFolder = textValue(folder.folder_id);
+    const parent = await requestDriveParent(drive, "mrf-original", uploadId, projectFolder, textValue(folder.root_id)) ?? projectFolder;
     if (!upload.drive_file_id) await update({ driveFileId: await drive.generateId() });
     const fileId = textValue(upload.drive_file_id);
     // A lost final upload response may leave a completed file with no DB ack.
     const existing = await drive.find(fileId);
     if (existing && existing.size === String(total)) {
-      drive.verifyIdentity(existing, textValue(folder.folder_id), tags);
+      drive.verifyIdentity(existing, parent, tags);
       await serviceRpc("document_transfer", { actor, upload_id: uploadId, action: "finish", lease_id: lease });
       await dispatchDocumentJobs().catch(() => {});
       return { validating: true, offset: total };
@@ -34,14 +36,14 @@ export async function transferSupportingPdf(uploadId: string, bytes?: Uint8Array
       uri = opened.uri;
     }
     if (!uri) {
-      uri = await drive.begin(fileId, textValue(folder.folder_id), textValue(upload.name), total, tags);
+      uri = await drive.begin(fileId, parent, textValue(upload.name), total, tags);
       if (!uri) throw Error("Unconfirmed provider file");
       await update({ session: sealUploadTicket({ uploadId, uri }) });
     }
     let progress = await drive.transfer(uri, total);
     if (progress.expired) {
       // An expired provider session may be recreated for the same preallocated ID.
-      uri = await drive.begin(fileId, textValue(folder.folder_id), textValue(upload.name), total, tags);
+      uri = await drive.begin(fileId, parent, textValue(upload.name), total, tags);
       if (!uri) throw Error("Unconfirmed provider file");
       if (Number(upload.offset_bytes) !== 0) throw new DocumentHttpError(410, "This provider upload expired. Cancel it and upload the PDF again.");
       await update({ session: sealUploadTicket({ uploadId, uri }) });

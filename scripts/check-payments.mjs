@@ -259,6 +259,11 @@ export async function checkPayments({
   assert.equal(saved.verifications.length, 1);
   assert.equal(saved.cleared, false);
   const firstFile = saved.verifications[0].files[0];
+  const providerId = (await sql(`select drive_file_id from private.payment_files where id='${firstFile}';`)).output.trim();
+  const proofFolder = drive.files.get(drive.files.get(providerId).parents[0]);
+  const proofPoFolder = drive.files.get(proofFolder.parents[0]);
+  const accountingFolder = drive.files.get(proofPoFolder.parents[0]);
+  assert.deepEqual([accountingFolder.name, proofPoFolder.name, proofFolder.name], ['Accounting Documents', ref, 'Payment Proof']);
   const cookies = await cookie(browser);
   const download = await fetch(base + `/api/payment-files/${firstFile}`, {
     headers: { Cookie: cookies },

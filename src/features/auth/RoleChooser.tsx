@@ -5,7 +5,7 @@ import { selectRoleAction } from "@/app/auth/actions";
 import { SignOutForm } from "./SignOutForm";
 import type { SessionContext } from "@/src/domain/auth/session";
 
-export function RoleChooser({ session, next }: { session: SessionContext; next: string }) {
+export function RoleChooser({ session }: { session: SessionContext }) {
   const [state, action, pending] = useActionState(selectRoleAction, { error: "" });
   return (
     <main className="state-screen">
@@ -14,7 +14,6 @@ export function RoleChooser({ session, next }: { session: SessionContext; next: 
         <h1 id="role-heading">Choose your role</h1>
         <p>Signed in as {session.displayName}. Choose how you want to work.</p>
         <form action={action} className="signin-form">
-          <input type="hidden" name="next" value={next} />
           <label htmlFor="active-role">Role</label>
           <select id="active-role" name="role" required defaultValue="">
             <option value="" disabled>Select a role</option>

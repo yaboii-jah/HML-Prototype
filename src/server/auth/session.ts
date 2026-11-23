@@ -1,8 +1,8 @@
 import "server-only";
 import { cache } from "react";
-import { cookies, headers } from "next/headers";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { chooseActiveRole, parseSessionContext, rolePreferenceCookie, workspaceEntry, UUID_PATTERN } from "@/src/domain/auth/session";
+import { chooseActiveRole, parseSessionContext, rolePreferenceCookie, UUID_PATTERN } from "@/src/domain/auth/session";
 import { cookieAuthClient } from "./clients";
 
 export class AuthUnavailableError extends Error {}
@@ -29,9 +29,6 @@ export async function requireSession() {
 
 export async function requireWorkspaceSession() {
   const session = await readSession();
-  if (!session?.activeRole) {
-    const destination = (await headers()).get("x-constructsync-workspace");
-    redirect(workspaceEntry(session ? "/choose-role" : "/sign-in", destination));
-  }
+  if (!session?.activeRole) redirect(session ? "/choose-role" : "/sign-in");
   return { ...session.context, activeRole: session.activeRole };
 }

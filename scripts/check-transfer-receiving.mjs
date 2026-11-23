@@ -85,6 +85,13 @@ export async function checkTransferReceiving({ browser,second,client,sql,login,l
     li.textContent.includes('signed-transfer-fixture.pdf')&&li.textContent.includes('complete'));`,30000);
   const signed=(await sql(`select f.id from private.transfer_receipt_files f join private.transfer_receipt_versions v on v.id=f.version_id
     where v.trip_id='${onward.id}' and f.kind='signed' and f.current_evidence;`)).output.trim();
+  const providerId=(await sql(`select drive_id from private.transfer_receipt_files where id='${signed}';`)).output.trim();
+  const deliveryFolder=drive.files.get(drive.files.get(providerId).parents[0]);
+  const transferFolder=drive.files.get(deliveryFolder.parents[0]);
+  const category=drive.files.get(transferFolder.parents[0]);
+  assert.equal(deliveryFolder.name,onward.ref);
+  assert.equal(category.name,'Stock Transfers');
+  assert.deepEqual(drive.files.get(category.parents[0]).parents,[folderId]);
   assert.equal(await browser.run(`return (await fetch('/api/transfer-files/${signed}')).status`),403);
   await enter(second,source);
   await content(second,'3.8 bags accepted');

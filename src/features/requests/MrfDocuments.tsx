@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useFoundationRealtime } from "@/src/app-state/FoundationRealtime";
 import { InlineError } from "@/src/components/ui/Primitives";
 import { RecordModal } from "@/src/components/ui/RecordModal";
+import { PdfDocumentViewer } from "@/src/components/PdfDocumentViewer";
 import { DOCUMENT_CHUNK_SIZE, MAX_SUPPORTING_PDF, parseDocumentsView, type DocumentsView, type UploadView } from "@/src/domain/requests/documents";
 import { record } from "@/src/domain/projects/projects";
 
@@ -20,7 +21,10 @@ export function useDocuments(query: string) {
     const attempt = ++sequence.current;
     try {
       const response = await fetch(`/api/mrf-documents?${query}`, { cache: "no-store", signal: AbortSignal.timeout(20000) });
-      if (response.status === 401 || response.status === 403) { setData(null); refresh(); }
+      if ([401, 403, 404].includes(response.status) && attempt === sequence.current) {
+        setData(null);
+        if (response.status !== 404) refresh();
+      }
       const parsed = parseDocumentsView(await responseBody(response));
       if (!parsed) throw Error("Document status could not be read. Retry shortly.");
       if (attempt === sequence.current) { setData(parsed); setError(""); }
@@ -46,7 +50,13 @@ const sizeLabel = (size: number) => size < 1024 ? `${size} bytes` : size < 1024 
 export function MrfDocuments({ mrfId, editable: permitted, archiveManager = false, onPendingFile }: { mrfId: string; editable: boolean; archiveManager?: boolean; onPendingFile?: (pending: boolean) => void }) {
   const { data, error: readError, load, refresh } = useDocuments(`mrfId=${encodeURIComponent(mrfId)}`);
   const editable = permitted && data?.editable === true;
-  const [file, setFile] = useState<File | null>(null), [resumeId, setResumeId] = useState(""), [busy, setBusy] = useState(false), [error, setError] = useState(""), [progress, setProgress] = useState<number | null>(null), [preview, setPreview] = useState(false);
+  const [file, setFile] = useState<File | null>(null), [resumeId, setResumeId] = useState(""), [busy, setBusy] = useState(false), [error, setError] = useState(""), [progress, setProgress] = useState<number | null>(null);
+  const [preview, setPreview] = useState<{ mrfId: string; id: string; title: string } | null>(null);
+  const [previewAttempt, setPreviewAttempt] = useState(0);
+  const closePreview = useCallback(() => setPreview(null), []);
+  const previewAvailable = preview?.mrfId === mrfId && (data?.current?.id === preview.id
+    || data?.archives.some(archive => archive.files.some(file => file.id === preview.id)));
+  if (preview && !previewAvailable) setPreview(null);
   const command = useRef<Record<string, unknown> | null>(null), locked = useRef(false), fileInput = useRef<HTMLInputElement>(null);
   const [uncertain, setUncertain] = useState(false);
   const [selectionRevision, setSelectionRevision] = useState<string | null>(null);
@@ -106,7 +116,7 @@ export function MrfDocuments({ mrfId, editable: permitted, archiveManager = fals
     <p className="muted">Combine the source MRF, key plan and work scope in one readable, unencrypted PDF, up to 50 MiB. Review the file contents before submission.</p>
     {!data && !readError && <p role="status">Loading document status…</p>}
     {data?.current ? <div className="document-current"><p><strong>{data.current.name}</strong> · {sizeLabel(data.current.size)}</p><p className="muted">Uploaded by {data.current.uploaderName}</p><div className="form-actions">
-      <button type="button" className="button secondary" onClick={() => setPreview(true)}>Preview PDF</button>
+      <button type="button" className="button secondary" onClick={() => data.current && setPreview({ mrfId, id: data.current.id, title: data.current.name })}>Preview PDF</button>
       <a className="button secondary" download href={`/api/mrf-documents/files/${data.current.id}?download=1`}>Download PDF</a>
       {editable && <button type="button" className="button secondary" disabled={busy || uncertain} onClick={() => { if (window.confirm("Remove the current supporting PDF? Its metadata history will be retained.")) void action({ type: "remove", expectedRevision: data.revision }); }}>Remove PDF</button>}
     </div></div> : data && <p>No supporting PDF attached.</p>}
@@ -130,12 +140,33 @@ export function MrfDocuments({ mrfId, editable: permitted, archiveManager = fals
       {editable && ["validate", "cleanup"].includes(job.kind) && ["failed", "paused"].includes(job.state) && !job.message?.includes("corrupt") && <button type="button" className="button secondary" disabled={busy || uncertain} onClick={() => void action({ type: "retryFile", jobId: job.id })}>Retry {job.kind === "cleanup" ? "cleanup" : "verification"}</button>}
       {archiveManager && job.kind === "archive" && ["failed", "paused"].includes(job.state) && <div className="form-actions"><button type="button" className="button secondary" disabled={busy || uncertain} onClick={() => void action({ type: "retryArchive", jobId: job.id })}>Retry approved archive</button><button type="button" className="button secondary" disabled={busy || uncertain || !data.folder} onClick={() => { if (window.confirm("Retry against the current project folder? The previous attempt’s destination and file identities remain recorded.")) void action({ type: "retryArchive", jobId: job.id, useCurrentMapping: true }); }}>Retry using current project folder</button></div>}
     </div>)}
-    {!!data?.archives.length && <><h3>Approved document versions</h3>{data.archives.map(archive => <div key={archive.id}><p><strong>Version {archive.version}</strong> · Approved by {archive.approvedBy} · <time dateTime={archive.approvedAt}>{new Date(archive.approvedAt).toLocaleString("en-PH", { timeZone: "Asia/Manila" })}</time> · {archive.complete ? "Archive complete" : "Archive pending"}</p><div className="form-actions">{archive.files.map(file => <span key={file.id}><a className="button secondary" target="_blank" rel="noreferrer" href={`/api/mrf-documents/files/${file.id}`}>Preview {file.kind === "form" ? "approved MRF" : "approved supporting PDF"}</a> <a download href={`/api/mrf-documents/files/${file.id}?download=1`}>Download</a></span>)}</div></div>)}</>}
+    {!!data?.archives.length && <>
+      <h3>Approved document versions</h3>
+      {data.archives.map(archive => <div key={archive.id}>
+        <p><strong>Version {archive.version}</strong> · Approved by {archive.approvedBy} · <time dateTime={archive.approvedAt}>{new Date(archive.approvedAt).toLocaleString("en-PH", { timeZone: "Asia/Manila" })}</time> · {archive.complete ? "Archive complete" : "Archive pending"}</p>
+        <div className="form-actions">{archive.files.map(file => {
+          const label = file.kind === "form" ? "approved MRF" : "approved supporting PDF";
+          return <span key={file.id}>
+            <button type="button" className="button secondary" onClick={() => setPreview({ mrfId, id: file.id, title: `${label} · Version ${archive.version}` })}>Preview {label}</button>{" "}
+            <a download href={`/api/mrf-documents/files/${file.id}?download=1`}>Download</a>
+          </span>;
+        })}</div>
+      </div>)}
+    </>}
     <InlineError message={error || readError} />
     {uncertain && <button type="button" className="button secondary" disabled={busy} onClick={() => void action(command.current ?? {})}>Retry same file action</button>}
     {(error || readError) && <button type="button" className="button secondary" disabled={busy} onClick={() => { command.current = null; setUncertain(false); void load(); }}>Review current file status</button>}
-    <RecordModal open={preview && !!data?.current} title={data?.current?.name ?? "Supporting PDF"} onClose={() => setPreview(false)}>
-      {data?.current && <><iframe className="document-preview-frame" title="Supporting PDF preview" src={`/api/mrf-documents/files/${data.current.id}`} /><a download href={`/api/mrf-documents/files/${data.current.id}?download=1`}>Download this PDF</a></>}
+    <RecordModal open={Boolean(preview && previewAvailable)} title={preview?.title ?? "PDF preview"} onClose={closePreview}>
+      {preview && previewAvailable && <>
+        <div className="mrf-pdf-preview">
+          <PdfDocumentViewer key={`${preview.id}:${previewAttempt}`} compact fileName={preview.title}
+            sourceUrl={`/api/mrf-documents/files/${preview.id}`} onUnavailable={closePreview}
+            onRetry={() => setPreviewAttempt(attempt => attempt + 1)}/>
+        </div>
+        <div className="form-actions">
+          <a download href={`/api/mrf-documents/files/${preview.id}?download=1`}>Download this PDF</a>
+        </div>
+      </>}
     </RecordModal>
   </section>;
 }

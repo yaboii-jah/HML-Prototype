@@ -5,6 +5,7 @@ import { record } from "@/src/domain/projects/projects";
 import { generateMrfPdf } from "@/src/server/template-mrf-pdf";
 import type { DriveGateway } from "./drive-gateway";
 import { validateSupportingPdf } from "./pdf-validation";
+import { requestDriveParent } from "./request-folders";
 
 function required(value: unknown) {
   if (typeof value !== "string" || !value) throw Error("Invalid archive snapshot");
@@ -20,17 +21,24 @@ export async function archiveApprovedMrf(job: Record<string, unknown>, drive: Dr
     || !draft.items.length || draft.items.some(item => !item.quantity || !item.name || !item.unit)) throw Error("Invalid approved snapshot");
   const ref = required(frozen.ref), projectName = required(frozen.projectName), projectLocation = required(frozen.projectLocation);
   const mappingId = required(folder.folder_id), root = required(folder.root_id), snapshotId = required(snapshot.id);
-  await drive.validateFolder(mappingId, root);
   let saved = record(job.checkpoint) ?? {};
   const allocate = async (key: string) => {
     if (!saved[key]) saved = await checkpoint({ [key]: await drive.generateId() });
     return required(saved[key]);
   };
-  const requestFolderId = await allocate("requestFolderId"), formFolderId = await allocate("formFolderId"), supportFolderId = await allocate("supportFolderId");
   const requestTag = { hmlRequestId: required(snapshot.request_id), hmlSnapshotId: snapshotId };
-  await drive.ensureFolder(requestFolderId, mappingId, `${ref}-v${snapshot.version}`, requestTag);
-  await drive.ensureFolder(formFolderId, requestFolderId, "MRF Form", requestTag);
-  await drive.ensureFolder(supportFolderId, requestFolderId, "Supporting Documents", requestTag);
+  let formFolderId = await requestDriveParent(drive, "mrf-form", snapshotId, mappingId, root);
+  let supportFolderId;
+  if (formFolderId) {
+    supportFolderId = required(await requestDriveParent(drive, "mrf-support", snapshotId, mappingId, root));
+  } else {
+    const requestFolderId = await allocate("requestFolderId");
+    formFolderId = await allocate("formFolderId");
+    supportFolderId = await allocate("supportFolderId");
+    await drive.ensureFolder(requestFolderId, mappingId, `${ref}-v${snapshot.version}`, requestTag);
+    await drive.ensureFolder(formFolderId, requestFolderId, "MRF Form", requestTag);
+    await drive.ensureFolder(supportFolderId, requestFolderId, "Supporting Documents", requestTag);
+  }
   const sourceBytes = await drive.bytes(required(source.drive_file_id), Number(source.size));
   if (sourceBytes.length !== Number(source.size) || createHash("sha256").update(sourceBytes).digest("hex") !== source.sha256) throw Error("Approved source integrity mismatch");
   await validateSupportingPdf(sourceBytes);

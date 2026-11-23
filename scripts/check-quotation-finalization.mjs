@@ -412,6 +412,14 @@ async function checkFinalization({
     providerCount + 2,
     "Lost acknowledgement created no duplicate review folder or PDF",
   );
+  const reviewPdf = [...drive.files.values()].find(file => file.appProperties?.hmlQuotationRevision === revision && file.mimeType === "application/pdf");
+  const revisionFolder = drive.files.get(reviewPdf.parents[0]);
+  const supplierFolder = drive.files.get(revisionFolder.parents[0]);
+  const categoryFolder = drive.files.get(supplierFolder.parents[0]);
+  assert.equal(categoryFolder.name, "Supplier Quotations");
+  assert.equal(drive.files.get(categoryFolder.parents[0]).appProperties.hmlRequestId, mrf);
+  const originalProvider = [...drive.files.values()].find(file => file.appProperties?.hmlQuotation === quote && file.name === "financial-original.pdf");
+  assert.deepEqual(originalProvider.parents, [supplierFolder.id]);
   assert.equal(
     await browser.run(
       "return document.querySelector('.quotation-originals').textContent.includes('Uploads transferred')",

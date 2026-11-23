@@ -13,7 +13,7 @@ const WORKFLOW_STAGES = [
 
 const subscribeHydration = () => () => {};
 
-export function SignIn({ destination, configured, passwordUpdated }: { destination: string; configured: boolean; passwordUpdated: boolean }) {
+export function SignIn({ configured, passwordUpdated }: { configured: boolean; passwordUpdated: boolean }) {
   const hydrated = useSyncExternalStore(subscribeHydration, () => true, () => false);
   const [state, action, busy] = useActionState(signInAction, { error: "" });
   const error = state.error;
@@ -87,7 +87,7 @@ export function SignIn({ destination, configured, passwordUpdated }: { destinati
         <h2 id="signin-title">Sign in to your workspace</h2>
         <p>Manage requests, purchases and deliveries.</p>
         <form className="signin-form" action={action}>
-          <input type="hidden" name="next" value={destination}/><div className="signin-field"><label htmlFor="signin-email">Email</label><input id="signin-email" name="email" type="email" autoComplete="username" required value={email} onChange={event => { setEmail(event.target.value); }} placeholder="Enter your email" aria-invalid={Boolean(error)} aria-describedby={error ? "signin-error" : undefined} /></div>
+          <div className="signin-field"><label htmlFor="signin-email">Email</label><input id="signin-email" name="email" type="email" autoComplete="username" required value={email} onChange={event => { setEmail(event.target.value); }} placeholder="Enter your email" aria-invalid={Boolean(error)} aria-describedby={error ? "signin-error" : undefined} /></div>
           <div className="signin-field"><label htmlFor="signin-password">Password</label><input id="signin-password" name="password" type="password" autoComplete="current-password" required value={password} onChange={event => { setPassword(event.target.value); }} placeholder="Enter your password" aria-invalid={Boolean(error)} aria-describedby={error ? "signin-error" : undefined} /></div>
           <button className="button primary signin-submit" disabled={busy || !configured || !hydrated}>{busy ? "Opening workspace…" : "Sign in"}</button>
         </form>

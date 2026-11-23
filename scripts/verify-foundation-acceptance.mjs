@@ -34,11 +34,12 @@ try {
     const drive = await read('document-drive-live.json');
     requireCurrentEvidence(drive, source, 'quotation original live Drive');
     if (!drive.cleaned || !drive.checks?.includes('quotation-mixed-originals') || !drive.checks?.includes('purchasing-comparison-artifacts')) throw Error('Live originals/comparison artifacts/owned cleanup incomplete');
+    if (!drive.checks?.includes('nested-request-folder-retry')) throw Error('Live request folder verification pending');
     // Manual review is deliberately explicit, never inferred from green CI.
     const manual = await read('foundation-manual.json');
     requireCurrentEvidence(manual, source, 'targeted manual review');
       if (!manual.confirmedByUser || !manual.reviewedBehavior?.includes('error-retry')) throw Error('Targeted recovery review pending');
-      for (const behavior of ['acceptance-department-handoffs','acceptance-dashboard-ledger','acceptance-access-retry']) {
+      for (const behavior of ['acceptance-department-handoffs','acceptance-dashboard-ledger','acceptance-access-retry','acceptance-staff-feedback']) {
         if (!manual.reviewedBehavior?.includes(behavior)) throw Error(`Targeted Step 4.19 review pending: ${behavior}`);
       }
       for (const behavior of ['monitoring-dashboard-actions','monitoring-lifecycle-reports','monitoring-access-filters-recovery']) {

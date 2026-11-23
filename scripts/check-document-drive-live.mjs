@@ -30,12 +30,22 @@ try {
   await writeFile('.verification/document-drive-smoke-owner.json', JSON.stringify({ folderId, tags, run }));
   await drive.ensureFolder(folderId, root, 'ConstructSync disposable document smoke ' + run, tags);
   await drive.validateFolder(folderId, root);
+  const requestFolder = await drive.generateId(), supportingFolder = await drive.generateId();
+  await drive.ensureFolder(requestFolder, folderId, 'SYNTHETIC-MRF-0001', tags);
+  await drive.ensureFolder(supportingFolder, requestFolder, 'Supporting Documents', tags);
+  const poFolder = await drive.generateId();
+  await Promise.all([
+    drive.ensureFolder(poFolder, requestFolder, 'Purchase Orders', tags),
+    drive.ensureFolder(poFolder, requestFolder, 'Purchase Orders', tags),
+  ]);
+  assert.deepEqual((await drive.get(poFolder)).parents, [requestFolder]);
+  result.checks.push('nested-request-folder-retry');
   const pdf = await PDFDocument.create(); pdf.addPage().drawText('Synthetic ConstructSync document gateway verification.');
   const bytes = await pdf.save(), sha256 = createHash('sha256').update(bytes).digest('hex'), id = await drive.generateId();
-  const uri = await drive.begin(id, folderId, 'synthetic-support.pdf', bytes.length, tags);
+  const uri = await drive.begin(id, supportingFolder, 'synthetic-support.pdf', bytes.length, tags);
   assert.ok(uri); assert.equal((await drive.transfer(uri, bytes.length)).offset, 0);
   assert.equal((await drive.transfer(uri, bytes.length, bytes, 0)).complete, true);
-  const verified = await drive.verifyPdf(id, folderId, tags, bytes.length, sha256);
+  const verified = await drive.verifyPdf(id, supportingFolder, tags, bytes.length, sha256);
   await validateSupportingPdf(verified);
   const range = await drive.stream(id, { start: 0, end: 4 }); assert.equal(range.status, 206); assert.equal(await range.text(), '%PDF-');
   assert.equal((await drive.ensureFolder(folderId, root, 'same owned folder', tags)).id, folderId);
@@ -88,10 +98,11 @@ try {
     const fileId = await drive.generateId();
     const fileTags = { ...tags, hmlKind: kind, ...(kind === 'approved-po'
       ? { hmlPoArchive: archiveId, hmlPoApproval: approvalId } : { hmlSnapshotId: archiveId }) };
-    const session = await drive.begin(fileId, folderId, 'synthetic-issuance-' + kind + '.pdf', approved.length, fileTags);
+    const parent = kind === 'approved-po' ? poFolder : supportingFolder;
+    const session = await drive.begin(fileId, parent, 'synthetic-issuance-' + kind + '.pdf', approved.length, fileTags);
     assert.ok(session); assert.equal((await drive.transfer(session, approved.length, approved)).complete, true);
     issuanceFiles.push({ id: fileId, tags: fileTags, size: String(approved.length), sha256: approvedHash,
-      ...(kind === 'approved-po' ? { parent: folderId } : {}) });
+      ...(kind === 'approved-po' ? { parent } : {}) });
   }
   const issuanceProof = { approvalId, mrfArchiveId: archiveId, poArchiveId: archiveId, files: issuanceFiles };
   await verifySendingFiles(issuanceProof, drive);

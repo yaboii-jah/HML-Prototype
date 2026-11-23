@@ -1710,6 +1710,40 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"request_drive_admissions": {
+                  Row: {
+                    "kind": string,"path": NonNullable<Json>,"request_id": string,"resource_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "kind": string,"path": NonNullable<Json>,"request_id": string,"resource_id": string
+                  }
+                  Update: {
+                    "kind"?: string,"path"?: NonNullable<Json>,"request_id"?: string,"resource_id"?: string
+                  }
+                  Relationships: [
+
+                  ]
+                },"request_drive_folders": {
+                  Row: {
+                    "folder_id": string,"name": string,"path_key": string,"project_folder_id": string,"request_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "folder_id": string,"name": string,"path_key": string,"project_folder_id": string,"request_id": string
+                  }
+                  Update: {
+                    "folder_id"?: string,"name"?: string,"path_key"?: string,"project_folder_id"?: string,"request_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "request_drive_folders_project_folder_id_fkey"
+      columns: ["project_folder_id"]
+isOneToOne: false
+      referencedRelation: "document_folder_owners"
+      referencedColumns: ["folder_id"]
+    }
+                  ]
                 },"request_operations": {
                   Row: {
                     "actor_id": string,"created_at": string,"id": string,"payload": NonNullable<Json>,"request_id": string,"result": Json | null
@@ -2229,6 +2263,9 @@ isOneToOne: true
 "documents_read":
 { Args: { "actor": Json,"target_project"?: string,"target_request"?: string }; Returns: Json
                            },
+"drive_path_segment":
+{ Args: { "key": string,"name": string }; Returns: Json
+                           },
 "foundation_topic":
 { Args: { "revision": number,"target_session": string,"target_user": string }; Returns: string
                            },
@@ -2613,6 +2650,9 @@ isOneToOne: true
                            },
 "request_draft_snapshot":
 { Args: { "target": string }; Returns: Json
+                           },
+"request_drive_path":
+{ Args: { "candidates": Json,"project_folder": string,"resource_kind": string,"target": string }; Returns: Json
                            },
 "request_project_allowed":
 { Args: { "actor": Json,"target": string }; Returns: boolean
@@ -3119,6 +3159,9 @@ isOneToOne: false
                            },
 "request_command":
 { Args: { "actor": Json,"command": Json }; Returns: Json
+                           },
+"request_drive_path":
+{ Args: { "candidates": Json,"project_folder": string,"resource_kind": string,"target": string }; Returns: Json
                            },
 "requests_read":
 { Args: { "actor": Json,"target_request"?: string }; Returns: Json

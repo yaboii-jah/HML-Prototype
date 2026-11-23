@@ -39,6 +39,8 @@ export async function checkMrfDocuments({ browser, second, client, login, logout
   const siteActor = await actor(browser);
   const draft = { scopeId: null, sourceRef: '', requestDate: '2026-11-03', requestedBy: 'Site', approvedBy: 'Printed PM', purchaser: '', financeOfficer: '', specialInstructions: '', items: [] };
   const mrf = ok(await client.rpc('request_command', { actor: siteActor, command: { type: 'createDraft', requestId: randomUUID(), projectId: project, draft } })).record.id;
+  const filePrefix = '/api/mrf-documents/files/';
+  const fileReads = browser.watchRequests(filePrefix), colleagueReads = second.watchRequests(filePrefix);
   await browser.navigate(`/requests/${mrf}/edit`); await second.navigate(`/requests/${mrf}`);
   await browser.fill('input[name=sourceRef]', 'Unsaved details survive file actions');
   await browser.wait("return !!document.querySelector('.mrf-documents input[type=file]')&&!document.querySelector('.mrf-documents fieldset').disabled");
@@ -53,6 +55,16 @@ export async function checkMrfDocuments({ browser, second, client, login, logout
   assert.equal(await browser.run("return document.querySelector('input[name=sourceRef]').value"), 'Unsaved details survive file actions');
   assert.equal((await sql(`select version from public.material_requests where id='${mrf}';`)).output.trim(), '1', 'File save left draft version alone');
   const current = (await docState(mrf)).current, cookies = await cookie(browser);
+  assert.deepEqual(fileReads, [], 'Uploading does not open or download PDF bytes');
+  assert.deepEqual(colleagueReads, [], 'Live attachment refresh does not open PDF bytes');
+  const original = [...drive.files.values()].find(file => file.appProperties?.hmlUploadId === current);
+  const originalsFolder = drive.files.get(original.parents[0]);
+  const supportingFolder = drive.files.get(originalsFolder.parents[0]);
+  const requestFolder = drive.files.get(supportingFolder.parents[0]);
+  assert.equal(originalsFolder.name, 'Originals');
+  assert.equal(supportingFolder.name, 'Supporting Documents');
+  assert.equal(requestFolder.appProperties.hmlRequestId, mrf);
+  assert.deepEqual(requestFolder.parents, [originalMapping.folder]);
   const http = (path, init = {}, overrideCookie = cookies) => fetch(base + path, { ...init, headers: { Cookie: overrideCookie, Origin: base, ...init.headers }, signal: AbortSignal.timeout(30000) });
   const file = await http('/api/mrf-documents/files/' + current);
   assert.equal(file.status, 200); assert.match(file.headers.get('cache-control'), /private.*no-store/);
@@ -61,6 +73,9 @@ export async function checkMrfDocuments({ browser, second, client, login, logout
   assert.equal(range.status, 206); assert.equal(await range.text(), '%PDF-');
   assert.equal((await http('/api/mrf-documents/files/' + current, { headers: { Range: 'bytes=999999999-' } })).status, 416);
   assert.equal((await http('/api/mrf-documents/files/' + current, {}, '')).status, 401);
+  const download = await http(filePrefix + current + '?download=1');
+  assert.match(download.headers.get('content-disposition'), /^attachment;.*filename\*=UTF-8''shared\.pdf$/);
+  assert.deepEqual(Buffer.from(await download.arrayBuffer()), bytes);
   assert.equal((await http('/api/mrf-documents?mrfId=' + mrf, { headers: { Origin: 'https://example.invalid' } })).status, 403);
   const post = async command => {
     const response = await http('/api/mrf-documents', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ operationId: randomUUID(), mrfId: mrf, ...command }) });
@@ -98,6 +113,7 @@ export async function checkMrfDocuments({ browser, second, client, login, logout
   await until(async () => (await docState(mrf)).current === resumed, 'resumed PDF committed after lost acknowledgement');
   assert.equal([...drive.files.values()].filter(file => file.appProperties?.hmlUploadId === resumed).length, 1, 'Retry created one provider file');
   await browser.wait("return document.querySelector('.document-current')?.textContent.includes('resumed.pdf')");
+  assert.deepEqual(fileReads, [], 'Replacing an attachment does not open PDF bytes');
   await second.wait("return document.body.innerText.includes('The shared attachment changed after you selected this PDF')");
   assert.equal(await second.run("return document.querySelector('.mrf-documents .primary').disabled"), true, 'File conflict requires explicit review');
   await second.run("[...document.querySelectorAll('button')].find(b=>b.textContent.includes('I reviewed the current attachment')).click()");
@@ -108,14 +124,28 @@ export async function checkMrfDocuments({ browser, second, client, login, logout
     await browser.run("document.querySelector('.mobile-scrim')?.click();document.querySelector('.mrf-documents').scrollIntoView()");
     if (width === 375) await browser.wait("return !document.querySelector('.mobile-scrim')&&document.querySelector('.side-nav').getBoundingClientRect().right<=1");
     assert.equal(await browser.run('return document.documentElement.scrollWidth<=innerWidth'), true, 'Attachment controls fit viewport');
+    await browser.run("[...document.querySelectorAll('.mrf-documents button')].find(b=>b.textContent==='Preview PDF').click()");
+    await browser.wait("return Array.from(document.querySelectorAll('.mrf-documents dialog[open] [aria-busy=false] .pdfViewer canvas')).some(canvas=>canvas.checkVisibility()&&canvas.width>0)");
+    assert.ok(fileReads.includes(filePrefix + resumed), 'Preview reads only the selected protected file');
+    assert.ok(fileReads.every(url => !url.includes('download=1')), 'Preview triggers no download');
+    await browser.click('.mrf-documents dialog[open] .record-modal-close');
+    await browser.wait("return !document.querySelector('.mrf-documents .pdf-document-viewer')");
     const screenshot = await browser.call('Page.captureScreenshot', { format: 'png' }); await writeFile(`.verification/request-documents-${width}.png`, Buffer.from(screenshot.data, 'base64'));
   }
   await browser.call('Emulation.clearDeviceMetricsOverride');
+  await second.navigate(`/requests/${mrf}`);
+  await second.wait("return document.querySelector('.document-current')?.textContent.includes('resumed.pdf')");
+  assert.deepEqual(colleagueReads, [], 'Reloading an attachment does not open PDF bytes');
+  await second.run("[...document.querySelectorAll('.mrf-documents button')].find(b=>b.textContent==='Preview PDF').click()");
+  await second.wait("return !!document.querySelector('.mrf-documents dialog[open] .pdfViewer canvas')");
   // File access and every transfer action are denied immediately after revocation.
   const secondCookie = await cookie(second);
   ok(await client.from('project_assignments').delete().eq('user_id', staff[1].id).eq('project_id', project));
   assert.equal((await http('/api/mrf-documents/files/' + resumed, {}, secondCookie)).status, 401);
   assert.equal((await http('/api/mrf-documents/uploads/' + resumed, { method: 'POST' }, secondCookie)).status, 401);
+  await second.wait("return !document.querySelector('.mrf-documents .pdf-document-viewer')");
+  browser.stopWatchingRequests(filePrefix);
+  second.stopWatchingRequests(filePrefix);
   // Internal archive fixture exercises the engine; no application approval API exists.
   const manager = { email: `${randomUUID()}@example.invalid`, password: randomUUID() };
   const managerId = ok(await client.auth.admin.createUser({ ...manager, email_confirm: true })).user.id;
