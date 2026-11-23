@@ -4,7 +4,7 @@ import { start } from "workflow/api";
 import { quotationArchiveWorkflow } from "@/src/server/workflows/quotations";
 import { serviceRpc } from "@/src/server/auth/service-rpc";
 import { documentDrive } from "@/src/server/documents/config";
-import { requestDriveParent } from "@/src/server/documents/request-folders";
+import { recordedRequestDriveParent, requestDriveParent } from "@/src/server/documents/request-folders";
 import { rowValue, textValue } from "@/src/server/documents/state";
 import { record } from "@/src/domain/projects/projects";
 import {
@@ -103,10 +103,7 @@ export async function processQuotationArchive(id: string) {
         throw Error("Invalid retained original metadata");
       const originalFolder = rowValue(file.folder);
       await checkpoint({ verified: false });
-      const originalProjectFolder = textValue(originalFolder.folder_id);
-      const originalParent = await requestDriveParent(
-        drive, "quotation-original", file.id, originalProjectFolder, textValue(originalFolder.root_id),
-      ) ?? originalProjectFolder;
+      const originalParent = await recordedRequestDriveParent("quotation-original", file.id, textValue(originalFolder.folder_id));
       const bytes = await drive.verifyFile(
         textValue(file.driveFileId),
         originalParent,

@@ -23,6 +23,18 @@ function parsePath(value: unknown) {
   return { requestId: path.requestId, folders };
 }
 
+/** A retained original can still be read after its old folder becomes read-only. */
+export async function recordedRequestDriveParent(kind: RequestFileKind, target: string, projectFolder: string) {
+  const value = await serviceRpc("request_drive_path", {
+    resource_kind: kind, target, project_folder: projectFolder, candidates: null,
+  });
+  if (value === null) return projectFolder;
+  const path = parsePath(value);
+  const parent = path.folders.at(-1)?.id;
+  if (!parent) throw Error("Recorded request folder missing");
+  return parent;
+}
+
 /** Resolve and verify a new admission's folders. A null path keeps the legacy layout. */
 export async function requestDriveParent(
   drive: DriveGateway, kind: RequestFileKind, target: string, projectFolder: string, root: string,
