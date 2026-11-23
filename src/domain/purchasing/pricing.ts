@@ -384,7 +384,7 @@ export type ComparisonSnapshot = {
   sources: {
     quoteId: string;
     revisionId: string;
-    supplierId: string;
+    supplierId: string | null;
     supplierName: string;
     ref: string;
     gross: string;
@@ -574,7 +574,7 @@ export function parseComparisonSnapshot(
       sources.push({
         quoteId: uuid(s.quoteId),
         revisionId: uuid(s.revisionId),
-        supplierId: uuid(s.supplierId),
+        supplierId: s.supplierId === null ? null : uuid(s.supplierId),
         supplierName: string(s.supplierName),
         ref: string(s.ref),
         gross: exact(s.gross),

@@ -4,7 +4,7 @@ import { createHash } from "node:crypto";
 import ExcelJS from "exceljs";
 import { PDFDocument } from "pdf-lib";
 import { purchasingFixture } from "./helpers/purchasing.mjs";
-import { comparisonSnapshot, calculatePo } from "../src/domain/purchasing/pricing.ts";
+import { comparisonSnapshot, calculatePo, parseComparisonSnapshot } from "../src/domain/purchasing/pricing.ts";
 import {
   generatePurchasingComparisonPdf,
   generatePurchasingComparisonWorkbook,
@@ -38,7 +38,8 @@ test("comparison XLSX preserves exact large decimal text, frozen values and dete
   );
 });
 test("comparison PDF paginates long source content and regenerates identical bytes", async () => {
-  const { view } = purchasingFixture();
+  const { view, q } = purchasingFixture();
+  q.supplierId = null;
   const snapshot = comparisonSnapshot(
     view,
     [],
@@ -49,6 +50,8 @@ test("comparison PDF paginates long source content and regenerates identical byt
     ...snapshot.items[0],
     name: `Material ${index + 1} ` + "long specification ".repeat(20),
   }));
+  assert.equal(snapshot.sources[0].supplierId, null);
+  assert.deepEqual(parseComparisonSnapshot(JSON.parse(JSON.stringify(snapshot))), snapshot);
   const bytes = await generatePurchasingComparisonPdf(snapshot, "1"),
     again = await generatePurchasingComparisonPdf(snapshot, "1");
   assert.equal(hash(bytes), hash(again));

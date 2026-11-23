@@ -10,10 +10,10 @@ export async function checkPurchasingRaces({ sql, database, environment }) {
   ).split("-- Assertions (the concurrency runner")[0];
   const json = (value) =>
     "'" + JSON.stringify(value).replaceAll("'", "''") + "'::jsonb";
-  const fixture = async () =>
+  const fixture = async (quoteOnly) =>
     JSON.parse(
       (
-        await sql(definition + "select pg_temp.purchasing_fixture(); commit;")
+        await sql(definition + `select pg_temp.purchasing_fixture(quote_only=>${quoteOnly}); commit;`)
       ).output
         .split("\n")
         .find((line) => line.startsWith("{")),
@@ -35,8 +35,8 @@ export async function checkPurchasingRaces({ sql, database, environment }) {
   ) =>
     `select public.purchasing_command(${json(f.actor)},${json({ type: kind, requestId: operation, mrfId: f.request, targetId: target, expectedVersion: version, expectedDemand: demandVersion, quoteId: f.quote, expectedFamily: "2", body: f.body, ...extra })});`;
   // Family creation advances its version. Read the actual value into each fixture.
-  const fresh = async () => {
-    const f = await fixture();
+  const fresh = async (quoteOnly = false) => {
+    const f = await fixture(quoteOnly);
     f.familyVersion = (
       await sql(
         `select version::text from private.quotation_families where id='${f.family}';`,
@@ -222,5 +222,22 @@ export async function checkPurchasingRaces({ sql, database, environment }) {
           );
         }
       }
+    f = await fresh(true);
+    award = randomUUID();
+    await sql(buying(f, "saveAward", award, "0", "0"));
+    const supplierSelection = { supplierId: f.supplier };
+    result = await race(
+      buying(f, "convert", award, "1", "1", supplierSelection),
+      buying(f, "convert", award, "1", "1", supplierSelection),
+      isolation,
+    );
+    assert.notEqual(result.code, 0);
+    assert.match(result.diagnostics, /changed|could not serialize/);
+    assert.equal((await snapshot(f)).requirements[0].ordered, "6");
+    assert.equal(
+      (await sql(`select count(*) from private.purchasing_records
+        where request_id='${f.request}' and kind='po' and supplier_id='${f.supplier}';`)).output.trim(),
+      "1",
+    );
   }
 }

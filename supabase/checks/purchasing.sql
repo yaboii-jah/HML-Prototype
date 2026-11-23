@@ -50,7 +50,7 @@ end $$;
 
 -- Owning purchasing security/atomicity fixtures. Archive metadata below is synthetic;
 -- real bytes and Workflow integrity belong to the separate application acceptance.
-create function pg_temp.purchasing_fixture(with_charge boolean default false,shared_project uuid default null,shared_scope uuid default null,only_cement boolean default false) returns jsonb language plpgsql as $$
+create function pg_temp.purchasing_fixture(with_charge boolean default false,shared_project uuid default null,shared_scope uuid default null,only_cement boolean default false,quote_only boolean default false) returns jsonb language plpgsql as $$
 declare f jsonb:=pg_temp.demand_fixture(shared_project,shared_scope,only_cement); target uuid:=(f->>'request')::uuid; caller uuid:=(f->'actor'->>'userId')::uuid;
   supplier uuid:=gen_random_uuid(); quote uuid:=gen_random_uuid(); revision uuid:=gen_random_uuid(); line uuid:=gen_random_uuid();
   family uuid; body jsonb:='{}'; source jsonb:='{}'; review jsonb; calculation jsonb; k text; fields jsonb:='{}'; orderline uuid:=gen_random_uuid(); charge uuid:=gen_random_uuid(); order_adjustments jsonb:='[]';
@@ -64,8 +64,16 @@ begin
     body:=jsonb_set(body,'{adjustments}',jsonb_build_array(jsonb_build_object('id',charge,'label','Delivery','kind','shipping','basis','fixed','value','100','taxable','VAT','sourceDetails','Supplier delivery')));
     order_adjustments:=jsonb_build_array(jsonb_build_object('id',charge,'sourceKind','adjustment','include',true,'amount','100','reason','','confirmed',false));
   end if;
-  insert into private.quotation_drafts(id,request_id,supplier_id,body,state,creator_id,creator_name,matches)
-    values(quote,target,supplier,body,'finalized',caller,'Purchasing fixture',jsonb_build_object(line::text,jsonb_build_object('line',source,'fileVersion','1')));
+  if quote_only then
+    body:=jsonb_set(body,'{supplierName}','"Quote-only Trading"');
+    quote:=(public.quotation_command(f->'actor',jsonb_build_object('type','create','requestId',gen_random_uuid(),
+      'mrfId',target,'supplierId',null,'body',body))->>'quoteId')::uuid;
+    update private.quotation_drafts set state='finalized',
+      matches=jsonb_build_object(line::text,jsonb_build_object('line',source,'fileVersion','1')) where id=quote;
+  else
+    insert into private.quotation_drafts(id,request_id,supplier_id,body,state,creator_id,creator_name,matches)
+      values(quote,target,supplier,body,'finalized',caller,'Purchasing fixture',jsonb_build_object(line::text,jsonb_build_object('line',source,'fileVersion','1')));
+  end if;
   select family_id into family from private.quotation_drafts where id=quote;
   review:=jsonb_build_object('vatStatus','VAT','priceBasis','inclusive','vatRate','12','subtotalBasis','materials','totalBasis','gross','rows',jsonb_build_array(jsonb_build_object('id',line,'role','material','discountType','none','taxable',null,'free',false,'reason','','printedBasis','input','summaryBasis','','amountField','printedTotal')),'adjustments','[]'::jsonb);
   if with_charge then review:=jsonb_set(review,'{adjustments}',jsonb_build_array(jsonb_build_object('id',charge,'kind','shipping','calculation','fixed','taxable',true,'reason','','summaryBasis',''))); end if;
@@ -151,5 +159,61 @@ begin
   body:=jsonb_set(body,'{lines,0,quantity}','"4"'); body:=jsonb_set(body,'{lines,0,offeredQuantity}','"4"');
   perform pg_temp.purchasing_action(f,'savePo',po,jsonb_build_object('body',body));
   if (select purchasing_records.body->'adjustments'->0->>'confirmed' from private.purchasing_records where id=po) is distinct from 'false' then raise exception 'Quantity change kept a stale charge review'; end if;
+end $$;
+do $$
+declare f jsonb:=pg_temp.purchasing_fixture(quote_only=>true); target uuid:=(f->>'request')::uuid;
+  family uuid:=(f->>'family')::uuid; quote uuid:=(f->>'quote')::uuid; supplier uuid:=(f->>'supplier')::uuid;
+  revision uuid:=(f->>'revision')::uuid; award uuid:=gen_random_uuid(); po uuid; archived jsonb; demand jsonb;
+  selection jsonb:=jsonb_build_object('supplierId',supplier); source jsonb; archive_job uuid; before_path jsonb;
+begin
+  select snapshot into archived from private.quotation_revisions where id=revision;
+  source:=archived->'source';
+  if exists(select 1 from private.suppliers where name_key='quote-only trading')
+    or private.quotation_view(quote)->'supplierId' is distinct from 'null'::jsonb
+    or private.quotation_revision_blockers(revision)<>'[]'::jsonb then
+    raise exception 'Quote-only intake created or required a directory entry';
+  end if;
+  if (public.quotation_command(f->'actor',jsonb_build_object('type','create','requestId',gen_random_uuid(),
+    'mrfId',target,'supplierId',null,'body',jsonb_set(source,'{supplierName}','"quote-only  TRADING"')))->>'quoteId')::uuid is distinct from quote then
+    raise exception 'Repeated manual supplier name opened a second history';
+  end if;
+  insert into private.quotation_archive_jobs(revision_id,folder_mapping_id,actor,original_actor,state)
+    select revision,a.folder_mapping_id,f->'actor',f->'actor','complete' from private.quotation_archives a where a.revision_id=revision
+    returning id into archive_job;
+  select path into before_path from private.request_drive_admissions where resource_id=archive_job and kind='quotation-review';
+  if before_path->1->>'key' is distinct from 'quotations/'||family::text then
+    raise exception 'The quote-only archive has no stable family path';
+  end if;
+  perform pg_temp.purchasing_action(f,'saveAward',award);
+  demand:=private.demand_snapshot(target);
+  begin
+    perform pg_temp.purchasing_action(f,'convert',award);
+    raise exception 'Unlinked award converted without a selection';
+  exception when sqlstate 'P4810' then null; end;
+  update private.suppliers set is_active=false where id=supplier;
+  begin
+    perform pg_temp.purchasing_action(f,'convert',award,selection);
+    raise exception 'Inactive supplier converted an award';
+  exception when sqlstate 'P4810' then null; end;
+  update private.suppliers set is_active=true where id=supplier;
+  begin
+    perform public.quotation_command(f->'actor',jsonb_build_object('type','create','requestId',gen_random_uuid(),
+      'mrfId',target,'supplierId',supplier,'body',source));
+    perform pg_temp.purchasing_action(f,'convert',award,selection);
+    raise exception 'Another quotation history already owns this supplier link';
+  exception when sqlstate 'P4811' then null; end;
+  if private.demand_snapshot(target) is distinct from demand
+    or (select state from private.purchasing_records where id=award) is distinct from 'active'
+    or (select supplier_id from private.quotation_families where id=family) is not null then
+    raise exception 'A rejected supplier link changed the award or demand';
+  end if;
+  po:=(pg_temp.purchasing_action(f,'convert',award,selection)->>'targetId')::uuid;
+  if (select supplier_id from private.purchasing_records where id=po) is distinct from supplier
+    or (select supplier_id from private.quotation_families where id=family) is distinct from supplier
+    or (select snapshot from private.quotation_revisions where id=revision) is distinct from archived
+    or (select path from private.request_drive_admissions where resource_id=archive_job and kind='quotation-review') is distinct from before_path
+    or private.demand_snapshot(target)->'requirements'->0->>'ordered' is distinct from '6' then
+    raise exception 'Supplier linking failed to preserve the finalized offer, archive or ordered demand';
+  end if;
 end $$;
 rollback;

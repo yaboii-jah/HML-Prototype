@@ -21,6 +21,7 @@
 
 ## Next Up
 
+- The 4.19 supplier follow-up implements quote-only intake, possible matches, and awards before supplier registration. The PO transaction links an active directory supplier and preserves the quotation snapshot and Drive path. Local migration replay and generated types, build, lint, 492 tests, disposable SQL and purchasing races, and signed-in browser checks for quote-only intake and PO conversion passed. Staging is still on the earlier migration.
 - **Exact next action:** verify [4.15 transfer trips and dispatch](step-4-implementation.md#415-transfer-trips-and-dispatch) through the matching integration, staging and staff gates.
 - **Separate release blockers:** unresolved Vercel Node-version deployment failure; real email/custom SMTP and verified sender; company-owned Shared Drive/services and suitable hosting; tested backup/restore, monitoring/incident owners and departmental release acceptance. Supported Node 26.12.1/npm 11.20.0 remain local; deployment targets Node 24.x, CI baseline 24.22.1.
 

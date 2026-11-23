@@ -110,6 +110,7 @@ export async function runQuotationCommand(
         "23505":
           "An active draft or unfinished file group already exists for this MRF and supplier.",
         P4501: "Quotation not found.",
+        P4508: "Enter the supplier name as printed on the quotation.",
         P4502:
           "A current fully archived MRF and active quotation draft are required. Existing input is preserved.",
         P4503:

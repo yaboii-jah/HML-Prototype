@@ -1322,14 +1322,14 @@ isOneToOne: false
                   ]
                 },"purchasing_records": {
                   Row: {
-                    "approval_id": string | null,"body": NonNullable<Json>,"calculation": Json | null,"checked": Json | null,"id": string,"kind": string,"po_status": string,"project_id": string,"quote_id": string,"ref": string | null,"request_id": string,"revision_id": string,"state": string,"submission_id": string | null,"supplier_id": string,"updated_at": string,"version": number
+                    "approval_id": string | null,"body": NonNullable<Json>,"calculation": Json | null,"checked": Json | null,"family_id": string,"id": string,"kind": string,"po_status": string,"project_id": string,"quote_id": string,"ref": string | null,"request_id": string,"revision_id": string,"state": string,"submission_id": string | null,"supplier_id": string | null,"updated_at": string,"version": number
                   }
                   ComputedFields: never
                   Insert: {
-                    "approval_id"?: string | null,"body": NonNullable<Json>,"calculation"?: Json | null,"checked"?: Json | null,"id": string,"kind": string,"po_status"?: string,"project_id": string,"quote_id": string,"ref"?: string | null,"request_id": string,"revision_id": string,"state"?: string,"submission_id"?: string | null,"supplier_id": string,"updated_at"?: string,"version"?: number
+                    "approval_id"?: string | null,"body": NonNullable<Json>,"calculation"?: Json | null,"checked"?: Json | null,"family_id": string,"id": string,"kind": string,"po_status"?: string,"project_id": string,"quote_id": string,"ref"?: string | null,"request_id": string,"revision_id": string,"state"?: string,"submission_id"?: string | null,"supplier_id"?: string | null,"updated_at"?: string,"version"?: number
                   }
                   Update: {
-                    "approval_id"?: string | null,"body"?: NonNullable<Json>,"calculation"?: Json | null,"checked"?: Json | null,"id"?: string,"kind"?: string,"po_status"?: string,"project_id"?: string,"quote_id"?: string,"ref"?: string | null,"request_id"?: string,"revision_id"?: string,"state"?: string,"submission_id"?: string | null,"supplier_id"?: string,"updated_at"?: string,"version"?: number
+                    "approval_id"?: string | null,"body"?: NonNullable<Json>,"calculation"?: Json | null,"checked"?: Json | null,"family_id"?: string,"id"?: string,"kind"?: string,"po_status"?: string,"project_id"?: string,"quote_id"?: string,"ref"?: string | null,"request_id"?: string,"revision_id"?: string,"state"?: string,"submission_id"?: string | null,"supplier_id"?: string | null,"updated_at"?: string,"version"?: number
                   }
                   Relationships: [
                     {
@@ -1337,6 +1337,12 @@ isOneToOne: false
       columns: ["approval_id"]
 isOneToOne: false
       referencedRelation: "po_approvals"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "purchasing_records_family_id_fkey"
+      columns: ["family_id"]
+isOneToOne: false
+      referencedRelation: "quotation_families"
       referencedColumns: ["id"]
     },{
       foreignKeyName: "purchasing_records_quote_id_fkey"
@@ -1418,14 +1424,14 @@ isOneToOne: true
                   ]
                 },"quotation_drafts": {
                   Row: {
-                    "body": NonNullable<Json>,"checked": Json | null,"content_version": number,"copied_from_revision": string | null,"created_at": string,"creator_id": string,"creator_name": string,"current_files": (string)[],"family_id": string,"file_version": number,"id": string,"matches": NonNullable<Json>,"request_id": string,"state": string,"supplier_id": string,"version": number,"quotation_ready_files": boolean | null
+                    "body": NonNullable<Json>,"checked": Json | null,"content_version": number,"copied_from_revision": string | null,"created_at": string,"creator_id": string,"creator_name": string,"current_files": (string)[],"family_id": string,"file_version": number,"id": string,"matches": NonNullable<Json>,"request_id": string,"state": string,"supplier_id": string | null,"version": number,"quotation_ready_files": boolean | null
                   }
                   ComputedFields: "quotation_ready_files"
                   Insert: {
-                    "body": NonNullable<Json>,"checked"?: Json | null,"content_version"?: number,"copied_from_revision"?: string | null,"created_at"?: string,"creator_id": string,"creator_name": string,"current_files"?: (string)[],"family_id": string,"file_version"?: number,"id": string,"matches"?: NonNullable<Json>,"request_id": string,"state"?: string,"supplier_id": string,"version"?: number
+                    "body": NonNullable<Json>,"checked"?: Json | null,"content_version"?: number,"copied_from_revision"?: string | null,"created_at"?: string,"creator_id": string,"creator_name": string,"current_files"?: (string)[],"family_id": string,"file_version"?: number,"id": string,"matches"?: NonNullable<Json>,"request_id": string,"state"?: string,"supplier_id"?: string | null,"version"?: number
                   }
                   Update: {
-                    "body"?: NonNullable<Json>,"checked"?: Json | null,"content_version"?: number,"copied_from_revision"?: string | null,"created_at"?: string,"creator_id"?: string,"creator_name"?: string,"current_files"?: (string)[],"family_id"?: string,"file_version"?: number,"id"?: string,"matches"?: NonNullable<Json>,"request_id"?: string,"state"?: string,"supplier_id"?: string,"version"?: number
+                    "body"?: NonNullable<Json>,"checked"?: Json | null,"content_version"?: number,"copied_from_revision"?: string | null,"created_at"?: string,"creator_id"?: string,"creator_name"?: string,"current_files"?: (string)[],"family_id"?: string,"file_version"?: number,"id"?: string,"matches"?: NonNullable<Json>,"request_id"?: string,"state"?: string,"supplier_id"?: string | null,"version"?: number
                   }
                   Relationships: [
                     {
@@ -1450,14 +1456,14 @@ isOneToOne: false
                   ]
                 },"quotation_families": {
                   Row: {
-                    "current_quote_id": string | null,"id": string,"pending_quote_id": string | null,"request_id": string,"supplier_id": string,"version": number
+                    "current_quote_id": string | null,"id": string,"intake_name": string | null,"pending_quote_id": string | null,"request_id": string,"supplier_id": string | null,"version": number
                   }
                   ComputedFields: never
                   Insert: {
-                    "current_quote_id"?: string | null,"id"?: string,"pending_quote_id"?: string | null,"request_id": string,"supplier_id": string,"version"?: number
+                    "current_quote_id"?: string | null,"id"?: string,"intake_name"?: string | null,"pending_quote_id"?: string | null,"request_id": string,"supplier_id"?: string | null,"version"?: number
                   }
                   Update: {
-                    "current_quote_id"?: string | null,"id"?: string,"pending_quote_id"?: string | null,"request_id"?: string,"supplier_id"?: string,"version"?: number
+                    "current_quote_id"?: string | null,"id"?: string,"intake_name"?: string | null,"pending_quote_id"?: string | null,"request_id"?: string,"supplier_id"?: string | null,"version"?: number
                   }
                   Relationships: [
                     {
@@ -2597,7 +2603,7 @@ isOneToOne: true
 "matches": NonNullable<Json>,
 "request_id": string,
 "state": string,
-"supplier_id": string,
+"supplier_id": string | null,
 "version": number
             }
                           SetofOptions: {
