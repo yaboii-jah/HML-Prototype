@@ -21,8 +21,7 @@ export async function checkMrfReview({ browser, second, client, login, logout, s
   };
   const fill = async (b, selector, value) => {
     await b.wait(`return !!document.querySelector(${JSON.stringify(selector)})&&!document.querySelector(${JSON.stringify(selector)}).matches(':disabled')`);
-    await b.run(`const input=document.querySelector(${JSON.stringify(selector)});input.focus();input.select();`);
-    await b.call('Input.insertText', { text: value });
+    await b.fill(selector, value);
   };
   const current = id => sql(`select private.request_snapshot('${id}');`).then(result => JSON.parse(result.output.trim()));
   const managerActor = await actor(second), operation = randomUUID();
@@ -49,6 +48,7 @@ export async function checkMrfReview({ browser, second, client, login, logout, s
   await browser.wait("return document.querySelector('input[name=sourceRef]')?.closest('fieldset').disabled&&document.body.innerText.includes('This request is locked')");
   assert.equal(await browser.run("return document.querySelector('input[name=sourceRef]').value"), 'Preserved across submission');
   await logout(second); await login(second, manager); await second.navigate(`/requests/${mrf}`);
+  await second.wait("return !!document.querySelector('.document-current')");
   await fill(second, '#mrf-review-heading ~ .field textarea', 'Clarify the request');
   await click(second, 'Return for changes');
   await browser.wait("return document.body.innerText.includes('Returned')&&!document.querySelector('input[name=sourceRef]').closest('fieldset').disabled");
@@ -101,6 +101,7 @@ export async function checkMrfReview({ browser, second, client, login, logout, s
   ok(await client.from('profiles').insert({ user_id: procurement.id, display_name: 'Review Procurement', is_active: true }));
   ok(await client.from('role_grants').insert({ user_id: procurement.id, role: 'Procurement' }));
   await logout(second); await login(second, procurement); await second.navigate(`/requests/${mrf}`);
+  await second.wait("return !!document.querySelector('.document-current')");
   await fill(second, '#mrf-review-heading ~ .field textarea', 'Correct the requirement');
   await click(second, 'Open correction');
   await browser.wait("return document.body.innerText.includes('Full correction')");
