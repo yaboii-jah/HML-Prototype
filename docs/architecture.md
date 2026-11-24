@@ -208,6 +208,8 @@ Stock commands commit the owning entry and exact movements together after checki
 
 Unrecorded stock reports retain one material count, submitter, and terminal Accounting decision per report. The project and stock identity are checked at submission, which leaves balances unchanged. Approval locks the report and reuses the checked opening stock command in the same transaction. A receipt or opening entry for the same project, description and unit blocks approval and exposes the existing inventory record to authorized readers. Rejected reports retain their reason, and operation IDs preserve retry outcomes.
 
+Pending unrecorded-stock reports appear as ready Accounting actions within the selected dashboard project and count toward the workspace bell. Each action opens its report in Site Inventory. Approval or rejection removes it from the queue.
+
 ### MRF Document Lifecycle
 
 Unit 4.2 implements this contract; its verification and staging state are recorded in the tracker. A saved numbered MRF has an independent attachment revision and at most one current validated supporting PDF. Upload progress cannot change the header/material version. Replacement retains the current file until exact provider identity, size/hash and PDF readability checks pass and the expected attachment revision commits atomically. All actions and protected reads verify the current session, grants and project access. Drive session URLs are encrypted in private server state; clients receive upload/document UUIDs and confirmed offsets. Raw uploads are bounded to 3 MiB chunks; retrieval streams authorized files with private/no-store headers and checked byte ranges. Reload requires matching local-file reselection; no document bytes persist in browser storage.

@@ -93,8 +93,10 @@ declare
   project uuid:=(f->>'destination')::uuid;
   report uuid:=gen_random_uuid(); approval uuid:=gen_random_uuid();
   rejected uuid:=gen_random_uuid(); raced uuid:=gen_random_uuid(); receipt_account uuid:=gen_random_uuid();
-  cmd jsonb; decision jsonb; result jsonb; view jsonb;
+  cmd jsonb; decision jsonb; result jsonb; view jsonb; bell_before integer;
+  report_href text:='/inventory?view=stock-reports&reportId='||report;
 begin
+  bell_before:=(public.monitoring_read(accountant,'bell','{}')->>'count')::integer;
   cmd:=jsonb_build_object('operationId',report,'action','submit','projectId',project,
     'description','Found stock tiles','unit','box','quantity','7.125','reason','Physical site count');
   begin
@@ -109,6 +111,12 @@ begin
   if result<>public.stock_report_command(site,cmd)
     or exists(select 1 from private.stock_accounts where id=report) then
     raise exception 'Pending report posted stock or changed on retry';
+  end if;
+  if (public.monitoring_read(accountant,'bell','{}')->>'count')::integer is distinct from bell_before+1
+    or not exists(select 1 from jsonb_array_elements(public.monitoring_read(accountant,'dashboard',
+      jsonb_build_object('projectId',project))->'actions') a where a->>'href'=report_href and a->>'label'='Review unrecorded stock')
+    or exists(select 1 from jsonb_array_elements(public.monitoring_read(site,'dashboard','{}')->'actions') a where a->>'href'=report_href) then
+    raise exception 'Pending stock report did not appear in the Accounting queue only';
   end if;
   begin
     perform public.stock_report_command(site,cmd||'{"quantity":"12"}');
@@ -129,6 +137,10 @@ begin
     raise exception 'Site approved a report'; exception when insufficient_privilege then null;
   end;
   result:=public.stock_report_command(accountant,decision);
+  if (public.monitoring_read(accountant,'bell','{}')->>'count')::integer is distinct from bell_before
+    or exists(select 1 from jsonb_array_elements(public.monitoring_read(accountant,'dashboard','{}')->'actions') a where a->>'href'=report_href) then
+    raise exception 'Approved stock report stayed in the Accounting queue';
+  end if;
   if result<>public.stock_report_command(accountant,decision)
     or result<>public.stock_report_command(site,cmd)
     or (select count(*) from private.stock_movements where operation_id=approval)<>1
@@ -152,6 +164,7 @@ begin
   result:=public.stock_report_command(accountant,decision);
   if result<>public.stock_report_command(accountant,decision)
     or exists(select 1 from private.stock_accounts where id=rejected)
+    or (public.monitoring_read(accountant,'bell','{}')->>'count')::integer is distinct from bell_before
     or (select rejection_reason from private.stock_reports where id=rejected) is distinct from 'Site count needs verification' then
     raise exception 'Rejection changed stock or lost its reason';
   end if;

@@ -97,10 +97,11 @@ export async function checkInventoryUsage({ browser,second,client,sql,login,logo
   await open(second,'Unrecorded stock','#stock-reports-heading');
   await content(second,'No stock reports yet.');
 
-  await enter(second,accounting);
-  await open(second,'Unrecorded stock','#stock-reports-heading');
-  await content(second,'Fixture unrecorded anchors');
-  await open(second,'Review report','dialog[open]');
+  await enter(second,accounting,'/dashboard');
+  const taskLink='a[href^="/inventory?view=stock-reports&reportId="]';
+  await second.wait(`return !!document.querySelector(${JSON.stringify(taskLink)});`);
+  await second.run(`document.querySelector(${JSON.stringify(taskLink)}).click();`);
+  await second.wait("return document.querySelector('dialog[open] h2')?.textContent==='Fixture unrecorded anchors';");
   await click(second,'Approve and post stock');
   await content(second,'Report approved and opening stock posted.');
   const stock=(await sql(`select r.status||':'||trim_scale(m.quantity)::text

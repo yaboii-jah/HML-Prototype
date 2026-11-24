@@ -14,14 +14,14 @@ const formatDate = (value:string) => new Date(value).toLocaleString('en-PH',{ ti
 const emptyCount = { description:'', unit:'', quantity:'', reason:'' };
 const statusText = {pending:'Pending',approved:'Approved',rejected:'Rejected'};
 
-export function StockReports({ view, actorId, initialProject, refresh }: {
-  view:InventoryView; actorId:string; initialProject:string; refresh:()=>void;
+export function StockReports({ view, actorId, initialProject, initialReportId, refresh }: {
+  view:InventoryView; actorId:string; initialProject:string; initialReportId?:string; refresh:()=>void;
 }) {
   const site=view.role==='Site Personnel';
   const [project,setProject]=useState(initialProject || (view.projects.length===1 ? view.projects[0].id : ''));
   const [count,setCount]=useState(emptyCount);
   const [problem,setProblem]=useState('');
-  const [reportId,setReportId]=useState<string|null>(null);
+  const [reportId,setReportId]=useState<string|null>(initialReportId??null);
   const [rejection,setRejection]=useState('');
   const reports=view.stockReports??[];
   const report=reports.find(item=>item.id===reportId);

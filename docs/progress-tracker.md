@@ -21,6 +21,7 @@
 
 ## Next Up
 
+- The Accounting stock-report queue follow-up adds pending reports to Dashboard Ready and the notification bell, with a direct link to the report. Local build, lint, types, rollback SQL, and signed-in browser checks passed. Migration `20261124105335_stock_report_monitoring.sql` awaits CI and Staging rollout.
 - Separate inventory follow-up. Site Personnel can report an unrecorded on-site count for an assigned project, and Accounting can approve and post the first balance or reject the report with a reason. Migration `20261124093817_inventory_unrecorded_stock.sql` passed disposable SQL checks and generated types. Build, lint, types, 492 tests, signed-in Site and Accounting flows, and 375px layout passed locally. Inventory rollout awaits matching CI. Staging staff retest for 4.19 remains on `8dd062b`.
 - The 4.19 supplier follow-up implements quote-only intake, possible matches, and awards before supplier registration. The PO transaction links an active directory supplier and preserves the quotation snapshot and Drive path. Local migration replay and generated types, build, lint, 492 tests, disposable SQL and purchasing races, and signed-in browser checks for quote-only intake and PO conversion passed. Staging is still on the earlier migration.
 - **Exact next action:** verify [4.15 transfer trips and dispatch](step-4-implementation.md#415-transfer-trips-and-dispatch) through the matching integration, staging and staff gates.

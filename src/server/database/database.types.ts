@@ -2348,6 +2348,9 @@ isOneToOne: true
 "monitoring_queue":
 { Args: { "caller": string,"projects": (string)[],"ready_only": boolean,"role_name": string }; Returns: Json
                            },
+"monitoring_queue_before_stock_reports":
+{ Args: { "caller": string,"projects": (string)[],"ready_only": boolean,"role_name": string }; Returns: Json
+                           },
 "monitoring_reports":
 { Args: { "filters": Json,"projects": (string)[] }; Returns: Json
                            },
