@@ -7,10 +7,13 @@ declare
   caller uuid; sid uuid; proof jsonb; admin jsonb; site jsonb; project uuid; mrf uuid; draft jsonb; command jsonb; result jsonb;
   folder_job uuid; job uuid; lease uuid; upload_a uuid; upload_b uuid; receipt jsonb; mapping uuid; before_version text; signature text; upload_target uuid;
   other_project uuid; other_job uuid;
+  office_id uuid:=gen_random_uuid(); office_session uuid:=gen_random_uuid(); office_actor jsonb; office_role text;
 begin
   foreach signature in array array['public.documents_read(jsonb,uuid,uuid)','public.document_command(jsonb,jsonb)',
     'public.document_transfer(jsonb,uuid,text,uuid,jsonb)','public.document_worker(uuid,text,uuid,jsonb)','public.document_dispatch(uuid)','public.document_file(jsonb,uuid)',
-    'public.request_drive_path(text,uuid,text,jsonb)'] loop
+    'public.request_drive_path(text,uuid,text,jsonb)','public.project_document_folder_open(jsonb,uuid)',
+    'private.project_document_folder_open(jsonb,uuid)','public.project_drive_directory(jsonb)',
+    'private.project_drive_directory(jsonb)'] loop
     if has_function_privilege('anon',signature,'execute') or has_function_privilege('authenticated',signature,'execute') or not has_function_privilege('service_role',signature,'execute') then raise exception 'Document RPC privilege leak'; end if;
   end loop;
   foreach signature in array array['project_document_folders','document_folder_owners','request_document_state','request_documents','document_uploads','document_jobs','document_operations','mrf_archive_snapshots','mrf_archives','request_drive_admissions','request_drive_folders'] loop
@@ -26,11 +29,17 @@ begin
   end loop;
   select jsonb_build_object('userId',admin_id,'sessionId',admin_session,'revision',access_revision::text,'activeRole','Administrator') into admin from public.profiles where user_id=admin_id;
   project:=(public.project_command(admin,jsonb_build_object('type','createProject','requestId',gen_random_uuid(),'name','Document checks '||gen_random_uuid(),'location','CI','code','D-'||upper(substr(replace(gen_random_uuid()::text,'-',''),1,10)),'budget','0'))->>'projectId')::uuid;
+  if public.project_document_folder_open(admin,project) is distinct from '{"folderId":null}'::jsonb then raise exception 'Pending setup exposed a destination'; end if;
+  if exists(select 1 from jsonb_array_elements(public.project_drive_directory(admin)) entry where entry->>'id'=project::text)
+    then raise exception 'Unconfirmed project appeared in the Drive directory'; end if;
+  begin perform public.project_document_folder_open(admin,gen_random_uuid()); raise exception 'Unknown project accepted'; exception when insufficient_privilege then null; end;
   select id into folder_job from private.document_jobs where project_id=project and kind='folder';
   if folder_job is null then raise exception 'New project did not atomically enqueue folder setup'; end if;
   receipt:=public.document_worker(folder_job,'claim'); lease:=(receipt->>'lease')::uuid;
   if public.document_worker(folder_job,'claim') is not null then raise exception 'Duplicate worker claimed active lease'; end if;
   delete from auth.sessions where id=admin_session;
+  begin perform public.project_document_folder_open(admin,project); raise exception 'Revoked folder access accepted'; exception when insufficient_privilege then null; end;
+  begin perform public.project_drive_directory(admin); raise exception 'Revoked directory access accepted'; exception when insufficient_privilege then null; end;
   if (select original_actor->>'name' from private.document_jobs where id=folder_job)<>'Documents Admin' then raise exception 'Original job actor name not frozen'; end if;
   perform public.document_worker(folder_job,'checkpoint',lease,jsonb_build_object('folderId','sql-folder-'||project,'rootId','sql-test-root','name','SQL destination','verified',true));
   perform public.document_worker(folder_job,'complete',lease);
@@ -41,6 +50,8 @@ begin
   proof:=private.login_preflight(site_id::text||'@example.invalid'); delete from private.session_bindings where session_id=site_session;
   perform private.bind_session(site_id,site_session,proof->>'revision',proof->>'credential');
   site:=jsonb_build_object('userId',site_id,'sessionId',site_session,'revision',proof->>'revision','activeRole','Site Personnel');
+  begin perform public.project_document_folder_open(site,project); raise exception 'Site Personnel resolved a Drive folder'; exception when insufficient_privilege then null; end;
+  begin perform public.project_drive_directory(site); raise exception 'Site Personnel read the Drive directory'; exception when insufficient_privilege then null; end;
   draft:='{"scopeId":null,"requestDate":"","sourceRef":"","requestedBy":"","approvedBy":"","purchaser":"","financeOfficer":"","specialInstructions":"","items":[]}';
   result:=public.request_command(site,jsonb_build_object('type','createDraft','requestId',gen_random_uuid(),'projectId',project,'draft',draft));
   mrf:=(result->'record'->>'id')::uuid; before_version:=result->'record'->>'version';
@@ -88,11 +99,14 @@ begin
   admin_session:=gen_random_uuid(); insert into auth.sessions(id,user_id,created_at,updated_at) values(admin_session,admin_id,now(),now());
   proof:=private.login_preflight(admin_id::text||'@example.invalid'); perform private.bind_session(admin_id,admin_session,proof->>'revision',proof->>'credential');
   admin:=admin||jsonb_build_object('sessionId',admin_session,'revision',proof->>'revision');
+  if public.project_document_folder_open(admin,project)->>'folderId' is distinct from 'sql-folder-'||project then raise exception 'Current folder lookup failed'; end if;
   begin perform public.document_command(site,jsonb_build_object('type','setupFolder','projectId',project,'operationId',gen_random_uuid())); raise exception 'Site managed folder'; exception when insufficient_privilege then null; end;
   job:=(public.document_command(admin,jsonb_build_object('type','setupFolder','projectId',project,'operationId',gen_random_uuid(),'expectedMapping',mapping))->>'jobId')::uuid;
+  if public.project_document_folder_open(admin,project)->>'folderId' is distinct from 'sql-folder-'||project then raise exception 'Pending remap changed the folder link'; end if;
   receipt:=public.document_worker(job,'claim'); lease:=(receipt->>'lease')::uuid;
   perform public.document_worker(job,'checkpoint',lease,jsonb_build_object('folderId','sql-new-'||project,'rootId','sql-test-root','name','New SQL destination','verified',true));
   perform public.document_worker(job,'complete',lease);
+  if public.project_document_folder_open(admin,project)->>'folderId' is distinct from 'sql-new-'||project then raise exception 'Folder lookup missed the confirmed remap'; end if;
   if (select folder_mapping_id from private.request_documents where id=upload_a)<>mapping or (select folder_mapping_id from private.document_uploads where id=upload_b)<>mapping then raise exception 'Remapping moved existing destinations'; end if;
   other_project:=(public.project_command(admin,jsonb_build_object('type','createProject','requestId',gen_random_uuid(),'name','Other documents '||gen_random_uuid(),'location','CI','code','D-'||upper(substr(replace(gen_random_uuid()::text,'-',''),1,10)),'budget','0'))->>'projectId')::uuid;
   select j.id into other_job from private.document_jobs j where j.project_id=other_project and j.kind='folder';
@@ -118,5 +132,30 @@ begin
   receipt:=public.document_worker(job,'claim');
   if receipt is not null or (select state from private.document_jobs where id=job)<>'paused' then raise exception 'Revoked worker continued'; end if;
   begin perform public.document_file(site,upload_a); raise exception 'Revoked file read accepted'; exception when insufficient_privilege then null; end;
+
+  insert into auth.users(id,email,is_anonymous,email_confirmed_at,encrypted_password)
+    values(office_id,office_id::text||'@example.invalid',false,now(),'fixture');
+  insert into public.profiles(user_id,display_name,is_active) values(office_id,'Drive Directory Staff',true);
+  insert into public.role_grants values (office_id,'Administrator'),(office_id,'Project Manager'),
+    (office_id,'Procurement'),(office_id,'Accounting'),(office_id,'Finance'),(office_id,'Logistics');
+  insert into auth.sessions(id,user_id,created_at,updated_at) values(office_session,office_id,now(),now());
+  proof:=private.login_preflight(office_id::text||'@example.invalid');
+  perform private.bind_session(office_id,office_session,proof->>'revision',proof->>'credential');
+  foreach office_role in array array['Administrator','Project Manager','Procurement','Accounting','Finance','Logistics'] loop
+    office_actor:=jsonb_build_object('userId',office_id,'sessionId',office_session,'revision',proof->>'revision','activeRole',office_role);
+    select entry into result from jsonb_array_elements(public.project_drive_directory(office_actor)) entry
+      where entry->>'id'=project::text;
+    if result is distinct from (select jsonb_build_object('id',id,'name',name,'code',document_code) from public.projects where id=project)
+      then raise exception 'Unexpected Drive directory projection for %',office_role; end if;
+    if public.project_document_folder_open(office_actor,project)->>'folderId' is distinct from 'sql-new-'||project
+      then raise exception 'Current folder is unavailable for %',office_role; end if;
+    if office_role not in ('Administrator','Project Manager') then
+      begin
+        perform public.document_command(office_actor,jsonb_build_object('type','setupFolder','projectId',project,'operationId',gen_random_uuid()));
+        raise exception 'Folder management expanded to %',office_role;
+      exception when insufficient_privilege then null;
+      end;
+    end if;
+  end loop;
 end $$;
 rollback;
