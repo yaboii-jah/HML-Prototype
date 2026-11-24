@@ -19,7 +19,6 @@ Read other context by task, using headings/search to select relevant sections:
 - [AI workflow rules](docs/ai-workflow-rules.md): execution, documentation and verification policy when planning or changing the project.
 - [Code standards](docs/code-standards.md): applicable conventions before writing code.
 - [Production checklist](docs/checklist.md): the relevant milestone and completion conditions for foundation/migration work.
-- [Step 4 guide](docs/step-4-implementation.md): roadmap/dependencies, the current unit and completion criteria for step 4 work. Read completed units only when their contracts affect the task.
 
 Reuse unchanged context within a session. On resumption, refresh current status and any relevant sections whose contents are missing or changed; do not reread every document by default. Distinguish production targets from implemented behavior.
 
