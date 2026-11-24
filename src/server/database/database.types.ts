@@ -1858,6 +1858,26 @@ isOneToOne: false
                   Relationships: [
 
                   ]
+                },"stock_reports": {
+                  Row: {
+                    "description": string,"id": string,"opening_entry_id": string | null,"project_id": string,"quantity": number,"reason": string,"rejection_reason": string | null,"reported_at": string,"reported_by": string,"reporter_name": string,"review_id": string | null,"reviewed_at": string | null,"reviewed_by": string | null,"reviewer_name": string | null,"status": string,"unit": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "description": string,"id": string,"opening_entry_id"?: string | null,"project_id": string,"quantity": number,"reason": string,"rejection_reason"?: string | null,"reported_at"?: string,"reported_by": string,"reporter_name": string,"review_id"?: string | null,"reviewed_at"?: string | null,"reviewed_by"?: string | null,"reviewer_name"?: string | null,"status"?: string,"unit": string
+                  }
+                  Update: {
+                    "description"?: string,"id"?: string,"opening_entry_id"?: string | null,"project_id"?: string,"quantity"?: number,"reason"?: string,"rejection_reason"?: string | null,"reported_at"?: string,"reported_by"?: string,"reporter_name"?: string,"review_id"?: string | null,"reviewed_at"?: string | null,"reviewed_by"?: string | null,"reviewer_name"?: string | null,"status"?: string,"unit"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "stock_reports_opening_entry_id_fkey"
+      columns: ["opening_entry_id"]
+isOneToOne: true
+      referencedRelation: "inventory_entries"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"stock_reservations": {
                   Row: {
                     "account_id": string,"id": string,"owner_id": string,"owner_kind": string,"owner_line_id": string,"quantity": number
@@ -2690,6 +2710,15 @@ isOneToOne: true
 "stock_apply":
 { Args: { "accounts": Json,"actor": Json,"operation": string,"postings": Json,"reason": string,"reservations": Json }; Returns: Json
                            },
+"stock_report_account":
+{ Args: { "description": string,"project": string,"unit": string }; Returns: string
+                           },
+"stock_report_command":
+{ Args: { "command": Json,"viewer": Json }; Returns: Json
+                           },
+"stock_reports_read":
+{ Args: { "selected_project": string,"viewer": Json }; Returns: Json
+                           },
 "stock_snapshot":
 { Args: { "ids": (string)[] }; Returns: Json
                            },
@@ -3171,6 +3200,9 @@ isOneToOne: false
                            },
 "requests_read":
 { Args: { "actor": Json,"target_request"?: string }; Returns: Json
+                           },
+"stock_report_command":
+{ Args: { "command": Json,"viewer": Json }; Returns: Json
                            },
 "supplier_command":
 { Args: { "actor": Json,"command": Json }; Returns: Json

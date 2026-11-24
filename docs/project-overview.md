@@ -108,6 +108,7 @@ Issued-PO payment workflows provide Finance plans, shared Accounting drafts/proo
 
 - Project stock balances, reservations and separate receiving and stock-posting actions.
 - Grouped material usage entries and authorized stock adjustments with recorded reasons.
+- Site Personnel report unrecorded physical stock on assigned projects. Accounting reviews the count and posts the first balance when approved.
 - Consumption reconciliation showing opening stock, additions, usage, transfers out, adjustments and closing stock for a selected period.
 - Usage is pooled by project/material/unit. Receipt-scope filters show provenance rather than creating separate scope balances; historical movements are not assigned invented scopes.
 - Drafts reserve no stock. A confirmed usage entry saves its movements atomically using a stable retry identity, cannot consume unavailable stock and remains immutable. Corrections use separate adjustments with reasons rather than editing the original entry.

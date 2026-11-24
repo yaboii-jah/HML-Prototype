@@ -82,5 +82,33 @@ export async function checkInventoryUsage({ browser,second,client,sql,login,logo
     await writeFile(`.verification/inventory-usage-${width}.png`,Buffer.from(shot.data,'base64'));
   }
   await second.call('Emulation.clearDeviceMetricsOverride');
-  console.log('Inventory role checks, opening count, draft reload, exactly-once usage and linked correction passed.');
+
+  await enter(browser,site);
+  await open(browser,'Report unrecorded stock','input[inputmode=decimal]:not(:disabled)');
+  await field(browser,'Material description','Fixture unrecorded anchors');
+  await field(browser,'Unit','box');
+  await field(browser,'Counted quantity','2.125');
+  await field(browser,'Count reason','Found during the physical site count');
+  await click(browser,'Submit stock report');
+  await content(browser,'Stock report submitted.');
+  await content(browser,'Fixture unrecorded anchors');
+  assert.equal((await sql(`select count(*) from private.stock_accounts where project_id='${fixture.destination}' and description='Fixture unrecorded anchors';`)).output.trim(),'0');
+  await enter(second,source);
+  await open(second,'Unrecorded stock','#stock-reports-heading');
+  await content(second,'No stock reports yet.');
+
+  await enter(second,accounting);
+  await open(second,'Unrecorded stock','#stock-reports-heading');
+  await content(second,'Fixture unrecorded anchors');
+  await open(second,'Review report','dialog[open]');
+  await click(second,'Approve and post stock');
+  await content(second,'Report approved and opening stock posted.');
+  const stock=(await sql(`select r.status||':'||trim_scale(m.quantity)::text
+    from private.stock_reports r join private.stock_movements m on m.operation_id=r.opening_entry_id
+    where r.project_id='${fixture.destination}' and r.description='Fixture unrecorded anchors';`)).output.trim();
+  assert.equal(stock,'approved:2.125');
+  await browser.navigate('/inventory');
+  await open(browser,'Unrecorded stock','#stock-reports-heading');
+  await content(browser,'Approved');
+  console.log('Inventory role checks, opening counts, stock report approval, exactly-once usage and linked corrections passed.');
 }
