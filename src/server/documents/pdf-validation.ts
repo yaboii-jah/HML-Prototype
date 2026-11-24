@@ -14,5 +14,6 @@ export async function validateSupportingPdf(bytes: Uint8Array) {
       const { width, height } = page.getSize();
       if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) throw Error("Invalid PDF page geometry");
     }
+    return pdf.getPageCount();
   } catch { throw new InvalidSupportingPdf(); }
 }

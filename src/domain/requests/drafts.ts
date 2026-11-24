@@ -9,8 +9,8 @@ export type MrfDraft = { scopeId: string | null; requestDate: string; items: Dra
 export type SavedMrf = MrfWorkflow & { id: string; projectId: string; ref: string; version: string; draft: MrfDraft; creatorId: string; creatorName: string; updaterId: string; updaterName: string; createdAt: string; updatedAt: string };
 export type RequestProject = { id: string; name: string; code: string | null; scopes: { id: string; name: string }[] };
 export type RequestView = { role: AuthRole; requests: SavedMrf[]; projects: RequestProject[] };
-export type DraftCommand = { type: "createDraft"; requestId: string; projectId: string; draft: MrfDraft } | { type: "saveDraft"; requestId: string; mrfId: string; expectedVersion: string; draft: MrfDraft };
-export type DraftResult = { ok: true; record: SavedMrf; changed: boolean } | { ok: false; message: string; conflict?: boolean; uncertain?: boolean };
+export type DraftCommand = { type: "createDraft"; requestId: string; projectId: string; draft: MrfDraft } | { type: "saveDraft"; requestId: string; mrfId: string; expectedVersion: string; draft: MrfDraft; extractionProposalId?: string };
+export type DraftResult = { ok: true; record: SavedMrf; changed: boolean } | { ok: false; message: string; conflict?: boolean; uncertain?: boolean; extractionStale?: boolean };
 
 export const uuid = (value: unknown): value is string => typeof value === "string" && UUID_PATTERN.test(value);
 export function validDraftDate(value: unknown): value is string {
@@ -59,7 +59,12 @@ export function parseDraftCommand(value: unknown): DraftCommand | null {
   const raw = record(value), draft = parseMrfDraft(raw?.draft);
   if (!raw || !uuid(raw.requestId) || !draft) return null;
   if (raw.type === "createDraft" && uuid(raw.projectId)) return { type: raw.type, requestId: raw.requestId, projectId: raw.projectId, draft };
-  if (raw.type === "saveDraft" && uuid(raw.mrfId) && typeof raw.expectedVersion === "string" && /^[1-9]\d{0,18}$/.test(raw.expectedVersion)) return { type: raw.type, requestId: raw.requestId, mrfId: raw.mrfId, expectedVersion: raw.expectedVersion, draft };
+  if (raw.type === "saveDraft" && uuid(raw.mrfId) && typeof raw.expectedVersion === "string" && /^[1-9]\d{0,18}$/.test(raw.expectedVersion)) {
+    const extractionProposalId = raw.extractionProposalId;
+    if (extractionProposalId !== undefined && !uuid(extractionProposalId)) return null;
+    return { type: raw.type, requestId: raw.requestId, mrfId: raw.mrfId, expectedVersion: raw.expectedVersion, draft,
+      ...(extractionProposalId ? { extractionProposalId } : {}) };
+  }
   return null;
 }
 export function parseSavedMrf(value: unknown): SavedMrf | null {

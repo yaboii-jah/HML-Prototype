@@ -245,6 +245,56 @@ export async function checkMrfDocuments({ browser, second, client, login, logout
   await browser.run("Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(document.querySelector('input[name=sourceRef]'),'');document.querySelector('input[name=sourceRef]').dispatchEvent(new Event('input',{bubbles:true}));");
   await browser.run("[...document.querySelectorAll('button')].find(b=>b.textContent==='Save draft')?.click()");
   await browser.wait(`return location.pathname==='/requests/${mrf}'`);
+  const extractionMrf = ok(await client.rpc('request_command', { actor: siteActor, command: {
+    type: 'createDraft', requestId: randomUUID(), projectId: project, draft,
+  } })).record.id;
+  const editPath = `/requests/${extractionMrf}/edit`;
+  await browser.navigate(editPath);
+  await browser.wait("return !!document.querySelector('.mrf-documents input[type=file]')");
+  const bundle = await PDFDocument.create();
+  for (const heading of ['Material Request Form', 'MRF continuation', 'Key plan and scope']) {
+    bundle.addPage([400, 500]).drawText(heading, { x: 30, y: 450, size: 14 });
+  }
+  const bundleBytes = Buffer.from(await bundle.save());
+  await select('extraction-bundle.pdf', bundleBytes);
+  const clickText = text => browser.run(`[...document.querySelectorAll('button')].find(b=>b.textContent===${JSON.stringify(text)})?.click()`);
+  await clickText('Upload PDF');
+  await browser.wait("return [...document.querySelectorAll('button')].some(b=>b.textContent==='Extract from supporting PDF'&&!b.disabled)");
+  drive.gemini.failNext = true;
+  await clickText('Extract from supporting PDF');
+  await browser.wait("return document.body.innerText.includes('Extraction could not finish')");
+  await clickText('Retry extraction');
+  await browser.wait("return document.body.innerText.includes('Selected fixture mesh')");
+  assert.equal(drive.gemini.inputs.length, 2);
+  assert.equal(drive.gemini.inputs[1].store, false);
+  assert.equal(drive.gemini.inputs[1].model, 'gemini-3.5-flash-lite');
+  assert.deepEqual(Buffer.from(drive.gemini.inputs[1].input[1].data, 'base64'), bundleBytes, 'Gemini receives all verified PDF bytes');
+  await browser.navigate(editPath);
+  await browser.wait("return document.body.innerText.includes('Selected fixture mesh')");
+  assert.equal(await browser.run("return [...document.querySelectorAll('[aria-labelledby=mrf-extraction-heading] input')].every(input=>!input.checked)"), true);
+  const reviewText = await browser.run("return document.querySelector('[aria-labelledby=mrf-extraction-heading]').innerText");
+  assert.ok(reviewText.includes('PRINTED-77') && reviewText.includes('Printed site supervisor'));
+  await browser.fill('input[name=sourceRef]', 'Manual reference');
+  for (const width of [1440, 375]) {
+    await browser.call('Emulation.setDeviceMetricsOverride', { width, height: 1000, deviceScaleFactor: 1, mobile: width === 375 });
+    try {
+      assert.equal(await browser.run("const review=document.querySelector('[aria-labelledby=mrf-extraction-heading]'); review.scrollIntoView(); return review.getBoundingClientRect().right<=innerWidth && document.documentElement.scrollWidth<=innerWidth"), true, 'Extraction review fits the viewport');
+      const screenshot = await browser.call('Page.captureScreenshot', { format: 'png' });
+      await writeFile(`.verification/request-extraction-${width}.png`, Buffer.from(screenshot.data, 'base64'));
+    } finally {
+      await browser.call('Emulation.clearDeviceMetricsOverride');
+    }
+  }
+  await browser.run("for (const label of document.querySelectorAll('[aria-labelledby=mrf-extraction-heading] label')) if (label.textContent.includes('Selected fixture mesh')||label.textContent.includes('Printed site supervisor')) label.querySelector('input').click()");
+  await clickText('Apply selected suggestions');
+  await browser.wait("return [...document.querySelectorAll('button')].some(b=>b.textContent==='Remove applied suggestions')");
+  assert.equal(await browser.run("return [...document.querySelectorAll('button')].find(b=>b.textContent==='Save and submit').disabled"), true);
+  await clickText('Save draft');
+  await browser.wait(`return location.pathname==='/requests/${extractionMrf}'`);
+  const extracted = await readSql(`select private.request_snapshot('${extractionMrf}') -> 'draft';`);
+  assert.equal(extracted.sourceRef, 'Manual reference');
+  assert.equal(extracted.requestedBy, 'Printed site supervisor');
+  assert.deepEqual(extracted.items.map(item => [item.name, item.quantity]), [['Selected fixture mesh', '12.125']]);
   await logout(browser);
   const office = { email: `${randomUUID()}@example.invalid`, password: randomUUID() };
   const officeId = ok(await client.auth.admin.createUser({ ...office, email_confirm: true })).user.id;

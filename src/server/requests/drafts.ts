@@ -30,6 +30,7 @@ export async function runDraftCommand(input: unknown): Promise<DraftResult> {
   } catch (error) {
     if (error instanceof ServiceCommandError) {
       if (error.code === "P4301") return { ok: false, conflict: true, message: "This MRF is now locked by submission or approval. Your input is preserved; review the current workflow state." };
+      if (error.code === "P4350") return { ok: false, extractionStale: true, message: "The draft, PDF or suggestions changed. Remove the applied suggestions before continuing." };
       if (error.code === "40001") return { ok: false, conflict: true, message: "This MRF changed. Your input is preserved. Review the latest saved changes before saving." };
       if (error.code === "42501") return { ok: false, message: "Your project access changed. Refresh and sign in again." };
       if (["23514", "23503", "22P02", "22007", "22008", "23505"].includes(error.code)) return { ok: false, message: "Check the selected project/scope, material identities, dates and positive quantities." };

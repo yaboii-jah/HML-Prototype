@@ -14,7 +14,7 @@
 
 ## In Progress
 
-- Unit 5.2 awaits scoped planning.
+- Unit 5.2 implements private extraction and selective review on a saved, editable MRF. The pilot reads the full verified PDF within 10 MB and 100 pages, offers suggestions from one MRF, and requires a draft save before submission. The rollback-only extraction and MRF review checks passed locally. CI, Staging and hands-on acceptance remain open.
 
 ## Recent Step 4 Checkpoints
 
@@ -46,7 +46,7 @@
 
 Both extractions use server-side durable jobs and default to disabled. Proposals are private to the initiating editor and bound to the saved draft and source versions. Verify checked access, selective apply and save, refresh and retry recovery, stale versions, and manual entry with deterministic fixtures and the applicable local, CI, disposable database and Staging gates. The user's hands-on check uses the normal app flow with the locally configured `gemini-3.5-flash-lite` model and synthetic or non-sensitive samples. Production enablement belongs to Step 7.
 
-**Exact next action** is to scope 5.2 MRF extraction from verified supporting PDFs on saved, editable MRF drafts.
+**Exact next action** is to complete 5.2 verification, then run the local synthetic-PDF hands-on check on the normal editor flow.
 
 ## Release Blockers
 

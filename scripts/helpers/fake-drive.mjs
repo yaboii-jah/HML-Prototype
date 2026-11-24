@@ -7,17 +7,34 @@ export async function fakeDrive() {
   const files = new Map([[root, { id: root, name: 'Disposable company root', mimeType: 'application/vnd.google-apps.folder', parents: [], trashed: false, capabilities: { canAddChildren: true }, appProperties: {} }]]);
   const sessions = new Map();
   const faults = { loseFinalResponse: false, failCreateAfterCommit: false, pauseUploads: false };
+  const gemini = { inputs: [], failNext: false };
   let origin, calls = 0;
   const server = createServer(async (req, res) => {
     try {
       calls++;
-      if (req.headers.authorization !== 'Bearer disposable-drive-token') { res.writeHead(401).end(); return; }
       const url = new URL(req.url, origin);
+      const extracting = url.pathname === '/test/gemini';
+      if (extracting ? req.headers['x-goog-api-key'] !== 'disposable-gemini-key'
+        : req.headers.authorization !== 'Bearer disposable-drive-token') { res.writeHead(401).end(); return; }
       const chunks = [];
       let length = 0;
       for await (const chunk of req) { length += chunk.length; if (length > 4 * 1024 * 1024) throw Error('Fake request too large'); chunks.push(chunk); }
       const body = Buffer.concat(chunks);
       const json = (value, status = 200) => { res.writeHead(status, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(value)); };
+      if (extracting) {
+        const request = JSON.parse(body);
+        gemini.inputs.push(request);
+        if (gemini.failNext) { gemini.failNext = false; json({}, 503); return; }
+        const proposal = {
+          documentType: 'single_mrf',
+          details: { requestedBy: { value: 'Printed site supervisor', page: 1 },
+            projectName: { value: 'Printed project alias', page: 1 }, sourceRef: { value: 'PRINTED-77', page: 1 } },
+          rows: [{ page: 2, name: 'Selected fixture mesh', quantity: '12.125', unit: 'sheet' },
+            { page: 2, name: 'Unchecked fixture cement', quantity: '20', unit: 'bag' }],
+        };
+        json({ status: 'completed', steps: [{ type: 'model_output', content: [{ type: 'text', text: JSON.stringify(proposal) }] }] });
+        return;
+      }
       if (url.pathname.endsWith('/generateIds')) { json({ ids: ['drive-' + randomUUID()] }); return; }
       if (url.pathname === '/upload/drive/v3/files' && req.method === 'POST') {
         const data = JSON.parse(body), id = randomUUID();
@@ -67,5 +84,5 @@ export async function fakeDrive() {
   });
   await new Promise((done, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', done); });
   origin = `http://127.0.0.1:${server.address().port}`;
-  return { root, origin, files, sessions, faults, get calls() { return calls; }, close: () => new Promise(done => { server.closeAllConnections(); server.close(done); }) };
+  return { root, origin, files, sessions, faults, gemini, get calls() { return calls; }, close: () => new Promise(done => { server.closeAllConnections(); server.close(done); }) };
 }

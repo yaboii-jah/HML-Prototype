@@ -242,6 +242,12 @@ New MRF-related uploads and archive jobs use the saved MRF number under the mapp
 
 Supporting and approved MRF PDFs open in an on-demand app viewer over the protected Range endpoint. Staff choose Download to save a file. The preview clears when the selected document or access changes.
 
+### MRF Extraction
+
+Assigned Site Personnel can request extraction on a saved MRF whose form is editable and whose current supporting PDF is verified. The pilot sends the complete verified PDF in one stateless Gemini call, up to 10 MB and 100 pages, and suggests values from one identifiable MRF and its continuation pages. The editor presents the printed project and source MRF number for comparison. Staff select individual editable details or material rows, check cited pages, and save the resulting draft before submitting. Selected rows append to existing materials.
+
+Private Postgres jobs bind the initiating user and access revision to the saved draft version and exact supporting PDF identity, revision, and hash. Workflow leases recover interrupted dispatch. Workers reverify the Drive bytes and current access before extraction and recheck authority before recording a proposal. Proposal text expires after seven days and becomes unavailable sooner when its bound versions change. Saving checks the proposal and both versions in the existing draft transaction. Manual editing remains available independently of the provider.
+
 ### Development Environments
 
 Local development and foundation review use a Next.js app connected to hosted staging. Local Docker is optional and is not required by the supported development workflow. GitHub Actions uses a disposable Docker-backed Supabase stack for clean migration/security checks, including Mailpit/account-flow coverage. Automated tests use explicitly validated loopback endpoints and never reset or depend on staging. See [Supabase's email testing](https://supabase.com/docs/guides/auth/testing-auth-flows).
@@ -267,7 +273,8 @@ For local integration testing, copy the repository's [environment template](../.
 | `GOOGLE_DRIVE_UPLOAD_TOKEN_KEY` | Base64-encoded 32-byte secret for encrypted resumable-upload tickets. |
 | `GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON` | Service-account credentials for the intended Shared Drive configuration. |
 | `GOOGLE_DRIVE_OAUTH_CLIENT_ID`, `GOOGLE_DRIVE_OAUTH_CLIENT_SECRET`, `GOOGLE_DRIVE_OAUTH_REFRESH_TOKEN` | Alternative OAuth configuration for authorized My Drive testing. |
-| `GEMINI_API_KEY`, `GEMINI_MODEL` | Server-side extraction credentials and model configuration. |
+| `MRF_EXTRACTION_ENABLED` | Defaults to false. Enable only for authorized local pilot checks using synthetic PDFs. |
+| `GEMINI_API_KEY`, `GEMINI_MODEL` | Server-side extraction credentials and model configuration. The MRF pilot defaults to `gemini-3.5-flash-lite`. |
 | `WORKFLOW_LOCAL_BASE_URL` | Local callback origin matching the running Next app (normally `http://127.0.0.1:3000`); deployed Vercel execution uses its managed World/deployment identity. |
 
 Use the Drive credential mode appropriate to the environment rather than configuring conflicting identities. Keep credential contents and `.env.local` out of Git and documentation. Restart the local server after changing environment values. These are the current integration settings, not a complete future production environment specification.

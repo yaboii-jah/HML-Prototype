@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { useFoundationRealtime } from "@/src/app-state/FoundationRealtime";
 import { InlineError } from "@/src/components/ui/Primitives";
 import { RecordModal } from "@/src/components/ui/RecordModal";
@@ -47,7 +47,9 @@ export async function sendDocumentAction(command: Record<string, unknown>) {
 }
 const sizeLabel = (size: number) => size < 1024 ? `${size} bytes` : size < 1024 * 1024 ? `${(size / 1024).toLocaleString("en-PH", { maximumFractionDigits: 1 })} KiB` : `${(size / (1024 * 1024)).toLocaleString("en-PH", { maximumFractionDigits: 2 })} MiB`;
 
-export function MrfDocuments({ mrfId, editable: permitted, archiveManager = false, onPendingFile }: { mrfId: string; editable: boolean; archiveManager?: boolean; onPendingFile?: (pending: boolean) => void }) {
+export function MrfDocuments({ mrfId, editable: permitted, archiveManager = false, onPendingFile, extraction }: {
+  mrfId: string; editable: boolean; archiveManager?: boolean; onPendingFile?: (pending: boolean) => void; extraction?: (revision: string) => ReactNode;
+}) {
   const { data, error: readError, load, refresh } = useDocuments(`mrfId=${encodeURIComponent(mrfId)}`);
   const editable = permitted && data?.editable === true;
   const [file, setFile] = useState<File | null>(null), [resumeId, setResumeId] = useState(""), [busy, setBusy] = useState(false), [error, setError] = useState(""), [progress, setProgress] = useState<number | null>(null);
@@ -140,6 +142,7 @@ export function MrfDocuments({ mrfId, editable: permitted, archiveManager = fals
       {editable && ["validate", "cleanup"].includes(job.kind) && ["failed", "paused"].includes(job.state) && !job.message?.includes("corrupt") && <button type="button" className="button secondary" disabled={busy || uncertain} onClick={() => void action({ type: "retryFile", jobId: job.id })}>Retry {job.kind === "cleanup" ? "cleanup" : "verification"}</button>}
       {archiveManager && job.kind === "archive" && ["failed", "paused"].includes(job.state) && <div className="form-actions"><button type="button" className="button secondary" disabled={busy || uncertain} onClick={() => void action({ type: "retryArchive", jobId: job.id })}>Retry approved archive</button><button type="button" className="button secondary" disabled={busy || uncertain || !data.folder} onClick={() => { if (window.confirm("Retry against the current project folder? The previous attempt’s destination and file identities remain recorded.")) void action({ type: "retryArchive", jobId: job.id, useCurrentMapping: true }); }}>Retry using current project folder</button></div>}
     </div>)}
+    {editable && data.current && extraction?.(data.revision)}
     {!!data?.archives.length && <>
       <h3>Approved document versions</h3>
       {data.archives.map(archive => <div key={archive.id}>
