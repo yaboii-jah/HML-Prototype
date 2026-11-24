@@ -174,7 +174,7 @@ function DraftEditor({ latest, data, today }: { latest?: SavedMrf; data: Request
         setLocal({ draft: latest.draft, version: latest.version, dirty: false }); setConflict(false); setError("");
         setAppliedExtraction(null); setExtractionStale(false); operation.current = null;
       }}>Discard my input and use saved draft</button></section>}
-      {appliedExtraction && <div className="grid justify-items-start gap-2" role="status">
+      {appliedExtraction && <div className="mrf-extraction-notice" role="status">
         <p>{extractionStale || stale ? "The applied suggestions are stale. Remove them to keep working on your other edits." : "Save the draft to keep the applied suggestions before submitting."}</p>
         <button type="button" className="button secondary" disabled={busy || uncertain || workflowLocked} onClick={() => {
           setLocal({ draft: removeMrfProposal(draft, appliedExtraction), version: expected, dirty: true });

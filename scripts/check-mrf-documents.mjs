@@ -253,7 +253,13 @@ export async function checkMrfDocuments({ browser, second, client, login, logout
   await browser.wait("return !!document.querySelector('.mrf-documents input[type=file]')");
   const bundle = await PDFDocument.create();
   for (const heading of ['Material Request Form', 'MRF continuation', 'Key plan and scope']) {
-    bundle.addPage([400, 500]).drawText(heading, { x: 30, y: 450, size: 14 });
+    const scan = await browser.run(`
+      const canvas=document.createElement('canvas');canvas.width=800;canvas.height=1000;
+      const context=canvas.getContext('2d');context.fillStyle='white';context.fillRect(0,0,800,1000);
+      context.fillStyle='black';context.font='28px sans-serif';context.fillText(${JSON.stringify(heading)},60,100);
+      return canvas.toDataURL('image/png');
+    `);
+    bundle.addPage([400, 500]).drawImage(await bundle.embedPng(scan), { x: 0, y: 0, width: 400, height: 500 });
   }
   const bundleBytes = Buffer.from(await bundle.save());
   await select('extraction-bundle.pdf', bundleBytes);
@@ -285,7 +291,12 @@ export async function checkMrfDocuments({ browser, second, client, login, logout
   for (const width of [1440, 375]) {
     await browser.call('Emulation.setDeviceMetricsOverride', { width, height: 1000, deviceScaleFactor: 1, mobile: width === 375 });
     try {
+      if (width === 375) {
+        await browser.run("document.querySelector('.mobile-scrim')?.click()");
+        await browser.wait("return !document.querySelector('.mobile-scrim')&&document.querySelector('.side-nav').getBoundingClientRect().right<=1");
+      }
       assert.equal(await browser.run("const review=document.querySelector('[aria-labelledby=mrf-extraction-heading]'); review.scrollIntoView(); return review.getBoundingClientRect().right<=innerWidth && document.documentElement.scrollWidth<=innerWidth"), true, 'Extraction review fits the viewport');
+      assert.equal(await browser.run("const rows=[...document.querySelectorAll('.mrf-extraction-option')].map(row=>row.getBoundingClientRect());return rows.length===3 && rows.every((row,index)=>row.left===rows[0].left&&(!index||row.top>=rows[index-1].bottom))"), true, 'Suggestions form separate checkbox rows');
       const screenshot = await browser.call('Page.captureScreenshot', { format: 'png' });
       await writeFile(`.verification/request-extraction-${width}.png`, Buffer.from(screenshot.data, 'base64'));
     } finally {

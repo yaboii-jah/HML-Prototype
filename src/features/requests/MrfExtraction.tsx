@@ -91,7 +91,7 @@ export function MrfExtraction({ mrfId, version, attachmentRevision, draft, proje
   if (status?.state === "disabled") return null;
   const start = status?.state === "idle";
   const retry = status?.state === "failed" || status?.state === "expired";
-  return <section className="grid gap-3 border-t border-current/15 pt-4" aria-labelledby="mrf-extraction-heading">
+  return <section className="mrf-extraction" aria-labelledby="mrf-extraction-heading">
     <h3 id="mrf-extraction-heading">PDF extraction</h3>
     <InlineError message={error} />
     {error && <div><button type="button" className="button secondary" disabled={busy} onClick={() => void load()}>Check extraction status</button></div>}
@@ -124,22 +124,22 @@ function ProposalReview({ proposal, draft, projectName, labels, disabled, onAppl
   const printedRef = proposal.details.sourceRef;
   const mismatch = printedProject.value && projectName && printedProject.value.toLowerCase() !== projectName.toLowerCase();
   const shown = (value: string | null) => value || "Blank";
-  return <div className="grid gap-3 [overflow-wrap:anywhere]">
+  return <div className="mrf-extraction-review">
     <p>Compare suggestions with the PDF and choose the changes to apply. Selected materials are added to the draft.</p>
     {printedProject.value && <p className={mismatch ? "callout warn" : undefined}>
       PDF project (page {printedProject.page}): <strong>{printedProject.value}</strong>. Draft project: <strong>{projectName}</strong>.
       {mismatch && " Check that the PDF belongs to this project."}
     </p>}
     {printedRef.value && <p>Printed MRF number (page {printedRef.page}): <strong>{printedRef.value}</strong>.</p>}
-    <fieldset disabled={disabled} className="grid gap-4">
+    <fieldset disabled={disabled} className="mrf-extraction-options">
       <legend>Suggested changes</legend>
-      {suggestionFields.filter(field => proposal.details[field].value).map(field => <label key={field} className="flex items-start gap-2">
+      {suggestionFields.filter(field => proposal.details[field].value).map(field => <label key={field} className="mrf-extraction-option">
         <input type="checkbox" checked={fields.has(field)} onChange={() => setFields(previous => toggle(previous, field))} />
         <span><strong>{labels[field]}</strong> · Page {proposal.details[field].page}<br />
           Current: {shown(draft[field])}<br />Suggested: {proposal.details[field].value}
         </span>
       </label>)}
-      {proposal.rows.map((row, index) => <label key={index} className="flex items-start gap-2">
+      {proposal.rows.map((row, index) => <label key={index} className="mrf-extraction-option">
         <input type="checkbox" checked={rows.has(index)} onChange={() => setRows(previous => toggle(previous, index))} />
         <span><strong>{row.name || "Unnamed material"}</strong> · Page {row.page}<br />
           {labels.quantity}: {shown(row.quantity)} · {labels.unit}: {shown(row.unit)}<br />
