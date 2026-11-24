@@ -25,10 +25,12 @@ const over = (amount:string,available:string) => compare(decimal(amount),decimal
 const remaining = (amount:string,used:string) =>
   exactQuantity(subtract(decimal(amount,amount.length),decimal(used)),amount.length+used.length+2);
 
-function SubmissionStatus({ state }: { state:ReturnType<typeof useInventorySubmission> }) {
+export function SubmissionStatus({ state }: { state:{
+  message:string; pending:unknown; busy:boolean; submit:()=>Promise<void>;
+} }) {
   return <>
     {state.message&&<p role="status">{state.message}</p>}
-    {state.pending&&<div className="form-actions"><button type="button" className="button primary" disabled={state.busy}
+    {!!state.pending&&<div className="form-actions"><button type="button" className="button primary" disabled={state.busy}
       onClick={()=>void state.submit()}>{state.busy?'Checking…':'Check saved outcome'}</button></div>}
   </>;
 }

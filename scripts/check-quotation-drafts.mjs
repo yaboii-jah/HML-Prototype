@@ -121,6 +121,25 @@ async function checkCapture({
   );
   const quote = await browser.run("return location.pathname.split('/').at(-1)");
   const path = `/requests/${mrf}/quotes/${quote}`;
+  await browser.navigate(`/requests/${mrf}/quotes`);
+  await click(browser, "Create quotation draft");
+  await browser.run(
+    "const el=document.querySelector('select[name=supplierId]');el.value='quote-only';el.dispatchEvent(new Event('change',{bubbles:true}));",
+  );
+  await browser.fill('dialog input[name=supplierName]', "Quotation browser");
+  await browser.wait(
+    `return [...document.querySelectorAll('[aria-label="Possible supplier matches"] a')].some(link=>link.href.endsWith(${JSON.stringify(path)}));`,
+  );
+  const typedName = "Quote-only supplier " + randomUUID();
+  await browser.fill('dialog input[name=supplierName]', typedName);
+  await click(browser, "Save draft and link MRF");
+  await browser.wait(
+    `return location.pathname.startsWith('/requests/${mrf}/quotes/')&&!!document.querySelector('input[name=ref]')`,
+  );
+  assert.ok(await browser.run("return document.body.innerText.includes('Supplier details are saved with this quotation.')"));
+  const manual = await browser.run("return location.pathname.split('/').at(-1)");
+  assert.equal((await sql(`select supplier_id is null from private.quotation_drafts where id='${manual}';`)).output.trim(), "t");
+  await browser.navigate(path);
   await login(second, accounts[1]);
   await second.navigate(path);
   await second.wait("return !!document.querySelector('input[name=ref]:not(:disabled)')");

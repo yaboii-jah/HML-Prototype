@@ -1,6 +1,6 @@
 # HML ConstructSync
 
-An internal construction operations application undergoing production migration. The foundation uses Supabase sign-in, current access grants, Administrator user management and shared project/scope setup; consult the tracker for verification. Projects is the landing page. Unmigrated operations remain unavailable.
+An internal construction operations application undergoing production migration. The foundation uses Supabase sign-in, current access grants, Administrator user management and shared project and scope setup. Dashboard is the landing page. See the tracker for verified workflows.
 
 See the [project overview](docs/project-overview.md) for the agreed production purpose, workflows, scope and success criteria.
 

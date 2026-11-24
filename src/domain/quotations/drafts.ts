@@ -111,7 +111,7 @@ export type QuoteJob = {
 export type QuotationDraft = {
   id: string;
   mrfId: string;
-  supplierId: string;
+  supplierId: string | null;
   body: QuoteBody;
   state: "draft" | "cancelled" | "finalized";
   contentVersion?: string;
@@ -165,7 +165,7 @@ export type QuotationsView = {
 export type QuoteCommand =
   | FinancialCommand
   | ((
-      | { type: "create"; mrfId: string; supplierId: string; body: QuoteBody }
+      | { type: "create"; mrfId: string; supplierId: string | null; body: QuoteBody }
       | {
           type: "save";
           quoteId: string;
@@ -357,7 +357,10 @@ export function parseQuoteCommand(value: unknown): QuoteCommand | null {
     return parseFinancialCommand(raw);
   if (raw.type === "create") {
     const body = parseQuoteBody(raw.body);
-    return body && quoteUuid(raw.mrfId) && quoteUuid(raw.supplierId)
+    return body &&
+      quoteUuid(raw.mrfId) &&
+      (quoteUuid(raw.supplierId) ||
+        (raw.supplierId === null && body.supplierName.trim().length > 0))
       ? {
           type: raw.type,
           requestId: raw.requestId,
@@ -499,7 +502,7 @@ export function parseQuotationsView(value: unknown): QuotationsView | null {
       !body ||
       !quoteUuid(q.id) ||
       !quoteUuid(q.mrfId) ||
-      !quoteUuid(q.supplierId) ||
+      (q.supplierId !== null && !quoteUuid(q.supplierId)) ||
       !version(q.version) ||
       !version(q.fileVersion) ||
       !["draft", "cancelled", "finalized"].includes(String(q.state)) ||

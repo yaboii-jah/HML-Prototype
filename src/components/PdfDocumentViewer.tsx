@@ -56,7 +56,14 @@ function Thumbnail({ pdf, number, active, root, onSelect }: { pdf: PDFDocumentPr
   return <button ref={button} type="button" className="pdf-document-thumbnail" aria-label={`Go to page ${number}`} aria-current={active ? "page" : undefined} onClick={onSelect}><span className="pdf-document-thumbnail-paper"><canvas ref={canvas} hidden={status !== "ready"}/>{status === "loading" && <span className="loading-visual"><Skeleton height="100%"/></span>}{status === "error" && <span>Preview unavailable</span>}</span><span>{number}</span></button>;
 }
 
-export function PdfDocumentViewer({ blob, fileName, sourceUrl, compact = false }: { blob: Blob; fileName: string; sourceUrl: string; compact?: boolean }) {
+export function PdfDocumentViewer({ blob, fileName, sourceUrl, compact = false, onUnavailable, onRetry }: {
+  blob?: Blob;
+  fileName: string;
+  sourceUrl: string;
+  compact?: boolean;
+  onUnavailable?: () => void;
+  onRetry?: () => void;
+}) {
   const shell = useRef<HTMLDivElement>(null), sidebar = useRef<HTMLElement>(null), findInput = useRef<HTMLInputElement>(null), printer = useRef<HTMLIFrameElement>(null);
   const container = useRef<HTMLDivElement>(null), pages = useRef<HTMLDivElement>(null), viewer = useRef<PDFViewer | null>(null), events = useRef<EventBus | null>(null);
   const [page, setPage] = useState(1), [count, setCount] = useState(0), [pageInput, setPageInput] = useState("1");
@@ -65,6 +72,7 @@ export function PdfDocumentViewer({ blob, fileName, sourceUrl, compact = false }
   const [pdf, setPdf] = useState<PDFDocumentProxy | null>(null), [sidebarOpen, setSidebarOpen] = useState(false), [searchOpen, setSearchOpen] = useState(false), [fullscreen, setFullscreen] = useState(false);
   const [query, setQuery] = useState(""), [matches, setMatches] = useState({ current: 0, total: 0 }), [searching, setSearching] = useState(false), [printUrl, setPrintUrl] = useState("");
   const printTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const displayError = compact ? "The PDF could not be displayed." : "The PDF could not be displayed. Use Open document to view the original file.";
   useEffect(() => {
     let disposed = false, task: PDFDocumentLoadingTask | undefined, instance: PDFViewer | undefined, resize: ResizeObserver | undefined;
     const onFullscreen = () => setFullscreen(document.fullscreenElement === shell.current);
@@ -87,33 +95,38 @@ export function PdfDocumentViewer({ blob, fileName, sourceUrl, compact = false }
         bus.on("scalechanging", (event: { scale: number; presetValue?: string }) => { if (!disposed) setScale(event.presetValue || String(Math.round(event.scale * 100))); });
         bus.on("pagerendered", (event: { error?: unknown; pageNumber: number }) => {
           if (disposed) return;
-          if (event.error) setError("This page could not be displayed. Use Open document to view the original file.");
+          if (event.error) setError(displayError);
           else if (event.pageNumber === instance?.currentPageNumber) setRendered(true);
         });
         bus.on("updatefindmatchescount", (event: { matchesCount: { current: number; total: number } }) => { if (!disposed) setMatches(event.matchesCount); });
         bus.on("updatefindcontrolstate", (event: { state: number; matchesCount: { current: number; total: number } }) => { if (!disposed) { setSearching(event.state === FindState.PENDING); setMatches(event.matchesCount); } });
-        const bytes = new Uint8Array(await blob.arrayBuffer());
+        const source = blob ? { data: new Uint8Array(await blob.arrayBuffer()) } : { url: sourceUrl };
         if (disposed) return;
-        task = pdfjs.getDocument({ data: bytes });
+        task = pdfjs.getDocument(source);
         const document = await task.promise;
         if (disposed) return;
         setPdf(document); links.setDocument(document); instance.setDocument(document);
         // PDF.js initializes its pages asynchronously. Account changes can destroy
         // the transport during that work, after the loading task has completed.
         void instance.pagesPromise?.catch(() => {
-          if (!disposed) setError("The PDF could not be displayed. Use Open document to view the original file.");
+          if (!disposed) setError(displayError);
         });
         resize = new ResizeObserver(() => {
           if (instance?.pagesCount && ["auto", "page-width", "page-fit"].includes(instance.currentScaleValue)) instance.currentScaleValue = instance.currentScaleValue;
         });
         resize.observe(container.current);
-      } catch { if (!disposed) setError("The PDF could not be displayed. Use Open document to view the original file."); }
+      } catch (error) {
+        if (disposed) return;
+        if (onUnavailable && error && typeof error === "object" && "status" in error
+          && (error.status === 401 || error.status === 403 || error.status === 404)) onUnavailable();
+        else setError(displayError);
+      }
     })();
     return () => {
       disposed = true; resize?.disconnect(); instance?.setDocument(null); viewer.current = null; events.current = null; void task?.destroy().catch(() => {});
       document.removeEventListener("fullscreenchange", onFullscreen); if (printTimer.current) clearTimeout(printTimer.current);
     };
-  }, [blob]);
+  }, [blob, sourceUrl, onUnavailable, displayError]);
   const go = (number: number) => { if (viewer.current && ready) viewer.current.currentPageNumber = Math.max(1, Math.min(count, number)); };
   const commitPage = () => { const number = Number(pageInput); if (Number.isInteger(number) && number >= 1 && number <= count) { go(number); setPageInput(String(number)); } else setPageInput(String(page)); };
   const zoom = (factor: number) => { if (viewer.current && ready) viewer.current.currentScale = Math.max(.25, Math.min(4, viewer.current.currentScale * factor)); };
@@ -154,7 +167,9 @@ export function PdfDocumentViewer({ blob, fileName, sourceUrl, compact = false }
       </div>}
     </div>
     {searchOpen && <div className="pdf-document-findbar"><input ref={findInput} type="search" aria-label="Search PDF text" placeholder="Find in document…" value={query} onChange={event => { setQuery(event.target.value); setMatches({ current: 0, total: 0 }); setSearching(!!event.target.value); search(event.target.value); }} onKeyDown={event => { if (event.key === "Enter") { event.preventDefault(); search(query, event.shiftKey, true); } }}/><PdfTool icon="previous" label="Previous match" disabled={!query} onClick={() => search(query, true, true)}/><PdfTool icon="next" label="Next match" disabled={!query} onClick={() => search(query, false, true)}/><span role="status">{query ? searching ? "Searching…" : matches.total ? `${matches.current} of ${matches.total} matches` : "No matches" : ""}</span></div>}
-    {error && <p className="field-error inline-error" role="alert">{error}</p>}
+    {error && <div className="field-error inline-error" role="alert">
+      {error} {onRetry && <button type="button" className="button secondary" onClick={onRetry}>Retry preview</button>}
+    </div>}
     <div className="pdf-document-body">{sidebarOpen && <aside ref={sidebar} className="pdf-document-sidebar" aria-label="Page thumbnails"><div className="pdf-document-sidebar-heading">Thumbnails</div>{pdf && ready && Array.from({ length: count }, (_, index) => <Thumbnail key={index + 1} pdf={pdf} number={index + 1} active={page === index + 1} root={sidebar} onSelect={() => go(index + 1)}/>)}</aside>}<div className="pdf-document-stage">{!rendered && !error && <DocumentLoading/>}<div ref={container} className="pdf-document-scroll" tabIndex={0} role="region" aria-label="PDF document pages" aria-busy={!rendered && !error}><div ref={pages} className="pdfViewer"/></div></div></div>
     {printUrl && <iframe ref={printer} className="pdf-document-print-frame" tabIndex={-1} aria-hidden="true" src={printUrl} title="PDF print document" onLoad={() => { printTimer.current = setTimeout(() => { try { printer.current?.contentWindow?.focus(); printer.current?.contentWindow?.print(); } catch { setError("Printing is unavailable here. Use Open document to print the original file."); } }, 500); }}/>}
   </div>;

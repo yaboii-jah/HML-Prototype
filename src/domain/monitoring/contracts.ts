@@ -15,12 +15,26 @@ const queue = z.object({
     blocker: text.nullable(), at: text, flag: text.nullable(),
   })),
 });
+const progress = z.object({
+  state: z.enum(["unavailable", "not-started", "partial", "complete"]),
+  completeLines: count,
+});
 
 export const monitoringSchemas = {
   bell: queue,
   dashboard: queue.extend({
     projects: z.array(project),
     overview: z.array(z.object({ projectId: id, draft: count, review: count, approved: count })),
+  }),
+  dashboardProgress: z.object({
+    page: count.positive(), pages: count.positive(), total: count,
+    rows: z.array(z.object({
+      id, ref: text, project: text,
+      status: z.enum(["draft", "submitted", "returned", "approved", "rejected"]),
+      correctionKind: z.enum(["full", "documents"]).nullable(),
+      correctionState: z.enum(["editing", "submitted", "returned"]).nullable(),
+      totalLines: count, sourcing: progress, receipt: progress, posting: progress,
+    })),
   }),
   lifecycle: z.object({
     target: id,
@@ -64,7 +78,7 @@ export type MonitoringMode = keyof typeof monitoringSchemas;
 export type MonitoringView<M extends MonitoringMode> = z.infer<(typeof monitoringSchemas)[M]>;
 export type MonitoringFilters = {
   projectId?: string; target?: string; scopeId?: string;
-  from?: string; to?: string; search?: string; unit?: string;
+  from?: string; to?: string; search?: string; unit?: string; status?: string; page?: string;
 };
 export type MonitoringAction = MonitoringView<"dashboard">["actions"][number];
 export type ConsumptionRow = MonitoringView<"consumption">["rows"][number];
@@ -82,6 +96,7 @@ export function parseMonitoringFilters(mode: MonitoringMode, params: URLSearchPa
   const filters: MonitoringFilters = {};
   const keys: Record<MonitoringMode, (keyof MonitoringFilters)[]> = {
     bell: [], dashboard: ["projectId"], lifecycle: ["target"],
+    dashboardProgress: ["projectId", "status", "search", "page"],
     reports: ["projectId", "from", "to"],
     consumption: ["projectId", "from", "to", "scopeId", "search", "unit"],
   };
@@ -95,6 +110,11 @@ export function parseMonitoringFilters(mode: MonitoringMode, params: URLSearchPa
     filters[key] = value;
   }
   if (mode === "lifecycle" && !filters.target) return null;
+  if (mode === "dashboardProgress" && (
+    filters.status && !["active", "all"].includes(filters.status) ||
+    filters.page && !/^[1-9]\d{0,7}$/.test(filters.page) ||
+    (filters.search?.length ?? 0) > 128
+  )) return null;
   if (mode === "consumption") {
     filters.from ??= today.slice(0, 7) + "-01";
     filters.to ??= today;

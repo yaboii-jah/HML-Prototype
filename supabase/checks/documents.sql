@@ -9,10 +9,11 @@ declare
   other_project uuid; other_job uuid;
 begin
   foreach signature in array array['public.documents_read(jsonb,uuid,uuid)','public.document_command(jsonb,jsonb)',
-    'public.document_transfer(jsonb,uuid,text,uuid,jsonb)','public.document_worker(uuid,text,uuid,jsonb)','public.document_dispatch(uuid)','public.document_file(jsonb,uuid)'] loop
+    'public.document_transfer(jsonb,uuid,text,uuid,jsonb)','public.document_worker(uuid,text,uuid,jsonb)','public.document_dispatch(uuid)','public.document_file(jsonb,uuid)',
+    'public.request_drive_path(text,uuid,text,jsonb)'] loop
     if has_function_privilege('anon',signature,'execute') or has_function_privilege('authenticated',signature,'execute') or not has_function_privilege('service_role',signature,'execute') then raise exception 'Document RPC privilege leak'; end if;
   end loop;
-  foreach signature in array array['project_document_folders','document_folder_owners','request_document_state','request_documents','document_uploads','document_jobs','document_operations','mrf_archive_snapshots','mrf_archives'] loop
+  foreach signature in array array['project_document_folders','document_folder_owners','request_document_state','request_documents','document_uploads','document_jobs','document_operations','mrf_archive_snapshots','mrf_archives','request_drive_admissions','request_drive_folders'] loop
     if has_table_privilege('authenticated','private.'||signature,'select') or has_table_privilege('service_role','private.'||signature,'insert') then raise exception 'Document table leak'; end if;
   end loop;
   insert into auth.users(id,email,is_anonymous,email_confirmed_at,encrypted_password) values(admin_id,admin_id::text||'@example.invalid',false,now(),'fixture'),(site_id,site_id::text||'@example.invalid',false,now(),'fixture');
@@ -49,6 +50,23 @@ begin
   begin perform public.document_command(site,command||'{"name":"changed.pdf"}'); raise exception 'Operation reused'; exception when sqlstate 'P3406' then null; end;
   begin perform public.document_command(admin,command||jsonb_build_object('operationId',gen_random_uuid())); raise exception 'Admin uploaded'; exception when insufficient_privilege then null; end;
   upload_b:=(public.document_command(site,command||jsonb_build_object('operationId',gen_random_uuid()))->>'uploadId')::uuid;
+  receipt:=public.request_drive_path('mrf-original',upload_a,'sql-folder-'||project,null);
+  if receipt->>'requestId' is distinct from mrf::text
+    or receipt#>>'{folders,2,name}' is distinct from 'Originals'
+    or receipt#>>'{folders,0,id}' is not null then raise exception 'Invalid new request folder plan'; end if;
+  receipt:=public.request_drive_path('mrf-original',upload_a,'sql-folder-'||project,
+    jsonb_build_object('request','request-'||project,'support','support-'||project,'support/originals','originals-'||project));
+  if public.request_drive_path('mrf-original',upload_b,'sql-folder-'||project,
+    '{"request":"unused-request","support":"unused-support","support/originals":"unused-originals"}') is distinct from receipt
+    then raise exception 'Uploads did not share reserved folder identities'; end if;
+  delete from private.request_drive_admissions where kind='mrf-original' and resource_id=upload_b;
+  if public.request_drive_path('mrf-original',upload_b,'sql-folder-'||project,null) is not null
+    then raise exception 'Legacy upload was assigned a new folder'; end if;
+  begin
+    perform public.request_drive_path('mrf-original',upload_a,'another-project',null);
+    raise exception 'Unowned folder accepted';
+  exception when check_violation then null;
+  end;
   foreach upload_target in array array[upload_a,upload_b] loop
     receipt:=public.document_transfer(site,upload_target,'claim'); lease:=(receipt->>'lease')::uuid;
     begin perform public.document_transfer(site,upload_target,'claim'); raise exception 'Duplicate transfer lease'; exception when lock_not_available then null; end;

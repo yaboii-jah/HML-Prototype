@@ -18,7 +18,8 @@ export async function checkOperationalMonitoring({ browser, second, client, sql,
 
   await logout(second);
   await second.navigate(consumption);
-  assert.equal(await second.run("return new URL(location.href).searchParams.get('next')"), consumption);
+  assert.equal(await second.run("return location.pathname + location.search"), '/sign-in',
+    'Signed-out users enter without carrying the previous workspace route');
   assert.equal((await read(second, '/api/monitoring/view?mode=bell')).status, 401);
   assert.equal((await read(second, '/api/monitoring/consumption.csv')).status, 401);
   await login(second, source);

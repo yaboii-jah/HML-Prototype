@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useFoundationRealtime } from "@/src/app-state/FoundationRealtime";
 import { monitoringParams, parseMonitoringView, type MonitoringFilters, type MonitoringMode, type MonitoringView } from "@/src/domain/monitoring/contracts";
-import { workspaceEntry } from "@/src/domain/auth/session";
 import { object } from "@/src/domain/accounts/accounts";
 
 export function useMonitoring<M extends MonitoringMode>(mode: M, filters: MonitoringFilters, initial: MonitoringView<M> | null, initialFilters: MonitoringFilters) {
@@ -27,7 +26,7 @@ export function useMonitoring<M extends MonitoringMode>(mode: M, filters: Monito
         });
         if (controller.signal.aborted) return;
         if (response.status === 401 || response.status === 409) {
-          window.location.replace(workspaceEntry(response.status === 401 ? "/sign-in" : "/choose-role", location.pathname + location.search));
+          window.location.replace(response.status === 401 ? "/sign-in" : "/choose-role");
           return;
         }
         if (response.status === 403 || response.status === 404) {

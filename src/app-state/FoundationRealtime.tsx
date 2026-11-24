@@ -5,7 +5,6 @@ import { usePathname } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { object } from "@/src/domain/accounts/accounts";
 import type { WorkspaceSession } from "@/src/domain/auth/session";
-import { workspaceEntry } from "@/src/domain/auth/session";
 import { parseMonitoringView } from "@/src/domain/monitoring/contracts";
 import { foundationViewQuery, parseFoundationView, parseRealtimeSession, parseWorkspaceSession, type FoundationView } from "@/src/domain/realtime/foundation";
 
@@ -55,7 +54,7 @@ export function FoundationRealtime({ session, children }: { session: WorkspaceSe
         signal: AbortSignal.any([abort.signal, AbortSignal.timeout(20000)]) });
       if (stopped) return null;
       if (response.status === 401 || response.status === 409) {
-        terminate(workspaceEntry(response.status === 401 ? "/sign-in" : "/choose-role", location.pathname + location.search));
+        terminate(response.status === 401 ? "/sign-in" : "/choose-role");
         return null;
       }
       if (!response.ok) throw Error("Read unavailable");

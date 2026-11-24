@@ -42,6 +42,8 @@ type Decision = {
   record: PurchasingRecord;
   reason: string;
   base: Base;
+  familyVersion?: string;
+  supplierId?: string;
 };
 const stamp = (view: PurchasingView): Base => ({
   expectedVersion: view.version,
@@ -250,6 +252,15 @@ export function PurchasingWorkspace({
   const editorLocked = currentEditorRecord?.kind === "po" && !["draft", "returned"].includes(currentEditorRecord.review?.status || "draft");
   const currentDecisionRecord = decision ? view.records.find((r) => r.id === decision.record.id) : null;
   const decisionLocked = currentDecisionRecord?.kind === "po" && !["draft", "returned"].includes(currentDecisionRecord.review?.status || "draft");
+  const decisionQuote = decision?.type === "convert"
+    ? view.quotations.quotes.find((q) => q.id === decision.record.quoteId)
+    : undefined;
+  const needsSupplier = decisionQuote?.supplierId === null;
+  const decisionStale = !!decision && (
+    decision.base.expectedVersion !== view.version ||
+    decision.base.expectedDemand !== view.demandVersion ||
+    (decision.type === "convert" && decision.familyVersion !== decisionQuote?.family?.version)
+  );
   const editorQuote = editor
     ? view.quotations.quotes.find((q) => q.id === editor.quoteId)
     : null;
@@ -346,7 +357,8 @@ export function PurchasingWorkspace({
   };
   const act = (type: Decision["type"], record: PurchasingRecord) => {
     operation.reviewed();
-    setDecision({ type, record, reason: "", base: stamp(view) });
+    const quote = view.quotations.quotes.find((q) => q.id === record.quoteId);
+    setDecision({ type, record, reason: "", base: stamp(view), familyVersion: quote?.family?.version });
   };
   const runDecision = async () => {
     if (!decision || decisionLocked) return;
@@ -356,6 +368,9 @@ export function PurchasingWorkspace({
       targetId: decision.record.id,
       ...decision.base,
       reason: decision.reason,
+      ...(needsSupplier
+        ? { supplierId: decision.supplierId, expectedFamily: decision.familyVersion }
+        : {}),
     });
     if (result?.ok) {
       setDecision(null);
@@ -741,7 +756,9 @@ export function PurchasingWorkspace({
               view.records.some(
                 (r) =>
                   r.state === "active" &&
-                  r.supplierId === selectedQuote.supplierId,
+                  (r.familyId
+                    ? r.familyId === selectedQuote.family?.id
+                    : selectedQuote.supplierId !== null && r.supplierId === selectedQuote.supplierId),
               ) ? (
                 <p>
                   An active award or PO exists for this supplier. Edit it below.
@@ -981,6 +998,30 @@ export function PurchasingWorkspace({
                 draft in a single transaction.
               </p>
             )}
+            {needsSupplier && (
+              <div className="form-stack">
+                <Field label="Active directory supplier">
+                  <select
+                    value={decision.supplierId ?? ""}
+                    disabled={operation.busy}
+                    onChange={(e) => setDecision({ ...decision, supplierId: e.target.value })}
+                  >
+                    <option value="">Choose supplier</option>
+                    {view.quotations.suppliers.map((supplier) => (
+                      <option key={supplier.id} value={supplier.id}>{supplier.name}</option>
+                    ))}
+                  </select>
+                </Field>
+                <div className="button-row">
+                  <a href="/suppliers" target="_blank" rel="noreferrer" className="text-link">
+                    Add supplier in the directory
+                  </a>
+                  <button type="button" className="button secondary" disabled={operation.busy} onClick={() => router.refresh()}>
+                    Refresh suppliers
+                  </button>
+                </div>
+              </div>
+            )}
             {["cancel", "reopen"].includes(decision.type) && (
               <Field label="Reason (at least five characters)">
                 <textarea
@@ -993,9 +1034,7 @@ export function PurchasingWorkspace({
                 />
               </Field>
             )}
-            {(decision.base.expectedVersion !== view.version ||
-              decision.base.expectedDemand !== view.demandVersion ||
-              operation.conflict) && (
+            {(decisionStale || operation.conflict) && (
               <>
                 <h3>Latest saved values</h3>
                 {view.records.find((r) => r.id === decision.record.id) && (
@@ -1018,6 +1057,7 @@ export function PurchasingWorkspace({
                         ...decision,
                         record: current,
                         base: stamp(view),
+                        familyVersion: view.quotations.quotes.find((q) => q.id === current.quoteId)?.family?.version,
                       });
                   }}
                 >
@@ -1037,8 +1077,8 @@ export function PurchasingWorkspace({
                   operation.busy ||
                   operation.conflict ||
                   decisionLocked ||
-                  decision.base.expectedVersion !== view.version ||
-                  decision.base.expectedDemand !== view.demandVersion ||
+                  decisionStale ||
+                  (needsSupplier && !view.quotations.suppliers.some((s) => s.id === decision.supplierId)) ||
                   (["cancel", "reopen"].includes(decision.type) &&
                     decision.reason.trim().length < 5)
                 }

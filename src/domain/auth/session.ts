@@ -58,8 +58,3 @@ export function safeWorkspaceDestination(value: unknown): string {
   if (!/^\/(?:projects|dashboard|requests|suppliers|purchase-orders|accounting|finance|deliveries|inventory|reports|admin|stock-transfers)(?:\/[a-zA-Z0-9_-]+)*$/.test(path)) return "/dashboard";
   return value;
 }
-
-export function workspaceEntry(path: "/sign-in" | "/choose-role", destination: unknown) {
-  const next = safeWorkspaceDestination(destination);
-  return next === "/dashboard" ? path : `${path}?${new URLSearchParams({ next })}`;
-}

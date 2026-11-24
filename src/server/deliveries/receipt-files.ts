@@ -8,6 +8,7 @@ import { parseDeliveryPlan, parseDeparture, parseReceiptSnapshot } from '@/src/d
 import { serviceRpc } from '@/src/server/auth/service-rpc';
 import { documentActor, DocumentHttpError, privateDocumentRead } from '@/src/server/documents/access';
 import { documentDrive } from '@/src/server/documents/config';
+import { requestDriveParent } from '@/src/server/documents/request-folders';
 import { rowValue, textValue } from '@/src/server/documents/state';
 import { validateQuotationOriginal } from '@/src/server/quotations/original-validation';
 import { openUploadTicket, sealUploadTicket } from '@/src/server/upload-ticket-codec';
@@ -93,9 +94,9 @@ export async function transferReceiptFile(id: string, chunk: Uint8Array, offset:
   };
   try {
     const drive = documentDrive();
-    const folder = textValue(file.folder_id), size = Number(file.size), mime = textValue(file.mime);
+    const projectFolder = textValue(file.folder_id), size = Number(file.size), mime = textValue(file.mime);
     const identity = tags(id, textValue(file.version_id), transfer);
-    await drive.validateFolder(folder, textValue(file.root_id));
+    const folder = await requestDriveParent(drive, transfer ? 'transfer' : 'delivery', id, projectFolder, textValue(file.root_id)) ?? projectFolder;
     if (!file.drive_id) await update({ driveId:await drive.generateId() });
     const providerId = textValue(file.drive_id);
     const finish = async () => {
@@ -141,8 +142,8 @@ export async function processDeliveryReceiptFile(id: string, transfer = false) {
   const lease = textValue(file.lease_id);
   try {
     const drive = documentDrive();
-    const folder = textValue(file.folder_id), identity = tags(id, textValue(file.version_id), transfer), mime = textValue(file.mime);
-    await drive.validateFolder(folder, textValue(file.root_id));
+    const projectFolder = textValue(file.folder_id), identity = tags(id, textValue(file.version_id), transfer), mime = textValue(file.mime);
+    const folder = await requestDriveParent(drive, transfer ? 'transfer' : 'delivery', id, projectFolder, textValue(file.root_id)) ?? projectFolder;
     let providerId = typeof file.drive_id === 'string' ? file.drive_id : '';
     let size = Number(file.size), sha256 = String(file.sha256 ?? '');
     if (file.kind === 'generated') {

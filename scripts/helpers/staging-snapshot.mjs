@@ -2,7 +2,7 @@ import { requireStaging, STAGING_REF } from './supabase-target.mjs';
 
 /** Read-only retained-state evidence. No Auth passwords, tokens or raw business
  * rows are returned. Application rows are compared using deterministic hashes. */
-export function retainedStateQuery({ includeProjectOperations = true, includeDocuments = true, includeReview = true, includeSuppliers = true, includeQuotations = true, includeQuotationFinalization = true, includeDemand = true, includeStock = true, includePurchasing = true, includeAccounting = true, includeIssuance = true, includePayments = true, includeDeliveries = true, includeReceiving = true, includeTransfers = true, includeTransferTrips = includeTransfers, includeTransferReceiving = includeTransferTrips, includeInventory = includeTransferReceiving } = {}) {
+export function retainedStateQuery({ includeProjectOperations = true, includeDocuments = true, includeReview = true, includeSuppliers = true, includeQuotations = true, includeQuotationFinalization = true, includeDemand = true, includeStock = true, includePurchasing = true, includeAccounting = true, includeIssuance = true, includePayments = true, includeDeliveries = true, includeReceiving = true, includeTransfers = true, includeTransferTrips = includeTransfers, includeTransferReceiving = includeTransferTrips, includeInventory = includeTransferReceiving, includeStockReports = includeInventory } = {}) {
   const tables = [
     ['profiles', 'public.profiles', 'user_id'], ['grants', 'public.role_grants', 'user_id,role'],
     ['assignments', 'public.project_assignments', 'user_id,project_id'], ['projects', 'public.projects', 'id'],
@@ -43,6 +43,7 @@ export function retainedStateQuery({ includeProjectOperations = true, includeDoc
     ['inventoryEntries','private.inventory_entries','id'],
     ['inventoryUsageNotes','private.inventory_usage_notes','entry_id,account_id'],
   );
+  if (includeStockReports) tables.push(['stockReports','private.stock_reports','id']);
   if (includePayments) tables.push(
     ['paymentHeads', 'private.payment_heads', 'po_id'], ['paymentParticipants', 'private.payment_participants', 'po_id,actor_id'],
     ['paymentDrafts', 'private.payment_drafts', 'id'], ['paymentVerifications', 'private.payment_verifications', 'id'],

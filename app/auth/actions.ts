@@ -1,8 +1,8 @@
 "use server";
 
 import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
-import { chooseActiveRole, isAuthRole, parseLoginPreflight, parseSessionContext, rolePreferenceCookie, safeWorkspaceDestination, workspaceEntry, UUID_PATTERN } from "@/src/domain/auth/session";
+import { redirect, RedirectType } from "next/navigation";
+import { chooseActiveRole, isAuthRole, parseLoginPreflight, parseSessionContext, rolePreferenceCookie, UUID_PATTERN } from "@/src/domain/auth/session";
 import { clearAuthCookies, cookieAuthClient, passwordClient, privilegedAuthClient } from "@/src/server/auth/clients";
 import { requireSession } from "@/src/server/auth/session";
 import { serviceRpc } from "@/src/server/auth/service-rpc";
@@ -16,7 +16,7 @@ export async function signInAction(_state: AuthFormState, form: FormData): Promi
   if (!email || email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || !password || password.length > 128) {
     return { error: "Enter a valid email and password." };
   }
-  let destination = safeWorkspaceDestination(form.get("next"));
+  let destination = "/dashboard";
   let temporary: ReturnType<typeof passwordClient> | undefined;
   let issuedToken: string | undefined;
   try {
@@ -47,7 +47,7 @@ export async function signInAction(_state: AuthFormState, form: FormData): Promi
     const projection = parseSessionContext(rawProjection);
     if (projectionError || !projection) return { error: unavailable };
     const preference = (await cookies()).get(rolePreferenceCookie(data.user.id))?.value;
-    if (!chooseActiveRole(projection.roles, preference)) destination = workspaceEntry("/choose-role", destination);
+    if (!chooseActiveRole(projection.roles, preference)) destination = "/choose-role";
     issuedToken = undefined;
   } catch {
     return { error: unavailable };
@@ -59,7 +59,7 @@ export async function signInAction(_state: AuthFormState, form: FormData): Promi
       await client?.auth.signOut({ scope: "local" }).catch(() => undefined);
     }
   }
-  redirect(destination);
+  redirect(destination, RedirectType.replace);
 }
 
 export async function signOutAction(): Promise<AuthFormState> {
@@ -84,7 +84,7 @@ export async function signOutAction(): Promise<AuthFormState> {
     if (!bindingRemoved) return { error: "Sign-out could not finish. Please try again." };
     await clearAuthCookies();
   }
-  redirect("/sign-in");
+  redirect("/sign-in", RedirectType.replace);
 }
 
 export async function selectRoleAction(_state: AuthFormState, form: FormData): Promise<AuthFormState> {
@@ -95,7 +95,7 @@ export async function selectRoleAction(_state: AuthFormState, form: FormData): P
     httpOnly: true, sameSite: "lax", secure: process.env.APP_ORIGIN?.startsWith("https:") ?? false,
     path: "/", maxAge: 60 * 60 * 24 * 365,
   });
-  redirect(safeWorkspaceDestination(form.get("next")));
+  redirect("/dashboard", RedirectType.replace);
 }
 
 export async function confirmPasswordAction(_state: AuthFormState, form: FormData): Promise<AuthFormState> {

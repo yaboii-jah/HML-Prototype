@@ -1,12 +1,16 @@
 -- Appended to the shared Accounting fixture definitions. Provider references are
 -- synthetic here; real bytes and failure recovery belong to application checks.
-create function pg_temp.issuance_fixture() returns jsonb language plpgsql as $$
-declare f jsonb:=pg_temp.accounting_fixture(); job uuid; claimed jsonb;
+create function pg_temp.issuance_fixture(payment_mode text default 'upfront', only_cement boolean default false) returns jsonb language plpgsql as $$
+declare f jsonb:=pg_temp.accounting_fixture(null,payment_mode,only_cement); job uuid; claimed jsonb; project_folder text;
 begin
   perform pg_temp.accounting_action(f,'submitPo');
   perform pg_temp.accounting_action(f,'approvePo');
   select j.id into job from private.po_archive_jobs j join private.purchasing_records r on r.approval_id=j.approval_id where r.id=(f->>'po')::uuid;
   claimed:=public.po_archive_worker(job,'claim');
+  project_folder:=claimed#>>'{folder,folder_id}';
+  insert into private.document_folder_owners values(project_folder,(f->>'project')::uuid) on conflict do nothing;
+  perform public.request_drive_path('po',job,project_folder,
+    jsonb_build_object('request','synthetic-request-'||(f->>'request'),'po','synthetic-po-folder-'||job));
   perform public.po_archive_worker(job,'checkpoint',(claimed->>'lease')::uuid,
     jsonb_build_object('fileId','synthetic-owned-issued-po-'||job,'sha256',repeat('a',64),'size',10,'verified',true));
   perform public.po_archive_worker(job,'complete',(claimed->>'lease')::uuid);
@@ -30,10 +34,20 @@ $$;
 do $$
 declare f jsonb:=pg_temp.issuance_fixture(); po uuid:=(f->>'po')::uuid; cmd jsonb; result jsonb; before_value jsonb;
   files jsonb; details jsonb; prepared uuid; issued uuid; invalid jsonb; field text; t text; view jsonb;
+  admission private.request_drive_admissions;
 begin
   before_value:=jsonb_build_object('demand',private.demand_snapshot((f->>'request')::uuid),'money',private.scope_committed((f->>'scope')::uuid));
   files:=public.issuance_prepare_files(f->'actor',po);
   if jsonb_array_length(files->'files')<>3 or (files->'files'->0->>'size') is null then raise exception 'Missing exact archive references'; end if;
+  if files#>>'{files,2,parent}' is distinct from 'synthetic-po-folder-'||(files->>'poArchiveId') then
+    raise exception 'New issuance did not use the exact nested parent';
+  end if;
+  delete from private.request_drive_admissions where kind='po' and resource_id=(files->>'poArchiveId')::uuid returning * into admission;
+  if public.issuance_prepare_files(f->'actor',po)#>>'{files,2,parent}' is distinct from
+    (select folder_id from private.project_document_folders where project_id=(f->>'project')::uuid and current) then
+    raise exception 'Legacy issuance did not preserve its project folder parent';
+  end if;
+  insert into private.request_drive_admissions values(admission.*);
   cmd:=pg_temp.issuance_input(f,'prepareSend');
   begin perform public.issuance_command(f->'actor',cmd); raise exception 'Preparation without provider proof'; exception when sqlstate 'P4102' then null; end;
   result:=public.issuance_command(f->'actor',cmd,files);

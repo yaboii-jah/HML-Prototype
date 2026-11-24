@@ -21,8 +21,7 @@ export async function checkMrfReview({ browser, second, client, login, logout, s
   };
   const fill = async (b, selector, value) => {
     await b.wait(`return !!document.querySelector(${JSON.stringify(selector)})&&!document.querySelector(${JSON.stringify(selector)}).matches(':disabled')`);
-    await b.run(`const input=document.querySelector(${JSON.stringify(selector)});input.focus();input.select();`);
-    await b.call('Input.insertText', { text: value });
+    await b.fill(selector, value);
   };
   const current = id => sql(`select private.request_snapshot('${id}');`).then(result => JSON.parse(result.output.trim()));
   const managerActor = await actor(second), operation = randomUUID();
@@ -49,6 +48,7 @@ export async function checkMrfReview({ browser, second, client, login, logout, s
   await browser.wait("return document.querySelector('input[name=sourceRef]')?.closest('fieldset').disabled&&document.body.innerText.includes('This request is locked')");
   assert.equal(await browser.run("return document.querySelector('input[name=sourceRef]').value"), 'Preserved across submission');
   await logout(second); await login(second, manager); await second.navigate(`/requests/${mrf}`);
+  await second.wait("return !!document.querySelector('.document-current')");
   await fill(second, '#mrf-review-heading ~ .field textarea', 'Clarify the request');
   await click(second, 'Return for changes');
   await browser.wait("return document.body.innerText.includes('Returned')&&!document.querySelector('input[name=sourceRef]').closest('fieldset').disabled");
@@ -60,6 +60,8 @@ export async function checkMrfReview({ browser, second, client, login, logout, s
   await click(second, 'I reviewed the current request');
   // A genuine provider failure keeps approval committed and offers PM retry.
   drive.files.get(mapping.folder_id).trashed = true;
+  const filePrefix = '/api/mrf-documents/files/';
+  const reads = browser.watchRequests(filePrefix);
   await click(second, 'Approve MRF');
   await until(async () => (await current(mrf)).status === 'approved', 'approval committed');
   await second.wait("return document.body.innerText.includes('Retry approved archive')");
@@ -68,9 +70,23 @@ export async function checkMrfReview({ browser, second, client, login, logout, s
   await click(second, 'Retry approved archive');
   await until(async () => (await current(mrf)).procurementReady, 'verified archive completion');
   await browser.wait("return document.body.innerText.includes('Approved document versions')&&document.body.innerText.includes('Archive complete')");
+  assert.deepEqual(reads, [], 'Approval and archive refresh do not open PDF bytes');
   const cookie = (await browser.call('Network.getAllCookies')).cookies.filter(c => c.domain === '127.0.0.1').map(c => `${c.name}=${c.value}`).join('; ');
-  const files = JSON.parse((await sql(`select jsonb_agg(to_jsonb(f)) from private.mrf_archive_files f join private.mrf_archive_snapshots s on s.id=f.snapshot_id where s.request_id='${mrf}';`)).output.trim());
+  const files = JSON.parse((await sql(`select jsonb_agg(to_jsonb(f)||jsonb_build_object('providerId',case f.kind when 'form' then a.form_file_id else a.supporting_file_id end))
+    from private.mrf_archive_files f join private.mrf_archive_snapshots s on s.id=f.snapshot_id
+    join private.mrf_archives a on a.snapshot_id=s.id where s.request_id='${mrf}';`)).output.trim());
   for (const file of files) {
+    const label = file.kind === 'form' ? 'Preview approved MRF' : 'Preview approved supporting PDF';
+    await click(browser, label);
+    await browser.wait("return Array.from(document.querySelectorAll('.mrf-documents dialog[open] [aria-busy=false] .pdfViewer canvas')).some(canvas=>canvas.checkVisibility()&&canvas.width>0)");
+    assert.ok(reads.includes(filePrefix + file.id));
+    await browser.click('.mrf-documents dialog[open] .record-modal-close');
+    const provider = drive.files.get(file.providerId);
+    const category = drive.files.get(provider.parents[0]);
+    const requestFolder = drive.files.get(category.parents[0]);
+    assert.equal(category.name, file.kind === 'form' ? 'MRF Form' : 'Supporting Documents');
+    assert.equal(requestFolder.appProperties.hmlRequestId, mrf);
+    assert.deepEqual(requestFolder.parents, [mapping.folder_id]);
     const response = await fetch(base + '/api/mrf-documents/files/' + file.id, { headers: { Cookie: cookie, Origin: base } });
     assert.equal(response.status, 200); assert.match(response.headers.get('cache-control'), /private.*no-store/);
     const body = Buffer.from(await response.arrayBuffer()); assert.equal(body.length, file.size);
@@ -78,11 +94,14 @@ export async function checkMrfReview({ browser, second, client, login, logout, s
     const range = await fetch(base + '/api/mrf-documents/files/' + file.id, { headers: { Cookie: cookie, Origin: base, Range: 'bytes=0-4' } });
     assert.equal(range.status, 206); assert.equal(await range.text(), '%PDF-');
   }
+  assert.ok(reads.every(url => !url.includes('download=1')), 'Archived PDF previews do not download');
+  browser.stopWatchingRequests(filePrefix);
   const procurement = { email: randomUUID()+'@example.invalid', password: randomUUID() };
   procurement.id = ok(await client.auth.admin.createUser({ ...procurement, email_confirm: true })).user.id;
   ok(await client.from('profiles').insert({ user_id: procurement.id, display_name: 'Review Procurement', is_active: true }));
   ok(await client.from('role_grants').insert({ user_id: procurement.id, role: 'Procurement' }));
   await logout(second); await login(second, procurement); await second.navigate(`/requests/${mrf}`);
+  await second.wait("return !!document.querySelector('.document-current')");
   await fill(second, '#mrf-review-heading ~ .field textarea', 'Correct the requirement');
   await click(second, 'Open correction');
   await browser.wait("return document.body.innerText.includes('Full correction')");
