@@ -14,6 +14,7 @@ declare
   project uuid := gen_random_uuid();
   mapping uuid := gen_random_uuid();
   doc uuid := gen_random_uuid();
+  large_doc uuid := gen_random_uuid();
   target uuid;
   job uuid;
   lease uuid;
@@ -51,13 +52,14 @@ begin
     values(mapping,project,'ex-folder-'||project,'fixture-root','Fixture');
   insert into private.request_documents(id,request_id,folder_mapping_id,drive_file_id,name,size,sha256,uploader_id,uploader_name)
     values(doc,target,mapping,'ex-file-'||doc,'support.pdf',10,repeat('a',64),site_id,'Fixture');
-  insert into private.request_document_state values(target,2,doc);
+  insert into private.request_documents(id,request_id,folder_mapping_id,drive_file_id,name,size,sha256,uploader_id,uploader_name)
+    values(large_doc,target,mapping,'ex-file-'||large_doc,'large-support.pdf',10000001,repeat('b',64),site_id,'Fixture');
+  insert into private.request_document_state values(target,1,large_doc);
   context:=jsonb_build_object('mrfId',target,'version',saved->>'version','attachmentRevision','2');
   input:=context||jsonb_build_object('type','start','operationId',gen_random_uuid());
-  update private.request_documents set size=10000001 where id=doc;
-  if public.mrf_extraction_command(site,input)->>'reason' is distinct from 'limit' then raise exception 'Oversized PDF admitted'; end if;
+  if public.mrf_extraction_command(site,input||'{"attachmentRevision":"1"}')->>'reason' is distinct from 'limit' then raise exception 'Oversized PDF admitted'; end if;
   if exists(select 1 from private.mrf_extraction_jobs where request_id=target) then raise exception 'Oversized PDF enqueued'; end if;
-  update private.request_documents set size=10 where id=doc;
+  update private.request_document_state set revision=2,current_document=doc where request_id=target;
   reply:=public.mrf_extraction_command(site,input);
   job:=(reply->>'id')::uuid;
   if reply->>'state' is distinct from 'pending' or reply->>'dispatch' is distinct from 'true' then raise exception 'Missing job admission'; end if;
