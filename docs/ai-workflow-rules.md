@@ -4,7 +4,7 @@
 
 Develop incrementally against agreed requirements. Follow [AGENTS.md](../AGENTS.md): always read repository instructions and the tracker's current state, then select relevant overview, architecture, standards and milestone sections for the task. Full-document rereading is not a prerequisite. Inspect affected implementation before changing it; follow the installed Next.js guidance when writing framework code.
 
-For foundation/migration work, read the relevant [checklist](checklist.md) step. For step 4, read the [guide](step-4-implementation.md) roadmap/dependencies, current unit and completion criteria; completed walkthroughs are not routine prerequisites. Later units require scoped planning and authorization. Reconcile Git, current goal and the latest user instruction before starting.
+For foundation/migration work, read the relevant [checklist](checklist.md) step and the current unit's scope, dependencies and acceptance criteria in the [tracker](progress-tracker.md). Later units require scoped planning and authorization. Reconcile Git, current goal and the latest user instruction before starting.
 
 Reuse unchanged context in the same session. After resumption or document changes, refresh current status and only missing/affected sections. Search headings first; request bounded excerpts rather than dumping files. Keep successful tool output to a result summary, with detailed logs in ignored verification artifacts; inspect failures only as needed. Do not load raw evidence trees when their summaries suffice.
 
@@ -61,7 +61,7 @@ Update the relevant document in the same change when agreed behavior or implemen
 
 Document both the target and remaining implementation gaps accurately. A completed unit does not establish that the entire production migration is complete.
 
-Maintain the five core context documents, production checklist and the agreed active step 4 guide. Architecture owns system decisions; the guide owns its detailed sequence and unit completion criteria; the checklist owns milestone completion; the tracker owns active work, authorization, blockers, next actions and verification evidence. Use links between them instead of parallel evidence logs or transcripts. Additional milestone companions require an agreed documentation scope; retire completed planning companions after preserving their durable contracts and evidence. Do not recreate superseded context files or ADR folders as routine maintenance.
+Maintain the five core context documents and production checklist. Architecture owns system decisions. The checklist owns milestone completion. The tracker owns the unit sequence, current acceptance criteria, authorization, blockers, next actions and verification evidence. Link to the owning document for each decision or result. Additional milestone companions require an agreed documentation scope. Retire completed companions after preserving their durable contracts and evidence.
 
 Update the [progress tracker](progress-tracker.md) after each meaningful implementation or documentation change and consequential decision. Record completed units, actual work in progress, next units, open questions and verification evidence. Distinguish local completion from publication and production readiness; planned work is not work in progress. Keep one concise final entry per completed unit: date, source revision, outcome, final evidence links and acceptance boundary. Replace superseded status instead of appending transcripts. Preserve lasting decisions in their owning document; delete recoverable intermediate history rather than creating routine archive documents. Never discard unique uncommitted requirements or evidence.
 
@@ -81,7 +81,7 @@ Use the repository's isolated verification paths by default. Run live integratio
 
 ### Verification Profiles
 
-Unit-specific scenarios remain required in the [step 4 guide](step-4-implementation.md) and executable [acceptance scenario mapping](../scripts/helpers/foundation-acceptance.mjs). The [acceptance runner](../scripts/verify-foundation-acceptance.mjs) owns evidence requirements; shortening this index does not remove cases or lower gates.
+The executable [acceptance scenario mapping](../scripts/helpers/foundation-acceptance.mjs) and [acceptance runner](../scripts/verify-foundation-acceptance.mjs) own the required scenarios and evidence. Completed unit outcomes and evidence links are in the [tracker](progress-tracker.md#completed).
 
 | Profile | Boundary and additional acceptance |
 | --- | --- |

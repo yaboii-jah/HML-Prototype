@@ -12,7 +12,7 @@ Check the [progress tracker](docs/progress-tracker.md) for completed work, migra
 
 Use the companion [production checklist](docs/checklist.md) to follow foundational and future steps and mark them complete after verification.
 
-Foundation and operational units through 4.11 are verified complete, including payment coordination, proof-backed settlement and delivery clearance. Unit 4.12 purchased delivery dispatch is next for scoped planning; staff dispatch/receiving/stock workflows and production release remain pending. See the [tracker](docs/progress-tracker.md#current-goal) for authorization, blockers and final evidence, and the [step 4 guide](docs/step-4-implementation.md#ordered-roadmap) for dependencies. The separate Vercel Node-version deployment blocker remains unresolved.
+The foundation and Step 4 operational workflows are verified complete. Step 5 starts with a Google Drive folder shortcut, followed by optional MRF and quotation extraction. The Vercel Node-version deployment blocker remains unresolved. See the [Step 5 sequence](docs/progress-tracker.md#step-5-planned) and [Step 4 evidence](docs/progress-tracker.md#completed).
 
 ## Run locally
 
@@ -31,15 +31,15 @@ Use `127.0.0.1:3000` consistently. Role switching selects only the signed-in per
 
 Use **Projects** for project/scopes and **Material requests**, supplier quotations, PO, Accounting and Finance views for migrated operations. Current access, deletion, budget and realtime rules are in [architecture](docs/architecture.md); the [overview](docs/project-overview.md#core-user-flow) describes the complete intended workflow.
 
-## Target workflow (later migration)
+## Operational workflow
 
-See the [core user flow](docs/project-overview.md#core-user-flow) and [monitoring requirements](docs/project-overview.md#monitoring-and-documents). Dispatch, receiving, inventory usage and operational monitoring still require their owning units; verified earlier purchasing/payment milestones do not establish those capabilities.
+The operational workspace covers sourcing, purchasing, settlement, dispatch, receiving, inventory usage and monitoring. See the [core user flow](docs/project-overview.md#core-user-flow) and [monitoring and documents](docs/project-overview.md#monitoring-and-documents).
 
 ## Storage and integrations
 
 Supabase owns authoritative business records, access and session bindings; Google Drive owns permanent documents. Browser snapshots and prototype fixtures grant no authority. See [storage boundaries](docs/architecture.md#storage-model).
 
-Required protected upload/archive and project-folder operations accompany their verified step 4 workflows. Unmigrated provider routes remain disabled; optional AI and broader document features remain step 5. CI capture and restricted hosted links do not verify real email delivery.
+The verified Step 4 workflows support protected uploads, archives, and project folder setup. The Google Drive sidebar lists mapped folders for staff roles other than Site Personnel. Human-reviewed Gemini extraction in the existing MRF and quotation editors is planned. CI captures email and hosted checks use restricted links. Real email delivery remains a release gate.
 
 ## Verification
 
@@ -58,7 +58,7 @@ Vercel remains a Node 24 deployment target. The repository's `vercel.json` invok
 
 Development, verification and deployment builds use Next.js's `--webpack` option. It also supports Next.js's WebAssembly compiler fallback when Windows Application Control blocks the native compiler; Turbopack requires native bindings.
 
-Guarded `db:staging:preview`, `db:staging:check` and `auth:staging:check` commands target the existing staging project. `npm run db:staging:acceptance` combines migration/Auth/type parity, rollback checks, owned Auth-only checks and channel rejection probes, preserving retained state without sending email. Its read-only type comparison writes only to `.verification/`. Migration application requires CI evidence for the exact migrations. Live provider verification belongs to explicitly scoped integration work: required document capabilities accompany their step 4 workflows, and optional AI/broader document features remain in step 5. Retained provider tooling is outside the supported foundation checks. See [verification profiles](docs/ai-workflow-rules.md#verification-profiles).
+Guarded `db:staging:preview`, `db:staging:check` and `auth:staging:check` commands target the existing staging project. `npm run db:staging:acceptance` combines migration/Auth/type parity, rollback checks, owned Auth-only checks and channel rejection probes, preserving retained state without sending email. Its read-only type comparison writes only to `.verification/`. Migration application requires CI evidence for the exact migrations. Scope live provider verification to the owning workflow. See the [verification profiles](docs/ai-workflow-rules.md#verification-profiles).
 
 ## Repository layout
 
@@ -70,4 +70,4 @@ See [architecture context](docs/architecture.md) for the current structure and a
 - `src/server/`: authorized Auth/database operations and provider modules; `src/mock/` and legacy `src/app-state/` retain prototype coverage outside the supported data/authentication path.
 - `src/documents/`: shared browser document storage, hashes and resumable uploads.
 - `tests/` and `scripts/`: domain/API tests and browser checks.
-- `docs/`: five core context documents, the production checklist and the active step 4 guide; product workflows and release acceptance criteria are in the [project overview](docs/project-overview.md).
+- `docs/` holds the five core context documents and the production checklist. See the [project overview](docs/project-overview.md) for workflows and release acceptance criteria.

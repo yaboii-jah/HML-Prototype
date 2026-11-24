@@ -16,15 +16,16 @@ Use this companion to track the steps toward production. See the [progress track
   Done when individual accounts, current role/project permissions, shared projects/scopes and protected realtime updates pass maintained foundation acceptance checks, including rejection of unauthorized or revoked access. CI captures invitation/recovery email; hosted synthetic checks use restricted generated links. Operational records move in step 4.
   Completed 2026-11-03: units 3.1-3.6 pass local checks, all four standard CI jobs, disposable foundation acceptance, staging parity and the user's targeted retry review at implementation `4a940cc`. See the [tracker](progress-tracker.md#completed) for evidence. Operational workflows and production release remain later milestones.
 
-- [ ] **4. Move operational records and business workflows to the server.**
+- [x] **4. Move operational records and business workflows to the server.**
   Done when each migrated workflow has shared authoritative records and realtime updates, with authorized, transactional, retry-safe and audited changes; prototype data authority/reset paths are retired and deferred operational browser coverage is restored.
-  Units 4.0–4.14 are verified complete. Unit 4.14 closed on 2026-11-18 at `63b2f6d` after all three staff review groups and matching combined acceptance passed. Units 4.15–4.19 remain open. See the [roadmap](step-4-implementation.md#ordered-roadmap) and [final evidence](progress-tracker.md#completed).
+  Completed 2026-11-24 at `4d51d1a`. All four 4.19 staff checks and matching combined acceptance passed. See the [final evidence](progress-tracker.md#completed).
 
 - [ ] **5. Complete reliable document and AI integrations.**
-  Done when the remaining broader document/project-folder features and optional AI integrations work, building on the protected uploads, required folder operations and archive jobs verified with step 4 workflows. Verify correct files, recovery from failures, protected browsing and human review of AI results.
+  Done when authorized staff can open the current mapped project folder from the Google Drive sidebar and use optional Gemini extraction from verified MRF and quotation files. Verify protected file access, extraction failure recovery, selective review before draft save, and the user's normal-flow hands-on check. See the [planned units](progress-tracker.md#step-5-planned).
 
 - [ ] **6. Convert the UI to Tailwind.**
   Done when the agreed screens use Tailwind/shared tokens and pass responsive, accessibility and workflow checks.
+  During scope review, revisit the app's overall look and feel based on feedback from the 4.15 review.
 
 - [ ] **7. Verify staging, backups, monitoring and staff acceptance.**
   Done when release blockers are resolved and staging, restore, monitoring and staff-acceptance evidence is recorded, including real invitation/recovery email delivery from a verified sender and company-owned production services.

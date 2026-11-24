@@ -4,7 +4,7 @@
 
 HML ConstructSync is an internal construction materials operations system for HML Technologies and Services Inc. It gives Site Personnel, Project Managers, Procurement, Accounting, Finance, Logistics and Administrators a shared way to follow each material request through sourcing, purchasing, payment verification, delivery and stock posting, alongside project inventory and material usage. Its main purpose is traceability across departments: staff can see the related records, responsible people, supporting documents, completed actions and outstanding work for a request.
 
-> **Current status.** Foundation 3.1–3.6 and operational units through 4.14 are verified complete, including transfer approval and source-stock reservation. Unit 4.15 adds transfer trip planning and dispatch and is in verification. See the [tracker](progress-tracker.md#current-phase) and [final evidence](progress-tracker.md#completed).
+> **Current status.** Foundation 3.1–3.6 and operational units through 4.19 are verified complete, including Site Inventory, the dashboard, material lifecycle, Operations reports and consumption reconciliation. See the [tracker](progress-tracker.md#current-phase) and [final evidence](progress-tracker.md#completed).
 
 See [architecture context](architecture.md) for the technical boundaries and production migration responsibilities.
 
@@ -24,7 +24,7 @@ The steps outline the main workflow. A request can split across source projects 
 3. **Request materials:** Site Personnel prepares a Material Requisition Form (MRF), chooses the project and scope, records the material requirements and attaches supporting documents. Any AI-extracted content is reviewed before submission.
 4. **Review the request:** Project Manager approves, returns or rejects the MRF. Approved request documents enter the archive process, and outstanding requirements remain visible before dependent actions proceed.
 5. **Plan sourcing:** Procurement checks other projects' stock and supplier offers, allocating available stock and purchasing the uncovered quantities. A material can be sourced from several projects or suppliers.
-6. **Follow the stock-transfer branch:** Where a stock description differs or its match is uncertain, the requesting site's personnel confirm that it meets the same requested specifications. Source Site Personnel approve release; Logistics schedules and dispatches the transfer; destination Site Personnel receives the materials and posts accepted quantities to inventory.
+6. **Follow the stock-transfer branch:** Where a stock description differs or its match is uncertain, the requesting site's personnel confirm that it meets the same requested specifications. Source Site Personnel approve release and Logistics schedules and dispatches. Procurement receives warehouse loads before Logistics forwards accepted custody. Destination Site Personnel receive site loads and separately post accepted stock to the approved MRF material.
 7. **Follow the purchasing branch:** Procurement reviews supplier quotations, compares offers, confirms awards and submits purchase orders (POs). Accounting reviews costs, applicable tax treatment, budget and payment terms before approval. Procurement sends the approved PO to the supplier and records issuance.
 8. **Coordinate payment and clear delivery:** Finance coordinates payment outside the application. Accounting archives payment proof and verifies the amount paid. Upfront purchases require full verified payment before delivery clearance; credit purchases allow payment and delivery to progress independently under the agreed terms.
 9. **Receive purchased materials:** Logistics schedules and dispatches cleared deliveries, directly to site or through the warehouse. Procurement confirms warehouse receipts; Site Personnel confirms site receipts, records shortages or damage and posts accepted stock. Supporting delivery evidence is archived and reviewed.
@@ -100,7 +100,7 @@ Issued-PO payment workflows provide Finance plans, shared Accounting drafts/proo
 - Purchased delivery plans may split one issued PO across partial supplier loads and the site/warehouse routes. Logistics can schedule before Accounting clearance; each saved load reserves its PO quantities. Reasoned revisions/cancellation precede departure. Dispatch requires current clearance and records an actual Philippine departure time after scheduling, issuance and the applicable clearance. Invalid departures need external escalation. Assigned Site users see operational schedules without financial details. Implementation acceptance is tracked separately in the [tracker](progress-tracker.md).
 - Logistics scheduling and dispatch, receiving records, partial acceptance and shortage or damage reporting.
 - Generated receipts, signed evidence and separate Accounting document review.
-- Transfers have no supplier PO, invoice/payment approval, tax calculation or budget charge. Dispatch debits source stock once; receiving records accepted quantities; posting credits destination stock once. Shortages reopen sourcing without automatically restoring dispatched stock to the source.
+- Transfers have no supplier PO, invoice/payment approval, tax calculation or budget charge. First-leg dispatch debits source stock once, and separate posting credits accepted site quantities once. Confirmed shortages on either leg immediately reopen the exact sourcing requirement. The recorded origin debit stays in stock history.
 - A transfer allocation may use several trips. Cancelling an undispatched trip does not itself cancel the approved allocation; changes to the allocation require explicit action.
 - Generated receipts and signed evidence are distinct requirements. Corrected quantities require current-version evidence and can reopen document review. Archive failures remain retryable without undoing confirmed receiving or stock posting.
 
@@ -119,9 +119,12 @@ Unit 4.7 is verified complete on 2026-11-06 at `e749844` as a private project-st
 ### Monitoring and Documents
 
 - Permitted shared changes appear automatically on open screens through Supabase Realtime. Reconnecting catches up from authoritative records; ordinary refreshes preserve unsaved form input, and conflicting edits require review before saving. This capability is a production target and is added as each record/workflow migrates.
-- Dashboards, notifications and lifecycle views showing outstanding actions, blockers and permitted record links.
-- Operational reports and protected audit history identifying the person and active role responsible for an action.
+- Dashboard opens after sign-in. The active role sees Ready and Waiting actions, and the workspace bell shows the total Ready count across accessible projects.
+- The dashboard request progress table lets staff search visible requests by MRF number and see completed material line counts for sourcing, site receipt and stock posting.
+- Material request details show sourcing, site acceptance and stock posting by requested material and unit. Authorized staff can also see shipment evidence, payment and clearance.
+- Operations reports show recorded activity, current exceptions, site balances and financial exposure. Site Inventory offers Philippine-date consumption reconciliation and CSV downloads within current project permissions.
 - Google Drive archives for originals, generated documents and evidence, with visible pending or failed status and retry controls.
+- The Google Drive sidebar opens mapped project folders for staff roles other than Site Personnel. Administrators and Project Managers manage folder setup from the project page.
 - Historical actor names, permanent identities and event times are retained; missing past information is shown as unrecorded rather than inferred from today's account. Generated and uploaded files remain linked to their relevant record and document version.
 - Current quotation and Accounting evidence groups accept up to 12 PDF/image files, 20 MB each and 45 MB total; transfer-trip evidence follows the same group limits. The corresponding validators define the executable limits, and changes to them require coordinated UI/server/documentation updates.
 
