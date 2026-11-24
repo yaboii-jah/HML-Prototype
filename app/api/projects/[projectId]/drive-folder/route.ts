@@ -21,13 +21,11 @@ export async function GET(request: Request, { params }: RouteContext<"/api/proje
   if (!uuid(projectId)) {
     return recovery(404, "Choose a saved project to open its folder.", "/projects", "Return to Projects");
   }
-  const projectPanel = `/projects/${projectId}#project-documents-heading`;
-
   try {
     privateDocumentRead(request);
     const folderId = await projectDocumentFolderId(projectId);
     if (folderId === null) {
-      return recovery(404, "This project has no confirmed Drive folder. Review its folder setup.", projectPanel, "Return to Document folder");
+      return recovery(404, "This project has no confirmed Drive folder. An Administrator or Project Manager can link one.", "/google-drive", "Return to Google Drive");
     }
     return new Response(null, {
       status: 307,
@@ -39,8 +37,8 @@ export async function GET(request: Request, { params }: RouteContext<"/api/proje
     }
     if (error instanceof DocumentHttpError && error.status === 403
       || error instanceof ServiceCommandError && error.code === "42501") {
-      return recovery(403, "Open the project folder from ConstructSync with current project management access.", "/projects", "Return to Projects");
+      return recovery(403, "Open the project folder from ConstructSync with a role that has folder access.", "/projects", "Return to Projects");
     }
-    return recovery(503, "The folder could not be checked right now. Return to the project and try again.", projectPanel, "Return to Document folder");
+    return recovery(503, "The folder could not be checked right now. Return to the directory and try again.", "/google-drive", "Return to Google Drive");
   }
 }

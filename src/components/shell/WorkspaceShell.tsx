@@ -13,7 +13,7 @@ import { useFoundationRealtime } from "@/src/app-state/FoundationRealtime";
 import "./workspace-actions.css";
 
 const sectionNames: Record<string, string> = {
-  dashboard: "Dashboard", reports: "Operations reports", projects: "Projects", admin: "Users",
+  dashboard: "Dashboard", reports: "Operations reports", projects: "Projects", "google-drive": "Google Drive", admin: "Users",
   requests: "Material requests", suppliers: "Suppliers", "purchase-orders": "Purchase orders",
   accounting: "Accounting", finance: "Finance", deliveries: "Deliveries",
   "stock-transfers": "Stock transfers", inventory: "Site inventory",
@@ -78,6 +78,13 @@ export function WorkspaceShell({ session: initialSession, children }: { session:
               <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h2m4 0h2M8 12h2m4 0h2M10 21v-5h4v5"/></svg>
               <span className="nav-label">Projects</span>
             </Link>
+            {session.activeRole !== "Site Personnel" && (
+              <Link className={`side-link ${pathname === "/google-drive" ? "active" : ""}`} href="/google-drive"
+                aria-label="Google Drive" aria-current={pathname === "/google-drive" ? "page" : undefined} onClick={() => setMenuOpen(false)}>
+                <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M3 6a2 2 0 0 1 2-2h4l2 3h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+                <span className="nav-label">Google Drive</span>
+              </Link>
+            )}
             <Link className={`side-link ${pathname.startsWith("/requests") ? "active" : ""}`} href="/requests" aria-label="Material requests" aria-current={pathname.startsWith("/requests") ? "page" : undefined} onClick={() => setMenuOpen(false)}><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg><span className="nav-label">Material requests</span></Link>{session.activeRole !== "Site Personnel" && <Link className={`side-link ${pathname.startsWith("/suppliers") ? "active" : ""}`} href="/suppliers" aria-label="Suppliers" aria-current={pathname.startsWith("/suppliers") ? "page" : undefined} onClick={() => setMenuOpen(false)}><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M3 21V7l9-4 9 4v14M3 11h18M8 15h2m4 0h2M8 19h2m4 0h2"/></svg><span className="nav-label">Suppliers</span></Link>}{session.activeRole === "Administrator" && <Link className={`side-link ${pathname.startsWith("/admin") ? "active" : ""}`} href="/admin" aria-label="Users" aria-current={pathname.startsWith("/admin") ? "page" : undefined} onClick={() => setMenuOpen(false)}>
               <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><circle cx="9" cy="8" r="3"/><path d="M3 21v-3a6 6 0 0 1 12 0v3m2-16a3 3 0 0 1 0 6m2 10v-3a6 6 0 0 0-2-4"/></svg><span className="nav-label">Users</span>
             </Link>}

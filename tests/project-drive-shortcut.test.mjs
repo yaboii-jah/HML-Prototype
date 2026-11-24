@@ -17,11 +17,13 @@ const origin = 'http://127.0.0.1:3198';
 const rpcCalls = [];
 let role = null;
 let folder = { folderId: 'stored-drive-folder' };
+const directory = [{ id: projectId, name: 'Test project', code: null, folderId: 'private-provider-id' }];
 globalThis.__projectDriveShortcut = {
   ServiceCommandError,
   readSession: async () => role && { context: { userId, revision: '1', roles: [role] }, activeRole: role, sessionId },
   serviceRpc: async (...args) => {
     rpcCalls.push(args);
+    if (args[0] === 'project_drive_directory') return directory;
     if (folder instanceof Error) throw folder;
     return folder;
   },
@@ -41,6 +43,7 @@ registerHooks({
 });
 
 const { GET } = await import('../app/api/projects/[projectId]/drive-folder/route.ts');
+const { projectDriveDirectory } = await import('../src/server/documents/access.ts');
 const openFolder = (headers = {}, target = projectId) => GET(
   new Request(origin + '/api/projects/' + target + '/drive-folder', { headers }),
   { params: Promise.resolve({ projectId: target }) },
@@ -50,12 +53,13 @@ test('folder shortcut resolves only fresh authorized mappings and returns recove
   assert.equal((await openFolder()).status, 401);
   role = 'Site Personnel';
   assert.equal((await openFolder()).status, 403);
+  await assert.rejects(projectDriveDirectory(), { status: 403 });
   role = 'Administrator';
   assert.equal((await openFolder({ 'Sec-Fetch-Site': 'cross-site' })).status, 403);
   assert.equal((await openFolder({}, 'invalid')).status, 404);
   assert.equal(rpcCalls.length, 0, 'Rejected requests do not look up mappings');
 
-  for (const activeRole of ['Administrator', 'Project Manager']) {
+  for (const activeRole of ['Administrator', 'Project Manager', 'Procurement', 'Accounting', 'Finance', 'Logistics']) {
     role = activeRole;
     const response = await openFolder({ 'Sec-Fetch-Site': 'same-origin' });
     assert.equal(response.status, 307);
@@ -66,6 +70,7 @@ test('folder shortcut resolves only fresh authorized mappings and returns recove
       actor: { userId, sessionId, revision: '1', activeRole },
       target_project: projectId,
     }]);
+    assert.deepEqual(await projectDriveDirectory(), [{ id: projectId, name: 'Test project', code: null }]);
   }
 
   folder = { folderId: 'replacement-drive-folder' };
@@ -83,5 +88,5 @@ test('folder shortcut resolves only fresh authorized mappings and returns recove
   const invalid = await openFolder();
   assert.equal(invalid.status, 503);
   assert.equal(invalid.headers.has('location'), false);
-  assert.match(await invalid.text(), /Return to Document folder/);
+  assert.match(await invalid.text(), /Return to Google Drive/);
 });

@@ -49,11 +49,27 @@ export async function documentsView(mrfId?: string, projectId?: string) {
   if (uuid(scopedProject)) await dispatchDocumentJobs(scopedProject).catch(() => {});
   return view;
 }
-export async function projectDocumentFolderId(projectId: string) {
+async function projectFolderReader() {
   const actor = await documentActor();
-  if (actor.activeRole !== "Administrator" && actor.activeRole !== "Project Manager") {
+  if (actor.activeRole === "Site Personnel") {
     throw new DocumentHttpError(403, "Project folder access required.");
   }
+  return actor;
+}
+export async function projectDriveDirectory() {
+  const actor = await projectFolderReader();
+  const rows = await serviceRpc("project_drive_directory", { actor });
+  if (!Array.isArray(rows)) throw new Error("Invalid project folder directory.");
+  return rows.map((value: unknown) => {
+    const row = record(value);
+    if (!row || !uuid(row.id) || typeof row.name !== "string" || (row.code !== null && typeof row.code !== "string")) {
+      throw new Error("Invalid project folder directory entry.");
+    }
+    return { id: row.id, name: row.name, code: row.code };
+  });
+}
+export async function projectDocumentFolderId(projectId: string) {
+  const actor = await projectFolderReader();
   const result = record(await serviceRpc("project_document_folder_open", {
     actor,
     target_project: projectId,

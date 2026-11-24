@@ -2508,6 +2508,9 @@ isOneToOne: true
 "project_document_folder_open":
 { Args: { "actor": Json,"target_project": string }; Returns: Json
                            },
+"project_drive_directory":
+{ Args: { "actor": Json }; Returns: Json
+                           },
 "project_history":
 { Args: { "target"?: string }; Returns: Json
                            },
@@ -3152,6 +3155,9 @@ isOneToOne: false
                            },
 "project_document_folder_open":
 { Args: { "actor": Json,"target_project": string }; Returns: Json
+                           },
+"project_drive_directory":
+{ Args: { "actor": Json }; Returns: Json
                            },
 "projects_read":
 { Args: { "actor": Json,"target_project"?: string }; Returns: Json

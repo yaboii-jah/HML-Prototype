@@ -51,6 +51,22 @@ export async function checkMrfDocuments({ browser, second, client, login, logout
   const adminCookie = await cookie(browser);
   await expectFolder(adminCookie, originalMapping.folder);
   assert.equal((await folderRequest('')).status, 401, 'Signed-out users cannot resolve folders');
+  const driveNav = '.side-nav a[href="/google-drive"]';
+  const directoryLink = `table[aria-label="Project Drive folders"] a[href="${shortcutPath}"]`;
+  await browser.click(driveNav);
+  await browser.wait(`return location.pathname==='/google-drive'&&!!document.querySelector(${JSON.stringify(directoryLink)})`);
+  assert.equal(await browser.run(`return document.querySelector(${JSON.stringify(driveNav)}).getAttribute('aria-current')`), 'page');
+  assert.deepEqual(await browser.run(`const link=document.querySelector(${JSON.stringify(directoryLink)});return [link.target,link.relList.contains('noopener'),link.relList.contains('noreferrer')]`), ['_blank', true, true]);
+  for (const width of [1440, 375]) {
+    await browser.call('Emulation.setDeviceMetricsOverride', { width, height: 1000, deviceScaleFactor: 1, mobile: width === 375 });
+    try {
+      assert.equal(await browser.run(`const link=document.querySelector(${JSON.stringify(directoryLink)});link.scrollIntoView();return link.checkVisibility()&&link.getBoundingClientRect().right<=innerWidth&&document.documentElement.scrollWidth<=innerWidth`), true, 'Drive row action fits the viewport');
+      const screenshot = await browser.call('Page.captureScreenshot', { format: 'png' });
+      await writeFile(`.verification/request-drive-directory-${width}.png`, Buffer.from(screenshot.data, 'base64'));
+    } finally {
+      await browser.call('Emulation.clearDeviceMetricsOverride');
+    }
+  }
   const staff = [];
   for (let i = 0; i < 2; i++) {
     const account = { email: `${randomUUID()}@example.invalid`, password: randomUUID() };
@@ -66,6 +82,9 @@ export async function checkMrfDocuments({ browser, second, client, login, logout
   const deniedFolder = await folderRequest(await cookie(browser));
   assert.equal(deniedFolder.status, 403);
   assert.equal(deniedFolder.headers.has('location'), false);
+  assert.equal(await browser.run(`return !!document.querySelector(${JSON.stringify(driveNav)})`), false, 'Site Personnel have no Drive sidebar item');
+  await browser.navigate('/google-drive');
+  assert.equal(await browser.run(`return !!document.querySelector(${JSON.stringify(directoryLink)})`), false, 'Direct navigation never displays restricted folder data');
   const siteActor = await actor(browser);
   const draft = { scopeId: null, sourceRef: '', requestDate: '2026-11-03', requestedBy: 'Site', approvedBy: 'Printed PM', purchaser: '', financeOfficer: '', specialInstructions: '', items: [] };
   const mrf = ok(await client.rpc('request_command', { actor: siteActor, command: { type: 'createDraft', requestId: randomUUID(), projectId: project, draft } })).record.id;
@@ -219,6 +238,17 @@ export async function checkMrfDocuments({ browser, second, client, login, logout
   await browser.run("Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(document.querySelector('input[name=sourceRef]'),'');document.querySelector('input[name=sourceRef]').dispatchEvent(new Event('input',{bubbles:true}));");
   await browser.run("[...document.querySelectorAll('button')].find(b=>b.textContent==='Save draft')?.click()");
   await browser.wait(`return location.pathname==='/requests/${mrf}'`);
+  await logout(browser);
+  const office = { email: `${randomUUID()}@example.invalid`, password: randomUUID() };
+  const officeId = ok(await client.auth.admin.createUser({ ...office, email_confirm: true })).user.id;
+  ok(await client.from('profiles').insert({ user_id: officeId, display_name: 'Drive Procurement', is_active: true }));
+  ok(await client.from('role_grants').insert({ user_id: officeId, role: 'Procurement' }));
+  await login(browser, office);
+  await browser.click(driveNav);
+  await browser.wait(`return location.pathname==='/google-drive'&&!!document.querySelector(${JSON.stringify(directoryLink)})`);
+  await expectFolder(await cookie(browser), correctedFolder);
+  await browser.navigate(projectPath);
+  assert.equal(await browser.run("return !!document.querySelector('#project-documents-heading')"), false, 'Read access does not expose folder setup controls');
   await logout(browser);
   console.log('Private document sharing, independent saves, Range, corrupt replacement, multi-chunk recovery, revocation and Workflow archive integrity passed.');
   return { staff, manager, bytes };
