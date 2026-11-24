@@ -13,6 +13,14 @@ export type InventoryCommand = Submission & (
   | { kind:'opening'; lines:[OpeningLine] }
   | { kind:'correction'; direction:'add'|'remove'; relatedMovementId?:string; lines:[UsageLine] }
 );
+type ReportReview = { operationId:string; projectId:string; reportId:string };
+export type StockReportCommand =
+  | (Submission & { action:'submit'; description:string; unit:string; quantity:string })
+  | (ReportReview & { action:'approve' })
+  | (ReportReview & { action:'reject'; reason:string });
+export type StockReport = { id:string; projectId:string; description:string; unit:string; quantity:string;
+  reason:string; reporterName:string; reportedAt:string; status:'pending'|'approved'|'rejected';
+  reviewerName:string|null; reviewedAt:string|null; rejectionReason:string|null; accountId:string|null };
 export type InventoryAccount = { accountId:string; projectId:string; description:string; unit:string;
   version:string; onHand:string; available:string; reserved:string; scopeIds:string[] };
 export type UsageSummary = { id:string; projectId:string; reason:string; actorName:string; at:string; materialCount:number };
@@ -21,7 +29,7 @@ export type StockMovement = { id:string; accountId:string; description:string; u
   usageId:string|null; transferId:string|null; deliveryId:string|null };
 export type InventoryView = { mode:InventoryMode; target:string|null; role:WorkspaceSession['activeRole']; found:boolean;
   projects:{ id:string; name:string }[]; scopes:{ id:string; name:string; projectId:string }[];
-  accounts:InventoryAccount[]; usage:UsageSummary[]; movements:StockMovement[] };
+  accounts:InventoryAccount[]; usage:UsageSummary[]; movements:StockMovement[]; stockReports?:StockReport[] };
 
 const text = (value:unknown):value is string => typeof value==='string';
 const bounded = (value:unknown,max:number,min=1):value is string =>
@@ -66,6 +74,23 @@ export function parseInventoryCommand(raw:unknown):InventoryCommand|null {
   return null;
 }
 
+export function parseStockReportCommand(raw:unknown):StockReportCommand|null {
+  const c=object(raw);
+  if (!c||!id(c.operationId)||!id(c.projectId)) return null;
+  const base={ operationId:c.operationId,projectId:c.projectId };
+  if (c.action==='submit') {
+    if (!bounded(c.description,4000)||!bounded(c.unit,4000)
+      ||!positiveQuantity(c.quantity)||!bounded(c.reason,2000,5)) return null;
+    return { ...base,action:c.action,description:c.description.trim(),unit:c.unit.trim(),
+      quantity:c.quantity,reason:c.reason.trim() };
+  }
+  if (!id(c.reportId)) return null;
+  if (c.action==='approve') return { ...base,action:c.action,reportId:c.reportId };
+  if (c.action==='reject'&&bounded(c.reason,2000,5))
+    return { ...base,action:c.action,reportId:c.reportId,reason:c.reason.trim() };
+  return null;
+}
+
 function rows<T>(data:unknown, parse:(value:Record<string,unknown>)=>T|null):T[]|null {
   if (!Array.isArray(data)) return null;
   const result:T[]=[];
@@ -100,6 +125,16 @@ export function parseInventoryView(raw:unknown):InventoryView|null {
     ? { id:m.id,accountId:m.accountId,description:m.description,unit:m.unit,kind:m.kind,at:m.at,quantity:m.quantity,
       reason:m.reason,actorName:m.actorName,actorRole:m.actorRole,relatedMovementId:m.relatedMovementId,
       usageId:m.usageId,transferId:m.transferId,deliveryId:m.deliveryId } : null);
+  const stockReports=v.stockReports===undefined ? undefined : rows<StockReport>(v.stockReports,r=>
+    id(r.id)&&id(r.projectId)&&text(r.description)&&text(r.unit)&&positiveQuantity(r.quantity)&&text(r.reason)
+      &&text(r.reporterName)&&stockDate(r.reportedAt)&&maybeId(r.accountId)
+      &&(r.status==='pending'||r.status==='approved'||r.status==='rejected')
+      &&(r.reviewerName===null||text(r.reviewerName))&&(r.reviewedAt===null||stockDate(r.reviewedAt))
+      &&(r.rejectionReason===null||text(r.rejectionReason))
+      ? { id:r.id,projectId:r.projectId,description:r.description,unit:r.unit,quantity:r.quantity,reason:r.reason,
+        reporterName:r.reporterName,reportedAt:r.reportedAt,status:r.status,reviewerName:r.reviewerName,
+        reviewedAt:r.reviewedAt,rejectionReason:r.rejectionReason,accountId:r.accountId } : null);
+  if (stockReports===null) return null;
   return projects&&scopes&&accounts&&usage&&movements
-    ? { mode,target:v.target,role:v.role,found:v.found,projects,scopes,accounts,usage,movements } : null;
+    ? { mode,target:v.target,role:v.role,found:v.found,projects,scopes,accounts,usage,movements,...(stockReports?{stockReports}:{}) } : null;
 }

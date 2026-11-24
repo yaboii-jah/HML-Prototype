@@ -15,7 +15,7 @@ test('remembered roles never establish a grant or change permanent identity', ()
 });
 
 test('return destinations reject external, encoded, auth and malformed paths', () => {
-  for (const value of ['//evil.example', 'https://evil.example', '/\\evil.example', '/projects/%2f%2fevil', '/auth/confirm', '/sign-in', '/projects\n', '/projects/../auth/confirm', null]) assert.equal(safeWorkspaceDestination(value), '/projects');
+  for (const value of ['//evil.example', 'https://evil.example', '/\\evil.example', '/projects/%2f%2fevil', '/auth/confirm', '/sign-in', '/projects\n', '/projects/../auth/confirm', null]) assert.equal(safeWorkspaceDestination(value), '/dashboard');
   assert.equal(safeWorkspaceDestination('/projects/abc'), '/projects/abc');
   assert.equal(safeWorkspaceDestination('/requests/new'), '/requests/new');
 });

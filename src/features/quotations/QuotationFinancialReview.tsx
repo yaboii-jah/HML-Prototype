@@ -690,7 +690,7 @@ export function QuotationFinancialReview({
     );
   if (quote.groups.length)
     readiness.push("Complete or explicitly cancel original-file changes.");
-  if (!family?.supplierActive) readiness.push("The supplier is inactive.");
+  if (family?.supplierActive === false) readiness.push("The supplier is inactive.");
   const included = review.rows.filter((row) => row.role === "material");
   const linked = included.filter(
     (row) => quote.body.lines.find((line) => line.id === row.id)?.requestItemId,

@@ -10,6 +10,14 @@ import type { WorkspaceSession } from "@/src/domain/auth/session";
 import { SidebarToggle } from "./SidebarToggle";
 import { CloseButton } from "@/src/components/ui/CloseButton";
 import { useFoundationRealtime } from "@/src/app-state/FoundationRealtime";
+import "./workspace-actions.css";
+
+const sectionNames: Record<string, string> = {
+  dashboard: "Dashboard", reports: "Operations reports", projects: "Projects", admin: "Users",
+  requests: "Material requests", suppliers: "Suppliers", "purchase-orders": "Purchase orders",
+  accounting: "Accounting", finance: "Finance", deliveries: "Deliveries",
+  "stock-transfers": "Stock transfers", inventory: "Site inventory",
+};
 
 const subscribeTheme = (notify: () => void) => {
   const observer = new MutationObserver(notify);
@@ -20,7 +28,8 @@ const getTheme = () => document.documentElement.dataset.theme === "dark" ? "dark
 const serverTheme = () => "light";
 
 export function WorkspaceShell({ session: initialSession, children }: { session: WorkspaceSession; children: ReactNode }) {
-  const session = useFoundationRealtime().session ?? initialSession;
+  const live = useFoundationRealtime();
+  const session = live.session ?? initialSession;
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const theme = useSyncExternalStore(subscribeTheme, getTheme, serverTheme);
@@ -40,7 +49,7 @@ export function WorkspaceShell({ session: initialSession, children }: { session:
       {menuOpen && <button className="mobile-scrim" aria-label="Close navigation" onClick={() => setMenuOpen(false)}/>}
       <aside id="workspace-navigation" className={`side-nav ${menuOpen ? "is-open" : ""}`}>
         <div className="side-brand">
-          <Link className="brand-logo" href="/projects" aria-label="HML ConstructSync projects" onClick={() => setMenuOpen(false)}>
+          <Link className="brand-logo" href="/dashboard" aria-label="HML ConstructSync dashboard" onClick={() => setMenuOpen(false)}>
             <Image src="/company%20-%20logo.webp" alt="HML Technologies and Services Inc." width={190} height={45} priority/>
             <span className="brand-compact" aria-hidden="true">HML</span>
           </Link>
@@ -49,6 +58,11 @@ export function WorkspaceShell({ session: initialSession, children }: { session:
         <div className="side-product"><strong>ConstructSync</strong><SidebarToggle/></div>
         <div className="compact-navigation">
           <nav aria-label="Main navigation">
+            <Link className={`side-link ${pathname === "/dashboard" ? "active" : ""}`} href="/dashboard"
+              aria-label="Dashboard" aria-current={pathname === "/dashboard" ? "page" : undefined} onClick={() => setMenuOpen(false)}>
+              <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><rect x="3.5" y="3.5" width="17" height="17" rx="2"/><path d="M3.5 10h17m-10.5 0v10.5"/></svg>
+              <span className="nav-label">Dashboard</span>
+            </Link>
             <Link className={`side-link ${pathname.startsWith('/inventory') ? 'active' : ''}`} href="/inventory"
               aria-label="Site inventory" aria-current={pathname.startsWith('/inventory') ? 'page' : undefined} onClick={() => setMenuOpen(false)}>
               <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="m3 7 9-4 9 4v10l-9 4-9-4Zm0 0 9 4 9-4m-9 4v10"/></svg>
@@ -79,14 +93,24 @@ export function WorkspaceShell({ session: initialSession, children }: { session:
               </Link>
             )}
             {session.activeRole !== "Site Personnel" && <Link className={`side-link ${pathname.startsWith("/finance") ? "active" : ""}`} href="/finance" aria-label="Finance" aria-current={pathname.startsWith("/finance") ? "page" : undefined} onClick={() => setMenuOpen(false)}><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 9h18M7 14h4"/></svg><span className="nav-label">Finance</span></Link>}
+            {session.activeRole !== "Site Personnel" && <Link className={`side-link ${pathname === "/reports" ? "active" : ""}`} href="/reports"
+              aria-label="Operations reports" aria-current={pathname === "/reports" ? "page" : undefined} onClick={() => setMenuOpen(false)}>
+              <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M3 4v16h18M7 16v-4m5 4V7m5 9v-7"/></svg>
+              <span className="nav-label">Operations reports</span>
+            </Link>}
           </nav>
         </div>
       </aside>
       <div className="workspace">
         <header className="masthead">
           <button className="mobile-menu icon-button" aria-label="Open navigation" aria-expanded={menuOpen} aria-controls="workspace-navigation" onClick={() => setMenuOpen(true)}>☰</button>
-          <div className="top-context"><span>Workspace</span><span className="crumb-separator">/</span><strong>{pathname.startsWith("/projects") ? "Projects" : pathname.startsWith("/admin") ? "Users" : pathname.startsWith("/requests") ? "Material requests" : pathname.startsWith("/suppliers") ? "Suppliers" : pathname.startsWith("/purchase-orders") ? "Purchase orders" : pathname.startsWith("/accounting") ? "Accounting" : pathname.startsWith("/finance") ? "Finance" : pathname.startsWith("/deliveries") ? "Deliveries" : pathname.startsWith("/stock-transfers") ? "Stock transfers" : pathname.startsWith("/inventory") ? "Site inventory" : "Unavailable"}</strong></div>
+          <div className="top-context"><span>Workspace</span><span className="crumb-separator">/</span><strong>{sectionNames[pathname.split("/")[1]] ?? "Unavailable"}</strong></div>
           <div className="masthead-right">
+            <Link className="icon-button workspace-action-bell" href="/dashboard#actions"
+              aria-label={live.readyActions === null ? "Ready actions" : `Ready actions (${live.readyActions})`}>
+              <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M6 9a6 6 0 0 1 12 0v4l2 3H4l2-3zm4 10a2 2 0 0 0 4 0"/></svg>
+              {live.readyActions !== null && <span aria-hidden="true">{live.readyActions > 99 ? "99+" : live.readyActions}</span>}
+            </Link>
             <button className="theme-toggle icon-button" type="button" aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`} aria-pressed={theme === "dark"} onClick={() => {
               const next = theme === "dark" ? "light" : "dark";
               document.documentElement.dataset.theme = next;

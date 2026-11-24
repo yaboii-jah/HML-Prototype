@@ -3,13 +3,14 @@ import { randomUUID } from 'node:crypto';
 import { writeFile } from 'node:fs/promises';
 
 export async function checkFoundationShell({ browser, client, login, logout, administrator, sql }) {
-  const ready = "return location.pathname==='/projects'&&!!document.querySelector('.masthead-account')&&!!document.querySelector('.page-header')&&!document.querySelector('.foundation-status')";
+  const ready = "return ['/dashboard','/projects'].includes(location.pathname)&&!!document.querySelector('.masthead-account')&&!!document.querySelector('.page-header')&&!document.querySelector('.foundation-status')";
   const key = async name => {
     await browser.call('Input.dispatchKeyEvent', { type: 'keyDown', key: name, code: name,
       windowsVirtualKeyCode: { Enter: 13, Tab: 9, Escape: 27 }[name], ...(name === 'Enter' ? { text: '\r' } : {}) });
     await browser.call('Input.dispatchKeyEvent', { type: 'keyUp', key: name, code: name });
   };
   await login(browser, administrator); await browser.wait(ready);
+  assert.equal(await browser.run('return location.pathname'), '/dashboard');
   for (const width of [1440, 375]) {
     await browser.call('Emulation.setDeviceMetricsOverride', { width, height: 900, deviceScaleFactor: 1, mobile: width === 375 });
     assert.equal(await browser.run('return document.documentElement.scrollWidth<=innerWidth'), true, 'Shell fits viewport');

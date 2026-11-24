@@ -24,7 +24,7 @@ export type QuotationFamily = {
   currentQuoteId: string | null;
   pendingQuoteId: string | null;
   currentMrfArchiveId: string | null;
-  supplierActive: boolean;
+  supplierActive: boolean | null;
 };
 export type QuotationRevision = {
   id: string;
@@ -267,7 +267,7 @@ export function parseQuotationFamily(value: unknown): QuotationFamily | null {
     nullableUuid(v.currentQuoteId) &&
     nullableUuid(v.pendingQuoteId) &&
     nullableUuid(v.currentMrfArchiveId) &&
-    typeof v.supplierActive === "boolean"
+    (v.supplierActive === null || typeof v.supplierActive === "boolean")
     ? {
         id: v.id,
         version: v.version,

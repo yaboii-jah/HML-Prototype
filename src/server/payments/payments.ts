@@ -37,6 +37,10 @@ export async function runPaymentCommand(input: unknown) {
         P4114: "Review the saved payment details, actual date, archived proof and current state before continuing.",
         P4115: "Proof or payment reference is already used. Check retained entries; explain cross-PO reference matches or use a linked replacement for reversed payments.",
         P4116: "Resolve the current delivery-clearance prerequisites first.",
+        P4117: "The actual payment date must be between the PO date and today in Philippine time. Edit the payment draft and check the date against the proof.",
+        P4118: "A verified payment on this PO already uses that method and reference. Check the existing payment, or edit this draft to enter the actual reference for this installment.",
+        P4119: "Another PO has a verified payment with the same method and reference. Check the reference, or explain the match in the payment draft if it is correct.",
+        P4120: "This proof file is already attached to a verified payment. Attach proof for this installment, or use a linked replacement for a reversed payment.",
         P4803: "This retry identity was used for different input. Review current values before starting a new action.",
       };
       if (messages[error.code]) return { ok: false, conflict: error.code === "40001", message: messages[error.code] };

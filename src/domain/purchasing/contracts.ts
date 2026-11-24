@@ -60,7 +60,8 @@ export type PurchasingRecord = {
   id: string;
   kind: "award" | "po";
   mrfId: string;
-  supplierId: string;
+  supplierId: string | null;
+  familyId?: string;
   quoteId: string;
   revisionId: string;
   version: string;
@@ -235,6 +236,7 @@ export type PurchasingCommand = {
   expectedDemand: string;
   targetId: string;
   quoteId?: string;
+  supplierId?: string;
   expectedFamily?: string;
   body?: OrderBody;
   reason?: string;
@@ -280,11 +282,14 @@ export function parsePurchasingCommand(
     return text(v.reason) && v.reason.trim().length >= 5
       ? { ...base, type: v.type, reason: v.reason.trim() }
       : null;
-  if (
-    v.type === "convert" ||
-    v.type === "checkPo" ||
-    v.type === "retryArtifact"
-  )
+  if (v.type === "convert") {
+    if (v.supplierId === undefined && v.expectedFamily === undefined)
+      return { ...base, type: v.type };
+    return id(v.supplierId) && version(v.expectedFamily)
+      ? { ...base, type: v.type, supplierId: v.supplierId, expectedFamily: v.expectedFamily }
+      : null;
+  }
+  if (v.type === "checkPo" || v.type === "retryArtifact")
     return { ...base, type: v.type };
   if (
     v.type === "saveComparison" &&
@@ -359,7 +364,8 @@ export function parsePurchasingView(value: unknown): PurchasingView | null {
       !body ||
       !id(r.id) ||
       !id(r.mrfId) ||
-      !id(r.supplierId) ||
+      !(id(r.supplierId) || (r.kind === "award" && r.supplierId === null)) ||
+      (r.familyId !== undefined && !id(r.familyId)) ||
       !id(r.quoteId) ||
       !id(r.revisionId) ||
       !version(r.version) ||
@@ -383,6 +389,7 @@ export function parsePurchasingView(value: unknown): PurchasingView | null {
       id: r.id,
       mrfId: r.mrfId,
       supplierId: r.supplierId,
+      ...(id(r.familyId) ? { familyId: r.familyId } : {}),
       quoteId: r.quoteId,
       revisionId: r.revisionId,
       kind: r.kind,

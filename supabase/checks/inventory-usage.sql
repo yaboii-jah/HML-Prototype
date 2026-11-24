@@ -85,4 +85,109 @@ begin
     raise exception 'Read-only role wrote stock'; exception when insufficient_privilege then null;
   end;
 end $$;
+do $$
+declare
+  f jsonb:=pg_temp.trip_fixture();
+  site jsonb:=f->'destinationActor'; other_site jsonb:=f->'sourceActor';
+  accountant jsonb:=pg_temp.po_person();
+  project uuid:=(f->>'destination')::uuid;
+  report uuid:=gen_random_uuid(); approval uuid:=gen_random_uuid();
+  rejected uuid:=gen_random_uuid(); raced uuid:=gen_random_uuid(); receipt_account uuid:=gen_random_uuid();
+  cmd jsonb; decision jsonb; result jsonb; view jsonb; bell_before integer;
+  report_href text:='/inventory?view=stock-reports&reportId='||report;
+begin
+  bell_before:=(public.monitoring_read(accountant,'bell','{}')->>'count')::integer;
+  cmd:=jsonb_build_object('operationId',report,'action','submit','projectId',project,
+    'description','Found stock tiles','unit','box','quantity','7.125','reason','Physical site count');
+  begin
+    perform public.stock_report_command(other_site,cmd);
+    raise exception 'Unassigned Site submitted a report'; exception when insufficient_privilege then null;
+  end;
+  begin
+    perform public.stock_report_command(accountant,cmd);
+    raise exception 'Accounting submitted as Site'; exception when insufficient_privilege then null;
+  end;
+  result:=public.stock_report_command(site,cmd);
+  if result<>public.stock_report_command(site,cmd)
+    or exists(select 1 from private.stock_accounts where id=report) then
+    raise exception 'Pending report posted stock or changed on retry';
+  end if;
+  if (public.monitoring_read(accountant,'bell','{}')->>'count')::integer is distinct from bell_before+1
+    or not exists(select 1 from jsonb_array_elements(public.monitoring_read(accountant,'dashboard',
+      jsonb_build_object('projectId',project))->'actions') a where a->>'href'=report_href and a->>'label'='Review unrecorded stock')
+    or exists(select 1 from jsonb_array_elements(public.monitoring_read(site,'dashboard','{}')->'actions') a where a->>'href'=report_href) then
+    raise exception 'Pending stock report did not appear in the Accounting queue only';
+  end if;
+  begin
+    perform public.stock_report_command(site,cmd||'{"quantity":"12"}');
+    raise exception 'Changed submission accepted on replay'; exception when sqlstate 'P4173' then null;
+  end;
+  begin
+    perform public.stock_report_command(site,cmd||jsonb_build_object('operationId',gen_random_uuid(),'description',' found STOCK tiles ','unit','BOX'));
+    raise exception 'Duplicate pending report accepted'; exception when unique_violation then null;
+  end;
+  view:=public.inventory_read(site,'stock',project,null);
+  if view->'stockReports'->0->>'status' is distinct from 'pending'
+    or public.inventory_read(other_site,'stock',project,null)->'stockReports' is distinct from '[]'::jsonb then
+    raise exception 'Pending status or Site project visibility failed';
+  end if;
+  decision:=jsonb_build_object('operationId',approval,'action','approve','projectId',project,'reportId',report);
+  begin
+    perform public.stock_report_command(site,decision);
+    raise exception 'Site approved a report'; exception when insufficient_privilege then null;
+  end;
+  result:=public.stock_report_command(accountant,decision);
+  if (public.monitoring_read(accountant,'bell','{}')->>'count')::integer is distinct from bell_before
+    or exists(select 1 from jsonb_array_elements(public.monitoring_read(accountant,'dashboard','{}')->'actions') a where a->>'href'=report_href) then
+    raise exception 'Approved stock report stayed in the Accounting queue';
+  end if;
+  if result<>public.stock_report_command(accountant,decision)
+    or result<>public.stock_report_command(site,cmd)
+    or (select count(*) from private.stock_movements where operation_id=approval)<>1
+    or (private.stock_snapshot(array[report])->0->>'available')::numeric is distinct from 7.125
+    or (select status from private.stock_reports where id=report) is distinct from 'approved'
+    or (select actor_id from private.inventory_entries where id=approval) is distinct from (accountant->>'userId')::uuid then
+    raise exception 'Approval failed to post one audited opening balance';
+  end if;
+  begin
+    perform public.stock_report_command(accountant,decision||jsonb_build_object('operationId',gen_random_uuid()));
+    raise exception 'A second approval succeeded'; exception when sqlstate 'P4175' then null;
+  end;
+  begin
+    perform public.stock_report_command(site,cmd||jsonb_build_object('operationId',gen_random_uuid()));
+    raise exception 'Report submitted for an existing record'; exception when sqlstate 'P4174' then null;
+  end;
+
+  perform public.stock_report_command(site,cmd||jsonb_build_object('operationId',rejected,'description','Found gravel'));
+  decision:=jsonb_build_object('operationId',gen_random_uuid(),'action','reject','projectId',project,
+    'reportId',rejected,'reason','Site count needs verification');
+  result:=public.stock_report_command(accountant,decision);
+  if result<>public.stock_report_command(accountant,decision)
+    or exists(select 1 from private.stock_accounts where id=rejected)
+    or (public.monitoring_read(accountant,'bell','{}')->>'count')::integer is distinct from bell_before
+    or (select rejection_reason from private.stock_reports where id=rejected) is distinct from 'Site count needs verification' then
+    raise exception 'Rejection changed stock or lost its reason';
+  end if;
+  perform public.stock_report_command(site,cmd||jsonb_build_object('operationId',gen_random_uuid(),'description','Found gravel'));
+
+  perform public.stock_report_command(site,cmd||jsonb_build_object('operationId',raced,'description','Counted outlet boxes'));
+  perform private.stock_apply(site,gen_random_uuid(),
+    jsonb_build_array(jsonb_build_object('accountId',receipt_account,'projectId',project,'description','Counted outlet boxes','unit','box','expectedVersion','0')),
+    jsonb_build_array(jsonb_build_object('accountId',receipt_account,'sourceId',gen_random_uuid(),'sourceLineId',gen_random_uuid(),
+      'sourceKind','purchase_receipt','postingKind','receipt','quantity','4')), '[]','Simulated receipt posting');
+  decision:=jsonb_build_object('operationId',gen_random_uuid(),'action','approve','projectId',project,'reportId',raced);
+  begin
+    perform public.stock_report_command(accountant,decision);
+    raise exception 'Receipt during review allowed another opening'; exception when sqlstate 'P4174' then null;
+  end;
+  view:=public.inventory_read(accountant,'stock',project,null);
+  if not exists(select 1 from jsonb_array_elements(view->'stockReports') r
+    where r->>'id'=raced::text and r->>'status'='pending' and r->>'accountId'=receipt_account::text)
+    or exists(select 1 from private.inventory_entries where id=(decision->>'operationId')::uuid)
+    or (private.stock_snapshot(array[receipt_account])->0->>'available')::numeric is distinct from 4
+    or has_function_privilege('authenticated','public.stock_report_command(jsonb,jsonb)','execute')
+    or has_table_privilege('service_role','private.stock_reports','select') then
+    raise exception 'Blocked approval leaked effects, account location or privileges';
+  end if;
+end $$;
 rollback;

@@ -10,6 +10,8 @@ import { checkTransferApproval } from './check-transfer-approval.mjs';
 import { checkTransferTrips } from './check-transfer-trips.mjs';
 import { checkTransferReceiving } from './check-transfer-receiving.mjs';
 import { checkInventoryUsage } from './check-inventory-usage.mjs';
+import { checkOperationalMonitoring } from './check-operational-monitoring.mjs';
+import { checkOperationalAcceptance, checkPrototypeRetirement } from './check-operational-acceptance.mjs';
 import { fakeDrive } from './helpers/fake-drive.mjs';
 import assert from 'node:assert/strict';
 import { randomUUID, randomBytes } from 'node:crypto';
@@ -136,12 +138,12 @@ export async function checkAuthFoundation({ api, anon, secret, mailpit, sql, env
     await browser.navigate('/sign-in');
     assert.equal(await browser.run("return document.querySelector('.signin-submit').disabled"), true, 'Configured sign-in waits for client action hydration');
     await browser.call('Network.setBlockedURLs', { urls: [] });
-    const login = async (browser, account) => {
-      await browser.navigate('/sign-in');
+    const login = async (browser, account, path = '/sign-in') => {
+      await browser.navigate(path);
       await browser.wait("return !!document.querySelector('#signin-email')&&!document.querySelector('.signin-submit').disabled");
       await browser.fill('#signin-email', account.email); await browser.fill('#signin-password', account.password);
       await browser.click('.signin-submit');
-      await browser.wait("return (location.pathname==='/projects'&&!!document.querySelector('.page-header')&&!document.querySelector('.foundation-status'))||(location.pathname==='/choose-role'&&!!document.querySelector('#active-role'))||!!document.querySelector('#signin-error')");
+      await browser.wait("return (location.pathname==='/dashboard'&&!!document.querySelector('.page-header')&&!document.querySelector('.foundation-status'))||(location.pathname==='/choose-role'&&!!document.querySelector('#active-role'))||!!document.querySelector('#signin-error')");
     };
     const logout = async browser => {
       await browser.click('.masthead-account');
@@ -161,7 +163,7 @@ export async function checkAuthFoundation({ api, anon, secret, mailpit, sql, env
     await browser.wait("return !!document.querySelector('#signin-error')");
     assert.match(await browser.run("return document.querySelector('#signin-error').textContent"), /Invalid email or password/);
     await login(browser, manager);
-    await browser.wait("return location.pathname==='/projects'&&!!document.querySelector('.masthead-account')");
+    await browser.wait("return location.pathname==='/dashboard'&&!!document.querySelector('.masthead-account')");
     const managerSession = await sessionCookie(browser);
     const context = await (await request('/rest/v1/rpc/auth_session_context', managerSession.access_token, { method: 'POST', body: '{}' })).json();
     assert.equal(context.userId, manager.id);
@@ -180,29 +182,31 @@ export async function checkAuthFoundation({ api, anon, secret, mailpit, sql, env
       await browser.wait("return document.body.innerText.includes('temporarily unavailable')");
       assert.match(await browser.run('return document.body.innerText'), /temporarily unavailable/);
     }
+    await browser.navigate('/reports');
+    await browser.wait("return location.pathname==='/reports'&&!!document.querySelector('.masthead-account')");
     await logout(browser);
     assert.equal(await (await request('/rest/v1/rpc/auth_session_context', managerSession.access_token, { method: 'POST', body: '{}' })).json(), null, 'Copied signed JWT loses application access on logout');
-    await login(browser, multi);
+    await login(browser, multi, '/sign-in?next=%2Freports');
     await browser.wait("return location.pathname==='/choose-role'&&!!document.querySelector('#active-role')");
     const select = async (selector, value) => browser.run(`const el=document.querySelector(${JSON.stringify(selector)});el.value=${JSON.stringify(value)};el.dispatchEvent(new Event('change',{bubbles:true}));`);
     await select('#active-role', 'Accounting'); await browser.click('.signin-form button');
-    await browser.wait("return location.pathname==='/projects'&&document.querySelector('.account-label small')?.textContent==='Accounting'");
+    await browser.wait("return location.pathname==='/dashboard'&&document.querySelector('.account-label small')?.textContent==='Accounting'");
     const beforeSwitch = await sessionCookie(browser);
     await browser.click('.masthead-account'); await browser.wait("return !!document.querySelector('.account-modal[open]')");
     await select('#switch-role', 'Finance'); await browser.click('.account-modal .signin-form button');
-    await browser.wait("return document.querySelector('.account-label small')?.textContent==='Finance'");
+    await browser.wait("return location.pathname==='/dashboard'&&document.querySelector('.account-label small')?.textContent==='Finance'");
     const afterSwitch = await sessionCookie(browser);
     assert.equal(afterSwitch.user.id, beforeSwitch.user.id, 'Role switching preserves permanent identity');
     assert.ok(afterSwitch.access_token === beforeSwitch.access_token, 'Role switching does not authenticate as another account');
     await logout(browser);
     await login(browser, multi);
-    await browser.wait("return location.pathname==='/projects'&&document.querySelector('.account-label small')?.textContent==='Finance'");
+    await browser.wait("return location.pathname==='/dashboard'&&document.querySelector('.account-label small')?.textContent==='Finance'");
     await browser.call('Network.setCookie', { name: `constructsync-role-${multi.id}`, value: 'Administrator', url: base, httpOnly: true });
     await browser.navigate('/projects');
     assert.equal(await browser.run('return location.pathname'), '/choose-role', 'Forged remembered role grants no authority');
     assert.equal(await browser.run("return [...document.querySelector('#active-role').options].some(o=>o.value==='Administrator')"), false);
     await select('#active-role', 'Accounting'); await browser.click('.signin-form button');
-    await browser.wait("return location.pathname==='/projects'&&!!document.querySelector('.masthead-account')");
+    await browser.wait("return location.pathname==='/dashboard'&&!!document.querySelector('.masthead-account')");
     const stale = await sessionCookie(browser);
     ok(await client.from('role_grants').delete().eq('user_id', multi.id).eq('role', 'Finance'), 'Revoke a role');
     assert.equal(await browser.run("return (await fetch('/api/drive/projects',{method:'POST'})).status"), 401, 'Missed notifications do not preserve revoked access');
@@ -212,10 +216,14 @@ export async function checkAuthFoundation({ api, anon, secret, mailpit, sql, env
     assert.equal(await (await request('/rest/v1/rpc/auth_session_context', refreshedSession.access_token, { method: 'POST', body: '{}' })).json(), null, 'Real JWT refresh never renews revoked binding');
     await browser.navigate('/projects');
     assert.equal(await browser.run('return location.pathname'), '/sign-in');
-    await login(browser, multi); await browser.wait("return location.pathname==='/projects'&&!!document.querySelector('.masthead-account')");
+    await login(browser, multi); await browser.wait("return location.pathname==='/dashboard'&&!!document.querySelector('.masthead-account')");
     ok(await client.from('profiles').update({ is_active: false }).eq('user_id', multi.id), 'Deactivate account');
     assert.equal(await browser.run("return (await fetch('/api/documents/preview',{method:'POST'})).status"), 401, 'Deactivation immediately denies operations');
-    await login(second, site); await second.wait("return location.pathname==='/projects'&&!!document.querySelector('.masthead-account')");
+    await login(browser, site, '/sign-in?next=%2Freports');
+    await browser.wait("return location.pathname==='/dashboard'&&document.querySelector('.account-label small')?.textContent==='Site Personnel'");
+    await browser.navigate('/reports');
+    await browser.wait("return location.pathname==='/reports'&&document.querySelector('h1')?.textContent==='404'");
+    await login(second, site, '/reports'); await second.wait("return location.pathname==='/dashboard'&&!!document.querySelector('.masthead-account')");
     ok(await client.from('project_assignments').insert({ user_id: site.id, project_id: fixtureProject }), 'Change site assignment');
     await second.navigate('/projects');
     assert.equal(await second.run('return location.pathname'), '/sign-in', 'Assignment changes require fresh sign-in');
@@ -256,7 +264,7 @@ export async function checkAuthFoundation({ api, anon, secret, mailpit, sql, env
     assert.match(await second.run("return document.querySelector('[role=alert]').textContent"), /matching passwords/);
     await savePassword(second, invite.password);
     await second.wait("return location.pathname==='/sign-in'&&!!document.querySelector('#signin-email')");
-    await login(second, invite); await second.wait("return location.pathname==='/projects'&&!!document.querySelector('.masthead-account')");
+    await login(second, invite); await second.wait("return location.pathname==='/dashboard'&&!!document.querySelector('.masthead-account')");
     await logout(second);
     await second.navigate(invitation); await savePassword(second, randomUUID());
     await second.wait("return !!document.querySelector('[role=alert]')");
@@ -266,7 +274,7 @@ export async function checkAuthFoundation({ api, anon, secret, mailpit, sql, env
     await second.navigate(recovery);
     invite.password = randomUUID(); await savePassword(second, invite.password);
     await second.wait("return location.pathname==='/sign-in'&&!!document.querySelector('#signin-email')");
-    await login(second, invite); await second.wait("return location.pathname==='/projects'&&!!document.querySelector('.masthead-account')");
+    await login(second, invite); await second.wait("return location.pathname==='/dashboard'&&!!document.querySelector('.masthead-account')");
     await logout(second);
     ok(await passwordClient().auth.resetPasswordForEmail(invite.email), 'Create expiring recovery link');
     const expiring = await mailLink(invite.email, 'recovery');
@@ -319,6 +327,12 @@ export async function checkAuthFoundation({ api, anon, secret, mailpit, sql, env
     checks.push('transfer-receiving-browser');
     await checkInventoryUsage({ browser,second,client,sql,login,logout });
     checks.push('inventory-usage-browser');
+    await checkOperationalMonitoring({ browser, second, client, sql, login, logout });
+    checks.push('operational-monitoring-browser');
+    await checkPrototypeRetirement(browser);
+    checks.push('prototype-retirement-browser');
+    await checkOperationalAcceptance({ browser, second, client, sql, login, logout });
+    checks.push('operational-acceptance-browser');
     await checkSupplierDirectory({ browser, second, client, login, logout, sessionCookie, sql });
     checks.push('supplier-browser');
     for (const browser of browsers) browser.assertIsolated();

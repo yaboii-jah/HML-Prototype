@@ -7,6 +7,7 @@ import { Field, PageHeader, RecordHeader } from '@/src/components/ui/Primitives'
 import { Register } from '@/src/components/ui/Register';
 import type { InventoryAccount, InventoryView } from '@/src/domain/inventory/contracts';
 import { ScopePicker, StockEntryForm, UsageEditor } from './InventoryActions';
+import { StockReports } from './StockReports';
 
 const atTime = (value:string) => new Date(value).toLocaleString('en-PH',{ timeZone:'Asia/Manila' });
 const materialHref = (item:InventoryAccount) => `/inventory/${item.projectId}/${item.accountId}`;
@@ -21,12 +22,16 @@ function ProjectPicker({ view, project, change }: { view:InventoryView; project:
   </select>;
 }
 
-function InventoryRegister({ view, actorId, initialUsage, refresh }: {
+function InventoryRegister({ view, actorId, initialUsage, initialReports, initialReportId, refresh }: {
   view:InventoryView; actorId:string; initialUsage:boolean; refresh:()=>void;
+  initialReports:boolean; initialReportId?:string;
 }) {
-  const [usage,setUsage]=useState(initialUsage);
+  const [tab,setTab]=useState<'stock'|'usage'|'reports'>(initialReports?'reports':initialUsage?'usage':'stock');
+  const usage=tab==='usage';
   const [project,setProject]=useState(''),[scope,setScope]=useState(''),[search,setSearch]=useState('');
   const [opening,setOpening]=useState(false);
+  const canSeeReports=!!view.stockReports&&(view.role==='Site Personnel'||view.role==='Accounting');
+  const showingReports=canSeeReports&&tab==='reports';
   const filters=<><ProjectPicker view={view} project={project} change={value=>{setProject(value);setScope('');}} />
     <input aria-label={usage?'Search usage entries':'Search inventory'} placeholder={usage?'Search explanation or person':'Search material or unit'}
       value={search} onChange={event=>setSearch(event.target.value)} /></>;
@@ -35,17 +40,23 @@ function InventoryRegister({ view, actorId, initialUsage, refresh }: {
     <PageHeader title="Site inventory" actions={<>
       {view.role==='Site Personnel'&&view.projects.length>0&&<Link className="button primary"
         href={`/inventory/usage/new${project?`?siteId=${project}`:''}`}>Record usage</Link>}
+      {canSeeReports&&view.role==='Site Personnel'&&view.projects.length>0&&<button type="button" className="button secondary"
+        onClick={()=>setTab('reports')}>Report unrecorded stock</button>}
       {view.role==='Accounting'&&view.projects.length>0&&<button type="button" className="button primary"
-        aria-expanded={opening} onClick={()=>setOpening(value=>!value)}>Opening stock</button>}
+        aria-expanded={opening&&!showingReports} onClick={()=>{if(showingReports)setTab('stock');setOpening(value=>showingReports||!value);}}>Opening stock</button>}
     </>} />
-    {opening&&view.role==='Accounting'&&<StockEntryForm view={view} actorId={actorId} refresh={refresh} />}
+    {opening&&!showingReports&&view.role==='Accounting'&&<StockEntryForm view={view} actorId={actorId} refresh={refresh} />}
     <div className="button-row" aria-label="Inventory view">
-      <button type="button" className={`button ${usage?'secondary':'primary'}`} aria-pressed={!usage}
-        onClick={()=>{setUsage(false);setSearch('');}}>Stock</button>
+      <button type="button" className={`button ${usage||showingReports?'secondary':'primary'}`} aria-pressed={!usage&&!showingReports}
+        onClick={()=>{setTab('stock');setSearch('');}}>Stock</button>
       <button type="button" className={`button ${usage?'primary':'secondary'}`} aria-pressed={usage}
-        onClick={()=>{setUsage(true);setSearch('');}}>Usage entries</button>
+        onClick={()=>{setTab('usage');setSearch('');}}>Usage entries</button>
+      {canSeeReports&&<button type="button" className={`button ${showingReports?'primary':'secondary'}`}
+        aria-pressed={showingReports} onClick={()=>setTab('reports')}>Unrecorded stock</button>}
+      <Link className="button secondary" href="/inventory?view=consumption">Consumption</Link>
     </div>
-    {usage ? <Register rows={view.usage.filter(e=>(!project||e.projectId===project)&&matching(e.reason+' '+e.actorName))}
+    {showingReports ? <StockReports view={view} actorId={actorId} initialProject={project} initialReportId={initialReportId} refresh={refresh}/>
+      : usage ? <Register rows={view.usage.filter(e=>(!project||e.projectId===project)&&matching(e.reason+' '+e.actorName))}
       unit="usage entries" resetKey={project+search} filters={filters}
       headers={<><th>Recorded (PH)</th><th>Project</th><th>Materials</th><th>Explanation</th><th>Recorded by</th></>}
       empty="No usage entries match this view." renderRow={entry=><tr key={entry.id}>
@@ -134,13 +145,15 @@ function UsageDetail({ view }: { view:InventoryView }) {
   </>;
 }
 
-export function InventoryWorkspace({ initial, actorId, initialUsage=false, initialProject, initialMaterial }: {
+export function InventoryWorkspace({ initial, actorId, initialUsage=false, initialReports=false, initialReportId, initialProject, initialMaterial }: {
   initial:InventoryView; actorId:string; initialUsage?:boolean; initialProject?:string; initialMaterial?:string;
+  initialReports?:boolean; initialReportId?:string;
 }) {
   const { view:live,refresh }=useFoundationRealtime();
   const view=live?.kind==='inventory'&&live.data.mode===initial.mode&&live.data.target===initial.target?live.data:initial;
   if (view.mode==='new') return <UsagePage view={view} actorId={actorId} refresh={refresh} initialProject={initialProject} initialMaterial={initialMaterial} />;
   if (view.mode==='material') return <MaterialPage view={view} actorId={actorId} refresh={refresh} />;
   if (view.mode==='entry') return <UsageDetail view={view} />;
-  return <InventoryRegister view={view} actorId={actorId} initialUsage={initialUsage} refresh={refresh} />;
+  return <InventoryRegister view={view} actorId={actorId} initialUsage={initialUsage} initialReports={initialReports}
+    initialReportId={initialReportId} refresh={refresh} />;
 }

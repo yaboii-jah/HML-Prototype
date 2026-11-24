@@ -127,12 +127,12 @@ export function OrderEditor({
   return (
     <>
       <p>
-        Linked supplier:{" "}
+        {quote.supplierId ? "Linked supplier: " : "Supplier as quoted: "}
         <strong>
           {quotations.suppliers.find((s) => s.id === quote.supplierId)?.name ||
             quote.body.supplierName}
         </strong>
-        . MRF and supplier ownership remain fixed.
+        .
       </p>
       <Field label="Quotation revision">
         <select
@@ -143,7 +143,7 @@ export function OrderEditor({
           {quotations.quotes
             .filter(
               (q) =>
-                q.supplierId === quote.supplierId &&
+                q.family?.id === quote.family?.id &&
                 (q.id === quote.id || q.revision?.eligible),
             )
             .map((q) => (

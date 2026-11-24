@@ -42,6 +42,9 @@ const supplierFields: HeaderKey[] = [
   "email",
   "phone",
 ];
+const quoteOnly = "quote-only";
+const normalizeSupplierName = (name: string) =>
+  name.trim().toLowerCase().replace(/\s+/g, " ");
 const financialFields: HeaderKey[] = [
   "currency",
   "taxStatus",
@@ -232,26 +235,45 @@ function NewQuotation({
   close: () => void;
 }) {
   const [supplierId, setSupplierId] = useState("");
+  const [typedDetails, setTypedDetails] = useState(emptyQuoteBody);
+  const [useTypedDetails, setUseTypedDetails] = useState(false);
   const operation = useQuoteOperation(),
     router = useRouter();
+  const manual = supplierId === quoteOnly;
+  const typedName = normalizeSupplierName(typedDetails.supplierName);
+  const matchesName = (name: string) => {
+    const normalized = normalizeSupplierName(name);
+    return !!typedName && !!normalized &&
+      (normalized === typedName ||
+        normalized.startsWith(typedName + " ") ||
+        typedName.startsWith(normalized + " "));
+  };
+  const quoteMatches = view.quotes.filter((q) => {
+    const current = q.family?.pendingQuoteId ?? q.family?.currentQuoteId;
+    return matchesName(q.body.supplierName) && (!current || current === q.id);
+  }).slice(0, 5);
+  const directoryMatches = view.suppliers.filter((s) =>
+    matchesName(s.name) && !quoteMatches.some((q) => q.supplierId === s.id),
+  ).slice(0, 5);
   const create = async (event: FormEvent) => {
     event.preventDefault();
     const supplier = view.suppliers.find((s) => s.id === supplierId);
-    if (!supplier || !view.request) return;
-    const body = emptyQuoteBody();
-    for (const key of [
-      "address",
-      "tin",
-      "contactName",
-      "email",
-      "phone",
-    ] as const)
-      body[key] = supplier[key];
-    body.supplierName = supplier.name;
+    if ((!supplier && !manual) || !view.request) return;
+    const body = supplier && !useTypedDetails
+      ? {
+          ...emptyQuoteBody(),
+          supplierName: supplier.name,
+          address: supplier.address,
+          tin: supplier.tin,
+          contactName: supplier.contactName,
+          email: supplier.email,
+          phone: supplier.phone,
+        }
+      : typedDetails;
     const result = await operation.run({
       type: "create",
       mrfId: view.request.id,
-      supplierId,
+      supplierId: supplier?.id ?? null,
       body,
     });
     if (result?.ok && result.quoteId) {
@@ -269,19 +291,23 @@ function NewQuotation({
     >
       <form className="form-stack" onSubmit={create}>
         <p>
-          First save permanently links this MRF and business. Later MRF
+          First save permanently links this MRF. Later MRF
           corrections can change supporting documents only, even if this
           quotation is cancelled.
         </p>
-        <Field label="Active supplier">
+        <Field label="Supplier">
           <select
             name="supplierId"
             value={supplierId}
             required
             disabled={operation.busy}
-            onChange={(e) => setSupplierId(e.target.value)}
+            onChange={(e) => {
+              setSupplierId(e.target.value);
+              setUseTypedDetails(false);
+            }}
           >
             <option value="">Choose supplier</option>
+            <option value={quoteOnly}>Enter supplier details for this quote</option>
             {view.suppliers.map((s) => (
               <option
                 key={s.id}
@@ -304,13 +330,78 @@ function NewQuotation({
             ))}
           </select>
         </Field>
+        {manual && (
+          <>
+            <Field label={HEADER_FIELDS.supplierName}>
+              <input
+                name="supplierName"
+                value={typedDetails.supplierName}
+                required
+                maxLength={4000}
+                disabled={operation.busy}
+                onChange={(e) => setTypedDetails({ ...typedDetails, supplierName: e.target.value })}
+              />
+            </Field>
+            {(quoteMatches.length > 0 || directoryMatches.length > 0) && (
+              <div role="region" aria-label="Possible supplier matches">
+                <p>Possible supplier matches</p>
+                <ul>
+                  {quoteMatches.map((q) => (
+                    <li key={q.id}>
+                      <Link onClick={close} href={`/requests/${view.request?.id}/quotes/${q.id}`}>
+                        Open {q.body.supplierName} on this request
+                      </Link>
+                    </li>
+                  ))}
+                  {directoryMatches.map((s) => {
+                    const existing = view.quotes.find((q) => q.supplierId === s.id &&
+                      (q.state === "draft" || q.state === "finalized"));
+                    return (
+                      <li key={s.id}>
+                        {existing ? (
+                          <Link onClick={close} href={`/requests/${view.request?.id}/quotes/${existing.id}`}>
+                            Open {s.name} on this request
+                          </Link>
+                        ) : (
+                          <button
+                            type="button"
+                            className="button secondary"
+                            disabled={operation.busy}
+                            onClick={() => {
+                              setSupplierId(s.id);
+                              setUseTypedDetails(true);
+                            }}
+                          >
+                            Select {s.name} from the directory
+                          </button>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            )}
+            <div className="form-grid">
+              {supplierFields.filter((key) => key !== "supplierName").map((key) => (
+                <Field key={key} label={HEADER_FIELDS[key]}>
+                  <input
+                    value={typedDetails[key]}
+                    disabled={operation.busy}
+                    maxLength={4000}
+                    onChange={(e) => setTypedDetails({ ...typedDetails, [key]: e.target.value })}
+                  />
+                </Field>
+              ))}
+            </div>
+          </>
+        )}
         <a
           className="text-link"
           href="/suppliers"
           target="_blank"
           rel="noreferrer"
         >
-          Add a missing supplier in the directory
+          Add to supplier directory
         </a>
         <InlineError message={operation.error} />
         <div className="form-actions">
@@ -324,7 +415,7 @@ function NewQuotation({
           </button>
           <button
             className="button primary"
-            disabled={operation.busy || !view.request?.procurementReady}
+            disabled={operation.busy || !view.request?.procurementReady || (manual && !typedName)}
           >
             {operation.busy ? "Saving…" : "Save draft and link MRF"}
           </button>
@@ -467,13 +558,16 @@ function SourceEditor({
           This is source review, not financial approval.
         </p>
         <p>
-          Created by {quote.creatorName}. Business identity and MRF are fixed.
-          Complete the financial review below before finalizing. Purchasing
-          remains unavailable until its later workflow units.
+          Created by {quote.creatorName}. Complete the financial review below
+          before finalizing.
         </p>
-        <Link href={`/suppliers/${quote.supplierId}`}>
-          View the linked supplier directory profile
-        </Link>
+        {quote.supplierId ? (
+          <Link href={`/suppliers/${quote.supplierId}`}>
+            View the linked supplier directory profile
+          </Link>
+        ) : (
+          <p>Supplier details are saved with this quotation.</p>
+        )}
         {quote.financial && (
           <p>
             <a className="text-link" href="#financial-review-heading">

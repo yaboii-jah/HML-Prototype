@@ -43,6 +43,7 @@ export async function authBrowser(base, { startupTimeoutMs = 30000, onLaunch, di
   let nextId = 0;
   const violations = [];
   const recentRequests = [];
+  const watchedRequests = new Map();
   async function close() {
     socket?.close();
     for (const item of pending.values()) item.reject(Error('Browser closed'));
@@ -88,6 +89,11 @@ export async function authBrowser(base, { startupTimeoutMs = 30000, onLaunch, di
       if (item) { pending.delete(message.id); if (message.error) item.reject(Error('Browser protocol ' + item.method + ': ' + message.error.message)); else item.resolve(message.result); }
       if (message.method === 'Fetch.requestPaused') {
         const url = new URL(message.params.request.url);
+        if (url.origin === appOrigin) {
+          for (const [prefix, matches] of watchedRequests) {
+            if (url.pathname.startsWith(prefix)) matches.push(url.pathname + url.search);
+          }
+        }
         if (message.params.request.method === 'POST' && url.origin === appOrigin) {
           recentRequests.push({ path: url.pathname, origin: message.params.request.headers.Origin ?? message.params.request.headers.origin ?? 'absent' });
           if (recentRequests.length > 6) recentRequests.shift();
@@ -139,6 +145,12 @@ export async function authBrowser(base, { startupTimeoutMs = 30000, onLaunch, di
     const fill = async (selector, value) => run(`const el=document.querySelector(${JSON.stringify(selector)});if(!el)throw Error('Input missing');const prototype=el instanceof HTMLTextAreaElement?HTMLTextAreaElement.prototype:HTMLInputElement.prototype;Object.getOwnPropertyDescriptor(prototype,'value').set.call(el,${JSON.stringify(value)});el.dispatchEvent(new Event('input',{bubbles:true}));`);
     const click = async selector => run(`const el=document.querySelector(${JSON.stringify(selector)});if(!el)throw Error('Control missing');el.click();`);
     return { run, wait, navigate, fill, click, call, close, discoveryMs,
+      watchRequests(prefix) {
+        const matches = [];
+        watchedRequests.set(prefix, matches);
+        return matches;
+      },
+      stopWatchingRequests: prefix => watchedRequests.delete(prefix),
       assertIsolated: () => assert.deepEqual(violations, [], 'Browser made no external HTTP/WebSocket requests') };
   } catch (error) { await close(); throw error; }
 }

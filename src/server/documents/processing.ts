@@ -7,6 +7,7 @@ import { documentDrive, documentRoot } from "./config";
 import { validateSupportingPdf, InvalidSupportingPdf } from "./pdf-validation";
 import { archiveApprovedMrf } from "./archive";
 import { rowValue, textValue, uploadTags } from "./state";
+import { requestDriveParent } from "./request-folders";
 
 /** Workflow steps return only small outcomes; bytes, metadata and credentials stay here. */
 export async function processDocumentJob(id: string): Promise<void> {
@@ -37,8 +38,10 @@ export async function processDocumentJob(id: string): Promise<void> {
       const upload = rowValue(job.upload), folder = rowValue(upload.folder);
       const size = Number(upload.size);
       if (!Number.isSafeInteger(size) || size < 5 || size > 50 * 1024 * 1024) throw Error("Invalid upload size");
-      await drive.validateFolder(textValue(folder.folder_id), textValue(folder.root_id));
-      const body = await drive.verifyPdf(textValue(upload.drive_file_id), textValue(folder.folder_id), uploadTags(textValue(upload.id), textValue(upload.request_id)), size, textValue(upload.sha256));
+      const projectFolder = textValue(folder.folder_id);
+      const uploadId = textValue(upload.id);
+      const parent = await requestDriveParent(drive, "mrf-original", uploadId, projectFolder, textValue(folder.root_id)) ?? projectFolder;
+      const body = await drive.verifyPdf(textValue(upload.drive_file_id), parent, uploadTags(uploadId, textValue(upload.request_id)), size, textValue(upload.sha256));
       await validateSupportingPdf(body);
       await checkpoint({ fileId: upload.drive_file_id, size: String(size), sha256: createHash("sha256").update(body).digest("hex"), readable: true });
     } else if (job.kind === "cleanup") {

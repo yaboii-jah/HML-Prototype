@@ -114,7 +114,6 @@ export async function checkAccounting({ browser, second, sql, base, drive, mrf, 
   await second.wait(`return [...document.querySelectorAll('dt')].some(dt=>dt.textContent==='Scope allocation'&&dt.nextElementSibling?.textContent===${JSON.stringify(formatPhp(before.calculation.gross))});`);
   await logout(browser); await login(browser, preparer);
   await browser.navigate(`/purchase-orders/${poId}`);
-  const providerCount = drive.files.size;
   drive.faults.loseFinalResponse = true;
   await click(second, 'Approve PO'); await click(second, 'Approve PO');
   await second.wait("return !document.querySelector('dialog[open]')");
@@ -127,7 +126,11 @@ export async function checkAccounting({ browser, second, sql, base, drive, mrf, 
   await reasonAction(second, 'Retry approved PDF v1', 'Retry frozen approved PDF after the interrupted provider response', 'Retry approved PDF archive');
   await until(async () => (await saved()).review.approvals[0].archiveState === 'complete', 'approved archive reconciliation');
   const current = await saved(), archive = current.review.approvals[0];
-  assert.equal(drive.files.size, providerCount + 1, 'Lost acknowledgement and retry do not duplicate the approved PDF');
+  const providerFiles = [...drive.files.values()].filter(file => file.appProperties?.hmlPoArchive === archive.archiveId);
+  assert.equal(providerFiles.length, 1, 'Lost acknowledgement and retry do not duplicate the approved PDF');
+  const poFolder = drive.files.get(providerFiles[0].parents[0]);
+  assert.equal(poFolder.name, 'Purchase Orders');
+  assert.equal(drive.files.get(poFolder.parents[0]).appProperties.hmlRequestId, mrf);
   const response = await fetch(base + `/api/approved-purchase-orders/${archive.archiveId}`, { headers: { Cookie: await cookie(second) } });
   assert.equal(response.status, 200);
   assert.match(response.headers.get('cache-control'), /private.*no-store/);

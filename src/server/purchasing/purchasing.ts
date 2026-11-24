@@ -193,6 +193,8 @@ export async function runPurchasingCommand(
           "This retry identity was used for different input. Review and retry with a new operation.",
         P4804:
           "Resolve the current pricing, required details and policy blockers before confirming preparation or retrying.",
+        P4810: "Select an active directory supplier before creating the PO. Your award is still saved.",
+        P4811: "That supplier is linked to another quotation on this request. Open that quotation to review its offers. Your award is still saved.",
         P4902: "This PO is locked by Accounting review. Recall it or request an Accounting return/revocation before editing.",
         P4904: "Save and review the payment arrangement, quotation-term agreement and a valid Credit due date before confirming preparation.",
         P4201:

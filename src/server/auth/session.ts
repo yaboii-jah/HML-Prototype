@@ -28,7 +28,7 @@ export async function requireSession() {
 }
 
 export async function requireWorkspaceSession() {
-  const session = await requireSession();
-  if (!session.activeRole) redirect("/choose-role");
+  const session = await readSession();
+  if (!session?.activeRole) redirect(session ? "/choose-role" : "/sign-in");
   return { ...session.context, activeRole: session.activeRole };
 }

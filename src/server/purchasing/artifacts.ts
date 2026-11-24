@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { start } from "workflow/api";
 import { serviceRpc } from "@/src/server/auth/service-rpc";
 import { documentDrive } from "@/src/server/documents/config";
+import { requestDriveParent } from "@/src/server/documents/request-folders";
 import { rowValue, textValue } from "@/src/server/documents/state";
 import { record } from "@/src/domain/projects/projects";
 import { id } from "@/src/domain/purchasing/contracts";
@@ -50,10 +51,10 @@ export async function processComparisonArtifact(jobId: string) {
       folder = rowValue(job.folder);
     if (!snapshot || (job.format !== "pdf" && job.format !== "xlsx"))
       throw Error("Invalid immutable comparison.");
-    const drive = documentDrive(),
-      folderId = textValue(folder.folder_id),
-      mime = job.format === "pdf" ? "application/pdf" : XLSX_MIME;
-    await drive.validateFolder(folderId, textValue(folder.root_id));
+    const drive = documentDrive();
+    const projectFolder = textValue(folder.folder_id);
+    const folderId = await requestDriveParent(drive, "comparison", jobId, projectFolder, textValue(folder.root_id)) ?? projectFolder;
+    const mime = job.format === "pdf" ? "application/pdf" : XLSX_MIME;
     let saved = rowValue(job.checkpoint);
     if (!saved.fileId)
       saved = await checkpoint({ fileId: await drive.generateId() });

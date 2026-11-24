@@ -4,6 +4,7 @@ import { start } from "workflow/api";
 import { quotationArchiveWorkflow } from "@/src/server/workflows/quotations";
 import { serviceRpc } from "@/src/server/auth/service-rpc";
 import { documentDrive } from "@/src/server/documents/config";
+import { recordedRequestDriveParent, requestDriveParent } from "@/src/server/documents/request-folders";
 import { rowValue, textValue } from "@/src/server/documents/state";
 import { record } from "@/src/domain/projects/projects";
 import {
@@ -68,10 +69,10 @@ export async function processQuotationArchive(id: string) {
       job.files.length > 12
     )
       throw Error("Invalid immutable quotation snapshot");
-    const drive = documentDrive(),
-      folderId = textValue(folder.folder_id),
-      revisionId = textValue(revision.id);
-    await drive.validateFolder(folderId, textValue(folder.root_id));
+    const drive = documentDrive();
+    const projectFolder = textValue(folder.folder_id);
+    const folderId = await requestDriveParent(drive, "quotation-review", id, projectFolder, textValue(folder.root_id)) ?? projectFolder;
+    const revisionId = textValue(revision.id);
     let saved = rowValue(job.checkpoint);
     const allocate = async (key: string) => {
       if (!saved[key])
@@ -102,9 +103,10 @@ export async function processQuotationArchive(id: string) {
         throw Error("Invalid retained original metadata");
       const originalFolder = rowValue(file.folder);
       await checkpoint({ verified: false });
+      const originalParent = await recordedRequestDriveParent("quotation-original", file.id, textValue(originalFolder.folder_id));
       const bytes = await drive.verifyFile(
         textValue(file.driveFileId),
-        textValue(originalFolder.folder_id),
+        originalParent,
         {
           hmlQuotationFile: file.id,
           hmlQuotation: file.quoteId,

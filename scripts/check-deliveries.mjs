@@ -104,6 +104,15 @@ export async function checkDeliveries({ browser, second, client, sql, login, log
     const input=document.querySelector('input[type=file]');input.files=transfer.files;input.dispatchEvent(new Event('change',{bubbles:true}));`);
   await browser.wait("return [...document.querySelectorAll('p')].some(p=>p.textContent.includes('Signed evidence')&&p.textContent.includes('complete'))",30000);
   const signedId = (await sql(`select f.id from private.delivery_receipt_files f join private.delivery_receipt_versions v on v.id=f.version_id where v.delivery_id='${id}' and f.current_evidence;`)).output.trim();
+  const receiptFiles = JSON.parse((await sql(`select jsonb_agg(f.drive_id) from private.delivery_receipt_files f
+    join private.delivery_receipt_versions v on v.id=f.version_id where v.delivery_id='${id}' and f.state='complete';`)).output.trim());
+  assert.equal(receiptFiles.length, 2);
+  const [receiptParent] = drive.files.get(receiptFiles[0]).parents;
+  assert.deepEqual(drive.files.get(receiptFiles[1]).parents, [receiptParent]);
+  const poFolder = drive.files.get(drive.files.get(receiptParent).parents[0]);
+  const category = drive.files.get(poFolder.parents[0]);
+  assert.equal(category.name, 'Delivery Receipts');
+  assert.deepEqual(drive.files.get(category.parents[0]).parents, [folderId]);
   assert.equal(await browser.run(`return (await fetch('/api/delivery-files/${signedId}')).status`),403);
   assert.equal(await browser.run("return [...document.querySelectorAll('a')].some(link=>link.textContent==='Open signed evidence')"),false);
   const accountant = { email:randomUUID()+'@example.invalid',password:randomUUID() };

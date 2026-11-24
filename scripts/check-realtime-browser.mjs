@@ -29,7 +29,8 @@ export async function checkRealtimeBrowser({ browser, second, client, login, log
   ` });
   try {
     await login(browser, administrator);
-    await browser.wait("return location.pathname==='/projects'&&!!document.querySelector('.masthead-account')");
+    await browser.wait("return location.pathname==='/dashboard'&&!!document.querySelector('.masthead-account')");
+    await browser.navigate('/projects');
     const stored = await sessionCookie(browser);
     const claims = ok(await client.auth.getClaims(stored.access_token), 'Realtime browser claims').claims;
     const response = await fetch(client.supabaseUrl + '/rest/v1/rpc/auth_session_context', { method: 'POST',
@@ -98,6 +99,7 @@ export async function checkRealtimeBrowser({ browser, second, client, login, log
     ok(await client.from('profiles').insert({ user_id: staffId, display_name: 'Revocation browser staff', is_active: true }), 'Revocation profile');
     ok(await client.from('role_grants').insert({ user_id: staffId, role: 'Project Manager' }), 'Revocation role');
     await login(second, { email, password });
+    await second.navigate('/projects');
     await second.wait("return location.pathname==='/projects'&&!!document.querySelector('.page-header .primary')&&!document.querySelector('.page-header .primary').disabled");
     await second.click('.page-header .primary');
     await second.wait("return !!document.querySelector('.project-editor')");

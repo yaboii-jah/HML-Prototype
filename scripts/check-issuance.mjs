@@ -63,6 +63,8 @@ export async function checkIssuance({ browser, second, sql, drive, login, logout
   const proof = JSON.parse((await sql(`select private.issuance_files('${poId}');`)).output.trim());
   const ownedFile = drive.files.get(proof.files[2].id);
   assert.ok(ownedFile);
+  assert.deepEqual(ownedFile.parents, [proof.files[2].parent]);
+  assert.equal(drive.files.get(proof.files[2].parent).name, 'Purchase Orders');
   ownedFile.trashed = true;
   await click(browser, 'Prepare to send'); await click(browser, 'Prepare to send');
   await browser.wait("return document.querySelector('dialog[open] [role=alert]')?.textContent.includes('Nothing was prepared')");

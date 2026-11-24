@@ -12,7 +12,7 @@ begin
   return public.quotation_financial_command(actor,command,calculation);
 end $$;
 
-do $$
+create function pg_temp.quotation_finalization_case(quote_only boolean) returns void language plpgsql as $$
 #variable_conflict use_variable
 declare project uuid:=gen_random_uuid(); scope uuid:=gen_random_uuid(); site_id uuid:=gen_random_uuid(); manager_id uuid:=gen_random_uuid(); buyer_id uuid:=gen_random_uuid(); reader_id uuid:=gen_random_uuid();
   uid uuid; sid uuid; proof jsonb; actors jsonb:='{}'; site jsonb; manager jsonb; buyer jsonb; reader jsonb; role_name text;
@@ -55,6 +55,10 @@ begin
   foreach k in array array['description','code','unit','quantity','unitPrice','brand','specification','conversionFactor','varianceReason','discountType','discountValue','taxLabel','taxRate','printedTotal','discrepancyNote','leadTime','notes','sourcePage'] loop line:=line||jsonb_build_object(k,''); end loop;
   line:=line||jsonb_build_object('id',line_id,'requestItemId',item_id,'sourceFileId',null,'description','Cement','unit','bag','quantity','1','unitPrice','112','conversionFactor','1');
   body:=body||jsonb_build_object('ref','FN-1','date','2026-11-05','paymentTerms','30 days','deliveryTerms','Delivered','vatRate','12','lines',jsonb_build_array(line),'adjustments','[]'::jsonb);
+  if quote_only then
+    supplier:=null;
+    body:=jsonb_set(body,'{supplierName}','"Unregistered quotation supplier"');
+  end if;
   quote:=(public.quotation_command(buyer,jsonb_build_object('type','create','requestId',gen_random_uuid(),'mrfId',mrf,'supplierId',supplier,'body',body))->>'quoteId')::uuid;
   part:=public.quotation_files_command(buyer,jsonb_build_object('type','beginGroup','requestId',gen_random_uuid(),'quoteId',quote,'expectedFiles','1','keep','[]'::jsonb,
     'uploads',jsonb_build_array(jsonb_build_object('name','original.pdf','mime','application/pdf','size',10,'sha256',repeat('a',64)))));
@@ -80,9 +84,11 @@ begin
   if result->>'changed'<>'false' or result->'quote'->'financial'->>'version'<>saved->'financial'->>'version' then raise exception 'Financial no-op changed versions'; end if;
   begin perform pg_temp.quotation_test_action(buyer,quote,'finalize','{}',calculation); raise exception 'Unchecked finances finalized'; exception when sqlstate 'P4504' then null; end;
   perform pg_temp.quotation_test_action(buyer,quote,'checkFinancial');
-  update private.suppliers set is_active=false where id=supplier;
-  begin perform pg_temp.quotation_test_action(buyer,quote,'finalize','{}',calculation); raise exception 'Inactive offer finalized'; exception when sqlstate 'P4504' then null; end;
-  update private.suppliers set is_active=true where id=supplier;
+  if not quote_only then
+    update private.suppliers set is_active=false where id=supplier;
+    begin perform pg_temp.quotation_test_action(buyer,quote,'finalize','{}',calculation); raise exception 'Inactive offer finalized'; exception when sqlstate 'P4504' then null; end;
+    update private.suppliers set is_active=true where id=supplier;
+  end if;
   saved:=private.quotation_view(quote);
   command:=jsonb_build_object('type','finalize','requestId',gen_random_uuid(),'quoteId',quote,'expectedVersion',saved->>'version','expectedFiles',saved->>'fileVersion','expectedFinancial',saved->'financial'->>'version','expectedFamily',saved->'family'->>'version');
   result:=public.quotation_financial_command(buyer,command,calculation);
@@ -93,10 +99,15 @@ begin
   -- offer cannot bypass the reasoned revision action through ordinary create.
   begin
     perform pg_temp.quotation_test_action(buyer,quote,'withdraw',jsonb_build_object('reason','Supplier withdrew before archive completion'));
-    begin
-      perform public.quotation_command(buyer,jsonb_build_object('type','create','requestId',gen_random_uuid(),'mrfId',mrf,'supplierId',supplier,'body',body));
-      raise exception 'Finalized family accepted an unreasoned new offer';
-    exception when unique_violation then null; end;
+    if quote_only then
+      result:=public.quotation_command(buyer,jsonb_build_object('type','create','requestId',gen_random_uuid(),'mrfId',mrf,'supplierId',null,'body',body));
+      if result->>'quoteId' is distinct from quote::text then raise exception 'Finalized quote-only history accepted a new offer'; end if;
+    else
+      begin
+        perform public.quotation_command(buyer,jsonb_build_object('type','create','requestId',gen_random_uuid(),'mrfId',mrf,'supplierId',supplier,'body',body));
+        raise exception 'Finalized family accepted an unreasoned new offer';
+      exception when unique_violation then null; end;
+    end if;
     raise exception 'Revert alternate withdrawal fixture' using errcode='P9999';
   exception when sqlstate 'P9999' then null; end;
   select snapshot into frozen from private.quotation_revisions where id=revision;
@@ -108,6 +119,11 @@ begin
   select id into job from private.quotation_jobs where file_id=file and kind='cleanup';
   if public.quotation_worker(job,'claim') is not null or (select state from private.quotation_files where id=file)<>'verified' then raise exception 'Protected original cleanup admitted'; end if;
   select id into job from private.quotation_archive_jobs where revision_id=revision;
+  if quote_only and (
+    select count(*) from private.request_drive_admissions
+    where (kind='quotation-original' and resource_id=file or kind='quotation-review' and resource_id=job)
+      and path->1->>'key'='quotations/'||(private.quotation_view(quote)->'family'->>'id')
+  )<>2 then raise exception 'Quote-only original and review have different folders'; end if;
   part:=public.quotation_archive_worker(job,'claim'); lease:=(part->>'lease')::uuid;
   begin perform public.quotation_archive_worker(job,'complete',lease); raise exception 'Archive completed without proof'; exception when check_violation then null; end;
   perform public.quotation_archive_worker(job,'checkpoint',lease,jsonb_build_object('pdfFileId','review-'||revision,'pdfSha256',repeat('c',64),'pdfSize',100,'manifest',jsonb_build_array(jsonb_build_object('id',file,'size',10,'sha256',repeat('a',64))),'verified',true));
@@ -151,4 +167,6 @@ begin
     or has_function_privilege('anon','public.quotation_archive_worker(uuid,text,uuid,jsonb)','execute')
     or has_table_privilege('authenticated','private.quotation_revisions','select') then raise exception 'Finalization permissions exposed'; end if;
 end $$;
+select pg_temp.quotation_finalization_case(false);
+select pg_temp.quotation_finalization_case(true);
 rollback;

@@ -4,7 +4,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 
 export async function checkFoundationHttp({ browser, second, client, login, logout, sessionCookie, administrator, base, passwordClient }) {
   const ok = (result, label) => { assert.equal(result.error?.message, undefined, label); return result.data; };
-  const paths = ['/api/foundation/view?view=projects', '/api/realtime/session'];
+  const paths = ['/api/foundation/view?view=projects', '/api/realtime/session', '/api/monitoring/view?mode=bell'];
   const cookie = async target => (await target.call('Network.getAllCookies')).cookies
     .filter(item => item.domain === '127.0.0.1').map(item => `${item.name}=${item.value}`).join('; ');
   const read = async (path, cookies = '', headers = {}) => {
@@ -15,7 +15,7 @@ export async function checkFoundationHttp({ browser, second, client, login, logo
   };
   for (const path of paths) assert.equal((await read(path)).status, 401, 'Anonymous HTTP access denied');
   await login(browser, administrator);
-  await browser.wait("return location.pathname==='/projects'&&!!document.querySelector('.masthead-account')");
+  await browser.wait("return location.pathname==='/dashboard'&&!!document.querySelector('.masthead-account')");
   const adminCookies = await cookie(browser);
   assert.equal(await browser.run("try{new WebSocket('wss://example.invalid/realtime/v1/websocket');return false}catch(error){return error.message.includes('Unexpected Realtime') }"), true, 'Actual browser constructor rejects an unexpected socket before connecting');
   for (const path of paths) {
@@ -46,9 +46,11 @@ export async function checkFoundationHttp({ browser, second, client, login, logo
     ok(await client.from('role_grants').insert({ user_id: id, role }), 'HTTP role');
     if (role === 'Site Personnel') ok(await client.from('project_assignments').insert({ user_id: id, project_id: ids[0] }), 'HTTP assignment');
     await login(second, account);
-    await second.wait("return location.pathname==='/projects'&&!!document.querySelector('.masthead-account')");
+    await second.wait("return location.pathname==='/dashboard'&&!!document.querySelector('.masthead-account')");
     assert.equal(await second.run("return !!document.querySelector('a.side-link[href=\"/admin\"]')"), role === 'Administrator', 'Current role controls supported navigation');
     const cookies = await cookie(second);
+    assert.equal((await read('/api/monitoring/view?mode=reports', cookies)).status, role === 'Site Personnel' ? 403 : 200);
+    assert.equal((await read('/api/monitoring/view?mode=consumption&projectId=' + ids[1], cookies)).status, role === 'Site Personnel' ? 403 : 200);
     const directory = await read(paths[0], cookies), detail = await read('/api/foundation/view?view=project&projectId=' + ids[0], cookies);
     assert.equal(directory.status, 200, role + ' directory'); assert.equal(detail.status, 200, role + ' detail');
     const requests = await read('/api/foundation/view?view=requests', cookies);

@@ -303,10 +303,14 @@ export async function checkPurchasing({
   );
   assert.equal(
     drive.files.size,
-    providerCount + 2,
-    "No duplicate artifact after lost acknowledgement",
+    providerCount + 3,
+    "The two artifacts share one category folder after a lost acknowledgement",
   );
   for (const artifact of (await view()).reports[0].artifacts) {
+    const file = [...drive.files.values()].find(file => file.appProperties?.hmlComparisonArtifact === artifact.id);
+    const category = drive.files.get(file.parents[0]);
+    assert.equal(category.name, "Bid Comparisons");
+    assert.equal(drive.files.get(category.parents[0]).appProperties.hmlRequestId, mrf);
     const response = await fetch(
       base + `/api/comparison-artifacts/${artifact.id}`,
       { headers: { Cookie: await cookie(second) } },

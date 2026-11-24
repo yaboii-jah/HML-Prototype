@@ -1322,14 +1322,14 @@ isOneToOne: false
                   ]
                 },"purchasing_records": {
                   Row: {
-                    "approval_id": string | null,"body": NonNullable<Json>,"calculation": Json | null,"checked": Json | null,"id": string,"kind": string,"po_status": string,"project_id": string,"quote_id": string,"ref": string | null,"request_id": string,"revision_id": string,"state": string,"submission_id": string | null,"supplier_id": string,"updated_at": string,"version": number
+                    "approval_id": string | null,"body": NonNullable<Json>,"calculation": Json | null,"checked": Json | null,"family_id": string,"id": string,"kind": string,"po_status": string,"project_id": string,"quote_id": string,"ref": string | null,"request_id": string,"revision_id": string,"state": string,"submission_id": string | null,"supplier_id": string | null,"updated_at": string,"version": number
                   }
                   ComputedFields: never
                   Insert: {
-                    "approval_id"?: string | null,"body": NonNullable<Json>,"calculation"?: Json | null,"checked"?: Json | null,"id": string,"kind": string,"po_status"?: string,"project_id": string,"quote_id": string,"ref"?: string | null,"request_id": string,"revision_id": string,"state"?: string,"submission_id"?: string | null,"supplier_id": string,"updated_at"?: string,"version"?: number
+                    "approval_id"?: string | null,"body": NonNullable<Json>,"calculation"?: Json | null,"checked"?: Json | null,"family_id": string,"id": string,"kind": string,"po_status"?: string,"project_id": string,"quote_id": string,"ref"?: string | null,"request_id": string,"revision_id": string,"state"?: string,"submission_id"?: string | null,"supplier_id"?: string | null,"updated_at"?: string,"version"?: number
                   }
                   Update: {
-                    "approval_id"?: string | null,"body"?: NonNullable<Json>,"calculation"?: Json | null,"checked"?: Json | null,"id"?: string,"kind"?: string,"po_status"?: string,"project_id"?: string,"quote_id"?: string,"ref"?: string | null,"request_id"?: string,"revision_id"?: string,"state"?: string,"submission_id"?: string | null,"supplier_id"?: string,"updated_at"?: string,"version"?: number
+                    "approval_id"?: string | null,"body"?: NonNullable<Json>,"calculation"?: Json | null,"checked"?: Json | null,"family_id"?: string,"id"?: string,"kind"?: string,"po_status"?: string,"project_id"?: string,"quote_id"?: string,"ref"?: string | null,"request_id"?: string,"revision_id"?: string,"state"?: string,"submission_id"?: string | null,"supplier_id"?: string | null,"updated_at"?: string,"version"?: number
                   }
                   Relationships: [
                     {
@@ -1337,6 +1337,12 @@ isOneToOne: false
       columns: ["approval_id"]
 isOneToOne: false
       referencedRelation: "po_approvals"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "purchasing_records_family_id_fkey"
+      columns: ["family_id"]
+isOneToOne: false
+      referencedRelation: "quotation_families"
       referencedColumns: ["id"]
     },{
       foreignKeyName: "purchasing_records_quote_id_fkey"
@@ -1418,14 +1424,14 @@ isOneToOne: true
                   ]
                 },"quotation_drafts": {
                   Row: {
-                    "body": NonNullable<Json>,"checked": Json | null,"content_version": number,"copied_from_revision": string | null,"created_at": string,"creator_id": string,"creator_name": string,"current_files": (string)[],"family_id": string,"file_version": number,"id": string,"matches": NonNullable<Json>,"request_id": string,"state": string,"supplier_id": string,"version": number,"quotation_ready_files": boolean | null
+                    "body": NonNullable<Json>,"checked": Json | null,"content_version": number,"copied_from_revision": string | null,"created_at": string,"creator_id": string,"creator_name": string,"current_files": (string)[],"family_id": string,"file_version": number,"id": string,"matches": NonNullable<Json>,"request_id": string,"state": string,"supplier_id": string | null,"version": number,"quotation_ready_files": boolean | null
                   }
                   ComputedFields: "quotation_ready_files"
                   Insert: {
-                    "body": NonNullable<Json>,"checked"?: Json | null,"content_version"?: number,"copied_from_revision"?: string | null,"created_at"?: string,"creator_id": string,"creator_name": string,"current_files"?: (string)[],"family_id": string,"file_version"?: number,"id": string,"matches"?: NonNullable<Json>,"request_id": string,"state"?: string,"supplier_id": string,"version"?: number
+                    "body": NonNullable<Json>,"checked"?: Json | null,"content_version"?: number,"copied_from_revision"?: string | null,"created_at"?: string,"creator_id": string,"creator_name": string,"current_files"?: (string)[],"family_id": string,"file_version"?: number,"id": string,"matches"?: NonNullable<Json>,"request_id": string,"state"?: string,"supplier_id"?: string | null,"version"?: number
                   }
                   Update: {
-                    "body"?: NonNullable<Json>,"checked"?: Json | null,"content_version"?: number,"copied_from_revision"?: string | null,"created_at"?: string,"creator_id"?: string,"creator_name"?: string,"current_files"?: (string)[],"family_id"?: string,"file_version"?: number,"id"?: string,"matches"?: NonNullable<Json>,"request_id"?: string,"state"?: string,"supplier_id"?: string,"version"?: number
+                    "body"?: NonNullable<Json>,"checked"?: Json | null,"content_version"?: number,"copied_from_revision"?: string | null,"created_at"?: string,"creator_id"?: string,"creator_name"?: string,"current_files"?: (string)[],"family_id"?: string,"file_version"?: number,"id"?: string,"matches"?: NonNullable<Json>,"request_id"?: string,"state"?: string,"supplier_id"?: string | null,"version"?: number
                   }
                   Relationships: [
                     {
@@ -1450,14 +1456,14 @@ isOneToOne: false
                   ]
                 },"quotation_families": {
                   Row: {
-                    "current_quote_id": string | null,"id": string,"pending_quote_id": string | null,"request_id": string,"supplier_id": string,"version": number
+                    "current_quote_id": string | null,"id": string,"intake_name": string | null,"pending_quote_id": string | null,"request_id": string,"supplier_id": string | null,"version": number
                   }
                   ComputedFields: never
                   Insert: {
-                    "current_quote_id"?: string | null,"id"?: string,"pending_quote_id"?: string | null,"request_id": string,"supplier_id": string,"version"?: number
+                    "current_quote_id"?: string | null,"id"?: string,"intake_name"?: string | null,"pending_quote_id"?: string | null,"request_id": string,"supplier_id"?: string | null,"version"?: number
                   }
                   Update: {
-                    "current_quote_id"?: string | null,"id"?: string,"pending_quote_id"?: string | null,"request_id"?: string,"supplier_id"?: string,"version"?: number
+                    "current_quote_id"?: string | null,"id"?: string,"intake_name"?: string | null,"pending_quote_id"?: string | null,"request_id"?: string,"supplier_id"?: string | null,"version"?: number
                   }
                   Relationships: [
                     {
@@ -1710,6 +1716,40 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"request_drive_admissions": {
+                  Row: {
+                    "kind": string,"path": NonNullable<Json>,"request_id": string,"resource_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "kind": string,"path": NonNullable<Json>,"request_id": string,"resource_id": string
+                  }
+                  Update: {
+                    "kind"?: string,"path"?: NonNullable<Json>,"request_id"?: string,"resource_id"?: string
+                  }
+                  Relationships: [
+
+                  ]
+                },"request_drive_folders": {
+                  Row: {
+                    "folder_id": string,"name": string,"path_key": string,"project_folder_id": string,"request_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "folder_id": string,"name": string,"path_key": string,"project_folder_id": string,"request_id": string
+                  }
+                  Update: {
+                    "folder_id"?: string,"name"?: string,"path_key"?: string,"project_folder_id"?: string,"request_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "request_drive_folders_project_folder_id_fkey"
+      columns: ["project_folder_id"]
+isOneToOne: false
+      referencedRelation: "document_folder_owners"
+      referencedColumns: ["folder_id"]
+    }
+                  ]
                 },"request_operations": {
                   Row: {
                     "actor_id": string,"created_at": string,"id": string,"payload": NonNullable<Json>,"request_id": string,"result": Json | null
@@ -1817,6 +1857,26 @@ isOneToOne: false
                   }
                   Relationships: [
 
+                  ]
+                },"stock_reports": {
+                  Row: {
+                    "description": string,"id": string,"opening_entry_id": string | null,"project_id": string,"quantity": number,"reason": string,"rejection_reason": string | null,"reported_at": string,"reported_by": string,"reporter_name": string,"review_id": string | null,"reviewed_at": string | null,"reviewed_by": string | null,"reviewer_name": string | null,"status": string,"unit": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "description": string,"id": string,"opening_entry_id"?: string | null,"project_id": string,"quantity": number,"reason": string,"rejection_reason"?: string | null,"reported_at"?: string,"reported_by": string,"reporter_name": string,"review_id"?: string | null,"reviewed_at"?: string | null,"reviewed_by"?: string | null,"reviewer_name"?: string | null,"status"?: string,"unit": string
+                  }
+                  Update: {
+                    "description"?: string,"id"?: string,"opening_entry_id"?: string | null,"project_id"?: string,"quantity"?: number,"reason"?: string,"rejection_reason"?: string | null,"reported_at"?: string,"reported_by"?: string,"reporter_name"?: string,"review_id"?: string | null,"reviewed_at"?: string | null,"reviewed_by"?: string | null,"reviewer_name"?: string | null,"status"?: string,"unit"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "stock_reports_opening_entry_id_fkey"
+      columns: ["opening_entry_id"]
+isOneToOne: true
+      referencedRelation: "inventory_entries"
+      referencedColumns: ["id"]
+    }
                   ]
                 },"stock_reservations": {
                   Row: {
@@ -2229,6 +2289,9 @@ isOneToOne: true
 "documents_read":
 { Args: { "actor": Json,"target_project"?: string,"target_request"?: string }; Returns: Json
                            },
+"drive_path_segment":
+{ Args: { "key": string,"name": string }; Returns: Json
+                           },
 "foundation_topic":
 { Args: { "revision": number,"target_session": string,"target_user": string }; Returns: string
                            },
@@ -2264,6 +2327,42 @@ isOneToOne: true
                            },
 "login_preflight":
 { Args: { "login_email": string }; Returns: Json
+                           },
+"monitoring_consumption":
+{ Args: { "filters": Json,"projects": (string)[] }; Returns: Json
+                           },
+"monitoring_dashboard_progress":
+{ Args: { "include_closed": boolean,"projects": (string)[],"ref_search": string,"requested_page": number }; Returns: Json
+                           },
+"monitoring_lifecycle":
+{ Args: { "project": string,"site": boolean,"target": string }; Returns: Json
+                           },
+"monitoring_line_facts":
+{ Args: { "targets": (string)[] }; Returns: {
+              "accepted": number,"awarded": number,"hold": number,"id": string,"issued": number,"line_order": number,"material": string,"posted": number,"purchasing": number,"quantity": number,"release_pending": number,"request_id": string,"transfers": number,"unassigned": number,"unit": string
+            }[]
+                           },
+"monitoring_progress_stage":
+{ Args: { "complete": number,"started": boolean,"total": number }; Returns: Json
+                           },
+"monitoring_queue":
+{ Args: { "caller": string,"projects": (string)[],"ready_only": boolean,"role_name": string }; Returns: Json
+                           },
+"monitoring_queue_before_stock_reports":
+{ Args: { "caller": string,"projects": (string)[],"ready_only": boolean,"role_name": string }; Returns: Json
+                           },
+"monitoring_reports":
+{ Args: { "filters": Json,"projects": (string)[] }; Returns: Json
+                           },
+"monitoring_request_items":
+{ Args: { "target": string }; Returns: {
+              "id": string,"line_order": number,"material": string,"quantity": number,"unit": string
+            }[]
+                           },
+"monitoring_shipments":
+{ Args: { "projects": (string)[] }; Returns: {
+              "can_forward": boolean,"created_at": string,"departed_at": string,"evidence_ready": boolean,"id": string,"kind": string,"lines": Json,"onward": boolean,"owner_id": string,"planned_date": string,"planned_time": string,"posted_at": string,"project_id": string,"receipt_at": string,"ref": string,"request_id": string,"review_state": string,"signed_ready": boolean,"state": string,"warehouse": boolean
+            }[]
                            },
 "mrf_editable":
 { Args: { "target": string }; Returns: boolean
@@ -2527,7 +2626,7 @@ isOneToOne: true
 "matches": NonNullable<Json>,
 "request_id": string,
 "state": string,
-"supplier_id": string,
+"supplier_id": string | null,
 "version": number
             }
                           SetofOptions: {
@@ -2581,6 +2680,9 @@ isOneToOne: true
 "request_draft_snapshot":
 { Args: { "target": string }; Returns: Json
                            },
+"request_drive_path":
+{ Args: { "candidates": Json,"project_folder": string,"resource_kind": string,"target": string }; Returns: Json
+                           },
 "request_project_allowed":
 { Args: { "actor": Json,"target": string }; Returns: boolean
                            },
@@ -2610,6 +2712,15 @@ isOneToOne: true
                            },
 "stock_apply":
 { Args: { "accounts": Json,"actor": Json,"operation": string,"postings": Json,"reason": string,"reservations": Json }; Returns: Json
+                           },
+"stock_report_account":
+{ Args: { "description": string,"project": string,"unit": string }; Returns: string
+                           },
+"stock_report_command":
+{ Args: { "command": Json,"viewer": Json }; Returns: Json
+                           },
+"stock_reports_read":
+{ Args: { "selected_project": string,"viewer": Json }; Returns: Json
                            },
 "stock_snapshot":
 { Args: { "ids": (string)[] }; Returns: Json
@@ -3000,6 +3111,9 @@ isOneToOne: false
 "issuance_receipt":
 { Args: { "actor": Json,"command": Json }; Returns: Json
                            },
+"monitoring_read":
+{ Args: { "filters": Json,"mode": string,"viewer": Json }; Returns: Json
+                           },
 "payment_command":
 { Args: { "actor": Json,"command": Json }; Returns: Json
                            },
@@ -3084,8 +3198,14 @@ isOneToOne: false
 "request_command":
 { Args: { "actor": Json,"command": Json }; Returns: Json
                            },
+"request_drive_path":
+{ Args: { "candidates": Json,"project_folder": string,"resource_kind": string,"target": string }; Returns: Json
+                           },
 "requests_read":
 { Args: { "actor": Json,"target_request"?: string }; Returns: Json
+                           },
+"stock_report_command":
+{ Args: { "command": Json,"viewer": Json }; Returns: Json
                            },
 "supplier_command":
 { Args: { "actor": Json,"command": Json }; Returns: Json

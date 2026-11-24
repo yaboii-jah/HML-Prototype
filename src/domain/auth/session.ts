@@ -53,8 +53,8 @@ export function rolePreferenceCookie(userId: string) {
 
 /** Restrict redirects to known workspace paths; credentials and auth routes never qualify. */
 export function safeWorkspaceDestination(value: unknown): string {
-  if (typeof value !== "string" || !value.startsWith("/") || /[\\\s#%]/.test(value) || value.startsWith("//")) return "/projects";
+  if (typeof value !== "string" || value.length > 2048 || !value.startsWith("/") || /[\\\s#]/.test(value) || value.startsWith("//")) return "/dashboard";
   const path = value.split("?")[0];
-  if (!/^\/(?:projects|dashboard|requests|suppliers|purchase-orders|accounting|finance|deliveries|inventory|reports|admin|stock-transfers)(?:\/[a-zA-Z0-9_-]+)*$/.test(path)) return "/projects";
+  if (!/^\/(?:projects|dashboard|requests|suppliers|purchase-orders|accounting|finance|deliveries|inventory|reports|admin|stock-transfers)(?:\/[a-zA-Z0-9_-]+)*$/.test(path)) return "/dashboard";
   return value;
 }

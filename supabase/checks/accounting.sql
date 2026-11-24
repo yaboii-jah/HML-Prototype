@@ -12,8 +12,8 @@ begin
   return jsonb_build_object('userId',person,'sessionId',session,'revision',proof->>'revision','activeRole',roles[1]);
 end $$;
 
-create function pg_temp.accounting_fixture(shared jsonb default null) returns jsonb language plpgsql as $$
-declare f jsonb:=pg_temp.purchasing_fixture(false,(shared->>'project')::uuid,(shared->>'scope')::uuid);
+create function pg_temp.accounting_fixture(shared jsonb default null, payment_mode text default 'upfront', only_cement boolean default false) returns jsonb language plpgsql as $$
+declare f jsonb:=pg_temp.purchasing_fixture(false,(shared->>'project')::uuid,(shared->>'scope')::uuid,only_cement);
   parent uuid:=(f->>'request')::uuid; project uuid; scope uuid; award uuid:=gen_random_uuid(); po uuid;
   body jsonb; calculation jsonb; proof jsonb; caller uuid:=(f->'actor'->>'userId')::uuid; fresh_session uuid:=gen_random_uuid();
 begin
@@ -37,8 +37,9 @@ begin
   po:=(pg_temp.purchasing_action(f,'convert',award)->>'targetId')::uuid;
   select r.body into body from private.purchasing_records r where r.id=po;
   body:=jsonb_set(body,'{fields,requisitioner}','"Fixture Site requester"');
-  body:=body||jsonb_build_object('payment',jsonb_build_object('mode','upfront','dueDate','',
-    'relation','differs','reason','Supplier confirmed upfront payment for this order'));
+  body:=body||jsonb_build_object('payment',case when payment_mode='credit' then
+    jsonb_build_object('mode','credit','dueDate',((now() at time zone 'Asia/Manila')::date+30)::text,'relation','matches','reason','')
+    else jsonb_build_object('mode','upfront','dueDate','','relation','differs','reason','Supplier confirmed upfront payment for this order') end);
   calculation:=jsonb_build_object('ruleVersion','hml-po-draft-2026-11-06-v1','materials','672.00','subtotal','672.00',
     'vat','72.00','gross','672.00','ewtGoods','6.00','ewtServices','0.00','net','666.00',
     'rows','[]'::jsonb,'adjustments','[]'::jsonb,'comparisons','[]'::jsonb,'issues','[]'::jsonb);

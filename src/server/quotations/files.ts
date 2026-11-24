@@ -7,6 +7,7 @@ import {
   DocumentHttpError,
 } from "@/src/server/documents/access";
 import { documentDrive } from "@/src/server/documents/config";
+import { requestDriveParent } from "@/src/server/documents/request-folders";
 import { rowValue, textValue } from "@/src/server/documents/state";
 import {
   sealUploadTicket,
@@ -148,10 +149,10 @@ export async function transferQuotationOriginal(
     return { validating: true, offset: total };
   };
   try {
-    await drive.validateFolder(
-      textValue(folder.folder_id),
-      textValue(folder.root_id),
-    );
+    const projectFolder = textValue(folder.folder_id);
+    const parent = await requestDriveParent(
+      drive, "quotation-original", fileId, projectFolder, textValue(folder.root_id),
+    ) ?? projectFolder;
     if (!file.drive_file_id)
       await update({ driveFileId: await drive.generateId() });
     const providerId = textValue(file.drive_file_id);
@@ -159,7 +160,7 @@ export async function transferQuotationOriginal(
     if (existing && existing.size === String(total)) {
       drive.verifyIdentity(
         existing,
-        textValue(folder.folder_id),
+        parent,
         identity,
         mime,
       );
@@ -175,7 +176,7 @@ export async function transferQuotationOriginal(
     const begin = async () => {
       const uri = await drive.begin(
         providerId,
-        textValue(folder.folder_id),
+        parent,
         textValue(file.name),
         total,
         identity,
@@ -259,13 +260,13 @@ export async function processQuotationFileJob(jobId: string) {
       drive = documentDrive();
     const identity = tags(textValue(file.id), textValue(file.quote_id));
     if (job.kind === "validate") {
-      await drive.validateFolder(
-        textValue(folder.folder_id),
-        textValue(folder.root_id),
-      );
+      const projectFolder = textValue(folder.folder_id);
+      const parent = await requestDriveParent(
+        drive, "quotation-original", textValue(file.id), projectFolder, textValue(folder.root_id),
+      ) ?? projectFolder;
       const bytes = await drive.verifyFile(
         textValue(file.drive_file_id),
-        textValue(folder.folder_id),
+        parent,
         identity,
         Number(file.size),
         textValue(file.sha256),
