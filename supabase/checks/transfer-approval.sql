@@ -34,7 +34,10 @@ declare f jsonb:=pg_temp.transfer_fixture(); source uuid:=(f->>'source')::uuid; 
   dual jsonb:=f->'destinationActor'; new_session uuid:=gen_random_uuid(); credentials jsonb;
 begin
   projection:=public.transfer_read(f->'actor',target,null);
-  if jsonb_array_length(projection->'sourcing'->'candidates')<>2
+  if (select count(*) from jsonb_array_elements(projection->'sourcing'->'candidates') c
+      where c->>'id'=direct_stock::text and c->>'projectId'=source::text and c->>'available'='10')<>1
+    or (select count(*) from jsonb_array_elements(projection->'sourcing'->'candidates') c
+      where c->>'id'=alt_stock::text and c->>'projectId'=source::text and c->>'available'='10')<>1
     or projection->'sourcing'->'items'->0->>'unassigned' is distinct from '18' then
     raise exception 'Initial approved MRF sourcing must show stock and unclaimed demand';
   end if;
