@@ -26,9 +26,9 @@ test('every disabled endpoint denies forged snapshots without reading bodies or 
   let bodyReads = 0;
   const request = { json() { bodyReads++; throw Error('Read forged snapshot'); }, formData() { bodyReads++; throw Error('Read upload'); } };
   for (const file of await routes('app/api')) {
-    // These migrated reads have their own real-session authorization coverage.
+    // These migrated endpoints have their own real-session authorization coverage.
     if (['app/api/foundation/view/route.ts', 'app/api/realtime/session/route.ts', 'app/api/mrf-documents/route.ts',
-      'app/api/projects/[projectId]/drive-folder/route.ts',
+      'app/api/projects/[projectId]/drive-folder/route.ts', 'app/api/mrf-extraction/route.ts',
       'app/api/monitoring/view/route.ts', 'app/api/monitoring/consumption.csv/route.ts',
       'app/api/mrf-documents/files/[id]/route.ts', 'app/api/mrf-documents/uploads/[id]/route.ts',
       'app/api/quotation-files/route.ts', 'app/api/quotation-files/[id]/route.ts',

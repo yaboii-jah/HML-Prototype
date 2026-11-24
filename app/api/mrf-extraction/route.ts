@@ -1,4 +1,4 @@
-import { DocumentHttpError, documentError, privateDocumentRead, readDocumentBytes, sameOrigin } from "@/src/server/documents/access";
+import { documentActor, DocumentHttpError, documentError, privateDocumentRead, readDocumentBytes, sameOrigin } from "@/src/server/documents/access";
 import { mrfExtractionCommand } from "@/src/server/requests/extraction";
 import { ServiceCommandError } from "@/src/server/auth/service-rpc";
 import { record } from "@/src/domain/projects/projects";
@@ -24,10 +24,12 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     sameOrigin(request);
+    const actor = await documentActor();
+    if (actor.activeRole !== "Site Personnel") throw new DocumentHttpError(403, "Assigned Site Personnel access is required.");
     const body = await readDocumentBytes(request, 4096);
     let command;
     try { command = record(JSON.parse(body.toString("utf8"))); } catch { /* Handled as an invalid command. */ }
     if (!command) throw new DocumentHttpError(400, "Invalid extraction action.");
-    return Response.json(await mrfExtractionCommand(command), { headers });
+    return Response.json(await mrfExtractionCommand(command, actor), { headers });
   } catch (error) { return extractionError(error); }
 }

@@ -260,11 +260,18 @@ export async function checkMrfDocuments({ browser, second, client, login, logout
   const clickText = text => browser.run(`[...document.querySelectorAll('button')].find(b=>b.textContent===${JSON.stringify(text)})?.click()`);
   await clickText('Upload PDF');
   await browser.wait("return [...document.querySelectorAll('button')].some(b=>b.textContent==='Extract from supporting PDF'&&!b.disabled)");
+  const sourceRevision = (await docState(extractionMrf)).revision;
+  const extractionUrl = '/api/mrf-extraction?' + new URLSearchParams({ mrfId: extractionMrf, version: '1', attachmentRevision: sourceRevision });
+  assert.equal((await http(extractionUrl, {}, '')).status, 401, 'Signed-out users cannot read suggestions');
+  assert.equal((await http(extractionUrl, { headers: { Origin: 'https://example.invalid' } })).status, 403, 'Cross-origin requests cannot read suggestions');
   drive.gemini.failNext = true;
   await clickText('Extract from supporting PDF');
   await browser.wait("return document.body.innerText.includes('Extraction could not finish')");
   await clickText('Retry extraction');
   await browser.wait("return document.body.innerText.includes('Selected fixture mesh')");
+  const proposalResponse = await http(extractionUrl);
+  assert.match(proposalResponse.headers.get('cache-control'), /private.*no-store/);
+  assert.equal((await proposalResponse.json()).state, 'ready');
   assert.equal(drive.gemini.inputs.length, 2);
   assert.equal(drive.gemini.inputs[1].store, false);
   assert.equal(drive.gemini.inputs[1].model, 'gemini-3.5-flash-lite');

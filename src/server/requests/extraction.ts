@@ -16,8 +16,8 @@ const enabled = () => process.env.MRF_EXTRACTION_ENABLED === "true"
   && process.env.GOOGLE_DRIVE_ENABLED === "true" && !!process.env.GEMINI_API_KEY;
 const version = (value: unknown) => typeof value === "string" && /^[1-9]\d{0,18}$/.test(value);
 
-export async function mrfExtractionCommand(input: unknown) {
-  const actor = await documentActor();
+export async function mrfExtractionCommand(input: unknown, checkedActor?: Awaited<ReturnType<typeof documentActor>>) {
+  const actor = checkedActor ?? await documentActor();
   if (actor.activeRole !== "Site Personnel") throw new DocumentHttpError(403, "Assigned Site Personnel access is required.");
   const command = record(input);
   if (!command || !uuid(command.mrfId) || !version(command.version) || !version(command.attachmentRevision)
