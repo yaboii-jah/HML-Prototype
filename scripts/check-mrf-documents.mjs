@@ -60,7 +60,14 @@ export async function checkMrfDocuments({ browser, second, client, login, logout
   for (const width of [1440, 375]) {
     await browser.call('Emulation.setDeviceMetricsOverride', { width, height: 1000, deviceScaleFactor: 1, mobile: width === 375 });
     try {
-      assert.equal(await browser.run(`const link=document.querySelector(${JSON.stringify(directoryLink)});link.scrollIntoView();return link.checkVisibility()&&link.getBoundingClientRect().right<=innerWidth&&document.documentElement.scrollWidth<=innerWidth`), true, 'Drive row action fits the viewport');
+      if (width === 375) {
+        await browser.wait("return document.querySelector('.side-nav').getBoundingClientRect().right<=1");
+        await browser.click('.mobile-menu');
+        await browser.wait("return document.querySelector('.side-nav.is-open')?.getBoundingClientRect().left>=0");
+        await browser.click(driveNav);
+        await browser.wait("return !document.querySelector('.mobile-scrim')&&document.querySelector('.side-nav').getBoundingClientRect().right<=1");
+      }
+      assert.equal(await browser.run(`const link=document.querySelector(${JSON.stringify(directoryLink)});const frame=link.closest('.table-frame');return link.checkVisibility()&&link.getBoundingClientRect().right<=innerWidth&&frame.scrollWidth<=frame.clientWidth&&document.documentElement.scrollWidth<=innerWidth`), true, 'Drive project and action fit together without horizontal scrolling');
       const screenshot = await browser.call('Page.captureScreenshot', { format: 'png' });
       await writeFile(`.verification/request-drive-directory-${width}.png`, Buffer.from(screenshot.data, 'base64'));
     } finally {

@@ -1,5 +1,5 @@
 export function ProjectDriveLink({ projectId, projectName }: { projectId: string; projectName?: string }) {
-  const label = projectName ? `Open ${projectName} in Google Drive` : "Open in Google Drive";
+  const label = projectName ? `Open in Google Drive for ${projectName}` : "Open in Google Drive";
   return (
     <a
       className="text-link"

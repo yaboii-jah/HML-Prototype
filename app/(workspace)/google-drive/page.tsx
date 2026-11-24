@@ -4,6 +4,7 @@ import { ProjectDriveLink } from "@/src/features/projects/ProjectDriveLink";
 import { requireWorkspaceSession } from "@/src/server/auth/session";
 import { ServiceCommandError } from "@/src/server/auth/service-rpc";
 import { DocumentHttpError, projectDriveDirectory } from "@/src/server/documents/access";
+import "./directory.css";
 
 export default async function Page() {
   const session = await requireWorkspaceSession();
@@ -29,7 +30,7 @@ export default async function Page() {
     {projects.length === 0 ? (
       <Empty title="No project folders are linked" detail="An Administrator or Project Manager can link a folder from the project page." />
     ) : (
-      <div className="table-frame">
+      <div className="table-frame project-drive-directory">
         <table aria-label="Project Drive folders">
           <thead><tr><th scope="col">Project</th><th scope="col">Folder</th></tr></thead>
           <tbody>{projects.map(project => (

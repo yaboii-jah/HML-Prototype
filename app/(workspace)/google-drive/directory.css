@@ -1,0 +1,15 @@
+@media (max-width: 620px) {
+  .project-drive-directory.table-frame table {
+    min-width: 0;
+    table-layout: fixed;
+  }
+
+  .project-drive-directory th:first-child {
+    width: 56%;
+  }
+
+  .project-drive-directory td {
+    overflow-wrap: anywhere;
+    white-space: normal;
+  }
+}
