@@ -22,10 +22,35 @@ export async function checkMrfDocuments({ browser, second, client, login, logout
   await login(browser, administrator);
   const adminActor = await actor(browser), projectOperation = randomUUID();
   const project = ok(await client.rpc('project_command', { actor: adminActor, command: { type: 'createProject', requestId: projectOperation, name: 'Documents runtime ' + projectOperation, location: 'CI', code: 'D-' + projectOperation.slice(0, 8).toUpperCase(), budget: '0' } })).projectId;
-  await browser.navigate('/projects/' + project);
+  const projectPath = '/projects/' + project;
+  const shortcutPath = '/api' + projectPath + '/drive-folder';
+  const shortcut = 'a[href$="/drive-folder"]';
+  const folderRequest = (cookies) => fetch(base + shortcutPath, {
+    headers: { Cookie: cookies, 'Sec-Fetch-Site': 'same-origin' },
+    redirect: 'manual',
+    signal: AbortSignal.timeout(30000),
+  });
+  const expectFolder = async (cookies, folderId) => {
+    const response = await folderRequest(cookies);
+    assert.equal(response.status, 307);
+    assert.equal(response.headers.get('location'), 'https://drive.google.com/drive/folders/' + folderId);
+    assert.match(response.headers.get('cache-control'), /no-store/);
+    assert.equal(response.headers.get('referrer-policy'), 'no-referrer');
+  };
+  await browser.navigate(projectPath);
   await browser.wait("return document.body.innerText.includes('Current destination:')");
   assert.equal((await sql(`select count(*) from private.project_document_folders where project_id='${project}' and current;`)).output.trim(), '1', 'Workflow acknowledged automatic folder');
   const originalMapping = await readSql(`select jsonb_build_object('id',id,'folder',folder_id) from private.project_document_folders where project_id='${project}' and current;`);
+  assert.deepEqual(await browser.run(`const link=document.querySelector(${JSON.stringify(shortcut)});return [link.getAttribute('href'),link.target,link.relList.contains('noopener')]`), [shortcutPath, '_blank', true]);
+  await browser.call('Emulation.setDeviceMetricsOverride', { width: 375, height: 1000, deviceScaleFactor: 1, mobile: true });
+  try {
+    assert.equal(await browser.run(`const link=document.querySelector(${JSON.stringify(shortcut)});link.scrollIntoView();return link.checkVisibility()&&link.getBoundingClientRect().right<=innerWidth`), true, 'Folder shortcut fits the mobile viewport');
+  } finally {
+    await browser.call('Emulation.clearDeviceMetricsOverride');
+  }
+  const adminCookie = await cookie(browser);
+  await expectFolder(adminCookie, originalMapping.folder);
+  assert.equal((await folderRequest('')).status, 401, 'Signed-out users cannot resolve folders');
   const staff = [];
   for (let i = 0; i < 2; i++) {
     const account = { email: `${randomUUID()}@example.invalid`, password: randomUUID() };
@@ -36,6 +61,11 @@ export async function checkMrfDocuments({ browser, second, client, login, logout
     staff.push(account);
   }
   await logout(browser); await login(browser, staff[0]); await login(second, staff[1]);
+  await browser.navigate(projectPath);
+  assert.equal(await browser.run(`return !!document.querySelector(${JSON.stringify(shortcut)})`), false, 'Site Personnel have no Drive shortcut');
+  const deniedFolder = await folderRequest(await cookie(browser));
+  assert.equal(deniedFolder.status, 403);
+  assert.equal(deniedFolder.headers.has('location'), false);
   const siteActor = await actor(browser);
   const draft = { scopeId: null, sourceRef: '', requestDate: '2026-11-03', requestedBy: 'Site', approvedBy: 'Printed PM', purchaser: '', financeOfficer: '', specialInstructions: '', items: [] };
   const mrf = ok(await client.rpc('request_command', { actor: siteActor, command: { type: 'createDraft', requestId: randomUUID(), projectId: project, draft } })).record.id;
@@ -153,6 +183,9 @@ export async function checkMrfDocuments({ browser, second, client, login, logout
   ok(await client.from('role_grants').insert({ user_id: managerId, role: 'Project Manager' }));
   await login(second, manager);
   const managerActor = await actor(second), managerCookie = await cookie(second);
+  await second.navigate(projectPath);
+  await second.wait(`return !!document.querySelector(${JSON.stringify(shortcut)})`);
+  await expectFolder(managerCookie, originalMapping.folder);
   const snapshotId = randomUUID(), archiveJob = randomUUID();
   const snapshot = { ref: 'CI-MRF-0001', projectName: 'Frozen project', projectLocation: 'Frozen location', draft: { ...draft, items: [{ id: randomUUID(), name: 'Exact quantity', unit: 'pc', quantity: '12345678901234567890.12345', neededDate: '2026-11-03', purpose: '', location: '', remarks: '' }] } };
   const actorJson = JSON.stringify(managerActor);
@@ -163,6 +196,7 @@ export async function checkMrfDocuments({ browser, second, client, login, logout
     update private.project_document_folders set current=false where project_id='${project}';
     insert into private.project_document_folders(id,project_id,folder_id,root_id,name) values('${correctedMapping}','${project}','${correctedFolder}','${drive.root}','Corrected destination');
     insert into private.document_folder_owners values('${correctedFolder}','${project}');`);
+  await expectFolder(managerCookie, correctedFolder);
   const deniedArchiveRetry = await http('/api/mrf-documents', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'retryArchive', operationId: randomUUID(), mrfId: mrf, jobId: archiveJob, useCurrentMapping: true }) });
   assert.equal(deniedArchiveRetry.status, 403, 'Site Personnel cannot retry approved archive work');
   const retry = await http('/api/mrf-documents', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'retryArchive', operationId: randomUUID(), mrfId: mrf, jobId: archiveJob, useCurrentMapping: true }) }, managerCookie);
@@ -178,6 +212,9 @@ export async function checkMrfDocuments({ browser, second, client, login, logout
   await delay(1000);
   assert.equal(drive.files.get([...drive.files.values()].find(f => f.appProperties?.hmlUploadId === resumed).id).trashed, false, 'Approved source retained after remove');
   assert.equal(drive.files.get(archive.supporting_file_id).trashed, false, 'Official archive retained');
+  const retainedSource = await http(filePrefix + resumed);
+  assert.equal(retainedSource.status, 200, 'Retained source remains readable at its original mapping');
+  assert.deepEqual(Buffer.from(await retainedSource.arrayBuffer()), largeBytes);
   // Avoid discarding an unsaved input through an unattended native dialog.
   await browser.run("Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(document.querySelector('input[name=sourceRef]'),'');document.querySelector('input[name=sourceRef]').dispatchEvent(new Event('input',{bubbles:true}));");
   await browser.run("[...document.querySelectorAll('button')].find(b=>b.textContent==='Save draft')?.click()");

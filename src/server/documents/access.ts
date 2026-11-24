@@ -49,6 +49,22 @@ export async function documentsView(mrfId?: string, projectId?: string) {
   if (uuid(scopedProject)) await dispatchDocumentJobs(scopedProject).catch(() => {});
   return view;
 }
+export async function projectDocumentFolderId(projectId: string) {
+  const actor = await documentActor();
+  if (actor.activeRole !== "Administrator" && actor.activeRole !== "Project Manager") {
+    throw new DocumentHttpError(403, "Project folder access required.");
+  }
+  const result = record(await serviceRpc("project_document_folder_open", {
+    actor,
+    target_project: projectId,
+  }));
+  const folderId = result?.folderId;
+  if (folderId === null) return null;
+  if (typeof folderId !== "string" || !/^[A-Za-z0-9_-]+$/.test(folderId)) {
+    throw new Error("Invalid project folder identity.");
+  }
+  return folderId;
+}
 export async function documentCommand(input: unknown) {
   const actor = await documentActor(), raw = record(input);
   if (!raw || !uuid(raw.operationId) || typeof raw.type !== "string" || (!uuid(raw.mrfId) && !uuid(raw.projectId)) || JSON.stringify(raw).length > 4096) throw new DocumentHttpError(400, "Invalid document action.");

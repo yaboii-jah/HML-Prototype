@@ -20,6 +20,13 @@ export function ProjectDocuments({ projectId }: { projectId: string }) {
   return <section className="panel" aria-labelledby="project-documents-heading"><h2 id="project-documents-heading">Document folder</h2>
     {!data && !readError && <p role="status">Loading folder status…</p>}
     {data && <><p>{data.folder ? `Current destination: ${data.folder.name}` : "No document folder configured."}</p><p className="muted">Each project needs its own writable folder below the configured company root. Changing this destination affects new operations; existing files and running jobs keep their locations.</p>
+      {data.folder && <p><a
+        className="text-link"
+        href={`/api/projects/${encodeURIComponent(projectId)}/drive-folder`}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="Open in Google Drive (opens in a new tab)"
+      >Open in Google Drive <span aria-hidden="true">↗</span></a></p>}
       {data.jobs.filter(job => job.kind === "folder").map(job => <div key={job.id} role="status"><p>Folder setup: {job.state}. {job.message}</p>{["failed", "paused"].includes(job.state) && <button type="button" className="button secondary" disabled={busy} onClick={() => void act({ type: "retryFolder", jobId: job.id })}>Retry folder setup</button>}</div>)}
       <Field label="Existing Drive folder URL or ID"><input value={input} disabled={busy || uncertain} onChange={event => setInput(event.target.value)} /></Field>
       <div className="form-actions"><button type="button" className="button secondary" disabled={busy || uncertain || !/^[\w-]{10,}$/.test(folderId)} onClick={() => void act({ type: "setupFolder", folderId, expectedMapping: data.folder?.id ?? null })}>Link folder</button><button type="button" className="button secondary" disabled={busy} onClick={() => void act({ type: "setupFolder", expectedMapping: data.folder?.id ?? null })}>{busy ? "Saving…" : uncertain ? "Retry same folder action" : data.folder ? "Create new destination" : "Create project folder"}</button></div></>}
