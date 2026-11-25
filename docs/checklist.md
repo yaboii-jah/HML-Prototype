@@ -23,7 +23,7 @@ Use this companion to track the steps toward production. See the [progress track
 - [ ] **5. Complete reliable document and AI integrations.**
   Done when authorized staff can open the current mapped project folder from the Google Drive sidebar and use optional Gemini autofill from verified MRF and quotation files. Verify protected file access, extraction failure recovery, editable autofill before save, and the user's normal-flow hands-on check. See the [planned units](progress-tracker.md#step-5-planned).
 
-  Units 5.1 and 5.2 passed on 2026-11-25. Quotation extraction in 5.3 remains pending. See the [tracker for evidence](progress-tracker.md#completed).
+  Units 5.1 and 5.2 passed on 2026-11-25. Quotation extraction in 5.3 passed automated and Staging verification and awaits the user's hands-on review. See the [tracker for evidence](progress-tracker.md#in-progress).
 
 - [ ] **6. Convert the UI to Tailwind.**
   Done when the agreed screens use Tailwind/shared tokens and pass responsive, accessibility and workflow checks.
