@@ -14,7 +14,7 @@
 
 ## In Progress
 
-- Unit 5.2 implements private extraction and selective review on a saved, editable MRF. The pilot reads the full verified PDF within 10 MB and 100 pages, offers suggestions from one MRF, and requires a draft save before submission. The rollback-only extraction and MRF review checks passed locally. CI, Staging and hands-on acceptance remain open.
+- Unit 5.2 is implemented in [PR #59](https://github.com/yaboii-jah/HML-Prototype/pull/59). At `a229874`, local verification passed with 496 tests, the public browser check, [four-job CI](https://github.com/yaboii-jah/HML-Prototype/actions/runs/45457466933), and [disposable SQL, generated types and signed-in desktop/mobile checks](https://github.com/yaboii-jah/HML-Prototype/actions/runs/45457466813). Staging applied only `20261124174400_mrf_extraction.sql` with extraction disabled. Full parity passed with retained records and access unchanged and no email sent. On 2026-11-25 the local editor completed a live `gemini-3.5-flash-lite` synthetic upload, selective apply and draft save. The user's hands-on confirmation remains pending.
 
 ## Recent Step 4 Checkpoints
 
@@ -46,7 +46,7 @@
 
 Both extractions use server-side durable jobs and default to disabled. Proposals are private to the initiating editor and bound to the saved draft and source versions. Verify checked access, selective apply and save, refresh and retry recovery, stale versions, and manual entry with deterministic fixtures and the applicable local, CI, disposable database and Staging gates. The user's hands-on check uses the normal app flow with the locally configured `gemini-3.5-flash-lite` model and synthetic or non-sensitive samples. Production enablement belongs to Step 7.
 
-**Exact next action** is to complete 5.2 verification, then run the local synthetic-PDF hands-on check on the normal editor flow.
+**Exact next action** is the user's hands-on check of 5.2 in the local editor with the synthetic supporting PDF. Keep the QA draft and its file together. Scope 5.3 after that confirmation.
 
 ## Release Blockers
 
