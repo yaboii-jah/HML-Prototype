@@ -100,7 +100,8 @@ begin
     dispatch := true;
   end if;
   return jsonb_strip_nulls(jsonb_build_object('id',job.id,'attemptId',job.attempt_id,'state',job.state,
-    'reason',job.reason,'expiresAt',job.expires_at,'proposal',case when action='apply' then job.proposal end,'dispatch',dispatch));
+    'reason',job.reason,'expiresAt',job.expires_at,'dispatch',dispatch))
+    || case when action='apply' then jsonb_build_object('proposal',job.proposal) else '{}'::jsonb end;
 end;
 $$;
 

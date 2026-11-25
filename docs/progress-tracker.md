@@ -14,7 +14,7 @@
 
 ## In Progress
 
-- Unit 5.3 implements autofill from verified quotation originals. Local unit tests passed (500 tests), the rollback-only quotation capture and finalization fixtures passed, and generated types match. Staging preview lists only `20261125063053_quotation_extraction.sql`. Signed-in review, CI, live Gemini, Staging parity and user acceptance are pending.
+- Unit 5.3 is in [PR #60](https://github.com/yaboii-jah/HML-Prototype/pull/60). Local verification passed with 500 tests and the public browser check. Live Gemini `gemini-3.5-flash-lite` passed with three mixed originals and a separate 100-page, 44 MiB group. Disposable verification is rerunning after a fix to preserve blank material links when returning ready results. Staging preview lists only `20261125063053_quotation_extraction.sql`. Staging parity and user acceptance are pending.
 
 ## Recent Step 4 Checkpoints
 

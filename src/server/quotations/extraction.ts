@@ -30,7 +30,9 @@ export async function quotationExtractionCommand(input: unknown, actor?: Awaited
   if (!enabled()) return { state: "disabled" };
   const raw = record(await serviceRpc("quotation_extraction_command", { actor: caller, command }));
   const status = parseQuoteExtractionStatus(raw);
-  if (!status) throw Error("Invalid quotation extraction status");
+  if (!status || (command.type === "apply" && status.state === "ready" && !status.proposal)) {
+    throw Error("Invalid quotation extraction status");
+  }
   if (status.id && raw?.dispatch === true) await start(quotationExtractionWorkflow, [status.id]).catch(() => {});
   return status;
 }

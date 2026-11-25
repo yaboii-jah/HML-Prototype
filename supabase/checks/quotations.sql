@@ -125,9 +125,9 @@ begin
       if public.quotation_extraction_worker(extraction_job,'complete',extraction_lease,'{}') is not null then raise exception 'Revoked worker published a quotation'; end if;
       raise exception 'Restore fixture grant' using errcode='P9499';
     exception when sqlstate 'P9499' then null; end;
-    if public.quotation_extraction_worker(extraction_job,'complete',extraction_lease,'{"proof":"fixture"}')->>'expiresAt' is null then raise exception 'Quotation proposal did not complete'; end if;
+    if public.quotation_extraction_worker(extraction_job,'complete',extraction_lease,'{"body":{"lines":[{"requestItemId":null,"sourceFileId":"fixture"}]}}')->>'expiresAt' is null then raise exception 'Quotation proposal did not complete'; end if;
     if public.quotation_extraction_command(buyer,extraction_context||'{"type":"status"}') ? 'proposal' then raise exception 'Polling returned an unchecked quotation payload'; end if;
-    if public.quotation_extraction_command(buyer,extraction_context||jsonb_build_object('type','apply','proposalId',extraction_job))->'proposal' is distinct from '{"proof":"fixture"}'::jsonb then raise exception 'Owner cannot recover ready quotation'; end if;
+    if public.quotation_extraction_command(buyer,extraction_context||jsonb_build_object('type','apply','proposalId',extraction_job))->'proposal' is distinct from '{"body":{"lines":[{"requestItemId":null,"sourceFileId":"fixture"}]}}'::jsonb then raise exception 'Owner cannot recover ready quotation with human mappings blank'; end if;
     extraction_command:=jsonb_build_object('type','save','requestId',gen_random_uuid(),'quoteId',quote,
       'expectedVersion',saved->>'version','body',body||'{"notes":"Autofill fixture"}','extractionProposalId',extraction_job);
     begin

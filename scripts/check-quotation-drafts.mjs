@@ -21,7 +21,7 @@ export async function checkQuotationDrafts(options) {
         "Quotation failure state:",
         await page
           .run(
-            "return [...document.querySelectorAll('[role=alert],.quotation-originals [role=status]')].map(el=>el.textContent).join(' | ')",
+          "return [...document.querySelectorAll('[role=alert],.quotation-extraction, .quotation-extraction-result,.quotation-originals [role=status]')].map(el=>el.textContent).join(' | ')",
           )
           .catch(() => "unavailable"),
       );
