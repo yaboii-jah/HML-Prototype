@@ -14,7 +14,7 @@
 
 ## In Progress
 
-- Unit 5.2 in [PR #59](https://github.com/yaboii-jah/HML-Prototype/pull/59) is being verified for direct form autofill and single-step submission. Staging already has `20261124174400_mrf_extraction.sql` with extraction disabled. The earlier selective review passed [CI](https://github.com/yaboii-jah/HML-Prototype/actions/runs/45457466933), [disposable integration](https://github.com/yaboii-jah/HML-Prototype/actions/runs/45457466813), Staging parity and a live synthetic check at `a229874`. The revised flow needs matching verification and a fresh hands-on confirmation.
+- At `a78aef2`, the revised 5.2 autofill and direct submission in [PR #59](https://github.com/yaboii-jah/HML-Prototype/pull/59) passed all 496 local tests, the public browser check, [four-job CI](https://github.com/yaboii-jah/HML-Prototype/actions/runs/45552143823), and [disposable SQL, generated types and signed-in desktop/mobile checks](https://github.com/yaboii-jah/HML-Prototype/actions/runs/45552144132). The local synthetic `gemini-3.5-flash-lite` walkthrough verified direct fill, reopening, result recovery and draft save. Staging retains `20261124174400_mrf_extraction.sql` with extraction disabled. The Management API returns HTTP 401, so `20261125050320_mrf_autofill_submission.sql` and revised Staging parity remain pending. User hands-on confirmation remains open.
 
 ## Recent Step 4 Checkpoints
 
@@ -46,7 +46,7 @@
 
 Both extractions use server-side durable jobs and default to disabled. Results are private to the initiating editor and bound to the saved draft and source versions. Verify checked access, editing and persistence, refresh and retry recovery, stale versions, and manual entry with deterministic fixtures and the applicable local, CI, disposable database and Staging gates. The user's hands-on check uses the normal app flow with the locally configured `gemini-3.5-flash-lite` model and synthetic or non-sensitive samples. Production enablement belongs to Step 7.
 
-**Exact next action** is to verify the revised 5.2 autofill and submission flow, then run the local synthetic walkthrough for the user's hands-on confirmation. Scope 5.3 after that confirmation.
+**Exact next action** is to restore Staging migration access, apply only `20261125050320_mrf_autofill_submission.sql` with matching CI evidence, and verify Staging parity and single-step submission. Obtain the user's hands-on confirmation before scoping 5.3.
 
 ## Release Blockers
 
