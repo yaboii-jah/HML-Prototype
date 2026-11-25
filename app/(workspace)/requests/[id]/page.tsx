@@ -10,6 +10,5 @@ export default async function Page({ params }: { params: Promise<{ id?: string }
   if (!initial) redirect("/sign-in");
   const lifecycle = id && initial.requests.some(request => request.id === id)
     ? await initialMonitoringView("lifecycle", { target: id }) : null;
-  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Manila", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
-  return <SharedRequests initial={initial} mode="detail" id={id} today={today} lifecycle={lifecycle} />;
+  return <SharedRequests initial={initial} mode="detail" id={id} lifecycle={lifecycle} />;
 }

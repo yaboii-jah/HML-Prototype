@@ -7,6 +7,5 @@ export default async function Page({ params }: { params: Promise<{ id?: string }
   const { id } = await params;
   const initial = await requestView(id);
   if (!initial) redirect("/sign-in");
-  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Manila", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
-  return <SharedRequests initial={initial} mode="new" id={id} today={today} />;
+  return <SharedRequests initial={initial} mode="new" id={id} />;
 }

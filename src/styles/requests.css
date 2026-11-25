@@ -53,36 +53,6 @@
   overflow-wrap: anywhere;
 }
 
-.mrf-documents .mrf-extraction-options {
-  display: grid;
-  gap: 0;
-  margin: 1rem 0 0;
-  min-inline-size: 0;
-}
-
-.mrf-extraction-options legend {
-  font-weight: 700;
-  margin-block-end: 0.5rem;
-}
-
-.mrf-extraction-option {
-  align-items: start;
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 0.65rem;
-  border-block-start: 1px solid var(--line);
-  padding-block: 0.75rem;
-}
-
-.mrf-extraction-option input {
-  accent-color: var(--teal);
-  margin: 0.25rem 0 0;
-}
-
-.mrf-extraction-options > div:last-child {
-  margin-block-start: 0.5rem;
-}
-
 .mrf-extraction-notice {
   display: grid;
   justify-items: start;

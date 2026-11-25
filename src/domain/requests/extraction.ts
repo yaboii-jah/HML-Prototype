@@ -10,7 +10,7 @@ export type SuggestionField = typeof suggestionFields[number];
 type PrintedValue = { value: string; page: number | null };
 type SuggestedMaterial = Omit<DraftMaterial, "id"> & { page: number };
 export type MrfProposal = { details: Record<typeof proposalFields[number], PrintedValue>; rows: SuggestedMaterial[] };
-export type AppliedExtraction = { id: string; previous: Partial<Record<SuggestionField, string>>; rowIds: string[] };
+export type AppliedExtraction = { id: string; fields: Partial<Record<SuggestionField, { before: string; filled: string }>>; rowIds: string[] };
 
 const boundedText = (value: unknown) => typeof value === "string" && value.length <= 4000 ? value.trim() : "";
 export function parseMrfProposal(value: unknown, pageCount = MAX_EXTRACTION_PAGES): MrfProposal | null {
@@ -57,25 +57,47 @@ export function parseExtractionStatus(value: unknown): ExtractionStatus | null {
     reason: typeof raw.reason === "string" ? raw.reason : undefined };
 }
 
-export function applyMrfProposal(draft: MrfDraft, proposal: MrfProposal, id: string,
-  fields: ReadonlySet<SuggestionField>, rows: ReadonlySet<number>, newId: () => string) {
+const normalizedText = (value: string) => value.trim().replace(/\s+/g, " ").toLowerCase();
+
+function materialKey(row: Omit<DraftMaterial, "id">) {
+  const exact = row.quantity === null ? null : row.quantity.trim();
+  return JSON.stringify([
+    ...materialFields.map(key => normalizedText(row[key])),
+    row.neededDate,
+    draftQuantity(exact) ?? exact,
+  ]);
+}
+
+export function fillMrfDraft(draft: MrfDraft, proposal: MrfProposal, id: string, newId: () => string) {
   const next = { ...draft };
-  const previous: AppliedExtraction["previous"] = {};
+  const applied: AppliedExtraction = { id, fields: {}, rowIds: [] };
   for (const field of suggestionFields) {
     const value = proposal.details[field].value;
-    if (fields.has(field) && value && draft[field] !== value) {
-      previous[field] = draft[field];
+    if (value && !draft[field].trim()) {
+      applied.fields[field] = { before: draft[field], filled: value };
       next[field] = value;
     }
   }
-  const added = proposal.rows.flatMap(({ name, unit, purpose, location, remarks, neededDate, quantity }, index) =>
-    rows.has(index) ? [{ id: newId(), name, unit, purpose, location, remarks, neededDate, quantity }] : []);
-  next.items = [...draft.items, ...added];
-  const applied: AppliedExtraction = { id, previous, rowIds: added.map(row => row.id) };
+  const known = new Set(draft.items.map(materialKey));
+  next.items = [...draft.items];
+  for (const { name, unit, purpose, location, remarks, neededDate, quantity } of proposal.rows) {
+    const row = { name, unit, purpose, location, remarks, neededDate, quantity };
+    const key = materialKey(row);
+    if (known.has(key)) continue;
+    known.add(key);
+    const rowId = newId();
+    next.items.push({ ...row, id: rowId });
+    applied.rowIds.push(rowId);
+  }
   return { draft: next, applied };
 }
 
 export function removeMrfProposal(draft: MrfDraft, applied: AppliedExtraction): MrfDraft {
   const added = new Set(applied.rowIds);
-  return { ...draft, ...applied.previous, items: draft.items.filter(row => !added.has(row.id)) };
+  const next = { ...draft, items: draft.items.filter(row => !added.has(row.id)) };
+  for (const field of suggestionFields) {
+    const change = applied.fields[field];
+    if (change && draft[field] === change.filled) next[field] = change.before;
+  }
+  return next;
 }

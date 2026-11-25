@@ -16,13 +16,13 @@ import { MrfExtraction } from "./MrfExtraction";
 import { MrfReview } from "./MrfReview";
 import { mrfEditable, mrfStatusLabel, mrfStatuses } from "@/src/domain/requests/workflow";
 import { detailFields, emptyMrfDraft, materialFields, type DraftCommand, type DraftMaterial, type MrfDraft, type RequestView, type SavedMrf } from "@/src/domain/requests/drafts";
-import { applyMrfProposal, removeMrfProposal, type AppliedExtraction } from "@/src/domain/requests/extraction";
+import { fillMrfDraft, removeMrfProposal, type AppliedExtraction } from "@/src/domain/requests/extraction";
 
 const labels = { sourceRef: "Source MRF number", requestDate: "Request date", requestedBy: "Requested by", approvedBy: "Approved by", purchaser: "Purchaser / Procurement Officer", financeOfficer: "Finance Officer", specialInstructions: "Special instructions", name: "Material name", unit: "Unit", purpose: "Purpose", location: "Delivery location", remarks: "Remarks", neededDate: "Date needed", quantity: "Quantity", scopeId: "Scope of work" };
 const availability = "Save incomplete work as a draft. Submission requires complete requirements and a verified supporting PDF.";
 const shown = (value: string | null | undefined) => value || "Not recorded";
 
-export function SharedRequests({ initial, mode, id, today, lifecycle = null }: { initial: RequestView; mode: "register" | "new" | "detail" | "edit"; id?: string; today: string; lifecycle?: MonitoringView<"lifecycle"> | null }) {
+export function SharedRequests({ initial, mode, id, lifecycle = null }: { initial: RequestView; mode: "register" | "new" | "detail" | "edit"; id?: string; lifecycle?: MonitoringView<"lifecycle"> | null }) {
   const { view } = useFoundationRealtime();
   const data = view?.kind === "requests" ? view.data : initial;
   const saved = data.requests.find(request => request.id === id);
@@ -30,7 +30,7 @@ export function SharedRequests({ initial, mode, id, today, lifecycle = null }: {
   if (mode !== "new" && !saved) return <><PageHeader title="Material request unavailable" description="This record does not exist or is outside your current project access." /><Link href="/requests">Return to material requests</Link></>;
   if (mode === "detail" && saved) return <RequestDetail saved={saved} data={data} lifecycle={lifecycle} />;
   if (data.role !== "Site Personnel") return <><PageHeader title="Read-only access" description="Only currently assigned Site Personnel can create or edit MRF drafts." /><Link href={saved ? `/requests/${saved.id}` : "/requests"}>Return to material requests</Link></>;
-  return <DraftEditor key={id ?? "new"} latest={saved} data={data} today={today} />;
+  return <DraftEditor key={id ?? "new"} latest={saved} data={data} />;
 }
 
 function RequestRegister({ data }: { data: RequestView }) {
@@ -88,9 +88,9 @@ function MaterialList({ items, edit, remove, move }: { items: DraftMaterial[]; e
   </>;
 }
 
-function DraftEditor({ latest, data, today }: { latest?: SavedMrf; data: RequestView; today: string }) {
+function DraftEditor({ latest, data }: { latest?: SavedMrf; data: RequestView }) {
   const router = useRouter(), live = useFoundationRealtime();
-  const [local, setLocal] = useState({ draft: latest?.draft ?? emptyMrfDraft(today), version: latest?.version ?? "", dirty: false });
+  const [local, setLocal] = useState({ draft: latest?.draft ?? emptyMrfDraft(), version: latest?.version ?? "", dirty: false });
   const [projectId, setProjectId] = useState(latest?.projectId ?? "");
   const [step, setStep] = useState(0), [selected, setSelected] = useState<string | null>(null), [copySource, setCopySource] = useState("");
   const [busy, setBusy] = useState(false), [error, setError] = useState(""), [conflict, setConflict] = useState(false), [uncertain, setUncertain] = useState(false);
@@ -175,26 +175,30 @@ function DraftEditor({ latest, data, today }: { latest?: SavedMrf; data: Request
         setAppliedExtraction(null); setExtractionStale(false); operation.current = null;
       }}>Discard my input and use saved draft</button></section>}
       {appliedExtraction && <div className="mrf-extraction-notice" role="status">
-        <p>{extractionStale || stale ? "The applied suggestions are stale. Remove them to keep working on your other edits." : "Save the draft to keep the applied suggestions before submitting."}</p>
+        <p>{extractionStale || stale ? "The draft, PDF or autofill changed. Undo autofill to keep working on your other edits." : "Filled from the PDF. Check the Details and Materials before saving or submitting."}</p>
         <button type="button" className="button secondary" disabled={busy || uncertain || workflowLocked} onClick={() => {
           setLocal({ draft: removeMrfProposal(draft, appliedExtraction), version: expected, dirty: true });
           setAppliedExtraction(null); setExtractionStale(false); setError(""); operation.current = null;
-        }}>Remove applied suggestions</button>
+        }}>Undo autofill</button>
       </div>}
       {!project?.code && <p role="status">Choose an assigned project with a configured document code before saving.</p>}
       <div className="form-actions request-wizard-actions"><div><Link className="button secondary" href={latest ? `/requests/${latest.id}` : "/requests"}>Cancel</Link><button className="button primary" disabled={!formEditable || busy || checkingExtraction || !project?.code || (!uncertain && (stale || conflict || extractionStale))}>{busy ? "Saving…" : uncertain ? "Retry same save" : "Save draft"}</button></div><div>{step > 0 && <button type="button" className="button secondary" onClick={() => changeStep(step - 1)}>Back</button>}{step < 2 && <button type="button" className="button secondary" onClick={() => changeStep(step + 1)}>Next</button>}</div></div>
     </form>
-    {latest && <MrfReview saved={latest} role={data.role} draft={draft} expectedVersion={expected} disabled={busy || uncertain || stale || conflict || !editable || filePending || checkingExtraction || !!appliedExtraction} onPendingChange={setWorkflowLocked} onSubmitted={() => { dirtyRef.current = false; router.push(`/requests/${latest.id}`); router.refresh(); }} />}
+    {latest && <MrfReview saved={latest} role={data.role} draft={draft} expectedVersion={expected}
+      extractionProposalId={appliedExtraction?.id} onExtractionStale={() => setExtractionStale(true)}
+      disabled={busy || uncertain || stale || conflict || extractionStale || !editable || filePending || checkingExtraction}
+      onPendingChange={setWorkflowLocked} onSubmitted={() => { dirtyRef.current = false; router.push(`/requests/${latest.id}`); router.refresh(); }} />}
     {latest ? <MrfDocuments mrfId={latest.id} editable={editable} onPendingFile={setFilePending}
       extraction={formEditable ? revision => <MrfExtraction key={`${latest.version}:${revision}`}
-        mrfId={latest.id} version={latest.version} attachmentRevision={revision} draft={draft} projectName={project?.name ?? ""} labels={labels}
+        mrfId={latest.id} version={latest.version} attachmentRevision={revision} projectName={project?.name ?? ""}
         disabled={stale || conflict || busy || uncertain || workflowLocked || filePending} applied={!!appliedExtraction} onChecking={setCheckingExtraction}
-        onApply={(proposal, id, selection) => {
-          const next = applyMrfProposal(draft, proposal, id, selection.fields, selection.rows, () => crypto.randomUUID());
-          if (!next.applied.rowIds.length && !Object.keys(next.applied.previous).length) return;
+        onFill={(proposal, id) => {
+          const next = fillMrfDraft(draft, proposal, id, () => crypto.randomUUID());
+          if (!next.applied.rowIds.length && !Object.keys(next.applied.fields).length) return false;
           operation.current = null;
           setAppliedExtraction(next.applied);
           setLocal({ draft: next.draft, version: expected, dirty: true });
+          return true;
         }} /> : undefined} /> : <section className="panel"><h2>Supporting PDF</h2><p>Save this draft first to assign its permanent MRF number, then attach the PDF.</p></section>}
     <RecordModal open={!!material} title="Material details" onClose={() => setSelected(null)}>{material && <fieldset className="mrf-material-fields" disabled={!formEditable || busy || uncertain}><div className="form-grid">{materialFields.map(key => <Field label={labels[key]} key={key}><input name={`material-${key}`} maxLength={4000} value={material[key]} onChange={event => change({ ...draft, items: draft.items.map(item => item.id === material.id ? { ...item, [key]: event.target.value } : item) })} /></Field>)}<Field label="Quantity"><input inputMode="decimal" value={material.quantity ?? ""} onChange={event => change({ ...draft, items: draft.items.map(item => item.id === material.id ? { ...item, quantity: event.target.value || null } : item) })} /></Field><Field label="Date needed"><input type="date" value={material.neededDate} onChange={event => change({ ...draft, items: draft.items.map(item => item.id === material.id ? { ...item, neededDate: event.target.value } : item) })} /></Field></div></fieldset>}</RecordModal>
   </>;

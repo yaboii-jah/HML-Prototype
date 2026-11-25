@@ -28,9 +28,11 @@ export async function fakeDrive() {
         const proposal = {
           documentType: 'single_mrf',
           details: { requestedBy: { value: 'Printed site supervisor', page: 1 },
+            requestDate: { value: '2026-11-24', page: 1 }, purchaser: { value: 'Printed buyer', page: 1 },
+            financeOfficer: { value: 'Printed finance', page: 1 },
             projectName: { value: 'Printed project alias', page: 1 }, sourceRef: { value: 'PRINTED-77', page: 1 } },
-          rows: [{ page: 2, name: 'Selected fixture mesh', quantity: '12.125', unit: 'sheet' },
-            { page: 2, name: 'Unchecked fixture cement', quantity: '20', unit: 'bag' }],
+          rows: [{ page: 2, name: 'Fixture mesh', quantity: '12.125', unit: 'sheet', neededDate: '2026-11-27', location: 'Site' },
+            { page: 2, name: 'Fixture cement', quantity: '20', unit: 'bag', neededDate: '2026-11-27', location: 'Site' }],
         };
         json({ status: 'completed', steps: [{ type: 'model_output', content: [{ type: 'text', text: JSON.stringify(proposal) }] }] });
         return;

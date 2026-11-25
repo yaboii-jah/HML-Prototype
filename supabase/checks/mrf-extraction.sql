@@ -12,6 +12,7 @@ declare
   site jsonb;
   peer jsonb;
   project uuid := gen_random_uuid();
+  scope uuid := gen_random_uuid();
   mapping uuid := gen_random_uuid();
   doc uuid := gen_random_uuid();
   large_doc uuid := gen_random_uuid();
@@ -23,6 +24,7 @@ declare
   input jsonb;
   reply jsonb;
   write_command jsonb;
+  submission jsonb;
   form jsonb := '{"scopeId":null,"requestDate":"","sourceRef":"","requestedBy":"","approvedBy":"","purchaser":"","financeOfficer":"","specialInstructions":"","items":[]}';
   proposal jsonb := '{"details":{"requestedBy":{"value":"Printed fixture","page":1}},"rows":[]}';
 begin
@@ -33,6 +35,9 @@ begin
   end if;
   insert into public.projects(id,name,location,document_code)
     values(project,'Extraction fixture '||project,'Site','EX-'||upper(substr(project::text,1,8)));
+  insert into public.project_budgets values(project,100);
+  insert into public.scopes(id,project_id,name) values(scope,project,'Autofill verification');
+  insert into public.scope_budgets values(scope,100);
   for uid in select unnest(array[site_id,peer_id]) loop
     sid:=gen_random_uuid();
     insert into auth.users(id,email,is_anonymous,email_confirmed_at,encrypted_password) values(uid,uid||'@example.invalid',false,now(),'fixture');
@@ -81,6 +86,10 @@ begin
   begin perform public.request_command(peer,write_command); raise exception 'Colleague saved private proposal'; exception when sqlstate 'P4350' then null; end;
   update private.request_document_state set revision=3 where request_id=target;
   begin perform public.request_command(site,write_command); raise exception 'Old PDF proposal saved'; exception when sqlstate 'P4350' then null; end;
+  begin
+    perform public.request_command(site,write_command||jsonb_build_object('type','submitMrf','attachmentRevision','3','requestId',gen_random_uuid()));
+    raise exception 'Submission accepted an autofill tied to a previous PDF';
+  exception when sqlstate 'P4350' then null; end;
   context:=context||'{"attachmentRevision":"3"}';
   reply:=public.mrf_extraction_command(site,context||jsonb_build_object('type','start','operationId',gen_random_uuid()));
   job:=(reply->>'id')::uuid;
@@ -101,8 +110,33 @@ begin
   reply:=public.mrf_extraction_command(site,context||jsonb_build_object('type','start','operationId',gen_random_uuid()));
   job:=(reply->>'id')::uuid;
   lease:=(public.mrf_extraction_worker(job,'claim',null,'{}')->>'lease')::uuid;
-  delete from public.project_assignments where user_id=site_id and project_id=project;
-  if public.mrf_extraction_worker(job,'complete',lease,proposal) is not null then raise exception 'Revoked worker published a proposal'; end if;
-  begin perform public.mrf_extraction_command(site,context||'{"type":"status"}'); raise exception 'Revoked editor read a proposal'; exception when insufficient_privilege then null; end;
+  begin
+    delete from public.project_assignments where user_id=site_id and project_id=project;
+    if public.mrf_extraction_worker(job,'complete',lease,proposal) is not null then raise exception 'Revoked worker published a proposal'; end if;
+    begin perform public.mrf_extraction_command(site,context||'{"type":"status"}'); raise exception 'Revoked editor read a proposal'; exception when insufficient_privilege then null; end;
+    raise exception 'Restore fixture assignment' using errcode='P9499';
+  exception when sqlstate 'P9499' then null; end;
+  perform public.mrf_extraction_worker(job,'complete',lease,proposal);
+  write_command:=jsonb_build_object('type','submitMrf','requestId',gen_random_uuid(),'mrfId',target,'expectedVersion',context->>'version',
+    'attachmentRevision','3','draft',form,'extractionProposalId',job);
+  begin perform public.request_command(peer,write_command); raise exception 'Colleague submitted private autofill'; exception when sqlstate 'P4350' then null; end;
+  begin perform public.request_command(site,write_command); raise exception 'Autofill bypassed form validation'; exception when sqlstate 'P4302' then null; end;
+  if private.request_snapshot(target)->>'version' is distinct from context->>'version' then raise exception 'Failed submission persisted changes'; end if;
+  write_command:=write_command||jsonb_build_object('draft',form||jsonb_build_object(
+    'scopeId',scope,'requestDate','2026-11-25','requestedBy','Printed fixture','approvedBy','Printed PM',
+    'purchaser','Printed buyer','financeOfficer','Printed finance','items',jsonb_build_array(jsonb_build_object(
+      'id',gen_random_uuid(),'name','Steel mesh','quantity','3.625','unit','sheet','neededDate','2026-11-28','location','Site','remarks','','purpose',''))));
+  begin
+    delete from public.project_assignments where user_id=site_id and project_id=project;
+    begin perform public.request_command(site,write_command); raise exception 'Revoked editor submitted autofill'; exception when insufficient_privilege then null; end;
+    raise exception 'Restore fixture assignment' using errcode='P9499';
+  exception when sqlstate 'P9499' then null; end;
+  submission:=public.request_command(site,write_command);
+  if submission->'record'->>'status' is distinct from 'submitted'
+    or submission->'record'->'draft'->'items'->0->>'quantity' is distinct from '3.625' then
+    raise exception 'Valid autofill did not save and submit atomically';
+  end if;
+  if public.request_command(site,write_command) is distinct from submission then raise exception 'Submission response not recoverable after version change'; end if;
+  if (select count(*) from private.mrf_submissions where request_id=target)<>1 then raise exception 'Duplicate autofilled submission'; end if;
 end $$;
 rollback;

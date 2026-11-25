@@ -14,7 +14,7 @@
 
 ## In Progress
 
-- Unit 5.2 is implemented in [PR #59](https://github.com/yaboii-jah/HML-Prototype/pull/59). At `a229874`, local verification passed with 496 tests, the public browser check, [four-job CI](https://github.com/yaboii-jah/HML-Prototype/actions/runs/45457466933), and [disposable SQL, generated types and signed-in desktop/mobile checks](https://github.com/yaboii-jah/HML-Prototype/actions/runs/45457466813). Staging applied only `20261124174400_mrf_extraction.sql` with extraction disabled. Full parity passed with retained records and access unchanged and no email sent. On 2026-11-25 the local editor completed a live `gemini-3.5-flash-lite` synthetic upload, selective apply and draft save. The user's hands-on confirmation remains pending.
+- Unit 5.2 in [PR #59](https://github.com/yaboii-jah/HML-Prototype/pull/59) is being verified for direct form autofill and single-step submission. Staging already has `20261124174400_mrf_extraction.sql` with extraction disabled. The earlier selective review passed [CI](https://github.com/yaboii-jah/HML-Prototype/actions/runs/45457466933), [disposable integration](https://github.com/yaboii-jah/HML-Prototype/actions/runs/45457466813), Staging parity and a live synthetic check at `a229874`. The revised flow needs matching verification and a fresh hands-on confirmation.
 
 ## Recent Step 4 Checkpoints
 
@@ -41,12 +41,12 @@
 
 ### Step 5 Planned
 
-- **5.2 MRF extraction.** Assigned Site Personnel can request extraction from the full verified supporting PDF on an editable saved MRF. Suggest printed details and material rows. Staff choose individual changes and use the normal draft save. The project, scope, numbering and approval follow the existing workflow.
+- **5.2 MRF extraction.** Assigned Site Personnel can fill blank details and append unmatched rows from the full verified supporting PDF on an editable saved MRF. Staff review the editable form and can save the draft or submit in one action.
 - **5.3 Quotation extraction.** Procurement extracts from the full verified original group on an editable saved quotation. Transcribe printed supplier details, offered lines, terms and financial values with exact decimals. Staff select changes before saving and complete the existing source checks, material matching, conversions and financial review.
 
-Both extractions use server-side durable jobs and default to disabled. Proposals are private to the initiating editor and bound to the saved draft and source versions. Verify checked access, selective apply and save, refresh and retry recovery, stale versions, and manual entry with deterministic fixtures and the applicable local, CI, disposable database and Staging gates. The user's hands-on check uses the normal app flow with the locally configured `gemini-3.5-flash-lite` model and synthetic or non-sensitive samples. Production enablement belongs to Step 7.
+Both extractions use server-side durable jobs and default to disabled. Results are private to the initiating editor and bound to the saved draft and source versions. Verify checked access, editing and persistence, refresh and retry recovery, stale versions, and manual entry with deterministic fixtures and the applicable local, CI, disposable database and Staging gates. The user's hands-on check uses the normal app flow with the locally configured `gemini-3.5-flash-lite` model and synthetic or non-sensitive samples. Production enablement belongs to Step 7.
 
-**Exact next action** is the user's hands-on check of 5.2 in the local editor with the synthetic supporting PDF. Keep the QA draft and its file together. Scope 5.3 after that confirmation.
+**Exact next action** is to verify the revised 5.2 autofill and submission flow, then run the local synthetic walkthrough for the user's hands-on confirmation. Scope 5.3 after that confirmation.
 
 ## Release Blockers
 
