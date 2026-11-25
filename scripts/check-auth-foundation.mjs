@@ -107,6 +107,7 @@ export async function checkAuthFoundation({ api, anon, secret, mailpit, sql, env
     GOOGLE_DRIVE_ENABLED: 'true', DOCUMENT_DRIVE_TEST_ORIGIN: drive.origin, GOOGLE_DRIVE_ROOT_FOLDER_ID: drive.root,
     GOOGLE_DRIVE_UPLOAD_TOKEN_KEY: randomBytes(32).toString('base64'), CI: 'true', ACCOUNT_EMAIL_ENABLED: 'true',
     MRF_EXTRACTION_ENABLED: 'true', GEMINI_API_KEY: 'disposable-gemini-key', GEMINI_MODEL: 'gemini-3.5-flash-lite',
+    QUOTATION_EXTRACTION_ENABLED: 'true',
     WORKFLOW_TARGET_WORLD: 'local', WORKFLOW_LOCAL_BASE_URL: base, WORKFLOW_LOCAL_DATA_DIR: '.verification/workflow-auth',
   };
   requireLoopback(appEnvironment.NEXT_PUBLIC_SUPABASE_URL);
@@ -306,6 +307,7 @@ export async function checkAuthFoundation({ api, anon, secret, mailpit, sql, env
     const reviewed = await checkMrfReview({ browser, second, client, login, logout, sql, base, drive, ...documents });
     checks.push('mrf-review-browser-workflow');
     quotationFixture = await checkQuotationDrafts({ browser, second, client, login, logout, sql, base, drive, ...reviewed });
+    checks.push('quotation-extraction-browser');
     checks.push('quotation-browser-workflow');
     quotationFixture.financial = await checkQuotationFinalization({ browser, second, client, login, logout, sql, base, drive, ...reviewed });
     checks.push('quotation-finalization-browser');

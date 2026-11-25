@@ -1444,9 +1444,9 @@ isOneToOne: true
                   ]
                 },"quotation_drafts": {
                   Row: {
-                    "body": NonNullable<Json>,"checked": Json | null,"content_version": number,"copied_from_revision": string | null,"created_at": string,"creator_id": string,"creator_name": string,"current_files": (string)[],"family_id": string,"file_version": number,"id": string,"matches": NonNullable<Json>,"request_id": string,"state": string,"supplier_id": string | null,"version": number,"quotation_ready_files": boolean | null
+                    "body": NonNullable<Json>,"checked": Json | null,"content_version": number,"copied_from_revision": string | null,"created_at": string,"creator_id": string,"creator_name": string,"current_files": (string)[],"family_id": string,"file_version": number,"id": string,"matches": NonNullable<Json>,"request_id": string,"state": string,"supplier_id": string | null,"version": number,"quotation_extraction_source": Json | null,"quotation_ready_files": boolean | null
                   }
-                  ComputedFields: "quotation_ready_files"
+                  ComputedFields: "quotation_extraction_source" | "quotation_ready_files"
                   Insert: {
                     "body": NonNullable<Json>,"checked"?: Json | null,"content_version"?: number,"copied_from_revision"?: string | null,"created_at"?: string,"creator_id": string,"creator_name": string,"current_files"?: (string)[],"family_id": string,"file_version"?: number,"id": string,"matches"?: NonNullable<Json>,"request_id": string,"state"?: string,"supplier_id"?: string | null,"version"?: number
                   }
@@ -1471,6 +1471,26 @@ isOneToOne: false
       columns: ["supplier_id"]
 isOneToOne: false
       referencedRelation: "suppliers"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"quotation_extraction_jobs": {
+                  Row: {
+                    "access_revision": string,"attempt_id": string,"dispatch_after": string,"expires_at": string | null,"id": string,"lease": string | null,"lease_until": string | null,"owner_id": string,"proposal": Json | null,"quote_id": string,"reason": string | null,"source_hash": string,"state": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "access_revision": string,"attempt_id": string,"dispatch_after"?: string,"expires_at"?: string | null,"id"?: string,"lease"?: string | null,"lease_until"?: string | null,"owner_id": string,"proposal"?: Json | null,"quote_id": string,"reason"?: string | null,"source_hash": string,"state"?: string
+                  }
+                  Update: {
+                    "access_revision"?: string,"attempt_id"?: string,"dispatch_after"?: string,"expires_at"?: string | null,"id"?: string,"lease"?: string | null,"lease_until"?: string | null,"owner_id"?: string,"proposal"?: Json | null,"quote_id"?: string,"reason"?: string | null,"source_hash"?: string,"state"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "quotation_extraction_jobs_quote_id_fkey"
+      columns: ["quote_id"]
+isOneToOne: false
+      referencedRelation: "quotation_drafts"
       referencedColumns: ["id"]
     }
                   ]
@@ -2612,6 +2632,9 @@ isOneToOne: true
 "quotation_body":
 { Args: { "parent": string,"value": Json }; Returns: Json
                            },
+"quotation_capture_before_extraction":
+{ Args: { "actor": Json,"command": Json }; Returns: Json
+                           },
 "quotation_capture_command":
 { Args: { "actor": Json,"command": Json }; Returns: Json
                            },
@@ -2632,6 +2655,18 @@ isOneToOne: true
                            },
 "quotation_enqueue":
 { Args: { "actor": Json,"file": string,"kind": string }; Returns: undefined
+                           },
+"quotation_extraction_command":
+{ Args: { "actor": Json,"command": Json }; Returns: Json
+                           },
+"quotation_extraction_current":
+{ Args: { "target": string }; Returns: Json
+                           },
+"quotation_extraction_source":
+{ Args: { "q": Omit<Database["private"]['Tables']["quotation_drafts"]['Row'], Database["private"]['Tables']["quotation_drafts"]['ComputedFields']> }; Returns: Json
+                           },
+"quotation_extraction_worker":
+{ Args: { "action": string,"job_id": string,"lease_id": string,"patch": Json }; Returns: Json
                            },
 "quotation_file":
 { Args: { "actor": Json,"file_id": string }; Returns: Json
@@ -3223,6 +3258,12 @@ isOneToOne: false
                            },
 "quotation_dispatch":
 { Args: Record<PropertyKey, never>; Returns: Json
+                           },
+"quotation_extraction_command":
+{ Args: { "actor": Json,"command": Json }; Returns: Json
+                           },
+"quotation_extraction_worker":
+{ Args: { "action": string,"job_id": string,"lease_id": string,"patch": Json }; Returns: Json
                            },
 "quotation_file":
 { Args: { "actor": Json,"file_id": string }; Returns: Json

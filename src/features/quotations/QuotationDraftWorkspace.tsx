@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   useEffect,
+  useRef,
   useState,
   useSyncExternalStore,
   type FormEvent,
@@ -28,6 +29,8 @@ import {
 } from "@/src/domain/quotations/drafts";
 import { record } from "@/src/domain/projects/projects";
 import { QuotationOriginals } from "./QuotationOriginals";
+import { QuotationExtraction, QuotationExtractionNotes } from "./QuotationExtraction";
+import { fillQuotation, undoQuotationFill, type QuoteExtractionProposal } from "@/src/domain/quotations/extraction";
 import { QuotationFinancialReview } from "./QuotationFinancialReview";
 import { useQuoteOperation } from "./use-quotation-operation";
 
@@ -441,6 +444,18 @@ function SourceEditor({
     contentVersion: quote.contentVersion,
     state: quote.state,
   });
+  const [fill, setFill] = useState<{
+    id: string;
+    version: string;
+    fileVersion: string;
+    before: QuoteBody;
+    after: QuoteBody;
+    notes: QuoteExtractionProposal["notes"];
+  } | null>(null);
+  const [checkingFill, setCheckingFill] = useState(false);
+  const [invalidFill, setInvalidFill] = useState(false);
+  const [pendingSave, setPendingSave] = useState<Extract<QuoteInput, { type: "save" }> | null>(null);
+  const editedHeaders = useRef(new Set<HeaderKey>());
   const [lineId, setLineId] = useState<string | null>(null);
   const [statusOpen, setStatusOpen] = useState(false),
     [reason, setReason] = useState("");
@@ -461,6 +476,7 @@ function SourceEditor({
     quote.state !== "finalized" &&
     !!view.request?.procurementReady;
   const busy = operation.busy;
+  const fillStale = !!fill && (invalidFill || fill.version !== quote.version || fill.fileVersion !== quote.fileVersion || !editable || quote.groups.length > 0);
   const selectedLine = body.lines.find((line) => line.id === lineId);
   useEffect(() => {
     if (!dirty) return;
@@ -473,6 +489,10 @@ function SourceEditor({
   }, [dirty]);
   const adopt = (saved: QuotationDraft) => {
     setBody(saved.body);
+    setFill(null);
+    setInvalidFill(false);
+    setPendingSave(null);
+    editedHeaders.current.clear();
     setBasis({
       body: saved.body,
       version: saved.version,
@@ -485,8 +505,10 @@ function SourceEditor({
     if (result?.ok && result.quote) adopt(result.quote);
     return result;
   };
-  const changeHeader = (key: HeaderKey, value: string) =>
+  const changeHeader = (key: HeaderKey, value: string) => {
+    editedHeaders.current.add(key);
     setBody({ ...body, [key]: value });
+  };
   const changeLine = (id: string, changes: Partial<QuoteLine>) =>
     setBody({
       ...body,
@@ -496,13 +518,26 @@ function SourceEditor({
     });
   const save = async (event: FormEvent) => {
     event.preventDefault();
-    if (!editable || stale || operation.conflict) return;
-    await run({
+    if (checkingFill || (!pendingSave && (!editable || stale || fillStale || operation.conflict))) return;
+    const command = pendingSave ?? {
       type: "save",
       quoteId: quote.id,
       expectedVersion: quote.version,
       body,
-    });
+      ...(fill ? { extractionProposalId: fill.id } : {}),
+    } as const;
+    const result = await run(command);
+    if (command.extractionProposalId) {
+      setPendingSave(!result || result.uncertain ? command : null);
+      if (result?.extractionStale) setInvalidFill(true);
+    }
+  };
+  const applyFill = (proposal: QuoteExtractionProposal, id: string) => {
+    const after = fillQuotation(body, basis.body, proposal.body, editedHeaders.current);
+    if (JSON.stringify(body) === JSON.stringify(after)) return false;
+    setFill({ id, version: quote.version, fileVersion: quote.fileVersion, before: body, after, notes: proposal.notes });
+    setBody(after);
+    return true;
   };
   const headerInputs = (keys: HeaderKey[]) => (
     <div className="form-grid">
@@ -611,7 +646,7 @@ function SourceEditor({
           </details>
           <button
             className="button secondary"
-            disabled={busy}
+            disabled={busy || !!pendingSave}
             onClick={() => {
               setBasis({
                 body: quote.body,
@@ -626,8 +661,32 @@ function SourceEditor({
           </button>
         </section>
       )}
+      <QuotationOriginals quote={quote} editable={editable && !pendingSave} canRetry={canStatus && !pendingSave}>
+        {editable && quote.files.length > 0 && (
+          <QuotationExtraction
+            key={`${quote.id}:${quote.version}:${quote.fileVersion}`}
+            quote={quote}
+            disabled={busy || stale || operation.conflict || !!pendingSave}
+            applied={!!fill}
+            onChecking={setCheckingFill}
+            onFill={applyFill}
+          />
+        )}
+      </QuotationOriginals>
+      {fill && <section className="panel quotation-extraction-result" aria-label="Quotation autofill">
+        <p role="status">{fillStale
+          ? "The extracted values expired or the quotation changed. Undo the fill before saving."
+          : "Filled from the originals. Check the fields, offered lines and charges before saving."}</p>
+        <QuotationExtractionNotes notes={fill.notes} files={quote.files} />
+        <button type="button" className="button secondary" disabled={busy || !!pendingSave} onClick={() => {
+          setBody(current => undoQuotationFill(current, fill));
+          setFill(null);
+          setInvalidFill(false);
+          operation.reviewed();
+        }}>Undo fill</button>
+      </section>}
       <form className="quotation-capture form-stack" onSubmit={save}>
-        <fieldset disabled={busy}>
+        <fieldset disabled={busy || !!pendingSave}>
           <details className="panel" open>
             <summary>Supplier details as quoted</summary>
             <p>
@@ -831,7 +890,7 @@ function SourceEditor({
             <button
               type="button"
               className="button secondary"
-              disabled={busy || !dirty}
+              disabled={busy || !dirty || !!pendingSave}
               onClick={() => {
                 if (window.confirm("Discard unsaved quotation changes?")) {
                   adopt(quote);
@@ -843,9 +902,9 @@ function SourceEditor({
             </button>
             <button
               className="button primary"
-              disabled={!editable || busy || stale || operation.conflict}
+              disabled={busy || checkingFill || (!pendingSave && (!editable || stale || fillStale || operation.conflict))}
             >
-              {busy ? "Saving…" : "Save quotation"}
+              {busy ? "Saving…" : pendingSave ? "Retry quotation save" : "Save quotation"}
             </button>
             <button
               type="button"
@@ -865,18 +924,13 @@ function SourceEditor({
           </div>
         )}
       </form>
-      <QuotationOriginals
-        quote={quote}
-        editable={editable}
-        canRetry={canStatus}
-      />
       {selectedLine && (
         <RecordModal
           open
           title="Offered line source details"
           onClose={() => setLineId(null)}
         >
-          <fieldset disabled={!editable || busy}>
+          <fieldset disabled={!editable || busy || !!pendingSave}>
             <div className="form-grid">
               {(Object.keys(LINE_FIELDS) as LineKey[]).map((key) => (
                 <Field key={key} label={LINE_FIELDS[key]}>

@@ -1,11 +1,7 @@
 import "server-only";
-import { record } from "@/src/domain/projects/projects";
 import { materialFields } from "@/src/domain/requests/drafts";
 import { suggestionFields } from "@/src/domain/requests/extraction";
-
-function objectSchema(properties: Record<string, object>) {
-  return { type: "object", properties, required: Object.keys(properties) };
-}
+import { extractOriginals, extractionSchema as objectSchema } from "@/src/server/gemini-extraction";
 
 const text = { type: "string" };
 const printed = objectSchema({ value: text, page: { type: ["integer", "null"] } });
@@ -30,31 +26,6 @@ const prompt = [
   "For multiple_mrfs or other, leave details blank and return no rows.",
 ].join(" ");
 
-export async function extractMrfPdf(bytes: Uint8Array): Promise<unknown> {
-  const key = process.env.GEMINI_API_KEY;
-  if (!key) throw Error("Extraction is unavailable");
-  const response = await fetch("https://generativelanguage.googleapis.com/v1beta/interactions", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "x-goog-api-key": key, "Api-Revision": "2026-05-20" },
-    body: JSON.stringify({
-      model: process.env.GEMINI_MODEL || "gemini-3.5-flash-lite",
-      input: [{ type: "text", text: prompt }, { type: "document", mime_type: "application/pdf", data: Buffer.from(bytes).toString("base64") }],
-      store: false,
-      response_format: { type: "text", mime_type: "application/json", schema },
-    }),
-    signal: AbortSignal.timeout(90_000),
-  });
-  if (!response.ok) throw Error("Extraction provider request failed");
-  const body = record(await response.json());
-  if (body?.status !== "completed" || !Array.isArray(body.steps)) throw Error("Extraction response was incomplete");
-  const output = body.steps.flatMap((value: unknown) => {
-    const step = record(value);
-    if (step?.type !== "model_output" || !Array.isArray(step.content)) return [];
-    return step.content.flatMap((value: unknown) => {
-      const part = record(value);
-      return part?.type === "text" && typeof part.text === "string" ? [part.text] : [];
-    });
-  }).join("");
-  if (output.length > 500_000) throw Error("Extraction response exceeded the result limit");
-  return JSON.parse(output);
+export function extractMrfPdf(bytes: Uint8Array): Promise<unknown> {
+  return extractOriginals(prompt, schema, [{ mime: "application/pdf", bytes }]);
 }

@@ -171,6 +171,7 @@ export type QuoteCommand =
           quoteId: string;
           expectedVersion: string;
           body: QuoteBody;
+          extractionProposalId?: string;
         }
       | {
           type: "status";
@@ -201,6 +202,8 @@ export type QuoteResult = {
   quoteId?: string;
   quote?: QuotationDraft;
   conflict?: boolean;
+  extractionStale?: boolean;
+  uncertain?: boolean;
 };
 export const quoteUuid = (v: unknown): v is string =>
   typeof v === "string" && UUID_PATTERN.test(v);
@@ -378,7 +381,8 @@ export function parseQuoteCommand(value: unknown): QuoteCommand | null {
   };
   if (raw.type === "save") {
     const body = parseQuoteBody(raw.body);
-    return body ? { ...base, type: raw.type, body } : null;
+    if (!body || (raw.extractionProposalId !== undefined && !quoteUuid(raw.extractionProposalId))) return null;
+    return { ...base, type: raw.type, body, ...(raw.extractionProposalId ? { extractionProposalId: raw.extractionProposalId } : {}) };
   }
   if (
     raw.type === "status" &&

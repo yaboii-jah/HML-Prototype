@@ -21,7 +21,7 @@ Use this companion to track the steps toward production. See the [progress track
   Completed 2026-11-24 at `4d51d1a`. All four 4.19 staff checks and matching combined acceptance passed. See the [final evidence](progress-tracker.md#completed).
 
 - [ ] **5. Complete reliable document and AI integrations.**
-  Done when authorized staff can open the current mapped project folder from the Google Drive sidebar and use optional Gemini extraction from verified MRF and quotation files. Verify protected file access, extraction failure recovery, editable MRF autofill, selective quotation review, and the user's normal-flow hands-on check. See the [planned units](progress-tracker.md#step-5-planned).
+  Done when authorized staff can open the current mapped project folder from the Google Drive sidebar and use optional Gemini autofill from verified MRF and quotation files. Verify protected file access, extraction failure recovery, editable autofill before save, and the user's normal-flow hands-on check. See the [planned units](progress-tracker.md#step-5-planned).
 
   Units 5.1 and 5.2 passed on 2026-11-25. Quotation extraction in 5.3 remains pending. See the [tracker for evidence](progress-tracker.md#completed).
 

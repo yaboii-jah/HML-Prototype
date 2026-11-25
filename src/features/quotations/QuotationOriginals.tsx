@@ -36,10 +36,12 @@ export function QuotationOriginals({
   quote,
   editable,
   canRetry,
+  children,
 }: {
   quote: QuotationDraft;
   editable: boolean;
   canRetry: boolean;
+  children?: React.ReactNode;
 }) {
   const { refresh } = useFoundationRealtime();
   const [selected, setSelected] = useState<File[]>([]);
@@ -262,6 +264,7 @@ export function QuotationOriginals({
         ))}
       </ul>
       {!quote.files.length && <p>No saved originals.</p>}
+      {!pending && !busy && children}
       {pending && (
         <div role="status">
           <strong>Group {pending.state}</strong>

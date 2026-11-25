@@ -25,7 +25,7 @@ import {
   InvalidQuotationOriginal,
 } from "./original-validation";
 
-const tags = (fileId: string, quoteId: string) => ({
+export const quotationOriginalTags = (fileId: string, quoteId: string) => ({
   hmlQuotationFile: fileId,
   hmlQuotation: quoteId,
   hmlKind: "quotation-original",
@@ -126,7 +126,7 @@ export async function transferQuotationOriginal(
     folder = rowValue(file.folder);
   const total = Number(file.size),
     mime = textValue(file.mime),
-    identity = tags(fileId, textValue(file.quote_id));
+    identity = quotationOriginalTags(fileId, textValue(file.quote_id));
   const update = async (patch: Record<string, unknown>) => {
     file = rowValue(
       await serviceRpc("quotation_transfer", {
@@ -258,7 +258,7 @@ export async function processQuotationFileJob(jobId: string) {
     const file = rowValue(job.file),
       folder = rowValue(job.folder),
       drive = documentDrive();
-    const identity = tags(textValue(file.id), textValue(file.quote_id));
+    const identity = quotationOriginalTags(textValue(file.id), textValue(file.quote_id));
     if (job.kind === "validate") {
       const projectFolder = textValue(folder.folder_id);
       const parent = await requestDriveParent(

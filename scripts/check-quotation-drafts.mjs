@@ -335,6 +335,7 @@ async function checkCapture({
   await browser.wait(
     "return document.querySelector('.quotation-review-status')?.textContent.includes('Editable quotation draft')",
   );
+  await checkAutofill({ browser, second, drive, sql, base, path, original, quote, click, save, cookie, supplierName: profile.name });
   for (const width of [1440, 375]) {
     await browser.call("Emulation.setDeviceMetricsOverride", {
       width,
@@ -434,4 +435,74 @@ async function checkCapture({
       ).output.trim(),
     ),
   };
+}
+
+async function checkAutofill({ browser, second, drive, sql, base, path, original, quote, click, save, cookie, supplierName }) {
+  const extractionInputs = () => drive.gemini.inputs.filter(input => input.response_format.schema.properties.documentType.enum.includes('single_offer'));
+  const saved = async () => JSON.parse((await sql(`select private.quotation_view('${quote}');`)).output.trim());
+  const current = await saved();
+  const context = { quoteId: quote, version: current.version, fileVersion: current.fileVersion };
+  const url = '/api/quotation-extraction?' + new URLSearchParams(context);
+  const status = page => page.run(`return (await (await fetch(${JSON.stringify(url)})).json()).state`);
+  assert.equal((await fetch(base + url, { redirect: 'manual' })).status, 401);
+  const crossOrigin = await fetch(base + '/api/quotation-extraction', {
+    method: 'POST', headers: { Cookie: cookie, Origin: 'https://unrelated.example.invalid', 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...context, type: 'start', operationId: randomUUID() }),
+  });
+  assert.equal(crossOrigin.status, 403, 'Cross-origin POST cannot start extraction');
+  drive.gemini.failNext = true;
+  await click(browser, 'Extract and fill');
+  await browser.wait("return document.querySelector('.quotation-extraction')?.textContent.includes('Extraction could not finish')", 60000);
+  drive.gemini.quotationDelay = 1500;
+  await click(browser, 'Retry extraction');
+  await browser.wait("return document.querySelector('.quotation-extraction')?.textContent.includes('Reading the originals')");
+  await browser.fill('textarea[name=notes]', 'Typed while extraction ran');
+  await browser.wait("return [...document.querySelectorAll('button')].some(b=>b.textContent==='Continue filling'&&!b.disabled)", 60000);
+  assert.equal(await status(second), 'idle', 'Ready result stays private to its initiating buyer');
+  assert.match(await browser.run("return document.querySelector('.quotation-extraction').textContent"), /Printed Quotation Supplier/);
+  assert.ok((await browser.run("return document.querySelector('.quotation-extraction').textContent")).includes(supplierName));
+  await click(browser, 'Continue filling');
+  await browser.wait("return !!document.querySelector('.quotation-extraction-result')");
+  assert.equal(await browser.run("return document.querySelector('textarea[name=notes]').value"), 'Typed while extraction ran');
+  assert.equal(await browser.run("return document.querySelector('input[name=ref]').value"), current.body.ref);
+  assert.equal(await browser.run("return document.querySelectorAll('input[aria-label^=\"Supplier description \" ]').length"), 2);
+  await browser.fill('textarea[name=notes]', 'Kept after undo');
+  await click(browser, 'Undo fill');
+  assert.equal(await browser.run("return document.querySelector('textarea[name=notes]').value"), 'Kept after undo');
+  assert.equal(await browser.run("return document.querySelectorAll('input[aria-label^=\"Supplier description \" ]').length"), 1);
+  await browser.fill('textarea[name=notes]', current.body.notes);
+  assert.deepEqual((await saved()).body, current.body, 'Fill and undo remain local until save');
+  await browser.navigate(path);
+  await click(browser, 'Fill from originals');
+  await click(browser, 'Continue filling');
+  await browser.wait("return !!document.querySelector('.quotation-extraction-result')");
+  assert.equal(extractionInputs().length, 2, 'Ready recovery does not call Gemini again');
+  const request = extractionInputs().at(-1);
+  assert.equal(request.store, false);
+  const inputs = request.input.filter(input => input.data);
+  assert.deepEqual(inputs.map(input => input.mime_type), original.files.map(file => file.mime));
+  assert.deepEqual(inputs.map(input => Buffer.from(input.data, 'base64').byteLength), original.files.map(file => file.size));
+  for (const width of [1440, 375]) {
+    await browser.call('Emulation.setDeviceMetricsOverride', { width, height: 1000, deviceScaleFactor: 1, mobile: width === 375 });
+    await browser.run("document.querySelector('.mobile-scrim')?.click(); const result=document.querySelector('.quotation-extraction-result'); result.querySelector('details').open=true; result.scrollIntoView()");
+    assert.equal(await browser.run("return document.querySelector('.quotation-extraction-result').getBoundingClientRect().right<=innerWidth&&document.documentElement.scrollWidth<=innerWidth"), true);
+    const shot = await browser.call('Page.captureScreenshot', { format: 'png' });
+    await writeFile(`.verification/quotation-extraction-${width}.png`, Buffer.from(shot.data, 'base64'));
+  }
+  await browser.call('Emulation.clearDeviceMetricsOverride');
+  await save(browser);
+  const persisted = await saved();
+  assert.equal(persisted.body.supplierName, current.body.supplierName);
+  assert.equal(persisted.body.lines[1].sourceFileId, original.files[1].id);
+  assert.equal(persisted.body.lines[1].sourcePage, '1');
+  assert.equal(persisted.body.lines[1].unitPrice, '0.00');
+  assert.equal(persisted.body.lines[1].requestItemId, null);
+  assert.equal(persisted.body.adjustments[0].value, '0.000');
+  assert.equal(persisted.checked, false);
+  drive.gemini.quotationDelay = 0;
+  drive.gemini.quotationType = 'multiple_offers';
+  await click(browser, 'Extract and fill');
+  await browser.wait("return document.querySelector('.quotation-extraction')?.textContent.includes('contains multiple offers')", 60000);
+  assert.deepEqual((await saved()).body, persisted.body);
+  drive.gemini.quotationType = 'single_offer';
 }

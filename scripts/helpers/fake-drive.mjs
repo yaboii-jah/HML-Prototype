@@ -1,5 +1,6 @@
 import { createServer } from 'node:http';
 import { randomUUID } from 'node:crypto';
+import { setTimeout as delay } from 'node:timers/promises';
 
 /** Isolated Drive protocol double. Never accepts or forwards a hosted URL. */
 export async function fakeDrive() {
@@ -7,7 +8,7 @@ export async function fakeDrive() {
   const files = new Map([[root, { id: root, name: 'Disposable company root', mimeType: 'application/vnd.google-apps.folder', parents: [], trashed: false, capabilities: { canAddChildren: true }, appProperties: {} }]]);
   const sessions = new Map();
   const faults = { loseFinalResponse: false, failCreateAfterCommit: false, pauseUploads: false };
-  const gemini = { inputs: [], failNext: false };
+  const gemini = { inputs: [], failNext: false, quotationType: 'single_offer', quotationDelay: 0 };
   let origin, calls = 0;
   const server = createServer(async (req, res) => {
     try {
@@ -25,7 +26,20 @@ export async function fakeDrive() {
         const request = JSON.parse(body);
         gemini.inputs.push(request);
         if (gemini.failNext) { gemini.failNext = false; json({}, 503); return; }
-        const proposal = {
+        const quotation = request.response_format?.schema?.properties?.documentType?.enum?.includes('single_offer');
+        if (quotation && gemini.quotationDelay) await delay(gemini.quotationDelay);
+        const proposal = quotation ? {
+          documentType: gemini.quotationType,
+          header: { supplierName: { value: 'Printed Quotation Supplier', file: 1, page: 1 },
+            ref: { value: 'Q-ORIGINAL', file: 1, page: 1 }, printedTax: { value: '0', file: 2, page: 1 },
+            paymentTerms: { value: 'Net 30', file: 2, page: 1 } },
+          lines: [
+            { file: 1, page: 1, description: 'Exact material from supplier', unit: 'pc', quantity: '12.125', unitPrice: '12345678901234567890.123456789012345678900' },
+            { file: 2, page: 1, description: 'Continuation material', unit: 'box', quantity: '2.0050', unitPrice: '0.00' },
+          ],
+          adjustments: [{ file: 2, page: 1, label: 'Delivery', value: '0.000' }],
+          notes: [{ file: 2, page: 1, text: 'Check the printed tax label.' }],
+        } : {
           documentType: 'single_mrf',
           details: { requestedBy: { value: 'Printed site supervisor', page: 1 },
             requestDate: { value: '2026-11-24', page: 1 }, purchaser: { value: 'Printed buyer', page: 1 },

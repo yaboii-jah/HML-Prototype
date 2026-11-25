@@ -8,6 +8,7 @@ declare
   project uuid:=gen_random_uuid(); scope uuid:=gen_random_uuid(); mapping uuid:=gen_random_uuid(); document uuid:=gen_random_uuid();
   mrf uuid; supplier uuid; quote uuid; other_quote uuid; archive uuid; job uuid; lease uuid; target_group uuid; fid uuid; retained_file uuid;
   form jsonb; body jsonb:='{}'; line jsonb:='{}'; saved jsonb; command jsonb; result jsonb; receipt jsonb; part jsonb; k text; v text; fv text; reader_role text;
+  extraction_context jsonb; extraction_command jsonb; extraction_job uuid; extraction_lease uuid; extracted jsonb;
 begin
   insert into public.projects(id,name,location,document_code) values(project,'Quotation fixture '||project,'Site','QT-'||upper(substr(project::text,1,8)));
   insert into public.project_budgets values(project,100);
@@ -93,6 +94,60 @@ begin
   end loop;
   saved:=private.quotation_view(quote);
   if jsonb_array_length(saved->'files')<>2 or saved->>'fileVersion'<>'2' or saved->>'version'<>result->'quote'->>'version' then raise exception 'Group commit changed text or lost files'; end if;
+  begin
+    if has_table_privilege('authenticated','private.quotation_extraction_jobs','SELECT')
+      or has_function_privilege('authenticated','public.quotation_extraction_worker(uuid,text,uuid,jsonb)','EXECUTE')
+      or has_function_privilege('anon','public.quotation_extraction_command(jsonb,jsonb)','EXECUTE') then
+      raise exception 'Quotation extraction exposed to a client role';
+    end if;
+    extraction_context:=jsonb_build_object('quoteId',quote,'version',saved->>'version','fileVersion',saved->>'fileVersion');
+    extraction_command:=extraction_context||jsonb_build_object('type','start','operationId',gen_random_uuid());
+    begin perform public.quotation_extraction_command(reader,extraction_command); raise exception 'Reader started extraction'; exception when insufficient_privilege then null; end;
+    extracted:=public.quotation_extraction_command(buyer,extraction_command);
+    extraction_job:=(extracted->>'id')::uuid;
+    if extracted->>'state' is distinct from 'pending' or extracted->>'dispatch' is distinct from 'true' then raise exception 'Missing quotation extraction admission'; end if;
+    extracted:=public.quotation_extraction_command(buyer,extraction_command||jsonb_build_object('operationId',gen_random_uuid()));
+    if extracted->>'id' is distinct from extraction_job::text or extracted->>'dispatch' is distinct from 'false' then raise exception 'Duplicate quotation extraction dispatch'; end if;
+    extracted:=public.quotation_extraction_worker(extraction_job,'claim',null,'{}');
+    extraction_lease:=(extracted->>'lease')::uuid;
+    if extraction_lease is null or extracted->>'archiveId' is distinct from archive::text or
+      extracted->'files'->0->>'id' is distinct from saved->'files'->0->>'id' or
+      extracted->'files'->1->>'id' is distinct from saved->'files'->1->>'id' or
+      public.quotation_extraction_worker(extraction_job,'claim',null,'{}') is not null then raise exception 'Incorrect original order or worker lease'; end if;
+    perform public.quotation_extraction_worker(extraction_job,'fail',extraction_lease,'{"reason":"provider"}');
+    extraction_command:=extraction_context||jsonb_build_object('type','retry','proposalId',extraction_job,
+      'attemptId',extraction_command->>'operationId','operationId',gen_random_uuid());
+    if public.quotation_extraction_command(buyer,extraction_command)->>'attemptId' is distinct from extraction_command->>'operationId'
+      or public.quotation_extraction_command(buyer,extraction_command)->>'attemptId' is distinct from extraction_command->>'operationId' then raise exception 'Quotation extraction retry was not idempotent'; end if;
+    extraction_lease:=(public.quotation_extraction_worker(extraction_job,'claim',null,'{}')->>'lease')::uuid;
+    begin
+      delete from public.role_grants where user_id=buyer_id and role='Procurement';
+      if public.quotation_extraction_worker(extraction_job,'complete',extraction_lease,'{}') is not null then raise exception 'Revoked worker published a quotation'; end if;
+      raise exception 'Restore fixture grant' using errcode='P9499';
+    exception when sqlstate 'P9499' then null; end;
+    if public.quotation_extraction_worker(extraction_job,'complete',extraction_lease,'{"proof":"fixture"}')->>'expiresAt' is null then raise exception 'Quotation proposal did not complete'; end if;
+    if public.quotation_extraction_command(buyer,extraction_context||'{"type":"status"}') ? 'proposal' then raise exception 'Polling returned an unchecked quotation payload'; end if;
+    if public.quotation_extraction_command(buyer,extraction_context||jsonb_build_object('type','apply','proposalId',extraction_job))->'proposal' is distinct from '{"proof":"fixture"}'::jsonb then raise exception 'Owner cannot recover ready quotation'; end if;
+    extraction_command:=jsonb_build_object('type','save','requestId',gen_random_uuid(),'quoteId',quote,
+      'expectedVersion',saved->>'version','body',body||'{"notes":"Autofill fixture"}','extractionProposalId',extraction_job);
+    begin
+      update private.quotation_groups set state='conflict' where id=target_group;
+      if public.quotation_extraction_command(buyer,extraction_context||'{"type":"status"}')->>'state' is distinct from 'stale' then raise exception 'Pending group exposed a quotation proposal'; end if;
+      begin perform public.quotation_command(buyer,extraction_command); raise exception 'Pending group accepted extracted save'; exception when sqlstate 'P4550' then null; end;
+      raise exception 'Restore fixture group' using errcode='P9499';
+    exception when sqlstate 'P9499' then null; end;
+    begin
+      update private.quotation_files set sha256=repeat('e',64) where id=(saved->'files'->0->>'id')::uuid;
+      begin perform public.quotation_command(buyer,extraction_command); raise exception 'Changed original hash accepted extracted save'; exception when sqlstate 'P4550' then null; end;
+      raise exception 'Restore fixture hash' using errcode='P9499';
+    exception when sqlstate 'P9499' then null; end;
+    extracted:=public.quotation_command(buyer,extraction_command);
+    if extracted->'quote'->'body'->>'notes' is distinct from 'Autofill fixture' then raise exception 'Verified quotation proposal did not save'; end if;
+    perform public.quotation_extraction_command(buyer,extraction_context||'{"type":"status"}');
+    if public.quotation_command(buyer,extraction_command) is distinct from extracted then raise exception 'Extracted quotation receipt was lost after invalidation'; end if;
+    if (select j.proposal is not null or j.state<>'expired' from private.quotation_extraction_jobs j where j.id=extraction_job) then raise exception 'Stale quotation proposal was retained'; end if;
+    raise exception 'Restore verified quotation fixture' using errcode='P9499';
+  exception when sqlstate 'P9499' then null; end;
   select details into part from private.audit_events where entity_id=quote and action='quotation.files' order by occurred_at desc limit 1;
   if jsonb_array_length(part->'afterFiles') is distinct from 2 or length(part->'afterFiles'->0->>'sha256') is distinct from 64 then raise exception 'Original filename/hash history missing'; end if;
   retained_file:=(saved->'files'->0->>'id')::uuid;
