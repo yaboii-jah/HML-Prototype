@@ -118,7 +118,7 @@ begin
   exception when sqlstate 'P9499' then null; end;
   perform public.mrf_extraction_worker(job,'complete',lease,proposal);
   write_command:=jsonb_build_object('type','submitMrf','requestId',gen_random_uuid(),'mrfId',target,'expectedVersion',context->>'version',
-    'attachmentRevision','3','draft',form,'extractionProposalId',job);
+    'attachmentRevision','3','draft',form||jsonb_build_object('scopeId',scope),'extractionProposalId',job);
   begin perform public.request_command(peer,write_command); raise exception 'Colleague submitted private autofill'; exception when sqlstate 'P4350' then null; end;
   begin perform public.request_command(site,write_command); raise exception 'Autofill bypassed form validation'; exception when sqlstate 'P4302' then null; end;
   if private.request_snapshot(target)->>'version' is distinct from context->>'version' then raise exception 'Failed submission persisted changes'; end if;
