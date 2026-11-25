@@ -120,6 +120,7 @@ export function MrfExtraction({ mrfId, version, attachmentRevision, projectName,
     <h3 id="mrf-extraction-heading">Fill from supporting PDF</h3>
     <InlineError message={error} />
     {error && <button type="button" className="button secondary" disabled={busy} onClick={() => void load()}>Check extraction status</button>}
+    {applied && <p role="status">Filled from the PDF. Check the Details and Materials before saving or submitting.</p>}
     {!applied && <>
       {status?.state === "idle" && <button type="button" className="button secondary" disabled={locked} onClick={() => void run("start")}>Extract and fill</button>}
       {processing && <p role="status">Reading the supporting PDF. You can keep editing while extraction runs.</p>}
@@ -127,7 +128,7 @@ export function MrfExtraction({ mrfId, version, attachmentRevision, projectName,
       {status?.state === "expired" && <p role="status">The extraction expired. Run it again from the current PDF.</p>}
       {status?.state === "stale" && <p role="status">The draft or supporting PDF changed. Open the current version to extract again.</p>}
       {retry && <button type="button" className="button secondary" disabled={locked} onClick={() => void run("retry")}>Retry extraction</button>}
-      {ready && <button type="button" className="button secondary" disabled={locked} onClick={() => setFillRequested(true)}>Fill from PDF</button>}
+      {ready && !fillRequested && <button type="button" className="button secondary" disabled={locked} onClick={() => setFillRequested(true)}>Fill from PDF</button>}
       {ready && noChanges && <p role="status">The draft already contains the readable PDF values.</p>}
     </>}
     {ready && (mismatch || printedRef) && <div className="mrf-extraction-review">

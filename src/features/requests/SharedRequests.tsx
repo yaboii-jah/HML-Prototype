@@ -174,8 +174,8 @@ function DraftEditor({ latest, data }: { latest?: SavedMrf; data: RequestView })
         setLocal({ draft: latest.draft, version: latest.version, dirty: false }); setConflict(false); setError("");
         setAppliedExtraction(null); setExtractionStale(false); operation.current = null;
       }}>Discard my input and use saved draft</button></section>}
-      {appliedExtraction && <div className="mrf-extraction-notice" role="status">
-        <p>{extractionStale || stale ? "The draft, PDF or autofill changed. Undo autofill to keep working on your other edits." : "Filled from the PDF. Check the Details and Materials before saving or submitting."}</p>
+      {appliedExtraction && <div className="mrf-extraction-notice">
+        {(extractionStale || stale) && <p role="status">The draft, PDF or autofill changed. Undo autofill to keep working on your other edits.</p>}
         <button type="button" className="button secondary" disabled={busy || uncertain || workflowLocked} onClick={() => {
           setLocal({ draft: removeMrfProposal(draft, appliedExtraction), version: expected, dirty: true });
           setAppliedExtraction(null); setExtractionStale(false); setError(""); operation.current = null;
