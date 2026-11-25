@@ -11,4 +11,10 @@ export function controlledFetch(fetchImplementation, input, init) {
   // a Location. Keep automatic redirects forbidden, including caller 'follow'.
   return fetchImplementation(input, { ...init, redirect: init?.redirect === 'manual' ? 'manual' : 'error' });
 }
-globalThis.fetch = (input, init) => controlledFetch(originalFetch, input, init);
+globalThis.fetch = (input, init) => {
+  const origin = process.env.CI === 'true' && process.env.DOCUMENT_DRIVE_TEST_ORIGIN;
+  if (origin && input === 'https://generativelanguage.googleapis.com/v1beta/interactions') {
+    return controlledFetch(originalFetch, new URL('/test/gemini', origin), init);
+  }
+  return controlledFetch(originalFetch, input, init);
+};

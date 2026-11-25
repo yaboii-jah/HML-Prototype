@@ -245,6 +245,100 @@ export async function checkMrfDocuments({ browser, second, client, login, logout
   await browser.run("Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(document.querySelector('input[name=sourceRef]'),'');document.querySelector('input[name=sourceRef]').dispatchEvent(new Event('input',{bubbles:true}));");
   await browser.run("[...document.querySelectorAll('button')].find(b=>b.textContent==='Save draft')?.click()");
   await browser.wait(`return location.pathname==='/requests/${mrf}'`);
+  await browser.navigate('/requests/new');
+  assert.equal(await browser.run("return document.querySelector('input[type=date]').value"), '', 'New manual drafts start with a blank request date');
+  const scopeId = randomUUID();
+  await sql(`update public.project_budgets set amount=100 where project_id='${project}';
+    insert into public.scopes(id,project_id,name) values('${scopeId}','${project}','Autofill verification');
+    insert into public.scope_budgets values('${scopeId}',100);`);
+  const existingRow = { id: randomUUID(), name: 'Fixture Mesh', quantity: '12.125', unit: 'sheet',
+    neededDate: '2026-11-27', location: 'site', remarks: '', purpose: '' };
+  const extractionMrf = ok(await client.rpc('request_command', { actor: siteActor, command: {
+    type: 'createDraft', requestId: randomUUID(), projectId: project, draft: { ...draft, scopeId, requestDate: '', items: [existingRow] },
+  } })).record.id;
+  const editPath = `/requests/${extractionMrf}/edit`;
+  await browser.navigate(editPath);
+  await browser.wait("return !!document.querySelector('.mrf-documents input[type=file]')");
+  const bundle = await PDFDocument.create();
+  for (const heading of ['Material Request Form', 'MRF continuation', 'Key plan and scope']) {
+    const scan = await browser.run(`
+      const canvas=document.createElement('canvas');canvas.width=800;canvas.height=1000;
+      const context=canvas.getContext('2d');context.fillStyle='white';context.fillRect(0,0,800,1000);
+      context.fillStyle='black';context.font='28px sans-serif';context.fillText(${JSON.stringify(heading)},60,100);
+      return canvas.toDataURL('image/png');
+    `);
+    bundle.addPage([400, 500]).drawImage(await bundle.embedPng(scan), { x: 0, y: 0, width: 400, height: 500 });
+  }
+  const bundleBytes = Buffer.from(await bundle.save());
+  await select('extraction-bundle.pdf', bundleBytes);
+  const clickText = text => browser.run(`[...document.querySelectorAll('button')].find(b=>b.textContent===${JSON.stringify(text)})?.click()`);
+  await clickText('Upload PDF');
+  await browser.wait("return [...document.querySelectorAll('button')].some(b=>b.textContent==='Extract and fill'&&!b.disabled)");
+  const sourceRevision = (await docState(extractionMrf)).revision;
+  const extractionUrl = '/api/mrf-extraction?' + new URLSearchParams({ mrfId: extractionMrf, version: '1', attachmentRevision: sourceRevision });
+  assert.equal((await http(extractionUrl, {}, '')).status, 401, 'Signed-out users cannot read suggestions');
+  assert.equal((await http(extractionUrl, { headers: { Origin: 'https://example.invalid' } })).status, 403, 'Cross-origin requests cannot read suggestions');
+  drive.gemini.failNext = true;
+  await clickText('Extract and fill');
+  await browser.wait("return document.body.innerText.includes('Extraction could not finish')");
+  await clickText('Retry extraction');
+  await browser.fill('input[name=requestedBy]', 'Manually entered while reading');
+  await browser.wait("return document.body.innerText.includes('Filled from the PDF')");
+  assert.equal(await browser.run("return document.querySelector('input[name=requestedBy]').value"), 'Manually entered while reading');
+  assert.equal(await browser.run("return document.querySelector('input[name=purchaser]').value"), 'Printed buyer');
+  assert.equal(await browser.run("return document.querySelector('input[type=date]').value"), '2026-11-24');
+  const proposalResponse = await http(extractionUrl);
+  assert.match(proposalResponse.headers.get('cache-control'), /private.*no-store/);
+  assert.equal((await proposalResponse.json()).state, 'ready');
+  assert.equal(drive.gemini.inputs.length, 2);
+  assert.equal(drive.gemini.inputs[1].store, false);
+  assert.equal(drive.gemini.inputs[1].model, 'gemini-3.5-flash-lite');
+  assert.deepEqual(Buffer.from(drive.gemini.inputs[1].input[1].data, 'base64'), bundleBytes, 'Gemini receives all verified PDF bytes');
+  const reviewText = await browser.run("return document.querySelector('[aria-labelledby=mrf-extraction-heading]').innerText");
+  assert.ok(reviewText.includes('PRINTED-77') && reviewText.includes('Printed project alias'));
+  await browser.fill('input[name=sourceRef]', 'Manual reference');
+  for (const width of [1440, 375]) {
+    await browser.call('Emulation.setDeviceMetricsOverride', { width, height: 1000, deviceScaleFactor: 1, mobile: width === 375 });
+    try {
+      if (width === 375) {
+        await browser.run("document.querySelector('.mobile-scrim')?.click()");
+        await browser.wait("return !document.querySelector('.mobile-scrim')&&document.querySelector('.side-nav').getBoundingClientRect().right<=1");
+      }
+      assert.equal(await browser.run("const review=document.querySelector('[aria-labelledby=mrf-extraction-heading]'); review.scrollIntoView(); return review.getBoundingClientRect().right<=innerWidth && document.documentElement.scrollWidth<=innerWidth"), true, 'Extraction review fits the viewport');
+      assert.equal(await browser.run("return !!document.querySelector('.mrf-extraction-notice button')&&!document.querySelector('.mrf-extraction input')"), true);
+      const screenshot = await browser.call('Page.captureScreenshot', { format: 'png' });
+      await writeFile(`.verification/request-extraction-${width}.png`, Buffer.from(screenshot.data, 'base64'));
+    } finally {
+      await browser.call('Emulation.clearDeviceMetricsOverride');
+    }
+  }
+  await clickText('Undo autofill');
+  assert.equal(await browser.run("return document.querySelector('input[name=purchaser]').value"), '');
+  assert.equal(await browser.run("return document.querySelector('input[name=sourceRef]').value"), 'Manual reference');
+  await clickText('Save draft');
+  await browser.wait(`return location.pathname==='/requests/${extractionMrf}'`);
+  const savedAutofillDraft = await readSql(`select private.request_snapshot('${extractionMrf}');`);
+  assert.equal(savedAutofillDraft.draft.items.length, 1, 'Undo removed only the appended row');
+  const recover = await http('/api/mrf-extraction', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ type: 'start', mrfId: extractionMrf, version: savedAutofillDraft.version,
+      attachmentRevision: sourceRevision, operationId: randomUUID() }) });
+  assert.equal(recover.status, 200);
+  await browser.navigate(editPath);
+  await browser.wait("return [...document.querySelectorAll('button')].some(b=>b.textContent==='Fill from PDF'&&!b.disabled)");
+  assert.equal(await browser.run("return document.querySelector('input[name=purchaser]').value"), '');
+  assert.equal(drive.gemini.inputs.length, 3);
+  await clickText('Fill from PDF');
+  await browser.wait("return document.body.innerText.includes('Filled from the PDF')");
+  assert.equal(drive.gemini.inputs.length, 3, 'Recovery reused the completed job');
+  await browser.wait("return [...document.querySelectorAll('button')].some(b=>b.textContent==='Save and submit'&&!b.disabled)");
+  await clickText('Save and submit');
+  await browser.wait(`return location.pathname==='/requests/${extractionMrf}'`);
+  const submittedAutofill = await readSql(`select private.request_snapshot('${extractionMrf}');`);
+  assert.equal(submittedAutofill.status, 'submitted');
+  const extracted = submittedAutofill.draft;
+  assert.equal(extracted.sourceRef, 'Manual reference');
+  assert.equal(extracted.requestedBy, 'Manually entered while reading');
+  assert.deepEqual(extracted.items.map(item => [item.name, item.quantity]), [['Fixture Mesh', '12.125'], ['Fixture cement', '20']]);
   await logout(browser);
   const office = { email: `${randomUUID()}@example.invalid`, password: randomUUID() };
   const officeId = ok(await client.auth.admin.createUser({ ...office, email_confirm: true })).user.id;

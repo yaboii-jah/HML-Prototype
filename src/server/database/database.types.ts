@@ -608,6 +608,26 @@ isOneToOne: true
                   Relationships: [
 
                   ]
+                },"mrf_extraction_jobs": {
+                  Row: {
+                    "access_revision": string,"attachment_revision": number,"attempt_id": string,"dispatch_after": string,"document_id": string,"expires_at": string | null,"id": string,"lease": string | null,"lease_until": string | null,"owner_id": string,"proposal": Json | null,"reason": string | null,"request_id": string,"request_version": number,"sha256": string,"state": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "access_revision": string,"attachment_revision": number,"attempt_id": string,"dispatch_after"?: string,"document_id": string,"expires_at"?: string | null,"id"?: string,"lease"?: string | null,"lease_until"?: string | null,"owner_id": string,"proposal"?: Json | null,"reason"?: string | null,"request_id": string,"request_version": number,"sha256": string,"state"?: string
+                  }
+                  Update: {
+                    "access_revision"?: string,"attachment_revision"?: number,"attempt_id"?: string,"dispatch_after"?: string,"document_id"?: string,"expires_at"?: string | null,"id"?: string,"lease"?: string | null,"lease_until"?: string | null,"owner_id"?: string,"proposal"?: Json | null,"reason"?: string | null,"request_id"?: string,"request_version"?: number,"sha256"?: string,"state"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "mrf_extraction_jobs_document_id_fkey"
+      columns: ["document_id"]
+isOneToOne: false
+      referencedRelation: "request_documents"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"mrf_review_events": {
                   Row: {
                     "action": string,"actor_id": string,"actor_name": string,"actor_role": string,"created_at": string,"id": string,"reason": string,"request_id": string,"submission_id": string | null
@@ -2367,6 +2387,18 @@ isOneToOne: true
 "mrf_editable":
 { Args: { "target": string }; Returns: boolean
                            },
+"mrf_extraction_command":
+{ Args: { "actor": Json,"command": Json }; Returns: Json
+                           },
+"mrf_extraction_current":
+{ Args: { "target": string }; Returns: Json
+                           },
+"mrf_extraction_matches":
+{ Args: { "job": Omit<Database["private"]['Tables']["mrf_extraction_jobs"]['Row'], Database["private"]['Tables']["mrf_extraction_jobs"]['ComputedFields']>,"source": Json }; Returns: boolean
+                           },
+"mrf_extraction_worker":
+{ Args: { "action": string,"job_id": string,"lease_id": string,"patch": Json }; Returns: Json
+                           },
 "mrf_ready":
 { Args: { "target": string }; Returns: boolean
                            },
@@ -2696,6 +2728,9 @@ isOneToOne: true
 { Args: { "target": string }; Returns: Json
                            },
 "request_without_commitments_command":
+{ Args: { "actor": Json,"command": Json }; Returns: Json
+                           },
+"request_without_extraction_command":
 { Args: { "actor": Json,"command": Json }; Returns: Json
                            },
 "requests_read":
@@ -3119,6 +3154,12 @@ isOneToOne: false
                            },
 "monitoring_read":
 { Args: { "filters": Json,"mode": string,"viewer": Json }; Returns: Json
+                           },
+"mrf_extraction_command":
+{ Args: { "actor": Json,"command": Json }; Returns: Json
+                           },
+"mrf_extraction_worker":
+{ Args: { "action": string,"job_id": string,"lease_id": string,"patch": Json }; Returns: Json
                            },
 "payment_command":
 { Args: { "actor": Json,"command": Json }; Returns: Json

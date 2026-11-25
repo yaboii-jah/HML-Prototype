@@ -124,6 +124,8 @@ try {
   await sql(await readFile('supabase/checks/requests.sql', 'utf8'));
   await sql(await readFile('supabase/checks/documents.sql', 'utf8'));
   await sql(await readFile('supabase/checks/mrf-review.sql', 'utf8'));
+  await sql(await readFile('supabase/checks/mrf-extraction.sql', 'utf8'));
+  checks.push('mrf-extraction-sql');
   await sql(await readFile('supabase/checks/suppliers.sql', 'utf8'));
   await sql(await readFile('supabase/checks/quotations.sql', 'utf8'));
   await sql(await readFile('supabase/checks/quotation-finalization.sql', 'utf8'));

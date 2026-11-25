@@ -40,4 +40,22 @@
   min-width: 0;
 }
 .mrf-documents progress { width: 100%; }
+
+.mrf-extraction {
+  border-block-start: 1px solid var(--line);
+  margin-block-start: 1rem;
+  padding-block-start: 1rem;
+  scroll-margin-block-start: 4.5rem;
+}
+
+.mrf-extraction-review {
+  max-inline-size: 75ch;
+  overflow-wrap: anywhere;
+}
+
+.mrf-extraction-notice {
+  display: grid;
+  justify-items: start;
+  gap: 0.5rem;
+}
 .mrf-pdf-preview { display: flex; height: min(62dvh, 640px); }

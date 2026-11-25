@@ -12,15 +12,17 @@ import { Field, InlineError, PageHeader } from "@/src/components/ui/Primitives";
 import { MaterialDetailsRow, MaterialDetailsTrigger } from "@/src/components/ui/MaterialDetails";
 import { RecordModal } from "@/src/components/ui/RecordModal";
 import { MrfDocuments } from "./MrfDocuments";
+import { MrfExtraction } from "./MrfExtraction";
 import { MrfReview } from "./MrfReview";
 import { mrfEditable, mrfStatusLabel, mrfStatuses } from "@/src/domain/requests/workflow";
 import { detailFields, emptyMrfDraft, materialFields, type DraftCommand, type DraftMaterial, type MrfDraft, type RequestView, type SavedMrf } from "@/src/domain/requests/drafts";
+import { fillMrfDraft, removeMrfProposal, type AppliedExtraction } from "@/src/domain/requests/extraction";
 
 const labels = { sourceRef: "Source MRF number", requestDate: "Request date", requestedBy: "Requested by", approvedBy: "Approved by", purchaser: "Purchaser / Procurement Officer", financeOfficer: "Finance Officer", specialInstructions: "Special instructions", name: "Material name", unit: "Unit", purpose: "Purpose", location: "Delivery location", remarks: "Remarks", neededDate: "Date needed", quantity: "Quantity", scopeId: "Scope of work" };
-const availability = "Save incomplete work as a draft. Submission requires complete requirements and a verified supporting PDF. AI remains unavailable.";
+const availability = "Save incomplete work as a draft. Submission requires complete requirements and a verified supporting PDF.";
 const shown = (value: string | null | undefined) => value || "Not recorded";
 
-export function SharedRequests({ initial, mode, id, today, lifecycle = null }: { initial: RequestView; mode: "register" | "new" | "detail" | "edit"; id?: string; today: string; lifecycle?: MonitoringView<"lifecycle"> | null }) {
+export function SharedRequests({ initial, mode, id, lifecycle = null }: { initial: RequestView; mode: "register" | "new" | "detail" | "edit"; id?: string; lifecycle?: MonitoringView<"lifecycle"> | null }) {
   const { view } = useFoundationRealtime();
   const data = view?.kind === "requests" ? view.data : initial;
   const saved = data.requests.find(request => request.id === id);
@@ -28,7 +30,7 @@ export function SharedRequests({ initial, mode, id, today, lifecycle = null }: {
   if (mode !== "new" && !saved) return <><PageHeader title="Material request unavailable" description="This record does not exist or is outside your current project access." /><Link href="/requests">Return to material requests</Link></>;
   if (mode === "detail" && saved) return <RequestDetail saved={saved} data={data} lifecycle={lifecycle} />;
   if (data.role !== "Site Personnel") return <><PageHeader title="Read-only access" description="Only currently assigned Site Personnel can create or edit MRF drafts." /><Link href={saved ? `/requests/${saved.id}` : "/requests"}>Return to material requests</Link></>;
-  return <DraftEditor key={id ?? "new"} latest={saved} data={data} today={today} />;
+  return <DraftEditor key={id ?? "new"} latest={saved} data={data} />;
 }
 
 function RequestRegister({ data }: { data: RequestView }) {
@@ -86,14 +88,17 @@ function MaterialList({ items, edit, remove, move }: { items: DraftMaterial[]; e
   </>;
 }
 
-function DraftEditor({ latest, data, today }: { latest?: SavedMrf; data: RequestView; today: string }) {
+function DraftEditor({ latest, data }: { latest?: SavedMrf; data: RequestView }) {
   const router = useRouter(), live = useFoundationRealtime();
-  const [local, setLocal] = useState({ draft: latest?.draft ?? emptyMrfDraft(today), version: latest?.version ?? "", dirty: false });
+  const [local, setLocal] = useState({ draft: latest?.draft ?? emptyMrfDraft(), version: latest?.version ?? "", dirty: false });
   const [projectId, setProjectId] = useState(latest?.projectId ?? "");
   const [step, setStep] = useState(0), [selected, setSelected] = useState<string | null>(null), [copySource, setCopySource] = useState("");
   const [busy, setBusy] = useState(false), [error, setError] = useState(""), [conflict, setConflict] = useState(false), [uncertain, setUncertain] = useState(false);
   const [workflowLocked, setWorkflowLocked] = useState(false);
   const [filePending, setFilePending] = useState(false);
+  const [appliedExtraction, setAppliedExtraction] = useState<AppliedExtraction | null>(null);
+  const [checkingExtraction, setCheckingExtraction] = useState(false);
+  const [extractionStale, setExtractionStale] = useState(false);
   const operation = useRef<DraftCommand | null>(null), pending = useRef(false), dirtyRef = useRef(false), heading = useRef<HTMLHeadingElement>(null);
   const draft = !local.dirty && latest ? latest.draft : local.draft;
   const expected = !local.dirty && latest ? latest.version : local.version;
@@ -114,20 +119,25 @@ function DraftEditor({ latest, data, today }: { latest?: SavedMrf; data: Request
     return () => { window.removeEventListener("beforeunload", unload); document.removeEventListener("click", leave, true); };
   }, []);
   const change = (next: MrfDraft) => {
-    if (busy || uncertain || workflowLocked || !formEditable) return;
+    if (busy || uncertain || workflowLocked || !formEditable || checkingExtraction) return;
     operation.current = null;
     setLocal({ draft: next, version: expected, dirty: true });
   };
   const changeStep = (index: number) => { setStep(index); queueMicrotask(() => heading.current?.focus()); };
   const save = async () => {
-    if (!formEditable || workflowLocked || pending.current || !project || (!uncertain && (stale || conflict))) return;
+    if (!formEditable || workflowLocked || checkingExtraction || pending.current || !project || (!uncertain && (stale || conflict || extractionStale))) return;
     pending.current = true; setBusy(true); setError("");
-    operation.current ??= latest ? { type: "saveDraft", requestId: crypto.randomUUID(), mrfId: latest.id, expectedVersion: expected, draft }
+    operation.current ??= latest ? { type: "saveDraft", requestId: crypto.randomUUID(), mrfId: latest.id, expectedVersion: expected, draft,
+      ...(appliedExtraction ? { extractionProposalId: appliedExtraction.id } : {}) }
       : { type: "createDraft", requestId: crypto.randomUUID(), projectId, draft };
     try {
       const result = await saveMrfDraftAction(operation.current);
       if (result.ok) { dirtyRef.current = false; router.push(`/requests/${result.record.id}`); router.refresh(); }
-      else { setError(result.message); setConflict(!!result.conflict); setUncertain(!!result.uncertain); if (!result.uncertain) operation.current = null; }
+      else {
+        setError(result.message); setConflict(!!result.conflict); setUncertain(!!result.uncertain);
+        setExtractionStale(!!result.extractionStale);
+        if (!result.uncertain) operation.current = null;
+      }
     } catch { setUncertain(true); setError("The save response was interrupted. Retry this same save before making further changes."); }
     finally { pending.current = false; setBusy(false); live.refresh(); }
   };
@@ -141,7 +151,7 @@ function DraftEditor({ latest, data, today }: { latest?: SavedMrf; data: Request
     <form className="form-stack request-wizard shared-mrf-editor" noValidate onSubmit={event => { event.preventDefault(); void save(); }}>
       <nav aria-label="Request steps"><ol className="request-steps">{["Details", "Materials", "Review draft"].map((label, index) => <li key={label}><button type="button" aria-current={step === index ? "step" : undefined} onClick={() => changeStep(index)}><span className="request-step-number" aria-hidden="true">{index + 1}</span><span>{label}</span></button></li>)}</ol></nav>
       <div className="request-step-heading"><h2 ref={heading} tabIndex={-1}>{["Details", "Materials", "Review draft"][step]}</h2><p>Incomplete fields may be saved. Printed names do not establish authority.</p></div>
-      <fieldset disabled={!formEditable || workflowLocked || busy || uncertain || !project && !!latest}>
+      <fieldset disabled={!formEditable || workflowLocked || busy || uncertain || checkingExtraction || !project && !!latest}>
         {step === 0 && <section className="panel"><div className="form-grid">
           <Field label="Project"><select name="projectId" required value={projectId} disabled={!!latest} onChange={event => { setProjectId(event.target.value); change({ ...draft, scopeId: null }); }}><option value="">Choose an assigned project</option>{data.projects.map(project => <option key={project.id} value={project.id}>{project.name}</option>)}</select></Field>
           <Field label="Scope of work"><select value={draft.scopeId ?? ""} onChange={event => change({ ...draft, scopeId: event.target.value || null })}><option value="">Unassigned</option>{project?.scopes.map(scope => <option key={scope.id} value={scope.id}>{scope.name}</option>)}</select></Field>
@@ -160,12 +170,36 @@ function DraftEditor({ latest, data, today }: { latest?: SavedMrf; data: Request
       <InlineError message={error} />
       {!editable && <p role="status">This request is locked by its current workflow state. Your unsaved input remains visible. A PM must return submitted work before it can be edited.</p>}
       {latest?.correctionKind === "documents" && <p role="status">Supporting-PDF-only correction: the form and scope remain locked.</p>}
-      {(stale || conflict) && latest && <section className="panel" role="status"><h2>Review saved changes</h2><p>Your input is preserved. Latest saved by {latest.updaterName}. Review the differences, reconcile your draft, then save.</p><DraftDifferences local={draft} saved={latest.draft} /><button type="button" className="button secondary" onClick={() => { setLocal({ draft, version: latest.version, dirty: true }); setConflict(false); setError(""); operation.current = null; }}>I reviewed the latest MRF; keep my draft</button><button type="button" className="button secondary" onClick={() => { setLocal({ draft: latest.draft, version: latest.version, dirty: false }); setConflict(false); setError(""); operation.current = null; }}>Discard my input and use saved draft</button></section>}
+      {(stale || conflict) && latest && <section className="panel" role="status"><h2>Review saved changes</h2><p>Your input is preserved. Latest saved by {latest.updaterName}. Review the differences, reconcile your draft, then save.</p><DraftDifferences local={draft} saved={latest.draft} /><button type="button" className="button secondary" disabled={!!appliedExtraction || checkingExtraction || busy || uncertain} onClick={() => { setLocal({ draft, version: latest.version, dirty: true }); setConflict(false); setError(""); operation.current = null; }}>I reviewed the latest MRF; keep my draft</button><button type="button" className="button secondary" disabled={checkingExtraction || busy || uncertain} onClick={() => {
+        setLocal({ draft: latest.draft, version: latest.version, dirty: false }); setConflict(false); setError("");
+        setAppliedExtraction(null); setExtractionStale(false); operation.current = null;
+      }}>Discard my input and use saved draft</button></section>}
+      {appliedExtraction && <div className="mrf-extraction-notice">
+        {(extractionStale || stale) && <p role="status">The draft, PDF or autofill changed. Undo autofill to keep working on your other edits.</p>}
+        <button type="button" className="button secondary" disabled={busy || uncertain || workflowLocked} onClick={() => {
+          setLocal({ draft: removeMrfProposal(draft, appliedExtraction), version: expected, dirty: true });
+          setAppliedExtraction(null); setExtractionStale(false); setError(""); operation.current = null;
+        }}>Undo autofill</button>
+      </div>}
       {!project?.code && <p role="status">Choose an assigned project with a configured document code before saving.</p>}
-      <div className="form-actions request-wizard-actions"><div><Link className="button secondary" href={latest ? `/requests/${latest.id}` : "/requests"}>Cancel</Link><button className="button primary" disabled={!formEditable || busy || !project?.code || (!uncertain && (stale || conflict))}>{busy ? "Saving…" : uncertain ? "Retry same save" : "Save draft"}</button></div><div>{step > 0 && <button type="button" className="button secondary" onClick={() => changeStep(step - 1)}>Back</button>}{step < 2 && <button type="button" className="button secondary" onClick={() => changeStep(step + 1)}>Next</button>}</div></div>
+      <div className="form-actions request-wizard-actions"><div><Link className="button secondary" href={latest ? `/requests/${latest.id}` : "/requests"}>Cancel</Link><button className="button primary" disabled={!formEditable || busy || checkingExtraction || !project?.code || (!uncertain && (stale || conflict || extractionStale))}>{busy ? "Saving…" : uncertain ? "Retry same save" : "Save draft"}</button></div><div>{step > 0 && <button type="button" className="button secondary" onClick={() => changeStep(step - 1)}>Back</button>}{step < 2 && <button type="button" className="button secondary" onClick={() => changeStep(step + 1)}>Next</button>}</div></div>
     </form>
-    {latest && <MrfReview saved={latest} role={data.role} draft={draft} expectedVersion={expected} disabled={busy || uncertain || stale || conflict || !editable || filePending} onPendingChange={setWorkflowLocked} onSubmitted={() => { dirtyRef.current = false; router.push(`/requests/${latest.id}`); router.refresh(); }} />}
-    {latest ? <MrfDocuments mrfId={latest.id} editable={editable} onPendingFile={setFilePending} /> : <section className="panel"><h2>Supporting PDF</h2><p>Save this draft first to assign its permanent MRF number, then attach the PDF.</p></section>}
+    {latest && <MrfReview saved={latest} role={data.role} draft={draft} expectedVersion={expected}
+      extractionProposalId={appliedExtraction?.id} onExtractionStale={() => setExtractionStale(true)}
+      disabled={busy || uncertain || stale || conflict || extractionStale || !editable || filePending || checkingExtraction}
+      onPendingChange={setWorkflowLocked} onSubmitted={() => { dirtyRef.current = false; router.push(`/requests/${latest.id}`); router.refresh(); }} />}
+    {latest ? <MrfDocuments mrfId={latest.id} editable={editable} onPendingFile={setFilePending}
+      extraction={formEditable ? revision => <MrfExtraction key={`${latest.version}:${revision}`}
+        mrfId={latest.id} version={latest.version} attachmentRevision={revision} projectName={project?.name ?? ""}
+        disabled={stale || conflict || busy || uncertain || workflowLocked || filePending} applied={!!appliedExtraction} onChecking={setCheckingExtraction}
+        onFill={(proposal, id) => {
+          const next = fillMrfDraft(draft, proposal, id, () => crypto.randomUUID());
+          if (!next.applied.rowIds.length && !Object.keys(next.applied.fields).length) return false;
+          operation.current = null;
+          setAppliedExtraction(next.applied);
+          setLocal({ draft: next.draft, version: expected, dirty: true });
+          return true;
+        }} /> : undefined} /> : <section className="panel"><h2>Supporting PDF</h2><p>Save this draft first to assign its permanent MRF number, then attach the PDF.</p></section>}
     <RecordModal open={!!material} title="Material details" onClose={() => setSelected(null)}>{material && <fieldset className="mrf-material-fields" disabled={!formEditable || busy || uncertain}><div className="form-grid">{materialFields.map(key => <Field label={labels[key]} key={key}><input name={`material-${key}`} maxLength={4000} value={material[key]} onChange={event => change({ ...draft, items: draft.items.map(item => item.id === material.id ? { ...item, [key]: event.target.value } : item) })} /></Field>)}<Field label="Quantity"><input inputMode="decimal" value={material.quantity ?? ""} onChange={event => change({ ...draft, items: draft.items.map(item => item.id === material.id ? { ...item, quantity: event.target.value || null } : item) })} /></Field><Field label="Date needed"><input type="date" value={material.neededDate} onChange={event => change({ ...draft, items: draft.items.map(item => item.id === material.id ? { ...item, neededDate: event.target.value } : item) })} /></Field></div></fieldset>}</RecordModal>
   </>;
 }

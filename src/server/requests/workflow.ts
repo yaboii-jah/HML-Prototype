@@ -10,6 +10,9 @@ export async function runMrfWorkflow(input: unknown): Promise<DraftResult> {
     const actor = await documentActor(), command = record(input);
     if (command?.reason !== undefined && (typeof command.reason !== "string" || command.reason.length > 4000)) return { ok: false, message: "Enter a reason up to 4,000 characters." };
     if (!command || !uuid(command.requestId) || !uuid(command.mrfId) || typeof command.expectedVersion !== "string" || !/^[1-9]\d{0,18}$/.test(command.expectedVersion)) return { ok: false, message: "Open the current MRF before continuing." };
+    if (command.extractionProposalId !== undefined && (command.type !== "submitMrf" || !uuid(command.extractionProposalId))) {
+      return { ok: false, message: "Check the current PDF autofill before submitting." };
+    }
     if (command.type === "submitMrf") {
       if (actor.activeRole !== "Site Personnel" || !parseMrfDraft(command.draft) || typeof command.attachmentRevision !== "string" || !/^[1-9]\d*$/.test(command.attachmentRevision)) return { ok: false, message: "Check the form and supporting PDF before submitting." };
     } else if (command.type === "reviewMrf") {
@@ -35,6 +38,7 @@ export async function runMrfWorkflow(input: unknown): Promise<DraftResult> {
         P3406: "This retry identity belongs to different input. Review the current record before continuing.",
       };
       if (error.code === "40001") return { ok: false, conflict: true, message: "The request, submission or PDF changed. Your input is preserved. Review the current record before trying again." };
+      if (error.code === "P4350") return { ok: false, extractionStale: true, message: "The draft, PDF or autofill changed. Undo autofill before continuing." };
       if (messages[error.code]) return { ok: false, message: messages[error.code] };
     }
     return { ok: false, uncertain: true, message: "The response was interrupted. Retry the same action to check its outcome before changing input." };

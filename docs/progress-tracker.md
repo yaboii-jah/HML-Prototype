@@ -5,16 +5,16 @@
 ## Current Phase
 
 - Runtime/CI milestone 2, foundation units 3.1–3.6 and Step 4 through unit 4.19 are verified complete. Production readiness is unverified.
-- Step 5 is in progress. Unit 5.1 is verified complete.
+- Step 5 is in progress. Units 5.1 and 5.2 are verified complete.
 
 ## Current Goal
 
-- Add optional, human-reviewed Gemini extraction in the existing MRF and quotation editors.
+- Scope optional, human-reviewed Gemini extraction in the existing quotation editor.
 - The tracker now owns the planned unit sequence. The completed Step 4 guide is retired. The [architecture](architecture.md#operational-migration-contracts) and [completion evidence](#completed) retain its durable requirements and outcomes.
 
 ## In Progress
 
-- Unit 5.2 awaits scoped planning.
+- Unit 5.3 awaits scoped planning.
 
 ## Recent Step 4 Checkpoints
 
@@ -41,12 +41,11 @@
 
 ### Step 5 Planned
 
-- **5.2 MRF extraction.** Assigned Site Personnel can request extraction from the full verified supporting PDF on an editable saved MRF. Suggest printed details and material rows. Staff choose individual changes and use the normal draft save. The project, scope, numbering and approval follow the existing workflow.
 - **5.3 Quotation extraction.** Procurement extracts from the full verified original group on an editable saved quotation. Transcribe printed supplier details, offered lines, terms and financial values with exact decimals. Staff select changes before saving and complete the existing source checks, material matching, conversions and financial review.
 
-Both extractions use server-side durable jobs and default to disabled. Proposals are private to the initiating editor and bound to the saved draft and source versions. Verify checked access, selective apply and save, refresh and retry recovery, stale versions, and manual entry with deterministic fixtures and the applicable local, CI, disposable database and Staging gates. The user's hands-on check uses the normal app flow with the locally configured `gemini-3.5-flash-lite` model and synthetic or non-sensitive samples. Production enablement belongs to Step 7.
+Both extractions use server-side durable jobs and default to disabled. Results are private to the initiating editor and bound to the saved draft and source versions. Verify checked access, editing and persistence, refresh and retry recovery, stale versions, and manual entry with deterministic fixtures and the applicable local, CI, disposable database and Staging gates. The user's hands-on check uses the normal app flow with the locally configured `gemini-3.5-flash-lite` model and synthetic or non-sensitive samples. Production enablement belongs to Step 7.
 
-**Exact next action** is to scope 5.2 MRF extraction from verified supporting PDFs on saved, editable MRF drafts.
+**Exact next action** is to scope 5.3 extraction from verified originals on saved, editable quotation drafts.
 
 ## Release Blockers
 
@@ -59,6 +58,7 @@ The table records final acceptance, not fresh reruns. Implemented code units hav
 
 | Unit | Completion date | Source | Outcome and acceptance boundary | Final links |
 | --- | --- | --- | --- | --- |
+| 5.2 | 2026-11-25 | `a78aef2` | The user confirmed the revised synthetic MRF flow passed hands-on review. Live Gemini autofill, result recovery, draft save, and single-step submission passed. Local verification passed with 496 tests and the public browser check. Four-job CI, disposable SQL and generated types, and signed-in desktop/mobile passed. Staging applied only `20261125050320_mrf_autofill_submission.sql` with extraction disabled, preserved retained records and access, and passed full parity without email. | [PR #59](https://github.com/yaboii-jah/HML-Prototype/pull/59), [CI](https://github.com/yaboii-jah/HML-Prototype/actions/runs/45552143823), [integration](https://github.com/yaboii-jah/HML-Prototype/actions/runs/45552144132) |
 | 5.1 | 2026-11-25 | `df8918f` | The user confirmed that the Google Drive sidebar listed mapped projects and opened the selected folder on Staging under a newly eligible staff role. Local verification passed with 493 tests. Signed-in desktop/mobile, role matrix, generated types, security advisor, four-job CI and disposable integration passed. Staging applied only `20261124161636_project_drive_directory.sql` and passed parity with retained data and access unchanged and no email sent. | [PR #57](https://github.com/yaboii-jah/HML-Prototype/pull/57), [CI](https://github.com/yaboii-jah/HML-Prototype/actions/runs/45437595085), [integration](https://github.com/yaboii-jah/HML-Prototype/actions/runs/45437595077) |
 | 4.19 | 2026-11-24 | `4d51d1a` | Four staff groups passed on Staging at `752054b`: department handoffs, dashboard and ledger reconciliation, access and retry recovery, and the staff feedback retest. The verification revision scopes the transfer test to its own stock records. Matching local, CI, disposable database, retained-state Staging, and live Drive checks passed. The combined milestone gate passed. PR #55 merged as `677011d` into the 4.18 branch. PR #54 merged the combined changes into `staging` as `0be995d`. | [PR #55](https://github.com/yaboii-jah/HML-Prototype/pull/55), [CI](https://github.com/yaboii-jah/HML-Prototype/actions/runs/45386334123), [integration](https://github.com/yaboii-jah/HML-Prototype/actions/runs/45386334242) |
 | 4.18 | 2026-11-19 | `b1ccf5f` | Role-based dashboard and bell, MRF lifecycle, Operations reports and consumption CSV. The user confirmed the overall staff review passed. Matching combined acceptance passed. Staging migration `20261119133238` preserved retained records and access. | [PR #54](https://github.com/yaboii-jah/HML-Prototype/pull/54), [CI](https://github.com/yaboii-jah/HML-Prototype/actions/runs/44543871851), [integration](https://github.com/yaboii-jah/HML-Prototype/actions/runs/44543872135) |

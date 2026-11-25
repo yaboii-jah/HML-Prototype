@@ -9,8 +9,10 @@ import { mrfEditable, mrfStatusLabel, mrfUnderReview } from "@/src/domain/reques
 import type { MrfDraft, SavedMrf } from "@/src/domain/requests/drafts";
 import { useDocuments } from "./MrfDocuments";
 
-export function MrfReview({ saved, role, draft = saved.draft, expectedVersion = saved.version, disabled = false, onSubmitted, onPendingChange }: {
+export function MrfReview({ saved, role, draft = saved.draft, expectedVersion = saved.version, disabled = false,
+  extractionProposalId, onExtractionStale, onSubmitted, onPendingChange }: {
   saved: SavedMrf; role: string; draft?: MrfDraft; expectedVersion?: string; disabled?: boolean; onSubmitted?: () => void; onPendingChange?: (pending: boolean) => void;
+  extractionProposalId?: string; onExtractionStale?: () => void;
 }) {
   const { data, error: documentError } = useDocuments(`mrfId=${encodeURIComponent(saved.id)}`);
   const live = useFoundationRealtime(), router = useRouter();
@@ -27,7 +29,7 @@ export function MrfReview({ saved, role, draft = saved.draft, expectedVersion = 
     if (!operation.current) {
       if (disabled || stale || type === "submitMrf" && !data?.current) return;
       operation.current = { type, requestId: crypto.randomUUID(), mrfId: saved.id, expectedVersion,
-        ...(type === "submitMrf" ? { draft, attachmentRevision: data?.revision } : {}),
+        ...(type === "submitMrf" ? { draft, attachmentRevision: data?.revision, ...(extractionProposalId ? { extractionProposalId } : {}) } : {}),
         ...(type === "reviewMrf" ? { decision, submissionId: saved.submissionId } : {}), reason };
     }
     pending.current = true;
@@ -40,7 +42,9 @@ export function MrfReview({ saved, role, draft = saved.draft, expectedVersion = 
         if (type === "submitMrf" && onSubmitted) onSubmitted();
         else router.refresh();
       } else {
-        setError(result.message); setUncertain(!!result.uncertain);
+        if (result.extractionStale && onExtractionStale) onExtractionStale();
+        else setError(result.message);
+        setUncertain(!!result.uncertain);
         if (!result.uncertain) operation.current = null;
       }
     } catch {

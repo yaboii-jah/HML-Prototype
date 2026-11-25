@@ -12,7 +12,7 @@ Check the [progress tracker](docs/progress-tracker.md) for completed work, migra
 
 Use the companion [production checklist](docs/checklist.md) to follow foundational and future steps and mark them complete after verification.
 
-The foundation and Step 4 operational workflows are verified complete. Step 5 starts with a Google Drive folder shortcut, followed by optional MRF and quotation extraction. The Vercel Node-version deployment blocker remains unresolved. See the [Step 5 sequence](docs/progress-tracker.md#step-5-planned) and [Step 4 evidence](docs/progress-tracker.md#completed).
+The foundation and Step 4 operational workflows are verified complete. Step 5 has verified the Google Drive folder shortcut and MRF autofill. Quotation extraction is next. The Vercel Node-version deployment blocker remains unresolved. See the [Step 5 sequence](docs/progress-tracker.md#step-5-planned) and [verification evidence](docs/progress-tracker.md#completed).
 
 ## Run locally
 
@@ -39,7 +39,7 @@ The operational workspace covers sourcing, purchasing, settlement, dispatch, rec
 
 Supabase owns authoritative business records, access and session bindings; Google Drive owns permanent documents. Browser snapshots and prototype fixtures grant no authority. See [storage boundaries](docs/architecture.md#storage-model).
 
-The verified Step 4 workflows support protected uploads, archives, and project folder setup. The Google Drive sidebar lists mapped folders for staff roles other than Site Personnel. Human-reviewed Gemini extraction in the existing MRF and quotation editors is planned. CI captures email and hosted checks use restricted links. Real email delivery remains a release gate.
+The verified Step 4 workflows support protected uploads, archives, and project folder setup. The Google Drive sidebar lists mapped folders for staff roles other than Site Personnel. When MRF autofill is enabled, assigned Site Personnel can fill blank details and add unmatched material rows from a verified supporting PDF, then review the form before saving or submitting. MRF autofill defaults to disabled. CI captures email and hosted checks use restricted links. Real email delivery remains a release gate.
 
 ## Verification
 

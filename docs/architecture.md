@@ -75,7 +75,7 @@ Project/scope commands keep metadata, financial rows, immutable audit events and
 
 Unused setup may be deleted with history retained. Project Managers cannot clear Administrator-managed assignments through deletion. Administrators may confirm deletion plus clearing the exact reviewed assignment set; changed assignments require another review. Clear only the deleted project's assignments, preserve identities/other assignments and invalidate affected application bindings. Pending provisioning references and document-use locks block deletion. Deletion acquires the account guard before project locks to serialize against account reservation/assignment commands. Operational migrations must add reference restrictions before enabling their writes. All non-Site roles can read project change history; Site Personnel receive no financial/history payloads.
 
-Step 4 verified protected uploads and archives, project Drive folder creation and validation, and retryable processing with the owning workflows. Step 5 adds a shortcut to native Drive browsing and plans optional extraction for saved MRF and quotation drafts. Enable provider capabilities only after verifying their protected paths. Business workflows require genuine archive completion at their document gates. Step 4 also verified MRF and PO self-approval restrictions and transactional document numbering.
+Step 4 verified protected uploads and archives, project Drive folder creation and validation, and retryable processing with the owning workflows. Step 5 verified the Google Drive folder shortcut and optional MRF autofill from verified supporting PDFs. Quotation extraction is planned for Step 5.3. Enable provider capabilities only after verifying their protected paths. Business workflows require genuine archive completion at their document gates. Step 4 also verified MRF and PO self-approval restrictions and transactional document numbering.
 
 ### Operational Migration Contracts
 
@@ -242,6 +242,12 @@ New MRF-related uploads and archive jobs use the saved MRF number under the mapp
 
 Supporting and approved MRF PDFs open in an on-demand app viewer over the protected Range endpoint. Staff choose Download to save a file. The preview clears when the selected document or access changes.
 
+### MRF Extraction
+
+Assigned Site Personnel can choose **Extract and fill** on a saved, form-editable MRF with a verified supporting PDF. The pilot sends the complete verified PDF in one stateless Gemini call, up to 10 MB and 100 pages. The result fills blank details and appends unmatched material rows from one identifiable MRF and its continuation pages. Existing entries are preserved, including edits entered during extraction. New drafts start with a blank request date. The editor surfaces a project mismatch and the printed MRF number for comparison. Staff review and edit the filled form, can undo autofill, and can use the ordinary draft save or **Save and submit**.
+
+Private Postgres jobs bind the initiating user and access revision to the saved draft version and exact supporting PDF identity, revision, and hash. Workflow leases recover interrupted dispatch. Workers reverify the Drive bytes and current access before extraction and recheck authority before recording a result. After reopening, **Fill from PDF** reuses a ready result. Results expire after seven days and become unavailable sooner when their bound versions change. The existing save and submission transactions both check the result and its versions. Manual editing remains available independently of the provider.
+
 ### Development Environments
 
 Local development and foundation review use a Next.js app connected to hosted staging. Local Docker is optional and is not required by the supported development workflow. GitHub Actions uses a disposable Docker-backed Supabase stack for clean migration/security checks, including Mailpit/account-flow coverage. Automated tests use explicitly validated loopback endpoints and never reset or depend on staging. See [Supabase's email testing](https://supabase.com/docs/guides/auth/testing-auth-flows).
@@ -267,7 +273,8 @@ For local integration testing, copy the repository's [environment template](../.
 | `GOOGLE_DRIVE_UPLOAD_TOKEN_KEY` | Base64-encoded 32-byte secret for encrypted resumable-upload tickets. |
 | `GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON` | Service-account credentials for the intended Shared Drive configuration. |
 | `GOOGLE_DRIVE_OAUTH_CLIENT_ID`, `GOOGLE_DRIVE_OAUTH_CLIENT_SECRET`, `GOOGLE_DRIVE_OAUTH_REFRESH_TOKEN` | Alternative OAuth configuration for authorized My Drive testing. |
-| `GEMINI_API_KEY`, `GEMINI_MODEL` | Server-side extraction credentials and model configuration. |
+| `MRF_EXTRACTION_ENABLED` | Defaults to false. Enable only for authorized local pilot checks using synthetic PDFs. |
+| `GEMINI_API_KEY`, `GEMINI_MODEL` | Server-side extraction credentials and model configuration. The MRF pilot defaults to `gemini-3.5-flash-lite`. |
 | `WORKFLOW_LOCAL_BASE_URL` | Local callback origin matching the running Next app (normally `http://127.0.0.1:3000`); deployed Vercel execution uses its managed World/deployment identity. |
 
 Use the Drive credential mode appropriate to the environment rather than configuring conflicting identities. Keep credential contents and `.env.local` out of Git and documentation. Restart the local server after changing environment values. These are the current integration settings, not a complete future production environment specification.
