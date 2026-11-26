@@ -8,7 +8,7 @@ declare
   project uuid:=gen_random_uuid(); scope uuid:=gen_random_uuid(); mapping uuid:=gen_random_uuid(); document uuid:=gen_random_uuid();
   mrf uuid; supplier uuid; quote uuid; other_quote uuid; archive uuid; job uuid; lease uuid; target_group uuid; fid uuid; retained_file uuid;
   form jsonb; body jsonb:='{}'; line jsonb:='{}'; saved jsonb; command jsonb; result jsonb; receipt jsonb; part jsonb; k text; v text; fv text; reader_role text;
-  extraction_context jsonb; extraction_command jsonb; extraction_job uuid; extraction_lease uuid; extracted jsonb;
+  extraction_context jsonb; extraction_command jsonb; extraction_job uuid; extraction_lease uuid; extracted jsonb; source_ids uuid[];
   intake uuid; intake_quote uuid; intake_command jsonb; intake_files jsonb; intake_proposal jsonb;
 begin
   insert into public.projects(id,name,location,document_code) values(project,'Quotation fixture '||project,'Site','QT-'||upper(substr(project::text,1,8)));
@@ -188,9 +188,10 @@ begin
     if extracted->>'id' is distinct from extraction_job::text or extracted->>'dispatch' is distinct from 'false' then raise exception 'Duplicate quotation extraction dispatch'; end if;
     extracted:=public.quotation_extraction_worker(extraction_job,'claim',null,'{}');
     extraction_lease:=(extracted->>'lease')::uuid;
+    select current_files into source_ids from private.quotation_drafts where id=quote;
     if extraction_lease is null or extracted->>'archiveId' is distinct from archive::text or
-      extracted->'files'->0->>'id' is distinct from saved->'files'->0->>'id' or
-      extracted->'files'->1->>'id' is distinct from saved->'files'->1->>'id' or
+      extracted->'files'->0->>'id' is distinct from source_ids[1]::text or
+      extracted->'files'->1->>'id' is distinct from source_ids[2]::text or
       public.quotation_extraction_worker(extraction_job,'claim',null,'{}') is not null then raise exception 'Incorrect original order or worker lease'; end if;
     perform public.quotation_extraction_worker(extraction_job,'fail',extraction_lease,'{"reason":"provider"}');
     extraction_command:=extraction_context||jsonb_build_object('type','retry','proposalId',extraction_job,

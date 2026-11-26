@@ -504,7 +504,7 @@ async function checkIntake({ browser, drive, client, buyer, sql, mrf, click, sav
     assert.equal(row.files.length, 2);
     await save(browser);
     row = await draft();
-    assert.equal(row.body.lines[1].sourceFileId, row.files[1].id);
+    assert.equal(row.body.lines[1].sourceFileId, row.files.find(file => file.name === 'intake.png').id);
     assert.equal(row.body.lines[1].sourcePage, '1');
     assert.equal(row.body.lines[1].unitPrice, '0.00');
     assert.equal(row.body.supplierName, name);
@@ -558,8 +558,10 @@ async function checkAutofill({ browser, second, drive, sql, base, path, original
   const request = extractionInputs().at(-1);
   assert.equal(request.store, false);
   const inputs = request.input.filter(input => input.data);
-  assert.deepEqual(inputs.map(input => input.mime_type), original.files.map(file => file.mime));
-  assert.deepEqual(inputs.map(input => Buffer.from(input.data, 'base64').byteLength), original.files.map(file => file.size));
+  const orderedIds = JSON.parse((await sql(`select to_json(current_files) from private.quotation_drafts where id='${quote}';`)).output.trim());
+  const ordered = orderedIds.map(id => original.files.find(file => file.id === id));
+  assert.deepEqual(inputs.map(input => input.mime_type), ordered.map(file => file.mime));
+  assert.deepEqual(inputs.map(input => Buffer.from(input.data, 'base64').byteLength), ordered.map(file => file.size));
   for (const width of [1440, 375]) {
     await browser.call('Emulation.setDeviceMetricsOverride', { width, height: 1000, deviceScaleFactor: 1, mobile: width === 375 });
     await browser.run("document.querySelector('.mobile-scrim')?.click(); const result=document.querySelector('.quotation-extraction-result'); result.querySelector('details').open=true; result.scrollIntoView()");
@@ -571,7 +573,7 @@ async function checkAutofill({ browser, second, drive, sql, base, path, original
   await save(browser);
   const persisted = await saved();
   assert.equal(persisted.body.supplierName, current.body.supplierName);
-  assert.equal(persisted.body.lines[1].sourceFileId, original.files[1].id);
+  assert.equal(persisted.body.lines[1].sourceFileId, ordered[1].id);
   assert.equal(persisted.body.lines[1].sourcePage, '1');
   assert.equal(persisted.body.lines[1].unitPrice, '0.00');
   assert.equal(persisted.body.lines[1].requestItemId, null);
