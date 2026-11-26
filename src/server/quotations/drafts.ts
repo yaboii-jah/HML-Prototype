@@ -95,6 +95,7 @@ export async function runQuotationCommand(
       ok: true,
       quote: checked.quotes[0],
       quoteId: result.quoteId,
+      existingQuote: command.type === "create" && !!command.intakeId && !result.changed,
       message: result.changed
         ? commandMessages[command.type] || "Quotation saved."
         : "No changes to save.",
@@ -111,6 +112,8 @@ export async function runQuotationCommand(
           "An active draft or unfinished file group already exists for this MRF and supplier.",
         P4501: "Quotation not found.",
         P4508: "Enter the supplier name as printed on the quotation.",
+        P4550: "The extracted values expired or the originals changed. Undo the fill before saving or extracting again.",
+        P4551: "The quotation upload or MRF approval changed. Review the current originals before saving.",
         P4502:
           "A current fully archived MRF and active quotation draft are required. Existing input is preserved.",
         P4503:
@@ -127,10 +130,12 @@ export async function runQuotationCommand(
           ok: false,
           message: messages[error.code],
           conflict: error.code === "40001",
+          extractionStale: error.code === "P4550",
         };
     }
     return {
       ok: false,
+      uncertain: true,
       message:
         "The response was interrupted. Retry the same request to check its saved outcome.",
     };

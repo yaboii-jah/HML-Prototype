@@ -1,6 +1,6 @@
 # Progress Tracker
 
-**Last reviewed on 2026-11-25.** Start with the current-state sections and consult completed evidence as needed. See the [overview](project-overview.md), [architecture](architecture.md), [checklist](checklist.md) and [workflow rules](ai-workflow-rules.md).
+**Last reviewed on 2026-11-27.** Start with the current-state sections and consult completed evidence as needed. See the [overview](project-overview.md), [architecture](architecture.md), [checklist](checklist.md) and [workflow rules](ai-workflow-rules.md).
 
 ## Current Phase
 
@@ -9,12 +9,13 @@
 
 ## Current Goal
 
-- Scope optional, human-reviewed Gemini extraction in the existing quotation editor.
+- Verify supplier extraction before quote-only draft creation and review the remaining autofill in the quotation editor.
 - The tracker now owns the planned unit sequence. The completed Step 4 guide is retired. The [architecture](architecture.md#operational-migration-contracts) and [completion evidence](#completed) retain its durable requirements and outcomes.
 
 ## In Progress
 
-- Unit 5.3 awaits scoped planning.
+- On 2026-11-25, Unit 5.3 at `6c198e9` passed local verification with 500 tests, the public browser check, [four-job CI](https://github.com/yaboii-jah/HML-Prototype/actions/runs/45643213382), and [disposable SQL, generated types and signed-in desktop/mobile checks](https://github.com/yaboii-jah/HML-Prototype/actions/runs/45643213642/attempts/2). Live Gemini `gemini-3.5-flash-lite` passed a mixed PDF/WebP group and a separate 100-page, 44 MiB group. Staging applied only `20261125063053_quotation_extraction.sql`, with extraction disabled by default and an empty job table. Full parity passed, retained records and access matched, and no email was sent. [PR #60](https://github.com/yaboii-jah/HML-Prototype/pull/60) awaits the user's hands-on Procurement review. The Vercel preview still fails at the existing Node version mismatch.
+- The follow-up moves quote-only supplier extraction before draft creation. At `0ab8745`, all four standard CI jobs and the disposable database suite passed, including generated types and signed-in desktop/mobile checks for both supplier linking choices and interrupted-save recovery. Live Drive verified the restricted folder, exact file copying, retry and cleanup. Live Gemini extracted the supplier details and offered lines from two PDFs and a WebP continuation. Staging applied only `20261126114819_quotation_intake.sql` on 2026-11-26. Full parity passed on 2026-11-27 with retained records and access matching the baseline, empty intake tables and no email sent. Procurement hands-on review is pending. [PR #60](https://github.com/yaboii-jah/HML-Prototype/pull/60) · [Standard CI](https://github.com/yaboii-jah/HML-Prototype/actions/runs/45824841302) · [Disposable CI](https://github.com/yaboii-jah/HML-Prototype/actions/runs/45824841289)
 
 ## Recent Step 4 Checkpoints
 
@@ -41,11 +42,11 @@
 
 ### Step 5 Planned
 
-- **5.3 Quotation extraction.** Procurement extracts from the full verified original group on an editable saved quotation. Transcribe printed supplier details, offered lines, terms and financial values with exact decimals. Staff select changes before saving and complete the existing source checks, material matching, conversions and financial review.
+- **5.3 Quotation extraction.** Procurement uses **Extract and fill** on one offer’s verified originals in a saved, editable draft linked to an approved and archived MRF. Autofill populates blank source fields and appends unmatched offered lines and charges. Staff review and edit before **Save quotation**, then complete the existing source checks, material matching, conversions and financial review.
 
 Both extractions use server-side durable jobs and default to disabled. Results are private to the initiating editor and bound to the saved draft and source versions. Verify checked access, editing and persistence, refresh and retry recovery, stale versions, and manual entry with deterministic fixtures and the applicable local, CI, disposable database and Staging gates. The user's hands-on check uses the normal app flow with the locally configured `gemini-3.5-flash-lite` model and synthetic or non-sensitive samples. Production enablement belongs to Step 7.
 
-**Exact next action** is to scope 5.3 extraction from verified originals on saved, editable quotation drafts.
+**Exact next action** is the user's hands-on check of pre-save supplier extraction in the local review app. Use the three originals in `output/pdf/step-5.3-quotation-extraction/` on an approved, archived test MRF. Confirm supplier review and the explicit MRF link on first save, followed by review and a separate save in the quotation editor.
 
 ## Release Blockers
 

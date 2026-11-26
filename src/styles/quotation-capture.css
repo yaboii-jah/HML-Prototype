@@ -34,6 +34,22 @@
   overflow-wrap: anywhere;
   margin-bottom: 10px;
 }
+.quotation-extraction {
+  border-block-start: 1px solid var(--line);
+  margin-block: 16px;
+  padding-block-start: 16px;
+  overflow-wrap: anywhere;
+}
+.quotation-extraction h3 {
+  margin-block: 0 8px;
+}
+.quotation-extraction-result {
+  margin-block: 16px;
+  overflow-wrap: anywhere;
+}
+.quotation-extraction-result details {
+  margin-block-end: 12px;
+}
 .quotation-review-status {
   margin-bottom: 20px;
 }

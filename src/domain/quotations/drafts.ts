@@ -165,12 +165,13 @@ export type QuotationsView = {
 export type QuoteCommand =
   | FinancialCommand
   | ((
-      | { type: "create"; mrfId: string; supplierId: string | null; body: QuoteBody }
+      | { type: "create"; mrfId: string; supplierId: string | null; body: QuoteBody; intakeId?: string }
       | {
           type: "save";
           quoteId: string;
           expectedVersion: string;
           body: QuoteBody;
+          extractionProposalId?: string;
         }
       | {
           type: "status";
@@ -201,6 +202,9 @@ export type QuoteResult = {
   quoteId?: string;
   quote?: QuotationDraft;
   conflict?: boolean;
+  extractionStale?: boolean;
+  existingQuote?: boolean;
+  uncertain?: boolean;
 };
 export const quoteUuid = (v: unknown): v is string =>
   typeof v === "string" && UUID_PATTERN.test(v);
@@ -357,6 +361,7 @@ export function parseQuoteCommand(value: unknown): QuoteCommand | null {
     return parseFinancialCommand(raw);
   if (raw.type === "create") {
     const body = parseQuoteBody(raw.body);
+    if (raw.intakeId !== undefined && (!quoteUuid(raw.intakeId) || !body?.supplierName || body.lines.length || body.adjustments.length)) return null;
     return body &&
       quoteUuid(raw.mrfId) &&
       (quoteUuid(raw.supplierId) ||
@@ -367,6 +372,7 @@ export function parseQuoteCommand(value: unknown): QuoteCommand | null {
           mrfId: raw.mrfId,
           supplierId: raw.supplierId,
           body,
+          ...(raw.intakeId ? { intakeId: raw.intakeId } : {}),
         }
       : null;
   }
@@ -378,7 +384,8 @@ export function parseQuoteCommand(value: unknown): QuoteCommand | null {
   };
   if (raw.type === "save") {
     const body = parseQuoteBody(raw.body);
-    return body ? { ...base, type: raw.type, body } : null;
+    if (!body || (raw.extractionProposalId !== undefined && !quoteUuid(raw.extractionProposalId))) return null;
+    return { ...base, type: raw.type, body, ...(raw.extractionProposalId ? { extractionProposalId: raw.extractionProposalId } : {}) };
   }
   if (
     raw.type === "status" &&

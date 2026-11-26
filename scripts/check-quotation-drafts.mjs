@@ -21,7 +21,7 @@ export async function checkQuotationDrafts(options) {
         "Quotation failure state:",
         await page
           .run(
-            "return [...document.querySelectorAll('[role=alert],.quotation-originals [role=status]')].map(el=>el.textContent).join(' | ')",
+          "return [...document.querySelectorAll('[role=alert],.quotation-extraction, .quotation-extraction-result,.quotation-originals [role=status]')].map(el=>el.textContent).join(' | ')",
           )
           .catch(() => "unavailable"),
       );
@@ -335,6 +335,9 @@ async function checkCapture({
   await browser.wait(
     "return document.querySelector('.quotation-review-status')?.textContent.includes('Editable quotation draft')",
   );
+  await checkAutofill({ browser, second, drive, sql, base, path, original, quote, click, save, cookie, supplierName: profile.name });
+  await checkIntake({ browser, drive, client, buyer, sql, mrf, click, save, bytes, image, profile });
+  await browser.navigate(path);
   for (const width of [1440, 375]) {
     await browser.call("Emulation.setDeviceMetricsOverride", {
       width,
@@ -434,4 +437,152 @@ async function checkCapture({
       ).output.trim(),
     ),
   };
+}
+
+async function checkIntake({ browser, drive, client, buyer, sql, mrf, click, save, bytes, image, profile }) {
+  const read = async (query) => (await sql(query)).output.trim();
+  const linked = () => read(`select count(*) from private.mrf_downstream_references where request_id='${mrf}' and kind='quotation';`);
+  const signed = await client.rpc('supplier_command', { actor: buyer, command: { type: 'createSupplier', requestId: randomUUID(),
+    profile: { ...profile, name: 'Intake directory ' + randomUUID() } } });
+  assert.equal(signed.error, null);
+  const directory = signed.data.supplierId;
+  const originals = [{ name: 'intake.pdf', bytes, mime: 'application/pdf' }, { name: 'intake.png', bytes: image, mime: 'image/png' }];
+  for (const width of [1440, 375]) {
+    await browser.call('Emulation.setDeviceMetricsOverride', { width, height: 1000, deviceScaleFactor: 1, mobile: width === 375 });
+    const prior = Number(await linked()), providerCalls = drive.gemini.inputs.length;
+    await browser.navigate(`/requests/${mrf}/quotes`);
+    await click(browser, 'Create quotation draft');
+    await browser.run("const field=document.querySelector('dialog select[name=supplierId]');field.value='quote-only';field.dispatchEvent(new Event('change',{bubbles:true}));");
+    const upload = 'dialog input[name=intake-originals]';
+    await browser.wait(`return !!document.querySelector(${JSON.stringify(upload)})`);
+    assert.equal(await browser.run("return document.querySelector('dialog input[name=supplierName]').value"), '');
+    await browser.run(`const dt=new DataTransfer();${originals.map(file => `dt.items.add(new File([Uint8Array.from(atob('${file.bytes.toString('base64')}'),c=>c.charCodeAt(0))],${JSON.stringify(file.name)},{type:${JSON.stringify(file.mime)}}));`).join('')}const input=document.querySelector(${JSON.stringify(upload)});input.files=dt.files;input.dispatchEvent(new Event('change',{bubbles:true}));`);
+    if (width === 1440) {
+      drive.faults.shareIntake = true;
+      await click(browser, 'Extract and fill');
+      await browser.wait("return !!document.querySelector('dialog [role=alert]')");
+      assert.equal(await read(`select count(*) from private.quotation_intakes where request_id='${mrf}' and state<>'closed';`), '0');
+      drive.faults.shareIntake = false;
+    }
+    await click(browser, 'Extract and fill');
+    await browser.wait("return document.querySelector('dialog input[name=supplierName]')?.value==='Printed Quotation Supplier'", 60000);
+    assert.equal(Number(await linked()), prior, 'Extracting supplier details never links an MRF');
+    assert.equal(drive.gemini.inputs.length, providerCalls + 1);
+    const name = width === 1440 ? 'Reviewed quote only' : 'Reviewed directory quote';
+    await browser.fill('dialog input[name=supplierName]', name);
+    if (width === 375) await browser.run(`const field=document.querySelector('dialog select[name=supplierId]');field.value=${JSON.stringify(directory)};field.dispatchEvent(new Event('change',{bubbles:true}));`);
+    if (width === 1440) {
+      drive.faults.loseCopyResponse = true;
+      await browser.run(`const fetchOriginal=window.fetch; window.fetch=async function(input,init){
+        const response=await fetchOriginal(input,init);
+        if(new Headers(init?.headers).has('Next-Action')){window.fetch=fetchOriginal;await response.text();throw Error('Simulated lost first-save response');}
+        return response;
+      }`);
+    }
+    await click(browser, 'Save draft and link MRF');
+    if (width === 1440) {
+      await browser.wait("return [...document.querySelectorAll('dialog button')].some(button=>button.textContent==='Retry linking the draft'&&!button.disabled)");
+      assert.equal(Number(await linked()), prior + 1, 'Interrupted response committed exactly one link');
+      await click(browser, 'Retry linking the draft');
+    }
+    await browser.wait("return !document.querySelector('dialog[open]') && !!document.querySelector('.quotation-originals')");
+    const quote = await browser.run("return location.pathname.split('/').at(-1)");
+    assert.equal(Number(await linked()), prior + 1);
+    const draft = async () => JSON.parse(await read(`select private.quotation_view('${quote}');`));
+    let row = await draft();
+    assert.equal(row.supplierId, width === 1440 ? null : directory);
+    assert.equal(row.body.supplierName, name);
+    assert.equal(row.body.lines.length, 0, 'Initial save saves only reviewed supplier fields');
+    if (width === 1440) {
+      await browser.wait("return document.querySelector('.quotation-originals').textContent.includes('File processing failed')", 60000);
+      await click(browser, 'Retry file job');
+    }
+    await browser.wait("return !!document.querySelector('.quotation-extraction-result')&&document.querySelector('input[name=ref]').value==='Q-ORIGINAL'", 60000);
+    assert.equal(drive.gemini.inputs.length, providerCalls + 1, 'Opening the editor reuses extraction');
+    row = await draft();
+    assert.equal(row.body.lines.length, 0);
+    assert.equal(row.files.length, 2);
+    await save(browser);
+    row = await draft();
+    assert.equal(row.body.lines[1].sourceFileId, row.files.find(file => file.name === 'intake.png').id);
+    assert.equal(row.body.lines[1].sourcePage, '1');
+    assert.equal(row.body.lines[1].unitPrice, '0.00');
+    assert.equal(row.body.supplierName, name);
+    assert.equal(row.checked, false);
+    const shot = await browser.call('Page.captureScreenshot', { format: 'png' });
+    await writeFile(`.verification/quotation-intake-${width}.png`, Buffer.from(shot.data, 'base64'));
+  }
+  await browser.call('Emulation.clearDeviceMetricsOverride');
+}
+
+async function checkAutofill({ browser, second, drive, sql, base, path, original, quote, click, save, cookie, supplierName }) {
+  const extractionInputs = () => drive.gemini.inputs.filter(input => input.response_format.schema.properties.documentType.enum.includes('single_offer'));
+  const saved = async () => JSON.parse((await sql(`select private.quotation_view('${quote}');`)).output.trim());
+  const current = await saved();
+  const context = { quoteId: quote, version: current.version, fileVersion: current.fileVersion };
+  const url = '/api/quotation-extraction?' + new URLSearchParams(context);
+  const status = page => page.run(`return (await (await fetch(${JSON.stringify(url)})).json()).state`);
+  assert.equal((await fetch(base + url, { redirect: 'manual' })).status, 401);
+  const crossOrigin = await fetch(base + '/api/quotation-extraction', {
+    method: 'POST', headers: { Cookie: cookie, Origin: 'https://unrelated.example.invalid', 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...context, type: 'start', operationId: randomUUID() }),
+  });
+  assert.equal(crossOrigin.status, 403, 'Cross-origin POST cannot start extraction');
+  drive.gemini.failNext = true;
+  await click(browser, 'Extract and fill');
+  await browser.wait("return document.querySelector('.quotation-extraction')?.textContent.includes('Extraction could not finish')", 60000);
+  drive.gemini.quotationDelay = 1500;
+  await click(browser, 'Retry extraction');
+  await browser.wait("return document.querySelector('.quotation-extraction')?.textContent.includes('Reading the originals')");
+  await browser.fill('textarea[name=notes]', 'Typed while extraction ran');
+  await browser.wait("return [...document.querySelectorAll('button')].some(b=>b.textContent==='Continue filling'&&!b.disabled)", 60000);
+  assert.equal(await status(second), 'idle', 'Ready result stays private to its initiating buyer');
+  assert.match(await browser.run("return document.querySelector('.quotation-extraction').textContent"), /Printed Quotation Supplier/);
+  assert.ok((await browser.run("return document.querySelector('.quotation-extraction').textContent")).includes(supplierName));
+  await click(browser, 'Continue filling');
+  await browser.wait("return !!document.querySelector('.quotation-extraction-result')");
+  assert.equal(await browser.run("return document.querySelector('textarea[name=notes]').value"), 'Typed while extraction ran');
+  assert.equal(await browser.run("return document.querySelector('input[name=ref]').value"), current.body.ref);
+  assert.equal(await browser.run("return document.querySelectorAll('input[aria-label^=\"Supplier description \" ]').length"), 2);
+  await browser.fill('textarea[name=notes]', 'Kept after undo');
+  await click(browser, 'Undo fill');
+  assert.equal(await browser.run("return document.querySelector('textarea[name=notes]').value"), 'Kept after undo');
+  assert.equal(await browser.run("return document.querySelectorAll('input[aria-label^=\"Supplier description \" ]').length"), 1);
+  await browser.fill('textarea[name=notes]', current.body.notes);
+  assert.deepEqual((await saved()).body, current.body, 'Fill and undo remain local until save');
+  await browser.navigate(path);
+  await click(browser, 'Fill from originals');
+  await click(browser, 'Continue filling');
+  await browser.wait("return !!document.querySelector('.quotation-extraction-result')");
+  assert.equal(extractionInputs().length, 2, 'Ready recovery does not call Gemini again');
+  const request = extractionInputs().at(-1);
+  assert.equal(request.store, false);
+  const inputs = request.input.filter(input => input.data);
+  const orderedIds = JSON.parse((await sql(`select to_json(current_files) from private.quotation_drafts where id='${quote}';`)).output.trim());
+  const ordered = orderedIds.map(id => original.files.find(file => file.id === id));
+  assert.deepEqual(inputs.map(input => input.mime_type), ordered.map(file => file.mime));
+  assert.deepEqual(inputs.map(input => Buffer.from(input.data, 'base64').byteLength), ordered.map(file => file.size));
+  for (const width of [1440, 375]) {
+    await browser.call('Emulation.setDeviceMetricsOverride', { width, height: 1000, deviceScaleFactor: 1, mobile: width === 375 });
+    await browser.run("document.querySelector('.mobile-scrim')?.click(); const result=document.querySelector('.quotation-extraction-result'); result.querySelector('details').open=true; result.scrollIntoView()");
+    assert.equal(await browser.run("return document.querySelector('.quotation-extraction-result').getBoundingClientRect().right<=innerWidth&&document.documentElement.scrollWidth<=innerWidth"), true);
+    const shot = await browser.call('Page.captureScreenshot', { format: 'png' });
+    await writeFile(`.verification/quotation-extraction-${width}.png`, Buffer.from(shot.data, 'base64'));
+  }
+  await browser.call('Emulation.clearDeviceMetricsOverride');
+  await save(browser);
+  const persisted = await saved();
+  assert.equal(persisted.body.supplierName, current.body.supplierName);
+  assert.equal(persisted.body.lines[1].sourceFileId, ordered[1].id);
+  assert.equal(persisted.body.lines[1].sourcePage, '1');
+  assert.equal(persisted.body.lines[1].unitPrice, '0.00');
+  assert.equal(persisted.body.lines[1].requestItemId, null);
+  assert.equal(persisted.body.adjustments[0].value, '0.000');
+  assert.equal(persisted.checked, false);
+  drive.gemini.quotationDelay = 0;
+  drive.gemini.quotationType = 'multiple_offers';
+  await click(browser, 'Extract and fill');
+  await browser.wait("return document.querySelector('.quotation-extraction')?.textContent.includes('contains multiple offers')", 60000);
+  assert.deepEqual((await saved()).body, persisted.body);
+  drive.gemini.quotationType = 'single_offer';
 }

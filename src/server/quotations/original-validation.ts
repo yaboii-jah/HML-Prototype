@@ -37,6 +37,7 @@ export async function validateQuotationOriginal(
     )
       throw Error("Invalid image");
     await decoder.raw().toBuffer();
+    return 1;
   } catch {
     throw new InvalidQuotationOriginal();
   }

@@ -8,6 +8,8 @@ declare
   project uuid:=gen_random_uuid(); scope uuid:=gen_random_uuid(); mapping uuid:=gen_random_uuid(); document uuid:=gen_random_uuid();
   mrf uuid; supplier uuid; quote uuid; other_quote uuid; archive uuid; job uuid; lease uuid; target_group uuid; fid uuid; retained_file uuid;
   form jsonb; body jsonb:='{}'; line jsonb:='{}'; saved jsonb; command jsonb; result jsonb; receipt jsonb; part jsonb; k text; v text; fv text; reader_role text;
+  extraction_context jsonb; extraction_command jsonb; extraction_job uuid; extraction_lease uuid; extracted jsonb; source_ids uuid[];
+  intake uuid; intake_quote uuid; intake_command jsonb; intake_files jsonb; intake_proposal jsonb;
 begin
   insert into public.projects(id,name,location,document_code) values(project,'Quotation fixture '||project,'Site','QT-'||upper(substr(project::text,1,8)));
   insert into public.project_budgets values(project,100);
@@ -48,6 +50,83 @@ begin
   part:=public.document_worker(job,'claim'); lease:=(part->>'lease')::uuid;
   perform public.document_worker(job,'checkpoint',lease,jsonb_build_object('formFileId','quote-fixture-form','supportingFileId','quote-fixture-support','formSha256',repeat('b',64),'supportingSha256',repeat('a',64),'formSize',20,'supportingSize',10,'verified',true));
   perform public.document_worker(job,'complete',lease);
+  begin
+    intake:=gen_random_uuid();
+    intake_command:=jsonb_build_object('type','begin','mrfId',mrf,'operationId',intake,'folderId','fixture-private-intake','files',jsonb_build_array(
+      jsonb_build_object('name','offer.pdf','mime','application/pdf','size',10,'sha256',repeat('a',64)),
+      jsonb_build_object('name','continuation.png','mime','image/png','size',10,'sha256',repeat('c',64))));
+    if has_table_privilege('authenticated','private.quotation_intakes','SELECT') or
+      has_function_privilege('authenticated','public.quotation_intake_command(jsonb,jsonb)','EXECUTE') or
+      has_function_privilege('anon','public.quotation_intake_transfer(jsonb,uuid,text,uuid,jsonb)','EXECUTE') then raise exception 'Intake exposed to a client'; end if;
+    part:=public.quotation_intake_command(buyer,intake_command);
+    intake_files:=part->'files';
+    if part->>'id' is distinct from intake::text or jsonb_array_length(intake_files)<>2 then raise exception 'Intake admission failed'; end if;
+    if public.quotation_intake_command(buyer,intake_command)->>'id' is distinct from intake::text then raise exception 'Intake admission retry changed'; end if;
+    if exists(select 1 from private.mrf_downstream_references where request_id=mrf) then raise exception 'Intake linked before explicit save'; end if;
+    fid:=(intake_files->0->>'id')::uuid;
+    begin perform public.quotation_intake_transfer(buyer,fid,'claim',null,'{}'); raise exception 'Upload without cleanup schedule'; exception when insufficient_privilege then null; end;
+    perform public.quotation_intake_worker(intake,'schedule',null,'{}');
+    begin perform public.quotation_intake_transfer(reader,fid,'claim',null,'{}'); raise exception 'Reader could upload'; exception when insufficient_privilege then null; end;
+    for fid in select (value->>'id')::uuid from jsonb_array_elements(intake_files) loop
+      lease:=(public.quotation_intake_transfer(buyer,fid,'claim',null,'{}')->>'lease')::uuid;
+      perform public.quotation_intake_transfer(buyer,fid,'checkpoint',lease,jsonb_build_object('driveFileId','intake-source-'||fid));
+      perform public.quotation_intake_transfer(buyer,fid,'finish',lease,'{}');
+    end loop;
+    part:=public.quotation_intake_command(buyer,jsonb_build_object('type','start','mrfId',mrf,'intakeId',intake));
+    if part->>'state' is distinct from 'pending' or part->>'dispatch' is distinct from 'true' then raise exception 'Intake did not queue'; end if;
+    lease:=(public.quotation_intake_worker(intake,'claim',null,'{}')->>'lease')::uuid;
+    if lease is null or public.quotation_intake_worker(intake,'claim',null,'{}') is not null then raise exception 'Intake lease not exclusive'; end if;
+    begin
+      delete from public.role_grants where user_id=buyer_id and role='Procurement';
+      if public.quotation_intake_worker(intake,'verified',lease,'{}') is not null then raise exception 'Revoked worker verified an intake'; end if;
+      raise exception 'Restore fixture grant' using errcode='P9499';
+    exception when sqlstate 'P9499' then null; end;
+    perform public.quotation_intake_worker(intake,'verified',lease,'{}');
+    intake_proposal:=jsonb_build_object('body',body||jsonb_build_object('supplierName','Supplier on source','ref','SOURCE-INTAKE','lines',jsonb_build_array(
+      jsonb_build_object('sourceFileId',intake_files->1->>'id','sourcePage','1','requestItemId',null))),'notes','[]'::jsonb);
+    perform public.quotation_intake_worker(intake,'complete',lease,intake_proposal);
+    part:=public.quotation_intake_command(buyer,jsonb_build_object('type','status','mrfId',mrf));
+    if part->'supplier'->>'supplierName' is distinct from 'Supplier on source' or part ? 'proposal' then raise exception 'Intake exposed beyond supplier review'; end if;
+    begin
+      perform public.quotation_intake_command(buyer,jsonb_build_object('type','cancel','mrfId',mrf,'intakeId',intake));
+      if exists(select 1 from private.mrf_downstream_references where request_id=mrf) or
+        public.quotation_intake_command(buyer,jsonb_build_object('type','status','mrfId',mrf))->>'state' is distinct from 'idle' then
+        raise exception 'Cancelled intake affected the MRF'; end if;
+      if jsonb_array_length(public.quotation_intake_worker(intake,'cleanup',null,'{}')->'files') is distinct from 2 then raise exception 'Cancelled originals missing from cleanup'; end if;
+      raise exception 'Restore cancelled fixture' using errcode='P9499';
+    exception when sqlstate 'P9499' then null; end;
+    intake_command:=jsonb_build_object('type','create','requestId',gen_random_uuid(),'mrfId',mrf,'supplierId',null,'intakeId',intake,
+      'body',body||'{"supplierName":"Reviewed Supplier"}');
+    begin
+      update private.quotation_intakes set archive_id=gen_random_uuid() where id=intake;
+      begin perform public.quotation_command(buyer,intake_command); raise exception 'Stale intake created a draft'; exception when sqlstate 'P4551' then null; end;
+      raise exception 'Restore fixture archive' using errcode='P9499';
+    exception when sqlstate 'P9499' then null; end;
+    extracted:=public.quotation_command(buyer,intake_command);
+    intake_quote:=(extracted->>'quoteId')::uuid;
+    if not exists(select 1 from private.mrf_downstream_references where request_id=mrf and record_id=intake_quote)
+      or public.quotation_command(buyer,intake_command) is distinct from extracted
+      or extracted->'quote'->'body'->>'ref' is distinct from '' or jsonb_array_length(extracted->'quote'->'body'->'lines')<>0 then
+      raise exception 'Intake first save or receipt altered the review sequence'; end if;
+    for fid in select (value->>'id')::uuid from jsonb_array_elements(intake_files) loop
+      select id into extraction_job from private.quotation_jobs where file_id=fid and kind='validate';
+      part:=public.quotation_worker(extraction_job,'claim'); lease:=(part->>'lease')::uuid;
+      if part->'intake'->>'driveId' is distinct from 'intake-source-'||fid then raise exception 'Worker lost private source identity'; end if;
+      perform public.quotation_worker(extraction_job,'checkpoint',lease,jsonb_build_object('intakeDestination','intake-final-'||fid));
+      perform public.quotation_worker(extraction_job,'checkpoint',lease,'{"verified":true}');
+      perform public.quotation_worker(extraction_job,'complete',lease);
+    end loop;
+    part:=private.quotation_view(intake_quote);
+    if jsonb_array_length(part->'files')<>2 or part->'body'->>'supplierName' is distinct from 'Reviewed Supplier' then raise exception 'Intake originals or reviewed name lost'; end if;
+    select j.id into extraction_job from private.quotation_extraction_jobs j where j.attempt_id=intake and j.state='ready';
+    if extraction_job is null then raise exception 'Quote did not inherit the original extraction'; end if;
+    extracted:=public.quotation_extraction_command(buyer,jsonb_build_object('type','apply','quoteId',intake_quote,'version',part->>'version','fileVersion',part->>'fileVersion','proposalId',extraction_job));
+    if extracted->'proposal'->'body'->>'supplierName' is distinct from '' or extracted->'proposal'->'body'->>'ref' is distinct from 'SOURCE-INTAKE'
+      or extracted->'proposal'->'body'->'lines'->0->'requestItemId' is distinct from 'null'::jsonb then raise exception 'Returned extraction was stale or rewrote reviewed supplier fields'; end if;
+    extracted:=public.quotation_intake_worker(intake,'cleanup',null,'{}');
+    if jsonb_array_length(extracted->'files')<>2 or extracted->>'retryAt' is null then raise exception 'Intake cleanup or proposal expiry unavailable'; end if;
+    raise exception 'Restore intake fixture' using errcode='P9499';
+  exception when sqlstate 'P9499' then null; end;
   begin perform public.quotation_command(reader,command); raise exception 'Reader wrote quote'; exception when insufficient_privilege then null; end;
   begin perform public.quotations_read(site,mrf); raise exception 'Site read quotes'; exception when insufficient_privilege then null; end;
   result:=public.quotation_command(buyer,command); quote:=(result->>'quoteId')::uuid;
@@ -93,6 +172,61 @@ begin
   end loop;
   saved:=private.quotation_view(quote);
   if jsonb_array_length(saved->'files')<>2 or saved->>'fileVersion'<>'2' or saved->>'version'<>result->'quote'->>'version' then raise exception 'Group commit changed text or lost files'; end if;
+  begin
+    if has_table_privilege('authenticated','private.quotation_extraction_jobs','SELECT')
+      or has_function_privilege('authenticated','public.quotation_extraction_worker(uuid,text,uuid,jsonb)','EXECUTE')
+      or has_function_privilege('anon','public.quotation_extraction_command(jsonb,jsonb)','EXECUTE') then
+      raise exception 'Quotation extraction exposed to a client role';
+    end if;
+    extraction_context:=jsonb_build_object('quoteId',quote,'version',saved->>'version','fileVersion',saved->>'fileVersion');
+    extraction_command:=extraction_context||jsonb_build_object('type','start','operationId',gen_random_uuid());
+    begin perform public.quotation_extraction_command(reader,extraction_command); raise exception 'Reader started extraction'; exception when insufficient_privilege then null; end;
+    extracted:=public.quotation_extraction_command(buyer,extraction_command);
+    extraction_job:=(extracted->>'id')::uuid;
+    if extracted->>'state' is distinct from 'pending' or extracted->>'dispatch' is distinct from 'true' then raise exception 'Missing quotation extraction admission'; end if;
+    extracted:=public.quotation_extraction_command(buyer,extraction_command||jsonb_build_object('operationId',gen_random_uuid()));
+    if extracted->>'id' is distinct from extraction_job::text or extracted->>'dispatch' is distinct from 'false' then raise exception 'Duplicate quotation extraction dispatch'; end if;
+    extracted:=public.quotation_extraction_worker(extraction_job,'claim',null,'{}');
+    extraction_lease:=(extracted->>'lease')::uuid;
+    select current_files into source_ids from private.quotation_drafts where id=quote;
+    if extraction_lease is null or extracted->>'archiveId' is distinct from archive::text or
+      extracted->'files'->0->>'id' is distinct from source_ids[1]::text or
+      extracted->'files'->1->>'id' is distinct from source_ids[2]::text or
+      public.quotation_extraction_worker(extraction_job,'claim',null,'{}') is not null then raise exception 'Incorrect original order or worker lease'; end if;
+    perform public.quotation_extraction_worker(extraction_job,'fail',extraction_lease,'{"reason":"provider"}');
+    extraction_command:=extraction_context||jsonb_build_object('type','retry','proposalId',extraction_job,
+      'attemptId',extraction_command->>'operationId','operationId',gen_random_uuid());
+    if public.quotation_extraction_command(buyer,extraction_command)->>'attemptId' is distinct from extraction_command->>'operationId'
+      or public.quotation_extraction_command(buyer,extraction_command)->>'attemptId' is distinct from extraction_command->>'operationId' then raise exception 'Quotation extraction retry was not idempotent'; end if;
+    extraction_lease:=(public.quotation_extraction_worker(extraction_job,'claim',null,'{}')->>'lease')::uuid;
+    begin
+      delete from public.role_grants where user_id=buyer_id and role='Procurement';
+      if public.quotation_extraction_worker(extraction_job,'complete',extraction_lease,'{}') is not null then raise exception 'Revoked worker published a quotation'; end if;
+      raise exception 'Restore fixture grant' using errcode='P9499';
+    exception when sqlstate 'P9499' then null; end;
+    if public.quotation_extraction_worker(extraction_job,'complete',extraction_lease,'{"body":{"lines":[{"requestItemId":null,"sourceFileId":"fixture"}]}}')->>'expiresAt' is null then raise exception 'Quotation proposal did not complete'; end if;
+    if public.quotation_extraction_command(buyer,extraction_context||'{"type":"status"}') ? 'proposal' then raise exception 'Polling returned an unchecked quotation payload'; end if;
+    if public.quotation_extraction_command(buyer,extraction_context||jsonb_build_object('type','apply','proposalId',extraction_job))->'proposal' is distinct from '{"body":{"lines":[{"requestItemId":null,"sourceFileId":"fixture"}]}}'::jsonb then raise exception 'Owner cannot recover ready quotation with human mappings blank'; end if;
+    extraction_command:=jsonb_build_object('type','save','requestId',gen_random_uuid(),'quoteId',quote,
+      'expectedVersion',saved->>'version','body',body||'{"notes":"Autofill fixture"}','extractionProposalId',extraction_job);
+    begin
+      update private.quotation_groups set state='conflict' where id=target_group;
+      if public.quotation_extraction_command(buyer,extraction_context||'{"type":"status"}')->>'state' is distinct from 'stale' then raise exception 'Pending group exposed a quotation proposal'; end if;
+      begin perform public.quotation_command(buyer,extraction_command); raise exception 'Pending group accepted extracted save'; exception when sqlstate 'P4550' then null; end;
+      raise exception 'Restore fixture group' using errcode='P9499';
+    exception when sqlstate 'P9499' then null; end;
+    begin
+      update private.quotation_files set sha256=repeat('e',64) where id=(saved->'files'->0->>'id')::uuid;
+      begin perform public.quotation_command(buyer,extraction_command); raise exception 'Changed original hash accepted extracted save'; exception when sqlstate 'P4550' then null; end;
+      raise exception 'Restore fixture hash' using errcode='P9499';
+    exception when sqlstate 'P9499' then null; end;
+    extracted:=public.quotation_command(buyer,extraction_command);
+    if extracted->'quote'->'body'->>'notes' is distinct from 'Autofill fixture' then raise exception 'Verified quotation proposal did not save'; end if;
+    perform public.quotation_extraction_command(buyer,extraction_context||'{"type":"status"}');
+    if public.quotation_command(buyer,extraction_command) is distinct from extracted then raise exception 'Extracted quotation receipt was lost after invalidation'; end if;
+    if (select j.proposal is not null or j.state<>'expired' from private.quotation_extraction_jobs j where j.id=extraction_job) then raise exception 'Stale quotation proposal was retained'; end if;
+    raise exception 'Restore verified quotation fixture' using errcode='P9499';
+  exception when sqlstate 'P9499' then null; end;
   select details into part from private.audit_events where entity_id=quote and action='quotation.files' order by occurred_at desc limit 1;
   if jsonb_array_length(part->'afterFiles') is distinct from 2 or length(part->'afterFiles'->0->>'sha256') is distinct from 64 then raise exception 'Original filename/hash history missing'; end if;
   retained_file:=(saved->'files'->0->>'id')::uuid;
