@@ -41,6 +41,7 @@ type HeaderKey = keyof typeof HEADER_FIELDS;
 type LineKey = keyof typeof LINE_FIELDS;
 const supplierFields: HeaderKey[] = [...quotedSupplierFields];
 const intakeFillKey = (quoteId: string) => `quotation-intake-fill:${quoteId}`;
+type IntakeSave = { command: Extract<QuoteInput, { type: "create" }>; autoFill: boolean };
 const quoteOnly = "quote-only";
 const normalizeSupplierName = (name: string) =>
   name.trim().toLowerCase().replace(/\s+/g, " ");
@@ -240,6 +241,7 @@ function NewQuotation({
   const [intakeBusy, setIntakeBusy] = useState(false);
   const [intakeError, setIntakeError] = useState("");
   const [existingQuote, setExistingQuote] = useState<string | null>(null);
+  const [pendingIntakeSave, setPendingIntakeSave] = useState<IntakeSave | null>(null);
   const editedSupplier = useRef(new Set<HeaderKey>());
   const operation = useQuoteOperation(),
     router = useRouter();
@@ -247,7 +249,8 @@ function NewQuotation({
   const intakeId = intake?.id;
   const reviewSupplier = manual || useTypedDetails || !!intakeId;
   const canSaveIntake = !intakeId || (intake.verified && ["ready", "unusable", "failed"].includes(intake.state));
-  const locked = intakeBusy || operation.busy;
+  const busy = intakeBusy || operation.busy;
+  const locked = busy || !!pendingIntakeSave;
   const typedName = normalizeSupplierName(typedDetails.supplierName);
   const changeSupplier = (key: HeaderKey, value: string) => {
     editedSupplier.current.add(key);
@@ -291,7 +294,7 @@ function NewQuotation({
   const create = async (event: FormEvent) => {
     event.preventDefault();
     const supplier = view.suppliers.find((s) => s.id === supplierId);
-    if ((!supplier && !manual) || !view.request || locked || !canSaveIntake || (reviewSupplier && !typedName)) return;
+    if (!view.request || busy || (!pendingIntakeSave && ((!supplier && !manual) || !canSaveIntake || (reviewSupplier && !typedName)))) return;
     const body = supplier && !reviewSupplier
       ? {
           ...emptyQuoteBody(),
@@ -303,20 +306,19 @@ function NewQuotation({
           phone: supplier.phone,
         }
       : typedDetails;
-    const result = await operation.run({
-      type: "create",
-      mrfId: view.request.id,
-      supplierId: supplier?.id ?? null,
-      body,
-      ...(intakeId ? { intakeId } : {}),
-    });
+    const submitted: IntakeSave = pendingIntakeSave ?? {
+      command: { type: "create", mrfId: view.request.id, supplierId: supplier?.id ?? null, body, ...(intakeId ? { intakeId } : {}) },
+      autoFill: intake?.state === "ready",
+    };
+    const result = await operation.run(submitted.command);
+    setPendingIntakeSave(submitted.command.intakeId && (!result || result.uncertain) ? submitted : null);
     if (result?.ok && result.quoteId) {
       if (result.existingQuote) {
         setExistingQuote(result.quoteId);
         return;
       }
-      if (intakeId && intake.state === "ready") {
-        try { sessionStorage.setItem(intakeFillKey(result.quoteId), intakeId); } catch { /* Recovery stays available in the editor. */ }
+      if (submitted.command.intakeId && submitted.autoFill) {
+        try { sessionStorage.setItem(intakeFillKey(result.quoteId), submitted.command.intakeId); } catch { /* Recovery stays available in the editor. */ }
       }
       close();
       router.push(`/requests/${view.request.id}/quotes/${result.quoteId}`);
@@ -371,7 +373,7 @@ function NewQuotation({
           </select>
         </Field>
         {(manual || intakeId) && view.request?.procurementReady && (
-          <QuotationIntake mrfId={view.request.id} status={intake} disabled={operation.busy}
+          <QuotationIntake mrfId={view.request.id} status={intake} disabled={operation.busy || !!pendingIntakeSave}
             onStatus={setIntake} onBusy={setIntakeBusy} onFill={fillSupplier} />
         )}
         {reviewSupplier && (
@@ -382,7 +384,7 @@ function NewQuotation({
                 value={typedDetails.supplierName}
                 required
                 maxLength={4000}
-                disabled={operation.busy}
+                disabled={operation.busy || !!pendingIntakeSave}
                 onChange={(e) => changeSupplier("supplierName", e.target.value)}
               />
             </Field>
@@ -433,7 +435,7 @@ function NewQuotation({
                 <Field key={key} label={HEADER_FIELDS[key]}>
                   <input
                     value={typedDetails[key]}
-                    disabled={operation.busy}
+                    disabled={operation.busy || !!pendingIntakeSave}
                     maxLength={4000}
                     onChange={(e) => changeSupplier(key, e.target.value)}
                   />
@@ -466,9 +468,9 @@ function NewQuotation({
           </button>
           <button
             className="button primary"
-            disabled={locked || !canSaveIntake || !view.request?.procurementReady || (reviewSupplier && !typedName)}
+            disabled={busy || (!pendingIntakeSave && (!canSaveIntake || !view.request?.procurementReady || (reviewSupplier && !typedName)))}
           >
-            {operation.busy ? "Saving…" : "Save draft and link MRF"}
+            {operation.busy ? "Saving…" : pendingIntakeSave ? "Retry linking the draft" : "Save draft and link MRF"}
           </button>
         </div>
       </form>

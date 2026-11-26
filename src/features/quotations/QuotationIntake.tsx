@@ -51,8 +51,10 @@ export function QuotationIntake({ mrfId, status, disabled, onStatus, onBusy, onF
   const load = useCallback(() => quotationIntakeAction(mrfId), [mrfId]);
   useEffect(() => {
     let active = true;
+    let polling = false;
     const check = async () => {
-      if (running.current) return;
+      if (running.current || polling) return;
+      polling = true;
       const ticket = ++sequence.current;
       try {
         const value = await load();
@@ -62,6 +64,8 @@ export function QuotationIntake({ mrfId, status, disabled, onStatus, onBusy, onF
         }
       } catch (problem) {
         if (active && ticket === sequence.current && !running.current) setError(problem instanceof Error ? problem.message : "Check the upload status again.");
+      } finally {
+        polling = false;
       }
     };
     void check();

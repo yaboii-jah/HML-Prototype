@@ -448,7 +448,7 @@ async function checkIntake({ browser, drive, client, buyer, sql, mrf, click, sav
   const directory = signed.data.supplierId;
   const originals = [{ name: 'intake.pdf', bytes, mime: 'application/pdf' }, { name: 'intake.png', bytes: image, mime: 'image/png' }];
   for (const width of [1440, 375]) {
-    if (width === 375) await browser.call('Emulation.setDeviceMetricsOverride', { width, height: 1000, deviceScaleFactor: 1, mobile: true });
+    await browser.call('Emulation.setDeviceMetricsOverride', { width, height: 1000, deviceScaleFactor: 1, mobile: width === 375 });
     const prior = Number(await linked()), providerCalls = drive.gemini.inputs.length;
     await browser.navigate(`/requests/${mrf}/quotes`);
     await click(browser, 'Create quotation draft');
@@ -471,8 +471,20 @@ async function checkIntake({ browser, drive, client, buyer, sql, mrf, click, sav
     const name = width === 1440 ? 'Reviewed quote only' : 'Reviewed directory quote';
     await browser.fill('dialog input[name=supplierName]', name);
     if (width === 375) await browser.run(`const field=document.querySelector('dialog select[name=supplierId]');field.value=${JSON.stringify(directory)};field.dispatchEvent(new Event('change',{bubbles:true}));`);
-    if (width === 1440) drive.faults.loseCopyResponse = true;
+    if (width === 1440) {
+      drive.faults.loseCopyResponse = true;
+      await browser.run(`const fetchOriginal=window.fetch; window.fetch=async function(input,init){
+        const response=await fetchOriginal(input,init);
+        if(new Headers(init?.headers).has('Next-Action')){window.fetch=fetchOriginal;await response.text();throw Error('Simulated lost first-save response');}
+        return response;
+      }`);
+    }
     await click(browser, 'Save draft and link MRF');
+    if (width === 1440) {
+      await browser.wait("return [...document.querySelectorAll('dialog button')].some(button=>button.textContent==='Retry linking the draft'&&!button.disabled)");
+      assert.equal(Number(await linked()), prior + 1, 'Interrupted response committed exactly one link');
+      await click(browser, 'Retry linking the draft');
+    }
     await browser.wait("return !document.querySelector('dialog[open]') && !!document.querySelector('.quotation-originals')");
     const quote = await browser.run("return location.pathname.split('/').at(-1)");
     assert.equal(Number(await linked()), prior + 1);
