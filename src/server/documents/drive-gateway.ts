@@ -31,6 +31,13 @@ export function createDriveGateway(origin: string, accessToken: () => Promise<st
   }
   async function get(id: string) { return metadata(await (await request(`${api}/${encodeURIComponent(id)}?supportsAllDrives=true&fields=${encodeURIComponent(fields)}`)).json()); }
   async function find(id: string) { try { return await get(id); } catch (e) { if (e instanceof DriveError && e.status === 404) return null; throw e; } }
+  async function copy(source: string, id: string, parent: string, name: string, tags: Record<string, string>) {
+    const response = await request(`${api}/${encodeURIComponent(source)}/copy?supportsAllDrives=true`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, name, parents: [parent], appProperties: tags }),
+    }, [409]);
+    await response.body?.cancel();
+  }
   async function generateId() {
     const raw: unknown = await (await request(`${api}/generateIds?count=1&space=drive&type=files`)).json();
     const ids = raw && typeof raw === "object" && "ids" in raw ? raw.ids : null;
@@ -53,6 +60,24 @@ export function createDriveGateway(origin: string, accessToken: () => Promise<st
       if (cursor?.trashed) throw Error("Parent folder is trashed");
     }
     throw Error("Choose a descendant of the configured company root.");
+  }
+  async function validatePrivateFolder(id: string, projectRoot: string) {
+    const folder = await get(id);
+    if (folder.trashed || folder.mimeType !== FOLDER || !folder.writable) throw Error("Intake folder is unavailable");
+    let cursor = folder;
+    const seen = new Set<string>();
+    while (true) {
+      if (cursor.id === projectRoot || cursor.trashed || seen.has(cursor.id) || seen.size >= 100) throw Error("Intake folder must be outside the shared project tree");
+      seen.add(cursor.id);
+      if (!cursor.parents[0]) break;
+      cursor = await get(cursor.parents[0]);
+    }
+    const response = await request(`${api}/${encodeURIComponent(id)}/permissions?supportsAllDrives=true&fields=nextPageToken,permissions(type,role,deleted)`);
+    const value = await response.json();
+    const permissions = Array.isArray(value?.permissions) ? value.permissions.filter((permission: { deleted?: boolean }) => permission.deleted !== true) : [];
+    if (value?.nextPageToken || permissions.length !== 1 || permissions[0]?.type !== "user" || permissions[0]?.role !== "owner") {
+      throw Error("Intake folder must be restricted to its document-service owner");
+    }
   }
   function verifyIdentity(file: DriveMetadata, parent: string, tags: Record<string, string>, mime = "application/pdf") {
     if (file.trashed || file.mimeType !== mime || !file.parents.includes(parent) || Object.entries(tags).some(([key, value]) => file.properties[key] !== value)) throw Error("Provider file identity does not match this operation");
@@ -119,6 +144,6 @@ export function createDriveGateway(origin: string, accessToken: () => Promise<st
     if (!file.trashed) { const response = await request(`${api}/${encodeURIComponent(id)}?supportsAllDrives=true`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: '{"trashed":true}' }); await response.body?.cancel(); }
     if (!(await get(id)).trashed) throw Error("Cleanup was not confirmed");
   }
-  return { get, find, generateId, validateFolder, verifyIdentity, ensureFolder, begin, transfer, validSession, stream, bytes, verifyFile, verifyPdf, trash };
+  return { get, find, copy, generateId, validateFolder, validatePrivateFolder, verifyIdentity, ensureFolder, begin, transfer, validSession, stream, bytes, verifyFile, verifyPdf, trash };
 }
 export type DriveGateway = ReturnType<typeof createDriveGateway>;

@@ -14,6 +14,7 @@ export function verificationEnvironment(blockNetwork = false) {
     ...Object.fromEntries(credentials.map(key => [key, ''])),
     GOOGLE_DRIVE_ENABLED: 'false',
     QUOTATION_EXTRACTION_ENABLED: 'false',
+    QUOTATION_INTAKE_DRIVE_FOLDER_ID: '',
     APP_ORIGIN: 'http://127.0.0.1:3199',
     ...(blockNetwork ? { NODE_OPTIONS: [process.env.NODE_OPTIONS, '--import=./scripts/helpers/no-external-network.mjs'].filter(Boolean).join(' ') } : {}),
   };

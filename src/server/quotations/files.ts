@@ -1,6 +1,7 @@
 import "server-only";
 import { start } from "workflow/api";
 import { quotationFileWorkflow } from "@/src/server/workflows/quotations";
+import { quotationIntakeCleanupWorkflow } from "@/src/server/workflows/quotation-intake";
 import { serviceRpc, ServiceCommandError } from "@/src/server/auth/service-rpc";
 import {
   documentActor,
@@ -9,13 +10,8 @@ import {
 import { documentDrive } from "@/src/server/documents/config";
 import { requestDriveParent } from "@/src/server/documents/request-folders";
 import { rowValue, textValue } from "@/src/server/documents/state";
-import {
-  sealUploadTicket,
-  openUploadTicket,
-} from "@/src/server/upload-ticket-codec";
 import { record } from "@/src/domain/projects/projects";
 import {
-  QUOTE_CHUNK_SIZE,
   QUOTE_GROUP_LIMIT,
   quoteUuid,
   validQuoteFile,
@@ -24,6 +20,7 @@ import {
   validateQuotationOriginal,
   InvalidQuotationOriginal,
 } from "./original-validation";
+import { quotationIntakeTags, resumeOriginal } from "./resumable-original";
 
 export const quotationOriginalTags = (fileId: string, quoteId: string) => ({
   hmlQuotationFile: fileId,
@@ -153,80 +150,9 @@ export async function transferQuotationOriginal(
     const parent = await requestDriveParent(
       drive, "quotation-original", fileId, projectFolder, textValue(folder.root_id),
     ) ?? projectFolder;
-    if (!file.drive_file_id)
-      await update({ driveFileId: await drive.generateId() });
-    const providerId = textValue(file.drive_file_id);
-    const existing = await drive.find(providerId);
-    if (existing && existing.size === String(total)) {
-      drive.verifyIdentity(
-        existing,
-        parent,
-        identity,
-        mime,
-      );
-      return await finish();
-    }
-    let uri: string | null = null;
-    if (file.encrypted_session)
-      uri = openUploadTicket<{ fileId: string; uri: string }>(
-        textValue(file.encrypted_session),
-        (v) => v.fileId === fileId && drive.validSession(v.uri),
-        "Invalid stored upload session.",
-      ).uri;
-    const begin = async () => {
-      const uri = await drive.begin(
-        providerId,
-        parent,
-        textValue(file.name),
-        total,
-        identity,
-        mime,
-      );
-      if (!uri) throw Error("Unconfirmed provider original");
-      await update({ session: sealUploadTicket({ fileId, uri }) });
-      return uri;
-    };
-    if (!uri) uri = await begin();
-    let progress = await drive.transfer(uri, total, undefined, 0, mime);
-    if (progress.expired) {
-      if (Number(file.offset_bytes) !== 0)
-        throw new DocumentHttpError(
-          410,
-          "Upload expired. Cancel this group and upload the originals again.",
-        );
-      uri = await begin();
-      progress = await drive.transfer(uri, total, undefined, 0, mime);
-    }
-    if (progress.complete) return await finish();
-    if (progress.offset < Number(file.offset_bytes))
-      throw new DocumentHttpError(
-        410,
-        "Provider bytes are no longer available. Cancel the group and upload again.",
-      );
-    if (bytes) {
-      if (requestedOffset !== progress.offset)
-        throw new DocumentHttpError(
-          409,
-          "Confirmed offset changed. Check status and resume.",
-        );
-      if (
-        !bytes.length ||
-        bytes.length > QUOTE_CHUNK_SIZE ||
-        progress.offset + bytes.length > total ||
-        (progress.offset + bytes.length < total && bytes.length % (256 * 1024))
-      )
-        throw new DocumentHttpError(400, "Invalid original-file chunk.");
-      progress = await drive.transfer(uri, total, bytes, progress.offset, mime);
-      if (progress.expired)
-        throw new DocumentHttpError(
-          410,
-          "Upload expired. Cancel the group and upload again.",
-        );
-    }
-    await update({ offset: progress.offset });
-    return progress.complete
-      ? await finish()
-      : { offset: progress.offset, total };
+    return await resumeOriginal(drive, { id: fileId, name: textValue(file.name), mime, size: total,
+      offset: Number(file.offset_bytes), driveId: textValue(file.drive_file_id), session: textValue(file.encrypted_session) },
+    parent, identity, update, finish, bytes, requestedOffset);
   } finally {
     await serviceRpc("quotation_transfer", {
       actor,
@@ -264,8 +190,24 @@ export async function processQuotationFileJob(jobId: string) {
       const parent = await requestDriveParent(
         drive, "quotation-original", textValue(file.id), projectFolder, textValue(folder.root_id),
       ) ?? projectFolder;
+      const intake = record(job.intake);
+      let driveId = textValue(file.drive_file_id);
+      if (intake) {
+        if (!driveId) {
+          await checkpoint({ intakeDestination: await drive.generateId() });
+          driveId = textValue(rowValue(job.file).drive_file_id);
+        }
+        if (!await drive.find(driveId)) {
+          if (intake.trashed === true || Date.parse(textValue(intake.expiresAt)) <= Date.now()) throw new InvalidQuotationOriginal();
+          const source = textValue(intake.driveId);
+          drive.verifyIdentity(await drive.get(source), textValue(intake.folderId),
+            quotationIntakeTags(textValue(intake.intakeId), textValue(file.id)), textValue(file.mime));
+          await checkpoint({});
+          await drive.copy(source, driveId, parent, textValue(file.name), identity);
+        }
+      }
       const bytes = await drive.verifyFile(
-        textValue(file.drive_file_id),
+        driveId,
         parent,
         identity,
         Number(file.size),
@@ -279,11 +221,12 @@ export async function processQuotationFileJob(jobId: string) {
         await drive.trash(textValue(file.drive_file_id), identity);
       await checkpoint({ trashed: true });
     } else throw Error("Unknown quotation processing job");
-    await serviceRpc("quotation_worker", {
+    const result = record(await serviceRpc("quotation_worker", {
       job_id: jobId,
       action: "complete",
       lease_id: lease,
-    });
+    }));
+    if (quoteUuid(result?.intakeCleanup)) await start(quotationIntakeCleanupWorkflow, [result.intakeCleanup]).catch(() => {});
   } catch (error) {
     await serviceRpc("quotation_worker", {
       job_id: jobId,
@@ -331,6 +274,7 @@ export function quotationFileError(error: unknown) {
         "Reopen the draft and wait for the current MRF approval/archive before changing originals.",
       ],
       P4503: [409, "This retry identity was used for different input."],
+      P4551: [409, "An unfinished quotation upload exists. Check its status or cancel it before choosing different originals."],
     };
     if (errors[error.code]) [status, message] = errors[error.code];
   }

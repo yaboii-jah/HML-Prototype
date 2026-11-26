@@ -336,6 +336,8 @@ async function checkCapture({
     "return document.querySelector('.quotation-review-status')?.textContent.includes('Editable quotation draft')",
   );
   await checkAutofill({ browser, second, drive, sql, base, path, original, quote, click, save, cookie, supplierName: profile.name });
+  await checkIntake({ browser, drive, client, buyer, sql, mrf, click, save, bytes, image, profile });
+  await browser.navigate(path);
   for (const width of [1440, 375]) {
     await browser.call("Emulation.setDeviceMetricsOverride", {
       width,
@@ -435,6 +437,70 @@ async function checkCapture({
       ).output.trim(),
     ),
   };
+}
+
+async function checkIntake({ browser, drive, client, buyer, sql, mrf, click, save, bytes, image, profile }) {
+  const read = async (query) => (await sql(query)).output.trim();
+  const linked = () => read(`select count(*) from private.mrf_downstream_references where request_id='${mrf}' and kind='quotation';`);
+  const signed = await client.rpc('supplier_command', { actor: buyer, command: { type: 'createSupplier', requestId: randomUUID(),
+    profile: { ...profile, name: 'Intake directory ' + randomUUID() } } });
+  assert.equal(signed.error, null);
+  const directory = signed.data.supplierId;
+  const originals = [{ name: 'intake.pdf', bytes, mime: 'application/pdf' }, { name: 'intake.png', bytes: image, mime: 'image/png' }];
+  for (const width of [1440, 375]) {
+    if (width === 375) await browser.call('Emulation.setDeviceMetricsOverride', { width, height: 1000, deviceScaleFactor: 1, mobile: true });
+    const prior = Number(await linked()), providerCalls = drive.gemini.inputs.length;
+    await browser.navigate(`/requests/${mrf}/quotes`);
+    await click(browser, 'Create quotation draft');
+    await browser.run("const field=document.querySelector('dialog select[name=supplierId]');field.value='quote-only';field.dispatchEvent(new Event('change',{bubbles:true}));");
+    const upload = 'dialog input[name=intake-originals]';
+    await browser.wait(`return !!document.querySelector(${JSON.stringify(upload)})`);
+    assert.equal(await browser.run("return document.querySelector('dialog input[name=supplierName]').value"), '');
+    await browser.run(`const dt=new DataTransfer();${originals.map(file => `dt.items.add(new File([Uint8Array.from(atob('${file.bytes.toString('base64')}'),c=>c.charCodeAt(0))],${JSON.stringify(file.name)},{type:${JSON.stringify(file.mime)}}));`).join('')}const input=document.querySelector(${JSON.stringify(upload)});input.files=dt.files;input.dispatchEvent(new Event('change',{bubbles:true}));`);
+    if (width === 1440) {
+      drive.faults.shareIntake = true;
+      await click(browser, 'Extract and fill');
+      await browser.wait("return !!document.querySelector('dialog [role=alert]')");
+      assert.equal(await read(`select count(*) from private.quotation_intakes where request_id='${mrf}' and state<>'closed';`), '0');
+      drive.faults.shareIntake = false;
+    }
+    await click(browser, 'Extract and fill');
+    await browser.wait("return document.querySelector('dialog input[name=supplierName]')?.value==='Printed Quotation Supplier'", 60000);
+    assert.equal(Number(await linked()), prior, 'Extracting supplier details never links an MRF');
+    assert.equal(drive.gemini.inputs.length, providerCalls + 1);
+    const name = width === 1440 ? 'Reviewed quote only' : 'Reviewed directory quote';
+    await browser.fill('dialog input[name=supplierName]', name);
+    if (width === 375) await browser.run(`const field=document.querySelector('dialog select[name=supplierId]');field.value=${JSON.stringify(directory)};field.dispatchEvent(new Event('change',{bubbles:true}));`);
+    if (width === 1440) drive.faults.loseCopyResponse = true;
+    await click(browser, 'Save draft and link MRF');
+    await browser.wait("return !document.querySelector('dialog[open]') && !!document.querySelector('.quotation-originals')");
+    const quote = await browser.run("return location.pathname.split('/').at(-1)");
+    assert.equal(Number(await linked()), prior + 1);
+    const draft = async () => JSON.parse(await read(`select private.quotation_view('${quote}');`));
+    let row = await draft();
+    assert.equal(row.supplierId, width === 1440 ? null : directory);
+    assert.equal(row.body.supplierName, name);
+    assert.equal(row.body.lines.length, 0, 'Initial save saves only reviewed supplier fields');
+    if (width === 1440) {
+      await browser.wait("return document.querySelector('.quotation-originals').textContent.includes('File processing failed')", 60000);
+      await click(browser, 'Retry file job');
+    }
+    await browser.wait("return !!document.querySelector('.quotation-extraction-result')&&document.querySelector('input[name=ref]').value==='Q-ORIGINAL'", 60000);
+    assert.equal(drive.gemini.inputs.length, providerCalls + 1, 'Opening the editor reuses extraction');
+    row = await draft();
+    assert.equal(row.body.lines.length, 0);
+    assert.equal(row.files.length, 2);
+    await save(browser);
+    row = await draft();
+    assert.equal(row.body.lines[1].sourceFileId, row.files[1].id);
+    assert.equal(row.body.lines[1].sourcePage, '1');
+    assert.equal(row.body.lines[1].unitPrice, '0.00');
+    assert.equal(row.body.supplierName, name);
+    assert.equal(row.checked, false);
+    const shot = await browser.call('Page.captureScreenshot', { format: 'png' });
+    await writeFile(`.verification/quotation-intake-${width}.png`, Buffer.from(shot.data, 'base64'));
+  }
+  await browser.call('Emulation.clearDeviceMetricsOverride');
 }
 
 async function checkAutofill({ browser, second, drive, sql, base, path, original, quote, click, save, cookie, supplierName }) {

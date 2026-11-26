@@ -2,7 +2,7 @@ import "server-only";
 import { start } from "workflow/api";
 import { record } from "@/src/domain/projects/projects";
 import { QUOTE_GROUP_LIMIT, quoteUuid, validQuoteFile } from "@/src/domain/quotations/drafts";
-import { extractionHeaders, parseQuoteExtraction, parseQuoteExtractionStatus, QUOTE_EXTRACTION_FILES, QUOTE_EXTRACTION_PAGES } from "@/src/domain/quotations/extraction";
+import { parseQuoteExtractionStatus, QUOTE_EXTRACTION_FILES, QUOTE_EXTRACTION_PAGES } from "@/src/domain/quotations/extraction";
 import { serviceRpc } from "@/src/server/auth/service-rpc";
 import { documentActor, DocumentHttpError } from "@/src/server/documents/access";
 import { documentDrive } from "@/src/server/documents/config";
@@ -10,9 +10,9 @@ import { recordedRequestDriveParent } from "@/src/server/documents/request-folde
 import { quotationExtractionWorkflow } from "@/src/server/workflows/quotation-extraction";
 import { quotationOriginalTags } from "./files";
 import { InvalidQuotationOriginal, validateQuotationOriginal } from "./original-validation";
-import { extractQuotationOriginals } from "./extraction-provider";
+import { quotationSourceValues } from "./extraction-provider";
 
-const enabled = () => process.env.QUOTATION_EXTRACTION_ENABLED === "true"
+export const quotationExtractionEnabled = () => process.env.QUOTATION_EXTRACTION_ENABLED === "true"
   && process.env.GOOGLE_DRIVE_ENABLED === "true" && !!process.env.GEMINI_API_KEY;
 const version = (value: unknown) => typeof value === "string" && /^[1-9]\d{0,18}$/.test(value);
 
@@ -27,7 +27,7 @@ export async function quotationExtractionCommand(input: unknown, actor?: Awaited
     || (command.type === "retry" && (!quoteUuid(command.proposalId) || !quoteUuid(command.operationId) || !quoteUuid(command.attemptId)))) {
     throw new DocumentHttpError(400, "Open the saved quotation and its current originals before extracting.");
   }
-  if (!enabled()) return { state: "disabled" };
+  if (!quotationExtractionEnabled()) return { state: "disabled" };
   const raw = record(await serviceRpc("quotation_extraction_command", { actor: caller, command }));
   const status = parseQuoteExtractionStatus(raw);
   if (!status || (command.type === "apply" && status.state === "ready" && !status.proposal)) {
@@ -52,7 +52,7 @@ export async function processQuotationExtraction(jobId: string): Promise<string 
   if (!job || !quoteUuid(job.lease)) return expiry(job);
   const lease = job.lease;
   const fail = async (reason: string) => { await quotationExtractionWorker(jobId, "fail", lease, { reason }); return null; };
-  if (!enabled()) return fail("provider");
+  if (!quotationExtractionEnabled()) return fail("provider");
   if (!Array.isArray(job.files) || !job.files.length || job.files.length > QUOTE_EXTRACTION_FILES) return fail("limit");
 
   const originals: { id: string; bytes: Uint8Array; mime: string; pages: number }[] = [];
@@ -77,12 +77,7 @@ export async function processQuotationExtraction(jobId: string): Promise<string 
     return fail(error instanceof InvalidQuotationOriginal ? "source" : "provider");
   }
   if (!await quotationExtractionWorker(jobId, "check", lease)) return null;
-  let raw;
-  try { raw = record(await extractQuotationOriginals(originals)); } catch { return fail("provider"); }
-  if (raw?.documentType === "other") return fail("no-offer");
-  if (raw?.documentType === "multiple_offers") return fail("multiple-offers");
-  const proposal = raw?.documentType === "single_offer" ? parseQuoteExtraction(raw, originals) : null;
-  if (!proposal || Buffer.byteLength(JSON.stringify(proposal)) > 460_000) return fail("provider");
-  if (!proposal.body.lines.length && !proposal.body.adjustments.length && !proposal.notes.length && !extractionHeaders.some(key => proposal.body[key])) return fail("empty");
-  return expiry(await quotationExtractionWorker(jobId, "complete", lease, proposal));
+  const result = await quotationSourceValues(originals);
+  if ("reason" in result) return fail(result.reason);
+  return expiry(await quotationExtractionWorker(jobId, "complete", lease, result.proposal));
 }

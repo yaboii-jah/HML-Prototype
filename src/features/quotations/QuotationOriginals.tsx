@@ -5,33 +5,13 @@ import { useFoundationRealtime } from "@/src/app-state/FoundationRealtime";
 import { Field, InlineError } from "@/src/components/ui/Primitives";
 import {
   parseQuotationsView,
-  QUOTE_CHUNK_SIZE,
   QUOTE_FILE_LIMIT,
   QUOTE_GROUP_LIMIT,
   QUOTE_MIMES,
   type QuotationDraft,
   type QuoteFile,
 } from "@/src/domain/quotations/drafts";
-
-async function responseJson(response: Response) {
-  const value = await response.json();
-  if (!response.ok)
-    throw Error(
-      typeof value?.error === "string"
-        ? value.error
-        : "File action could not finish.",
-    );
-  return value;
-}
-async function fingerprint(file: File) {
-  const digest = await crypto.subtle.digest(
-    "SHA-256",
-    await file.arrayBuffer(),
-  );
-  return Array.from(new Uint8Array(digest), (b) =>
-    b.toString(16).padStart(2, "0"),
-  ).join("");
-}
+import { fingerprint, responseJson, uploadQuotationFiles } from "./original-upload";
 export function QuotationOriginals({
   quote,
   editable,
@@ -97,64 +77,7 @@ export function QuotationOriginals({
     );
     const group = saved.groups.find((g) => g.state === "uploading");
     if (!group) return;
-    for (const upload of group.uploads.filter((f) => f.state === "uploading")) {
-      const match = hashes.find(
-        (f) =>
-          f.file.name === upload.name &&
-          f.file.size === upload.size &&
-          f.file.type === upload.mime &&
-          f.sha256 === upload.sha256,
-      );
-      if (!match)
-        throw Error(
-          `Reselect the matching local file to resume: ${upload.name}`,
-        );
-      let state = await responseJson(
-        await fetch(`/api/quotation-files/uploads/${upload.id}`, {
-          method: "POST",
-          cache: "no-store",
-        }),
-      );
-      while (!state.complete && !state.validating) {
-        const offset = state.offset;
-        if (
-          !Number.isSafeInteger(offset) ||
-          offset < 0 ||
-          offset >= match.file.size
-        )
-          throw Error("Invalid confirmed upload position.");
-        setProgress(
-          `${upload.name}: ${offset.toLocaleString()} / ${upload.size.toLocaleString()} bytes`,
-        );
-        try {
-          state = await responseJson(
-            await fetch(
-              `/api/quotation-files/uploads/${upload.id}?offset=${offset}`,
-              {
-                method: "PUT",
-                headers: { "Content-Type": "application/octet-stream" },
-                body: match.file.slice(offset, offset + QUOTE_CHUNK_SIZE),
-              },
-            ),
-          );
-        } catch (error) {
-          // Resolve an uncertain POST before deciding whether another chunk is needed.
-          const recovered = await responseJson(
-            await fetch(`/api/quotation-files/uploads/${upload.id}`, {
-              method: "POST",
-              cache: "no-store",
-            }),
-          );
-          if (
-            recovered.offset === offset &&
-            !recovered.complete &&
-            !recovered.validating
-          )
-            throw error;
-          state = recovered;
-        }
-      }
-    }
+    await uploadQuotationFiles(hashes, group.uploads.filter(file => file.state === "uploading"), "/api/quotation-files/uploads", setProgress);
     setProgress(
       "Uploads transferred. Verifying the complete group before saving it.",
     );

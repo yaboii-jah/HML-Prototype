@@ -15,8 +15,9 @@ const messages: Record<string, string> = {
   provider: "Extraction could not finish. Retry or enter the quotation manually.",
 };
 
-export function QuotationExtraction({ quote, disabled, applied, onChecking, onFill }: {
+export function QuotationExtraction({ quote, initialAttempt, disabled, applied, onChecking, onFill }: {
   quote: QuotationDraft;
+  initialAttempt?: string | null;
   disabled: boolean;
   applied: boolean;
   onChecking: (active: boolean) => void;
@@ -32,6 +33,7 @@ export function QuotationExtraction({ quote, disabled, applied, onChecking, onFi
   const [unchangedNotes, setUnchangedNotes] = useState<QuoteExtractionProposal["notes"] | null>(null);
   const sequence = useRef(0);
   const pending = useRef(false);
+  const attempted = useRef(false);
   const operation = useRef<{ key: string; id: string } | null>(null);
   const endpoint = "/api/quotation-extraction";
 
@@ -102,9 +104,13 @@ export function QuotationExtraction({ quote, disabled, applied, onChecking, onFi
     }
   });
 
+  const carriedResult = !!initialAttempt && status?.attemptId === initialAttempt;
   useEffect(() => {
-    if (readyId && intent && !disabled && !busy && !applied) void fill(readyId, intent === "continue" ? mismatch : "");
-  }, [readyId, intent, mismatch, disabled, busy, applied]);
+    if (readyId && (intent || (carriedResult && !attempted.current)) && !disabled && !busy && !applied) {
+      attempted.current = true;
+      void fill(readyId, intent === "continue" ? mismatch : "");
+    }
+  }, [readyId, intent, mismatch, disabled, busy, applied, carriedResult]);
 
   const start = async (type: "start" | "retry") => {
     if (pending.current || disabled || applied) return;

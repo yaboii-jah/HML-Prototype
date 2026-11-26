@@ -1598,6 +1598,46 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"quotation_intake_files": {
+                  Row: {
+                    "drive_id": string | null,"id": string,"intake_id": string,"lease": string | null,"lease_until": string | null,"mime": string,"name": string,"offset_bytes": number,"position": number,"session": string | null,"sha256": string,"size": number,"trashed": boolean,"uploaded": boolean
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "drive_id"?: string | null,"id"?: string,"intake_id": string,"lease"?: string | null,"lease_until"?: string | null,"mime": string,"name": string,"offset_bytes"?: number,"position": number,"session"?: string | null,"sha256": string,"size": number,"trashed"?: boolean,"uploaded"?: boolean
+                  }
+                  Update: {
+                    "drive_id"?: string | null,"id"?: string,"intake_id"?: string,"lease"?: string | null,"lease_until"?: string | null,"mime"?: string,"name"?: string,"offset_bytes"?: number,"position"?: number,"session"?: string | null,"sha256"?: string,"size"?: number,"trashed"?: boolean,"uploaded"?: boolean
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "quotation_intake_files_intake_id_fkey"
+      columns: ["intake_id"]
+isOneToOne: false
+      referencedRelation: "quotation_intakes"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"quotation_intakes": {
+                  Row: {
+                    "actor": NonNullable<Json>,"archive_id": string,"cleanup_scheduled": boolean,"descriptors": NonNullable<Json>,"dispatch_after": string,"expires_at": string,"folder_id": string,"id": string,"lease": string | null,"lease_until": string | null,"owner_id": string,"proposal": Json | null,"quote_id": string | null,"quote_version": number | null,"reason": string | null,"request_id": string,"state": string,"verified": boolean,"quotation_intake_current": boolean | null
+                  }
+                  ComputedFields: "quotation_intake_current"
+                  Insert: {
+                    "actor": NonNullable<Json>,"archive_id": string,"cleanup_scheduled"?: boolean,"descriptors": NonNullable<Json>,"dispatch_after"?: string,"expires_at"?: string,"folder_id": string,"id": string,"lease"?: string | null,"lease_until"?: string | null,"owner_id": string,"proposal"?: Json | null,"quote_id"?: string | null,"quote_version"?: number | null,"reason"?: string | null,"request_id": string,"state"?: string,"verified"?: boolean
+                  }
+                  Update: {
+                    "actor"?: NonNullable<Json>,"archive_id"?: string,"cleanup_scheduled"?: boolean,"descriptors"?: NonNullable<Json>,"dispatch_after"?: string,"expires_at"?: string,"folder_id"?: string,"id"?: string,"lease"?: string | null,"lease_until"?: string | null,"owner_id"?: string,"proposal"?: Json | null,"quote_id"?: string | null,"quote_version"?: number | null,"reason"?: string | null,"request_id"?: string,"state"?: string,"verified"?: boolean
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "quotation_intakes_quote_id_fkey"
+      columns: ["quote_id"]
+isOneToOne: false
+      referencedRelation: "quotation_drafts"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"quotation_jobs": {
                   Row: {
                     "actor": NonNullable<Json>,"attempts": number,"checkpoint": NonNullable<Json>,"dispatched_at": string | null,"file_id": string,"id": string,"kind": string,"lease": string | null,"lease_until": string | null,"message": string | null,"original_actor": NonNullable<Json>,"state": string
@@ -2635,6 +2675,9 @@ isOneToOne: true
 "quotation_capture_before_extraction":
 { Args: { "actor": Json,"command": Json }; Returns: Json
                            },
+"quotation_capture_before_intake":
+{ Args: { "actor": Json,"command": Json }; Returns: Json
+                           },
 "quotation_capture_command":
 { Args: { "actor": Json,"command": Json }; Returns: Json
                            },
@@ -2679,6 +2722,18 @@ isOneToOne: true
                            },
 "quotation_financial_source":
 { Args: { "actor": Json,"quote_id": string }; Returns: Json
+                           },
+"quotation_intake_command":
+{ Args: { "actor": Json,"command": Json }; Returns: Json
+                           },
+"quotation_intake_current":
+{ Args: { "i": Omit<Database["private"]['Tables']["quotation_intakes"]['Row'], Database["private"]['Tables']["quotation_intakes"]['ComputedFields']> }; Returns: boolean
+                           },
+"quotation_intake_transfer":
+{ Args: { "action": string,"actor": Json,"file_id": string,"lease_id": string,"patch": Json }; Returns: Json
+                           },
+"quotation_intake_worker":
+{ Args: { "action": string,"lease_id": string,"patch": Json,"target": string }; Returns: Json
                            },
 "quotation_job_allowed":
 { Args: { "actor": Json,"target": string }; Returns: boolean
@@ -2733,6 +2788,9 @@ isOneToOne: true
 { Args: { "target": string }; Returns: Json
                            },
 "quotation_worker":
+{ Args: { "action": string,"job_id": string,"lease_id"?: string,"patch"?: Json }; Returns: Json
+                           },
+"quotation_worker_before_intake":
 { Args: { "action": string,"job_id": string,"lease_id"?: string,"patch"?: Json }; Returns: Json
                            },
 "quotations_read":
@@ -3276,6 +3334,15 @@ isOneToOne: false
                            },
 "quotation_financial_source":
 { Args: { "actor": Json,"quote_id": string }; Returns: Json
+                           },
+"quotation_intake_command":
+{ Args: { "actor": Json,"command": Json }; Returns: Json
+                           },
+"quotation_intake_transfer":
+{ Args: { "action": string,"actor": Json,"file_id": string,"lease_id": string,"patch": Json }; Returns: Json
+                           },
+"quotation_intake_worker":
+{ Args: { "action": string,"lease_id": string,"patch": Json,"target": string }; Returns: Json
                            },
 "quotation_review_pdf":
 { Args: { "actor": Json,"revision_id": string }; Returns: Json

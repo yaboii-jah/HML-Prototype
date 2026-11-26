@@ -1,6 +1,7 @@
 import "server-only";
 import { ADJUSTMENT_FIELDS, HEADER_FIELDS, LINE_FIELDS } from "@/src/domain/quotations/drafts";
-import { extractionAdjustments, extractionHeaders, extractionLines } from "@/src/domain/quotations/extraction";
+import { record } from "@/src/domain/projects/projects";
+import { extractionAdjustments, extractionHeaders, extractionLines, parseQuoteExtraction, type QuoteExtractionProposal } from "@/src/domain/quotations/extraction";
 import { extractOriginals, extractionSchema } from "@/src/server/gemini-extraction";
 
 const text = { type: "string" };
@@ -30,4 +31,17 @@ const prompt = [
 
 export function extractQuotationOriginals(originals: Parameters<typeof extractOriginals>[2]) {
   return extractOriginals(prompt, schema, originals);
+}
+
+export async function quotationSourceValues(originals: { id: string; pages: number; mime: string; bytes: Uint8Array }[]): Promise<
+  { proposal: QuoteExtractionProposal } | { reason: string }
+> {
+  let raw;
+  try { raw = record(await extractQuotationOriginals(originals)); } catch { return { reason: "provider" }; }
+  if (raw?.documentType === "other") return { reason: "no-offer" };
+  if (raw?.documentType === "multiple_offers") return { reason: "multiple-offers" };
+  const proposal = raw?.documentType === "single_offer" ? parseQuoteExtraction(raw, originals) : null;
+  if (!proposal || Buffer.byteLength(JSON.stringify(proposal)) > 460_000) return { reason: "provider" };
+  if (!proposal.body.lines.length && !proposal.body.adjustments.length && !proposal.notes.length && !extractionHeaders.some(key => proposal.body[key])) return { reason: "empty" };
+  return { proposal };
 }

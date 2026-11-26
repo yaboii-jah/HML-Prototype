@@ -165,7 +165,7 @@ export type QuotationsView = {
 export type QuoteCommand =
   | FinancialCommand
   | ((
-      | { type: "create"; mrfId: string; supplierId: string | null; body: QuoteBody }
+      | { type: "create"; mrfId: string; supplierId: string | null; body: QuoteBody; intakeId?: string }
       | {
           type: "save";
           quoteId: string;
@@ -203,6 +203,7 @@ export type QuoteResult = {
   quote?: QuotationDraft;
   conflict?: boolean;
   extractionStale?: boolean;
+  existingQuote?: boolean;
   uncertain?: boolean;
 };
 export const quoteUuid = (v: unknown): v is string =>
@@ -360,6 +361,7 @@ export function parseQuoteCommand(value: unknown): QuoteCommand | null {
     return parseFinancialCommand(raw);
   if (raw.type === "create") {
     const body = parseQuoteBody(raw.body);
+    if (raw.intakeId !== undefined && (!quoteUuid(raw.intakeId) || !body?.supplierName || body.lines.length || body.adjustments.length)) return null;
     return body &&
       quoteUuid(raw.mrfId) &&
       (quoteUuid(raw.supplierId) ||
@@ -370,6 +372,7 @@ export function parseQuoteCommand(value: unknown): QuoteCommand | null {
           mrfId: raw.mrfId,
           supplierId: raw.supplierId,
           body,
+          ...(raw.intakeId ? { intakeId: raw.intakeId } : {}),
         }
       : null;
   }

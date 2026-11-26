@@ -30,6 +30,8 @@ import {
 import { record } from "@/src/domain/projects/projects";
 import { QuotationOriginals } from "./QuotationOriginals";
 import { QuotationExtraction, QuotationExtractionNotes } from "./QuotationExtraction";
+import { QuotationIntake, quotationIntakeAction } from "./QuotationIntake";
+import { quotedSupplierFields, type QuotationIntakeStatus, type QuotedSupplier } from "@/src/domain/quotations/intake";
 import { fillQuotation, undoQuotationFill, type QuoteExtractionProposal } from "@/src/domain/quotations/extraction";
 import { QuotationFinancialReview } from "./QuotationFinancialReview";
 import { useQuoteOperation } from "./use-quotation-operation";
@@ -37,14 +39,8 @@ import { useQuoteOperation } from "./use-quotation-operation";
 const subscribe = () => () => {};
 type HeaderKey = keyof typeof HEADER_FIELDS;
 type LineKey = keyof typeof LINE_FIELDS;
-const supplierFields: HeaderKey[] = [
-  "supplierName",
-  "address",
-  "tin",
-  "contactName",
-  "email",
-  "phone",
-];
+const supplierFields: HeaderKey[] = [...quotedSupplierFields];
+const intakeFillKey = (quoteId: string) => `quotation-intake-fill:${quoteId}`;
 const quoteOnly = "quote-only";
 const normalizeSupplierName = (name: string) =>
   name.trim().toLowerCase().replace(/\s+/g, " ");
@@ -240,10 +236,44 @@ function NewQuotation({
   const [supplierId, setSupplierId] = useState("");
   const [typedDetails, setTypedDetails] = useState(emptyQuoteBody);
   const [useTypedDetails, setUseTypedDetails] = useState(false);
+  const [intake, setIntake] = useState<QuotationIntakeStatus | null>(null);
+  const [intakeBusy, setIntakeBusy] = useState(false);
+  const [intakeError, setIntakeError] = useState("");
+  const [existingQuote, setExistingQuote] = useState<string | null>(null);
+  const editedSupplier = useRef(new Set<HeaderKey>());
   const operation = useQuoteOperation(),
     router = useRouter();
   const manual = supplierId === quoteOnly;
+  const intakeId = intake?.id;
+  const reviewSupplier = manual || useTypedDetails || !!intakeId;
+  const canSaveIntake = !intakeId || (intake.verified && ["ready", "unusable", "failed"].includes(intake.state));
+  const locked = intakeBusy || operation.busy;
   const typedName = normalizeSupplierName(typedDetails.supplierName);
+  const changeSupplier = (key: HeaderKey, value: string) => {
+    editedSupplier.current.add(key);
+    setTypedDetails(current => ({ ...current, [key]: value }));
+  };
+  const fillSupplier = (values: QuotedSupplier) => {
+    const fields = quotedSupplierFields.filter(key => !editedSupplier.current.has(key));
+    setTypedDetails(current => {
+      const next = { ...current };
+      for (const field of fields) if (!current[field].trim()) next[field] = values[field];
+      return next;
+    });
+  };
+  const dismiss = async () => {
+    if (locked) return;
+    if (intakeId && view.request) {
+      setIntakeBusy(true);
+      try { await quotationIntakeAction(view.request.id, { type: "cancel", intakeId }); }
+      catch (error) {
+        setIntakeError(error instanceof Error ? error.message : "Retry cancelling the quotation upload.");
+        setIntakeBusy(false);
+        return;
+      }
+    }
+    close();
+  };
   const matchesName = (name: string) => {
     const normalized = normalizeSupplierName(name);
     return !!typedName && !!normalized &&
@@ -261,8 +291,8 @@ function NewQuotation({
   const create = async (event: FormEvent) => {
     event.preventDefault();
     const supplier = view.suppliers.find((s) => s.id === supplierId);
-    if ((!supplier && !manual) || !view.request) return;
-    const body = supplier && !useTypedDetails
+    if ((!supplier && !manual) || !view.request || locked || !canSaveIntake || (reviewSupplier && !typedName)) return;
+    const body = supplier && !reviewSupplier
       ? {
           ...emptyQuoteBody(),
           supplierName: supplier.name,
@@ -278,8 +308,16 @@ function NewQuotation({
       mrfId: view.request.id,
       supplierId: supplier?.id ?? null,
       body,
+      ...(intakeId ? { intakeId } : {}),
     });
     if (result?.ok && result.quoteId) {
+      if (result.existingQuote) {
+        setExistingQuote(result.quoteId);
+        return;
+      }
+      if (intakeId && intake.state === "ready") {
+        try { sessionStorage.setItem(intakeFillKey(result.quoteId), intakeId); } catch { /* Recovery stays available in the editor. */ }
+      }
       close();
       router.push(`/requests/${view.request.id}/quotes/${result.quoteId}`);
     }
@@ -288,9 +326,7 @@ function NewQuotation({
     <RecordModal
       open
       title="Create quotation draft"
-      onClose={() => {
-        if (!operation.busy) close();
-      }}
+      onClose={() => void dismiss()}
     >
       <form className="form-stack" onSubmit={create}>
         <p>
@@ -303,10 +339,11 @@ function NewQuotation({
             name="supplierId"
             value={supplierId}
             required
-            disabled={operation.busy}
+            disabled={locked}
             onChange={(e) => {
               setSupplierId(e.target.value);
-              setUseTypedDetails(false);
+              setUseTypedDetails(!!intakeId);
+              setExistingQuote(null);
             }}
           >
             <option value="">Choose supplier</option>
@@ -333,7 +370,11 @@ function NewQuotation({
             ))}
           </select>
         </Field>
-        {manual && (
+        {(manual || intakeId) && view.request?.procurementReady && (
+          <QuotationIntake mrfId={view.request.id} status={intake} disabled={operation.busy}
+            onStatus={setIntake} onBusy={setIntakeBusy} onFill={fillSupplier} />
+        )}
+        {reviewSupplier && (
           <>
             <Field label={HEADER_FIELDS.supplierName}>
               <input
@@ -342,10 +383,13 @@ function NewQuotation({
                 required
                 maxLength={4000}
                 disabled={operation.busy}
-                onChange={(e) => setTypedDetails({ ...typedDetails, supplierName: e.target.value })}
+                onChange={(e) => changeSupplier("supplierName", e.target.value)}
               />
             </Field>
-            {(quoteMatches.length > 0 || directoryMatches.length > 0) && (
+            {intake?.supplier?.supplierName && normalizeSupplierName(intake.supplier.supplierName) !== typedName && (
+              <p role="status">The originals list {intake.supplier.supplierName}. Review the quoted name before saving.</p>
+            )}
+            {manual && (quoteMatches.length > 0 || directoryMatches.length > 0) && (
               <div role="region" aria-label="Possible supplier matches">
                 <p>Possible supplier matches</p>
                 <ul>
@@ -369,7 +413,7 @@ function NewQuotation({
                           <button
                             type="button"
                             className="button secondary"
-                            disabled={operation.busy}
+                            disabled={locked}
                             onClick={() => {
                               setSupplierId(s.id);
                               setUseTypedDetails(true);
@@ -391,7 +435,7 @@ function NewQuotation({
                     value={typedDetails[key]}
                     disabled={operation.busy}
                     maxLength={4000}
-                    onChange={(e) => setTypedDetails({ ...typedDetails, [key]: e.target.value })}
+                    onChange={(e) => changeSupplier(key, e.target.value)}
                   />
                 </Field>
               ))}
@@ -407,18 +451,22 @@ function NewQuotation({
           Add to supplier directory
         </a>
         <InlineError message={operation.error} />
+        <InlineError message={intakeError} />
+        {existingQuote && <p role="status">A quotation for this supplier already exists. {" "}
+          <Link href={`/requests/${view.request?.id}/quotes/${existingQuote}`} onClick={close}>Open the existing quotation</Link>
+        </p>}
         <div className="form-actions">
           <button
             type="button"
             className="button secondary"
-            disabled={operation.busy}
-            onClick={close}
+            disabled={locked}
+            onClick={() => void dismiss()}
           >
             Cancel
           </button>
           <button
             className="button primary"
-            disabled={operation.busy || !view.request?.procurementReady || (manual && !typedName)}
+            disabled={locked || !canSaveIntake || !view.request?.procurementReady || (reviewSupplier && !typedName)}
           >
             {operation.busy ? "Saving…" : "Save draft and link MRF"}
           </button>
@@ -454,12 +502,25 @@ function SourceEditor({
   } | null>(null);
   const [checkingFill, setCheckingFill] = useState(false);
   const [invalidFill, setInvalidFill] = useState(false);
+  const [intakeAttempt, setIntakeAttempt] = useState<string | null>(null);
   const [pendingSave, setPendingSave] = useState<Extract<QuoteInput, { type: "save" }> | null>(null);
   const editedHeaders = useRef(new Set<HeaderKey>());
   const [lineId, setLineId] = useState<string | null>(null);
   const [statusOpen, setStatusOpen] = useState(false),
     [reason, setReason] = useState("");
   const operation = useQuoteOperation();
+  useEffect(() => {
+    queueMicrotask(() => {
+      try {
+        const key = intakeFillKey(quote.id);
+        const value = sessionStorage.getItem(key);
+        if (value) {
+          sessionStorage.removeItem(key);
+          setIntakeAttempt(value);
+        }
+      } catch { /* A reopened draft can recover from the originals. */ }
+    });
+  }, [quote.id]);
   const dirty = JSON.stringify(body) !== JSON.stringify(basis.body);
   const stale =
     basis.contentVersion !== undefined
@@ -666,6 +727,7 @@ function SourceEditor({
           <QuotationExtraction
             key={`${quote.id}:${quote.version}:${quote.fileVersion}`}
             quote={quote}
+            initialAttempt={intakeAttempt}
             disabled={busy || stale || operation.conflict || !!pendingSave}
             applied={!!fill}
             onChecking={setCheckingFill}
