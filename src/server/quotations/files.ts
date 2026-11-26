@@ -20,7 +20,7 @@ import {
   validateQuotationOriginal,
   InvalidQuotationOriginal,
 } from "./original-validation";
-import { quotationIntakeTags, resumeOriginal } from "./resumable-original";
+import { optionalOriginalText, quotationIntakeTags, resumeOriginal } from "./resumable-original";
 
 export const quotationOriginalTags = (fileId: string, quoteId: string) => ({
   hmlQuotationFile: fileId,
@@ -151,7 +151,7 @@ export async function transferQuotationOriginal(
       drive, "quotation-original", fileId, projectFolder, textValue(folder.root_id),
     ) ?? projectFolder;
     return await resumeOriginal(drive, { id: fileId, name: textValue(file.name), mime, size: total,
-      offset: Number(file.offset_bytes), driveId: textValue(file.drive_file_id), session: textValue(file.encrypted_session) },
+      offset: Number(file.offset_bytes), driveId: optionalOriginalText(file.drive_file_id), session: optionalOriginalText(file.encrypted_session) },
     parent, identity, update, finish, bytes, requestedOffset);
   } finally {
     await serviceRpc("quotation_transfer", {
@@ -191,7 +191,7 @@ export async function processQuotationFileJob(jobId: string) {
         drive, "quotation-original", textValue(file.id), projectFolder, textValue(folder.root_id),
       ) ?? projectFolder;
       const intake = record(job.intake);
-      let driveId = textValue(file.drive_file_id);
+      let driveId = optionalOriginalText(file.drive_file_id);
       if (intake) {
         if (!driveId) {
           await checkpoint({ intakeDestination: await drive.generateId() });

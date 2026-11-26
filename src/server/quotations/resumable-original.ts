@@ -1,6 +1,7 @@
 import "server-only";
 import type { DriveGateway } from "@/src/server/documents/drive-gateway";
 import { DocumentHttpError } from "@/src/server/documents/access";
+import { textValue } from "@/src/server/documents/state";
 import { QUOTE_CHUNK_SIZE } from "@/src/domain/quotations/drafts";
 import { openUploadTicket, sealUploadTicket } from "@/src/server/upload-ticket-codec";
 
@@ -11,6 +12,10 @@ export type OriginalTransfer = {
 export const quotationIntakeTags = (intakeId: string, fileId: string) => ({
   hmlKind: "quotation-intake", hmlQuotationIntake: intakeId, hmlQuotationFile: fileId,
 });
+
+export function optionalOriginalText(value: unknown) {
+  return value === null || value === undefined ? "" : textValue(value);
+}
 
 export async function resumeOriginal<Finished>(
   drive: DriveGateway,

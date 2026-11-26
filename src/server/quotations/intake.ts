@@ -12,7 +12,7 @@ import { quotationIntakeCleanupWorkflow, quotationIntakeExtractionWorkflow } fro
 import { quotationExtractionEnabled } from "./extraction";
 import { quotationSourceValues } from "./extraction-provider";
 import { InvalidQuotationOriginal, validateQuotationOriginal } from "./original-validation";
-import { quotationIntakeTags, resumeOriginal } from "./resumable-original";
+import { optionalOriginalText, quotationIntakeTags, resumeOriginal } from "./resumable-original";
 
 export function quotationIntakeWorker(target: string, action: string, leaseId: string | null = null, patch = {}) {
   return serviceRpc("quotation_intake_worker", { target, action, lease_id: leaseId, patch });
@@ -60,7 +60,7 @@ export async function transferIntakeOriginal(fileId: string, bytes?: Uint8Array,
   try {
     if (!file.drive_id) await drive.validatePrivateFolder(parent, documentRoot());
     return await resumeOriginal(drive, { id: fileId, name: textValue(file.name), mime: textValue(file.mime), size: Number(file.size),
-      offset: Number(file.offset_bytes), driveId: textValue(file.drive_id), session: textValue(file.session) },
+      offset: Number(file.offset_bytes), driveId: optionalOriginalText(file.drive_id), session: optionalOriginalText(file.session) },
     parent, quotationIntakeTags(textValue(file.intake_id), fileId), async patch => { await call("checkpoint", lease, patch); },
     async () => await call("finish", lease), bytes, offset);
   } finally {
